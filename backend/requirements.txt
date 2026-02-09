@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+openai
+python-dotenv
+pydantic
+
+langsmith
+git+https://github.com/openai/openai-agents-python.git
