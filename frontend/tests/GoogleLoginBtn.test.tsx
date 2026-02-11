@@ -13,8 +13,8 @@ jest.mock('next/navigation', () => ({
 // Mock useGoogleLogin
 const mockLogin = jest.fn()
 jest.mock('@react-oauth/google', () => ({
-    useGoogleLogin: (config: any) => {
-        // Simulate config usage if needed
+    useGoogleLogin: (config: { onSuccess?: () => void }) => {
+        if (config.onSuccess) config.onSuccess();
         return mockLogin
     },
 }))

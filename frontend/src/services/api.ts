@@ -13,7 +13,7 @@ const getAuthHeaders = (): HeadersInit => {
 };
 
 const getRoomId = async (): Promise<number> => {
-    let roomId = localStorage.getItem('chat_room_id');
+    const roomId = localStorage.getItem('chat_room_id');
     if (roomId) {
         return parseInt(roomId, 10);
     }

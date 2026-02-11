@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from "next/link";
 import { sendChatMessage } from '@/services/api';
-import { Paperclip, Image as ImageIcon, MapPin, X } from 'lucide-react';
+import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus } from 'lucide-react';
 
 interface ChatMessage {
     role: 'user' | 'bot';
@@ -90,91 +91,143 @@ export default function ChatbotPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen p-10 bg-zinc-50 dark:bg-black text-black dark:text-white relative">
-            <h1 className="text-2xl font-bold mb-4">AI 챗봇과 대화하기</h1>
-            <div className="flex-1 overflow-y-auto mb-4 p-4 bg-white dark:bg-zinc-900 rounded-lg shadow border border-zinc-200 dark:border-zinc-800">
-                {chatLog.map((msg, i) => (
-                    <div key={i} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                        <div className={`inline-block p-2 rounded-lg whitespace-pre-wrap ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-zinc-200 dark:bg-zinc-800'}`}>
-                            {msg.text}
-                        </div>
-                    </div>
-                ))}
-                {isTyping && <p className="text-zinc-400 text-sm">답변 생성 중...</p>}
-            </div>
-
-            {/* Attachment Preview */}
-            {(attachedImage || attachedLocation) && (
-                <div className="flex gap-2 mb-2">
-                    {attachedImage && (
-                        <div className="relative">
-                            <img src={attachedImage} alt="Preview" className="h-20 w-20 object-cover rounded border border-zinc-300" />
-                            <button
-                                onClick={() => setAttachedImage(null)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                            >
-                                <X size={12} />
-                            </button>
-                        </div>
-                    )}
-                    {attachedLocation && (
-                        <div className="relative flex items-center gap-2 bg-blue-100 dark:bg-blue-900 p-2 rounded border border-blue-200 dark:border-blue-800">
-                            <MapPin size={20} className="text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm">위치 정보 첨부됨</span>
-                            <button
-                                onClick={() => setAttachedLocation(null)}
-                                className="ml-2 text-zinc-500 hover:text-red-500"
-                            >
-                                <X size={14} />
-                            </button>
-                        </div>
-                    )}
+        <div className="grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[320px_1fr]">
+            {/* Sidebar */}
+            <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
+                <div className="flex items-center justify-between px-4 py-4">
+                    <Link href="/" className="text-lg font-semibold">Polaris</Link>
+                    <Menu className="h-5 w-5 text-slate-400" />
                 </div>
-            )}
 
-            <div className="flex gap-2 relative items-end">
-                {/* Attachment Menu */}
-                <div className="relative">
-                    <button
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="p-3 bg-zinc-200 dark:bg-zinc-800 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                    >
-                        <Paperclip size={20} />
+                <div className="px-4 pb-4">
+                    <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+                        <Plus className="h-4 w-4" /> 새 채팅 만들기
                     </button>
-
-                    {isMenuOpen && (
-                        <div className="absolute bottom-14 left-0 bg-white dark:bg-zinc-800 shadow-xl rounded-lg border border-zinc-200 dark:border-zinc-700 p-2 w-40 z-10 flex flex-col gap-1">
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center gap-2 w-full p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-sm"
-                            >
-                                <ImageIcon size={16} /> 이미지 첨부
-                            </button>
-                            <button
-                                onClick={handleLocationSelect}
-                                className="flex items-center gap-2 w-full p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-sm"
-                            >
-                                <MapPin size={16} /> 장소 첨부
-                            </button>
-                        </div>
-                    )}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageSelect}
-                    />
                 </div>
 
-                <input
-                    className="flex-1 p-3 border rounded-lg bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="메시지를 입력하세요..."
-                />
-                <button onClick={handleSend} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">전송</button>
+                <div className="flex-1 overflow-y-auto px-2 pb-4">
+                    <p className="px-2 text-xs font-semibold uppercase text-slate-500">채팅 리스트</p>
+                    <div className="mt-2 space-y-1">
+                        {["여행 추천", "비건 맛집", "반려견 숙소", "배우 추천"].map((title, idx) => (
+                            <button
+                                key={title}
+                                className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition ${idx === 0 ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-100"}`}
+                            >
+                                <span>{title}</span>
+                                <span className="text-[10px] text-slate-400">12:3{idx}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600">
+                    <p className="font-semibold">내 정보</p>
+                    <p className="text-xs text-slate-500">is_first_login = false</p>
+                    <Link href="/mypage" className="mt-2 inline-flex text-xs font-semibold text-indigo-600 hover:underline">마이페이지</Link>
+                </div>
+            </aside>
+
+            {/* Chat area */}
+            <div className="flex h-full flex-col">
+                <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase text-slate-500">채팅방</p>
+                        <h1 className="text-xl font-bold">여행 추천</h1>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                        <Link href="/survey" className="font-semibold text-indigo-600 hover:underline">선호도 재설정</Link>
+                        <span className="h-6 w-px bg-slate-200" />
+                        <Link href="/login" className="hover:text-slate-700">로그아웃</Link>
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-6">
+                    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+                        {chatLog.map((msg, i) => (
+                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+                        {isTyping && <p className="text-xs text-slate-400">답변 생성 중...</p>}
+                    </div>
+                </div>
+
+                {(attachedImage || attachedLocation) && (
+                    <div className="mx-auto flex w-full max-w-3xl gap-2 px-6 pb-3">
+                        {attachedImage && (
+                            <div className="relative">
+                                {/* Using img intentionally for quick preview; optimization can be added later */}
+                                <img src={attachedImage} alt="Preview" className="h-16 w-16 rounded-xl border border-slate-200 object-cover" />
+                                <button
+                                    onClick={() => setAttachedImage(null)}
+                                    className="absolute -top-2 -right-2 rounded-full bg-rose-500 p-1 text-white"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </div>
+                        )}
+                        {attachedLocation && (
+                            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                                <MapPin className="h-4 w-4 text-indigo-500" /> 위치 첨부됨
+                                <button onClick={() => setAttachedLocation(null)} className="text-slate-400 hover:text-rose-500">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="border-t border-slate-200 bg-white px-6 py-4">
+                    <div className="mx-auto flex max-w-3xl items-end gap-3">
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:border-indigo-300"
+                            >
+                                <Paperclip size={18} />
+                            </button>
+                            {isMenuOpen && (
+                                <div className="absolute -top-28 left-0 z-10 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100"
+                                    >
+                                        <ImageIcon size={16} /> 이미지 첨부
+                                    </button>
+                                    <button
+                                        onClick={handleLocationSelect}
+                                        className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100"
+                                    >
+                                        <MapPin size={16} /> 위치 첨부
+                                    </button>
+                                </div>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                className="hidden"
+                                onChange={handleImageSelect}
+                            />
+                        </div>
+
+                        <input
+                            className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 shadow-inner focus:border-indigo-400 focus:outline-none"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            placeholder="메시지를 입력하세요..."
+                        />
+                        <button
+                            onClick={handleSend}
+                            className="rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:bg-indigo-700"
+                        >
+                            전송
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
