@@ -4,7 +4,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+RUN rm -f package-lock.json && npm install && \
+    cp node_modules/lightningcss-linux-arm64-gnu/lightningcss.linux-arm64-gnu.node node_modules/lightningcss/ || true
 
 COPY . .
 

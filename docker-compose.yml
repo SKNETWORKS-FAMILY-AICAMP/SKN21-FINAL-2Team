@@ -1,6 +1,27 @@
 # docker compose -f 'docker-compose.yml' up -d --build
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_container
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
   backend:
     build: ./backend
     ports:
@@ -11,6 +32,14 @@ services:
       - ./backend:/app
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - mysql
 
   frontend:
     build: ./frontend
@@ -25,3 +54,6 @@ services:
       - backend
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+volumes:
+  mysql_data:

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
 
 import Sidebar from "@/components/Sidebar";
 
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "192396621385-ecjvjgmtvqpokgmgvhch69rb21ab86ul.apps.googleusercontent.com"; // Env variable recommended
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,10 +32,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-row h-screen overflow-hidden`}
       >
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+        <GoogleOAuthProvider clientId={CLIENT_ID}>
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

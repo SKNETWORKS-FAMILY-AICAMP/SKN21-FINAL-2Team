@@ -12,6 +12,12 @@ export default function Home() {
           >
             챗봇 시작하기 →
           </Link>
+          <Link
+            href="/login"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gray-200 px-8 text-black transition-colors hover:bg-gray-300 md:w-auto"
+          >
+            로그인
+          </Link>
         </div>
       </main>
     </div>

@@ -1,8 +1,25 @@
 fastapi
-uvicorn
-openai
 python-dotenv
-pydantic
 
+uvicorn # ASGI Server
+pydantic # Data Validation
+pydantic[email] # Email validation
+
+# LLM
+openai
 langsmith
-git+https://github.com/openai/openai-agents-python.git
+
+# DB
+pydbml # Database Modeling
+pymysql # MySQL Connector
+sqlalchemy # ORM
+python-jose[cryptography] # JWT Token
+passlib[bcrypt] # Password Hashing
+python-multipart # File Upload
+google-auth
+requests
+
+# Testing
+pytest
+httpx
+pytest-asyncio
