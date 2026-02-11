@@ -1,0 +1,45 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f0f0f;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+}
+
+.center {
+  position: relative;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.word {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+  font-weight: 800;
+  font-size: clamp(28px, 4vw, 64px);
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.splitRow {
+  position: absolute;
+  display: flex;
+  gap: 40px;
+}
+
+.layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.layerCenter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}

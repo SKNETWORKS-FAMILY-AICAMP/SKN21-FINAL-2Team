@@ -1,4 +1,4 @@
-// src/app/chatbot/page.tsx
+// src/app/chatbot_demo/page.tsx
 'use client';
 
 import { useState, useRef } from 'react';
@@ -16,7 +16,7 @@ interface AttachedLocation {
     lng: number;
 }
 
-export default function ChatbotPage() {
+export default function ChatbotDemoPage() {
     const [input, setInput] = useState('');
     const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
     const [isTyping, setIsTyping] = useState(false);
@@ -122,7 +122,7 @@ export default function ChatbotPage() {
 
                 <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600">
                     <p className="font-semibold">내 정보</p>
-                    <p className="text-xs text-slate-500">is_join = true</p>
+                    <p className="text-xs text-slate-500">is_join = True</p>
                     <Link href="/mypage" className="mt-2 inline-flex text-xs font-semibold text-indigo-600 hover:underline">마이페이지</Link>
                 </div>
             </aside>

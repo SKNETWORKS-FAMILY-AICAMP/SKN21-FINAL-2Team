@@ -52,7 +52,7 @@ export default function Home() {
                 지금 시작하기 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/chatbot"
+                href="/chatbot_demo"
                 className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-slate-800 hover:border-indigo-300 hover:text-indigo-700"
               >
                 데모 챗봇 보기
