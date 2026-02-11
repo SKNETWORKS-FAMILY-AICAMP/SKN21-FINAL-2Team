@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Heart, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Trophy, Sparkles } from "lucide-react";
 import { fetchCurrentUser, updateCurrentUser, logoutApi } from "@/services/api";
+import Link from "next/link";
 
 type Category = "actor" | "movie" | "drama" | "celeb" | "variety" | "travel" | "dog" | "vegan";
 
@@ -124,6 +125,13 @@ export default function PreferenceSurveyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-slate-100">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-12">
+        <header className="mb-6 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-800 hover:text-indigo-600">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
+            Polaris
+          </Link>
+          <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600">홈으로</Link>
+        </header>
         {loading && <p className="text-sm text-slate-500 mb-4">기존 선호도를 불러오는 중...</p>}
         <header className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">

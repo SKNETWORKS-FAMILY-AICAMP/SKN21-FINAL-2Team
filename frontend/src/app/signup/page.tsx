@@ -4,6 +4,7 @@ import GoogleLoginBtn from "@/components/GoogleLoginBtn";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 
 export default function SignUpEntryPage() {
   const router = useRouter();
@@ -20,7 +21,8 @@ export default function SignUpEntryPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-16">
         <div className="mb-10 flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-slate-800">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-800 hover:text-indigo-600">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
             Polaris
           </Link>
           <Link href="/login" className="text-sm text-indigo-600 hover:underline">

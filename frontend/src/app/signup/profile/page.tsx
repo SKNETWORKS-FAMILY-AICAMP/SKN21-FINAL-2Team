@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { updateCurrentUser } from "@/services/api";
 import { useEffect } from "react";
+import { Sparkles } from "lucide-react";
 
 const genders = [
   { value: "female", label: "여성" },
@@ -50,7 +51,8 @@ export default function SignUpProfilePage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-16">
         <div className="mb-8 flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-slate-800">
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-800 hover:text-indigo-600">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
             Polaris
           </Link>
           <Link href="/login" className="text-sm text-indigo-600 hover:underline">

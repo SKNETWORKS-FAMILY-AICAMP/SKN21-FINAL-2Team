@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from "next/link";
 import { sendChatMessage, fetchRooms, fetchRoom, createRoom, ChatMessage, ChatRoom, logoutApi } from '@/services/api';
-import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus } from 'lucide-react';
+import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface AttachedLocation {
@@ -183,7 +183,10 @@ export default function ChatbotPage() {
       {/* Sidebar */}
       <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
         <div className="flex items-center justify-between px-4 py-4">
-          <Link href="/" className="text-lg font-semibold">Polaris</Link>
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold hover:text-indigo-600">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
+            Polaris
+          </Link>
           <Menu className="h-5 w-5 text-slate-400" />
         </div>
 
