@@ -107,7 +107,13 @@ def verify_google_auth_code(code: str):
     
     # Verify ID Token
     try:
-        id_info = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
+        # Allow small clock skew because local/dev environments sometimes drift a few seconds
+        id_info = id_token.verify_oauth2_token(
+            id_token_str,
+            requests.Request(),
+            GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=30
+        )
         if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
              raise ValueError('Wrong issuer.')
              

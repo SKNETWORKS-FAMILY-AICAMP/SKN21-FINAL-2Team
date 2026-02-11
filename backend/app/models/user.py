@@ -27,7 +27,7 @@ class User(BaseModel):
     dog_yn = Column(Boolean, nullable=True)
     vegan_yn = Column(Boolean, nullable=True)
     is_join = Column(Boolean, default=False)
-    is_perfer = Column(Boolean, default=False)
+    is_prefer = Column(Boolean, default=False)
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

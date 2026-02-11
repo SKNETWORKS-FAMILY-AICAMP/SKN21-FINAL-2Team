@@ -7,13 +7,28 @@ from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
 from app.core.security import get_current_user
+import re
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+def _make_room_title(text: str) -> str:
+    """Generate a concise room title from user input."""
+    clean = re.sub(r"\s+", " ", (text or "")).strip()
+    if len(clean) > 30:
+        clean = clean[:30].rstrip() + "..."
+    return clean or "새 채팅"
 
 # 채팅방 목록 조회
 @router.get("/rooms", response_model=List[ChatRoomResponse])
 def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rooms = db.query(ChatRoom).filter(ChatRoom.user_id == current_user.id).offset(skip).limit(limit).all()
+    rooms = (
+        db.query(ChatRoom)
+        .filter(ChatRoom.user_id == current_user.id)
+        .order_by(ChatRoom.created_at.desc(), ChatRoom.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return rooms
 
 # 채팅방 생성
@@ -96,6 +111,12 @@ def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = D
     )
     db.add(user_message)
     db.commit()
+    
+    # 방 제목 자동 설정 (없거나 기본값일 때)
+    if not room.title or room.title.lower() == "new chat":
+        room.title = _make_room_title(message_in.message)
+        db.add(room)
+        db.commit()
     
     # 2. LLM 응답 생성
     # image_path가 base64라고 가정하거나 URL. generate_response는 둘 다 처리 가능 (구현에 따라)

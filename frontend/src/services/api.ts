@@ -2,8 +2,22 @@
 
 const API_URL = 'http://localhost:8000/api';
 
+const safeLocalGet = (key: string) => (typeof window !== "undefined" ? localStorage.getItem(key) : null);
+
+export interface UserProfile {
+    id: number;
+    email: string;
+    name?: string | null;
+    gender?: string | null;
+    is_join?: boolean | null;
+    is_prefer?: boolean | null;
+    dog_yn?: boolean | null;
+    vegan_yn?: boolean | null;
+    with_yn?: boolean | null;
+}
+
 const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('access_token');
+    const token = safeLocalGet('access_token');
     return token ? {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -12,76 +26,144 @@ const getAuthHeaders = (): HeadersInit => {
     };
 };
 
-const getRoomId = async (): Promise<number> => {
-    const roomId = localStorage.getItem('chat_room_id');
-    if (roomId) {
-        return parseInt(roomId, 10);
-    }
+export type RoleType = 'human' | 'ai';
 
-    // Create new chat room
-    try {
-        const response = await fetch(`${API_URL}/chat/rooms`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ title: 'New Chat' })
-        });
-        
-        if (!response.ok) throw new Error('Failed to create room');
+export interface ChatMessage {
+    id: number;
+    room_id: number;
+    message: string;
+    role: RoleType;
+    latitude?: number | null;
+    longitude?: number | null;
+    image_path?: string | null;
+    bookmark_yn?: boolean | null;
+    created_at: string;
+}
 
-        const data = await response.json();
-        localStorage.setItem('chat_room_id', data.id.toString());
-        return data.id;
-    } catch (error) {
-        console.error("Room creation failed:", error);
-        throw error;
+export interface ChatRoom {
+    id: number;
+    user_id: number;
+    title: string;
+    created_at: string;
+    messages?: ChatMessage[];
+}
+
+const refreshAccessToken = async () => {
+    const refresh_token = safeLocalGet('refresh_token');
+    if (!refresh_token) throw new Error('No refresh token');
+
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ refresh_token }),
+    });
+    if (!res.ok) throw new Error('Refresh failed');
+    const data = await res.json();
+    if (typeof window !== "undefined") {
+        localStorage.setItem('access_token', data.access_token);
+        if (data.refresh_token) {
+            localStorage.setItem('refresh_token', data.refresh_token);
+        }
     }
+    return data.access_token as string;
+};
+
+type FetchOpts = {
+    method?: string;
+    body?: any;
+    headers?: HeadersInit;
+};
+
+const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
+    const { method = 'GET', body, headers } = opts;
+
+    const doFetch = async () => fetch(url, {
+        method,
+        headers: { ...getAuthHeaders(), ...headers },
+        credentials: 'include',
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    let res = await doFetch();
+    if (res.status === 401 || res.status === 400) {
+        try {
+            await refreshAccessToken();
+            res = await doFetch();
+        } catch {
+            throw new Error('Unauthorized');
+        }
+    }
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Request failed');
+    }
+    return res;
+};
+
+export const createRoom = async (title: string): Promise<ChatRoom> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms`, { method: 'POST', body: { title } });
+    return response.json();
+};
+
+export const fetchRooms = async (): Promise<ChatRoom[]> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms`);
+    return response.json();
+};
+
+export const fetchRoom = async (roomId: number): Promise<ChatRoom> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}`);
+    return response.json();
 };
 
 export const sendChatMessage = async (
+    roomId: number,
     message: string,
     image?: string | null,
     location?: string | null
-): Promise<string> => {
+): Promise<ChatMessage> => {
+    let latitude = null;
+    let longitude = null;
+
+    if (location) {
+        const parts = location.split(',');
+        if (parts.length >= 2) {
+            latitude = parseFloat(parts[0].trim());
+            longitude = parseFloat(parts[1].trim());
+        }
+    }
+
+    const body = {
+        room_id: roomId,
+        message,
+        image_path: image,
+        latitude,
+        longitude,
+        role: 'human'
+    };
+
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/ask`, { method: 'POST', body });
+    return response.json();
+};
+
+export const fetchCurrentUser = async (): Promise<UserProfile> => {
+    const response = await fetchWithAuth(`${API_URL}/users/me`);
+    return response.json();
+};
+
+export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<UserProfile> => {
+    const response = await fetchWithAuth(`${API_URL}/users/me`, { method: 'PATCH', body: payload });
+    return response.json();
+};
+
+export const logoutApi = async () => {
     try {
-        const roomId = await getRoomId();
-        console.log('room id:', roomId);
-
-        let latitude = null;
-        let longitude = null;
-
-        if (location) {
-            const parts = location.split(',');
-            if (parts.length >= 2) {
-                latitude = parseFloat(parts[0].trim());
-                longitude = parseFloat(parts[1].trim());
-            }
-        }
-
-        const body = {
-            room_id: roomId,
-            message,
-            image_path: image,
-            latitude,
-            longitude,
-            role: 'human'
-        };
-
-        const response = await fetch(`${API_URL}/chat/rooms/${roomId}/ask`, {
+        await fetch(`${API_URL}/auth/logout`, {
             method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(body),
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
         });
-
-        if (!response.ok) {
-            throw new Error('네트워크 응답에 문제가 있습니다.');
-        }
-
-        const data = await response.json();
-        // Backend returns ChatMessageResponse { id, message, ... }
-        return data.message;
-
-    } catch (error) {
-        console.error("Error sending message:", error);
-        return "서버와 연결할 수 없습니다.";
+    } catch (e) {
+        console.error("Logout API failed:", e);
     }
 };

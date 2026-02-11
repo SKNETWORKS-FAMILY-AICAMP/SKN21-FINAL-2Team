@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: #0f0f0f;
+  background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
   z-index: 9999;
   display: grid;
   place-items: center;
@@ -19,7 +19,7 @@
   font-weight: 800;
   font-size: clamp(28px, 4vw, 64px);
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
   text-align: center;
   white-space: nowrap;
 }

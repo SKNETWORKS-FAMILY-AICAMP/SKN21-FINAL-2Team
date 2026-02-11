@@ -1,7 +1,32 @@
+'use client';
+
 import Link from "next/link";
 import { ArrowRight, Sparkles, Star, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { logoutApi } from "@/services/api";
 
 export default function Home() {
+  const router = useRouter();
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("access_token");
+    setHasToken(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("chat_room_id");
+    }
+    logoutApi();
+    setHasToken(false);
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
       {/* Top nav */}
@@ -12,18 +37,37 @@ export default function Home() {
             <span>Polaris</span>
           </div>
           <div className="flex items-center gap-3 text-sm font-medium">
-            <Link
-              href="/login"
-              className="rounded-full px-4 py-2 text-slate-700 hover:text-indigo-600 transition-colors"
-            >
-              로그인
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-full bg-indigo-600 px-4 py-2 text-white shadow-sm hover:bg-indigo-700 transition-colors"
-            >
-              회원가입
-            </Link>
+            {hasToken ? (
+              <>
+                <Link
+                  href="/survey"
+                  className="rounded-full px-4 py-2 text-slate-700 hover:text-indigo-600 transition-colors"
+                >
+                  선호도 재설정
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-full bg-indigo-600 px-4 py-2 text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full px-4 py-2 text-slate-700 hover:text-indigo-600 transition-colors"
+                >
+                  로그인
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-indigo-600 px-4 py-2 text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                >
+                  회원가입
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -46,17 +90,19 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/signup"
+                href={hasToken ? "/chatbot" : "/signup"}
                 className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-3 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-transform hover:-translate-y-0.5"
               >
-                지금 시작하기 <ArrowRight className="h-4 w-4" />
+                {hasToken ? "챗봇 바로가기" : "지금 시작하기"} <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                href="/chatbot_demo"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-slate-800 hover:border-indigo-300 hover:text-indigo-700"
-              >
-                데모 챗봇 보기
-              </Link>
+              {!hasToken && (
+                <Link
+                  href="/chatbot_demo"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-slate-800 hover:border-indigo-300 hover:text-indigo-700"
+                >
+                  데모 챗봇 보기
+                </Link>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {["취향 기반 답변", "구글 로그인", "선호도 재설정"].map((item) => (

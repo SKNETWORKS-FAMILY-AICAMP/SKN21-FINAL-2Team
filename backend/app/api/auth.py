@@ -99,3 +99,12 @@ def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
+
+@router.post("/logout")
+def logout(response: Response):
+    # Refresh 토큰 쿠키 삭제로 사실상 로그아웃 처리
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+    )
+    return {"message": "logged out"}

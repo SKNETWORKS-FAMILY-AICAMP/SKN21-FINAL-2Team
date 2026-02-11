@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Heart, Trophy } from "lucide-react";
+import { fetchCurrentUser, updateCurrentUser, logoutApi } from "@/services/api";
 
 type Category = "actor" | "movie" | "drama" | "celeb" | "variety" | "travel" | "dog" | "vegan";
 
@@ -41,14 +42,55 @@ export default function PreferenceSurveyPage() {
     dog: "",
     vegan: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [lastPicked, setLastPicked] = useState("");
+  const logoutAndGoHome = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("chat_room_id");
+    }
+    logoutApi();
+    router.replace("/");
+  };
 
   const categories = useMemo(() => Object.keys(categoryLabels) as Category[], []);
   const current = categories[step];
   const total = categories.length;
   const { a, b } = mockOptions[current];
 
+  // Load existing user prefer flags
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const user = await fetchCurrentUser();
+        setAnswers((prev) => {
+          const next = {
+            ...prev,
+            dog: user.dog_yn ? mockOptions.dog.a : user.dog_yn === false ? mockOptions.dog.b : prev.dog,
+            vegan: user.vegan_yn ? mockOptions.vegan.a : user.vegan_yn === false ? mockOptions.vegan.b : prev.vegan,
+          };
+          return next;
+        });
+        setLastPicked((prev) => {
+          const candidate = user.dog_yn !== null && user.dog_yn !== undefined
+            ? (user.dog_yn ? mockOptions.dog.a : mockOptions.dog.b)
+            : prev;
+          return candidate || prev;
+        });
+      } catch (error) {
+        console.error("사용자 정보를 불러오지 못했습니다:", error);
+        logoutAndGoHome();
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   const handlePick = (choice: string) => {
     setAnswers((prev) => ({ ...prev, [current]: choice }));
+    setLastPicked(choice);
     if (step < total - 1) {
       setStep((s) => s + 1);
     }
@@ -56,9 +98,25 @@ export default function PreferenceSurveyPage() {
 
   const handleBack = () => setStep((s) => Math.max(0, s - 1));
 
-  const handleFinish = () => {
-    // TODO: send answers to API
-    router.push("/chatbot");
+  const handleFinish = async () => {
+    const dog_yn = answers.dog === mockOptions.dog.a; // 반려견 동행 필수
+    const vegan_yn = answers.vegan === mockOptions.vegan.a; // 비건 선호
+
+    // TODO: actor/movie/etc.는 추후 prefer_id로 매핑 필요
+    const payload = {
+      dog_yn,
+      vegan_yn,
+      is_prefer: true,
+    };
+
+    try {
+      await updateCurrentUser(payload);
+    } catch (error) {
+      console.error("선호도 저장 실패:", error);
+      logoutAndGoHome();
+    } finally {
+      router.push("/chatbot");
+    }
   };
 
   const isLast = step === total - 1;
@@ -66,6 +124,7 @@ export default function PreferenceSurveyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-slate-100">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 py-12">
+        {loading && <p className="text-sm text-slate-500 mb-4">기존 선호도를 불러오는 중...</p>}
         <header className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
             <Trophy className="h-5 w-5" /> 취향 월드컵
@@ -87,7 +146,11 @@ export default function PreferenceSurveyPage() {
                   <button
                     key={key}
                     onClick={() => handlePick(label)}
-                    className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
+                    className={`group relative overflow-hidden rounded-2xl border p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg ${
+                      answers[current] === label
+                        ? "border-indigo-400 bg-indigo-50/80"
+                        : "border-slate-200 bg-gradient-to-br from-white to-slate-50"
+                    }`}
                   >
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100">
                       <div className="h-full w-full bg-gradient-to-br from-indigo-50 via-white to-sky-50" />
@@ -106,7 +169,7 @@ export default function PreferenceSurveyPage() {
               <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
                 <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-slate-700">
                   <Heart className="h-4 w-4 text-rose-500" />
-                  이미 선택한 항목: {answers[current] || "없음"}
+                  이미 선택한 항목: {answers[current] || lastPicked || "없음"}
                 </div>
               </div>
             </div>
@@ -161,4 +224,3 @@ export default function PreferenceSurveyPage() {
     </div>
   );
 }
-

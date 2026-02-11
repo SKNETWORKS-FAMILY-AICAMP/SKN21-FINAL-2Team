@@ -43,8 +43,8 @@ Table users {
   dog_yn bool
   vegan_yn bool
 
-  is_join bool [not null, default: true]
-  is_perfer bool [not null, default: false]
+  is_join bool [not null, default: false]
+  is_prefer bool [not null, default: false]
 
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]

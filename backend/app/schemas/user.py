@@ -7,8 +7,10 @@ class UserBase(BaseModel):
     email: EmailStr
     name: Optional[str] = None
     gender: Optional[GenderType] = None
-    
-    
+    is_join: Optional[bool] = None
+    is_prefer: Optional[bool] = None
+
+
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     gender: Optional[GenderType] = None
@@ -20,6 +22,8 @@ class UserUpdate(BaseModel):
     with_yn: Optional[bool] = None
     dog_yn: Optional[bool] = None
     vegan_yn: Optional[bool] = None
+    is_join: Optional[bool] = None
+    is_prefer: Optional[bool] = None
 
 class UserResponse(UserBase):
     id: int
