@@ -25,8 +25,9 @@ Table users {
   email varchar [unique, not null]
   name varchar
   gender gender_type // 정의한 Enum 사용
+  contury_code varchar
 
-  // 
+  // Google Login
   social_provider varchar
   social_id varchar [unique]
   social_access_token varchar
@@ -79,6 +80,11 @@ Table chat_messages {
   created_at timestamp [default: `now()` ]
 }
 
+Table country {
+    code varchar
+    name varchar
+}
+
 // --- 관계 설정 (Ref) ---
 
 // Users - 특정 선호도 연결 (1:N)
@@ -87,6 +93,9 @@ Ref: users.movie_prefer_id > prefers.id
 Ref: users.drama_prefer_id > prefers.id
 Ref: users.celeb_prefer_id > prefers.id
 Ref: users.variety_prefer_id > prefers.id
+
+// Users - 국적 연결 (1:N)
+Ref: users.contury_code > country.code
 
 // 채팅방 및 메시지
 Ref: chat_rooms.user_id > users.id

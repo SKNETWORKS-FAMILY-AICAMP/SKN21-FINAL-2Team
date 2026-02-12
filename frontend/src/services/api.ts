@@ -1,6 +1,6 @@
 // src/services/api.ts
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const safeLocalGet = (key: string) => (typeof window !== "undefined" ? localStorage.getItem(key) : null);
 
