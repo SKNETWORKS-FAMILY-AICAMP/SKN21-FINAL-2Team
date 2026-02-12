@@ -1,14 +1,19 @@
 // src/app/chatbot_demo/page.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import Link from "next/link";
-import { sendChatMessage } from '@/services/api';
-import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus } from 'lucide-react';
+import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
     role: 'user' | 'bot';
     text: string;
+}
+
+interface DemoRoom {
+    id: string;
+    title: string;
+    messages: ChatMessage[];
 }
 
 interface AttachedLocation {
@@ -16,17 +21,99 @@ interface AttachedLocation {
     lng: number;
 }
 
+const INITIAL_DEMO_ROOMS: DemoRoom[] = [
+    {
+        id: "travel",
+        title: "여행 추천",
+        messages: [
+            { role: "user", text: "주말에 서울 근교로 반려견과 갈만한 곳 추천해줘." },
+            { role: "bot", text: "남한산성 산책 코스, 양평 두물머리, 가평 애견 동반 카페를 추천해요." },
+            { role: "user", text: "가평 쪽으로 반나절 코스도 짜줘." },
+            { role: "bot", text: "아침 카페 -> 호수 산책 -> 펫프렌들리 식당 순으로 4~5시간 코스가 좋아요." },
+        ],
+    },
+    {
+        id: "vegan",
+        title: "비건 맛집",
+        messages: [
+            { role: "user", text: "강남역 근처 비건 식당 3곳만 알려줘." },
+            { role: "bot", text: "샐러드 중심 1곳, 비건 버거 1곳, 한식 비건 1곳으로 구성해볼게요." },
+        ],
+    },
+    {
+        id: "pet",
+        title: "반려견 숙소",
+        messages: [
+            { role: "user", text: "애견 동반 가능한 펜션 찾고 있어." },
+            { role: "bot", text: "마당 유무, 소형견/대형견 허용 여부, 추가 요금을 먼저 확인하는 게 좋아요." },
+        ],
+    },
+    {
+        id: "actor",
+        title: "배우 추천",
+        messages: [
+            { role: "user", text: "송강 느낌의 로맨스 드라마 추천해줘." },
+            { role: "bot", text: "청춘 로맨스 톤의 작품 위주로 3개 추천해드릴게요." },
+        ],
+    },
+];
+
 export default function ChatbotDemoPage() {
     const [input, setInput] = useState('');
-    const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
+    const [rooms, setRooms] = useState<DemoRoom[]>(INITIAL_DEMO_ROOMS);
+    const [currentRoomId, setCurrentRoomId] = useState<string>(INITIAL_DEMO_ROOMS[0].id);
     const [isTyping, setIsTyping] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     // Attachments
     const [attachedImage, setAttachedImage] = useState<string | null>(null); // Base64
     const [attachedLocation, setAttachedLocation] = useState<AttachedLocation | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const currentRoom = rooms.find((room) => room.id === currentRoomId) ?? rooms[0];
+    const chatLog = currentRoom?.messages ?? [];
+
+    const handleCreateRoom = () => {
+        const roomNo = rooms.length + 1;
+        const newRoom: DemoRoom = {
+            id: `demo-${Date.now()}`,
+            title: `새 데모 채팅 ${roomNo}`,
+            messages: [
+                { role: "bot", text: "데모 채팅이 시작되었습니다. 여행/맛집/취향 질문을 입력해보세요." },
+            ],
+        };
+        setRooms((prev) => [newRoom, ...prev]);
+        setCurrentRoomId(newRoom.id);
+        setInput('');
+        setAttachedImage(null);
+        setAttachedLocation(null);
+        setIsTyping(false);
+    };
+
+    const appendMessage = (roomId: string, message: ChatMessage) => {
+        setRooms((prev) =>
+            prev.map((room) =>
+                room.id === roomId
+                    ? { ...room, messages: [...room.messages, message] }
+                    : room
+            )
+        );
+    };
+
+    const getDemoReply = (text: string) => {
+        const normalized = text.toLowerCase();
+        if (normalized.includes("비건")) {
+            return "비건 기준으로 단백질/포만감/접근성을 함께 고려한 후보를 우선 추천할게요.";
+        }
+        if (normalized.includes("반려견") || normalized.includes("강아지")) {
+            return "반려견 동반 여부, 실내 허용 범위, 주변 산책 동선을 기준으로 다시 정리해드릴게요.";
+        }
+        if (normalized.includes("여행")) {
+            return "이동 시간 1시간 내외 기준으로 당일치기 코스를 우선 추천할게요.";
+        }
+        return "좋아요. 데모 응답입니다. 질문 의도에 맞춰 핵심만 요약해 안내해드릴게요.";
+    };
 
     const handleSend = async () => {
         if (!input.trim() && !attachedImage && !attachedLocation) return;
@@ -40,11 +127,7 @@ export default function ChatbotDemoPage() {
         }
 
         const newUserMsg: ChatMessage = { role: 'user', text: userText };
-        setChatLog((prev) => [...prev, newUserMsg]);
-
-        const currentInput = input;
-        const currentImage = attachedImage;
-        const currentLocation = attachedLocation ? JSON.stringify(attachedLocation) : null;
+        appendMessage(currentRoomId, newUserMsg);
 
         // Reset inputs immediately
         setInput('');
@@ -52,9 +135,9 @@ export default function ChatbotDemoPage() {
         setAttachedLocation(null);
         setIsTyping(true);
 
-        const botReply = await sendChatMessage(currentInput, currentImage, currentLocation);
-        const newBotMsg: ChatMessage = { role: 'bot', text: botReply };
-        setChatLog((prev) => [...prev, newBotMsg]);
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        const newBotMsg: ChatMessage = { role: 'bot', text: getDemoReply(userText) };
+        appendMessage(currentRoomId, newBotMsg);
         setIsTyping(false);
     };
 
@@ -91,40 +174,80 @@ export default function ChatbotDemoPage() {
     };
 
     return (
-        <div className="grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[320px_1fr]">
+        <div
+            className={
+                isSidebarCollapsed
+                    ? "grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[72px_1fr]"
+                    : "grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[320px_1fr]"
+            }
+        >
             {/* Sidebar */}
             <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
-                <div className="flex items-center justify-between px-4 py-4">
-                    <Link href="/" className="text-lg font-semibold">Polaris</Link>
-                    <Menu className="h-5 w-5 text-slate-400" />
-                </div>
-
-                <div className="px-4 pb-4">
-                    <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-700">
-                        <Plus className="h-4 w-4" /> 새 채팅 만들기
-                    </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-2 pb-4">
-                    <p className="px-2 text-xs font-semibold uppercase text-slate-500">채팅 리스트</p>
-                    <div className="mt-2 space-y-1">
-                        {["여행 추천", "비건 맛집", "반려견 숙소", "배우 추천"].map((title, idx) => (
-                            <button
-                                key={title}
-                                className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition ${idx === 0 ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-100"}`}
-                            >
-                                <span>{title}</span>
-                                <span className="text-[10px] text-slate-400">12:3{idx}</span>
-                            </button>
-                        ))}
+                {isSidebarCollapsed ? (
+                    <div className="flex h-full flex-col items-center px-2 py-4">
+                        <button
+                            type="button"
+                            onClick={() => setIsSidebarCollapsed(false)}
+                            aria-label="사이드바 확장"
+                            title="사이드바 확장"
+                            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCreateRoom}
+                            aria-label="새 채팅 만들기"
+                            title="새 채팅 만들기"
+                            className="mt-3 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700"
+                        >
+                            <Plus className="h-5 w-5" />
+                        </button>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between px-4 py-4">
+                            <Link href="/home" className="flex items-center gap-2 text-lg font-semibold hover:text-indigo-600">
+                                <Sparkles className="h-5 w-5 text-indigo-600" />
+                                Polaris
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => setIsSidebarCollapsed(true)}
+                                aria-label="사이드바 축소"
+                                title="사이드바 축소"
+                                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            >
+                                <Menu className="h-5 w-5" />
+                            </button>
+                        </div>
 
-                <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600">
-                    <p className="font-semibold">내 정보</p>
-                    <p className="text-xs text-slate-500">is_join = True</p>
-                    <Link href="/mypage" className="mt-2 inline-flex text-xs font-semibold text-indigo-600 hover:underline">마이페이지</Link>
-                </div>
+                        <div className="px-4 pb-4">
+                            <button
+                                onClick={handleCreateRoom}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-700"
+                            >
+                                <Plus className="h-4 w-4" /> 새 채팅 만들기
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-2 pb-4">
+                            <p className="px-2 text-xs font-semibold uppercase text-slate-500">채팅 리스트</p>
+                            <div className="mt-2 space-y-1">
+                                {rooms.map((room) => (
+                                    <button
+                                        key={room.id}
+                                        onClick={() => setCurrentRoomId(room.id)}
+                                        className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition ${currentRoomId === room.id ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-100"}`}
+                                    >
+                                        <span>{room.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
+
             </aside>
 
             {/* Chat area */}
@@ -132,13 +255,9 @@ export default function ChatbotDemoPage() {
                 <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
                     <div>
                         <p className="text-xs font-semibold uppercase text-slate-500">채팅방</p>
-                        <h1 className="text-xl font-bold">여행 추천</h1>
+                        <h1 className="text-xl font-bold">{currentRoom?.title ?? "데모 채팅"}</h1>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-500">
-                        <Link href="/survey" className="font-semibold text-indigo-600 hover:underline">선호도 재설정</Link>
-                        <span className="h-6 w-px bg-slate-200" />
-                        <Link href="/login" className="hover:text-slate-700">로그아웃</Link>
-                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-500" />
                 </header>
 
                 <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-6">

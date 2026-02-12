@@ -130,7 +130,6 @@ export default function PreferenceSurveyPage() {
             <Sparkles className="h-5 w-5 text-indigo-600" />
             Polaris
           </Link>
-          <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600">홈으로</Link>
         </header>
         {loading && <p className="text-sm text-slate-500 mb-4">기존 선호도를 불러오는 중...</p>}
         <header className="mb-8 flex items-center justify-between">

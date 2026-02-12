@@ -2,19 +2,15 @@
 
 import Link from "next/link";
 import { ArrowRight, Sparkles, Star, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { logoutApi } from "@/services/api";
 
 export default function Home() {
   const router = useRouter();
-  const [hasToken, setHasToken] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("access_token");
-    setHasToken(!!token);
-  }, []);
+  const [hasToken, setHasToken] = useState(() =>
+    typeof window !== "undefined" ? !!localStorage.getItem("access_token") : false
+  );
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {
@@ -40,10 +36,10 @@ export default function Home() {
             {hasToken ? (
               <>
                 <Link
-                  href="/survey"
+                  href="/mypage"
                   className="rounded-full px-4 py-2 text-slate-700 hover:text-indigo-600 transition-colors"
                 >
-                  선호도 재설정
+                  마이페이지
                 </Link>
                 <button
                   onClick={handleLogout}

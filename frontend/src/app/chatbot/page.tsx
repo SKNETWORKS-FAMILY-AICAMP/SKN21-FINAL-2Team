@@ -21,6 +21,7 @@ export default function ChatbotPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const [loadingRoom, setLoadingRoom] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Attachments
   const [attachedImage, setAttachedImage] = useState<string | null>(null); // Base64
@@ -179,46 +180,81 @@ export default function ChatbotPage() {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[320px_1fr]">
+    <div
+      className={
+        isSidebarCollapsed
+          ? "grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[72px_1fr]"
+          : "grid min-h-screen grid-cols-1 bg-slate-50 text-slate-900 md:grid-cols-[320px_1fr]"
+      }
+    >
       {/* Sidebar */}
       <aside className="flex h-full flex-col border-r border-slate-200 bg-white">
-        <div className="flex items-center justify-between px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold hover:text-indigo-600">
-            <Sparkles className="h-5 w-5 text-indigo-600" />
-            Polaris
-          </Link>
-          <Menu className="h-5 w-5 text-slate-400" />
-        </div>
-
-        <div className="px-4 pb-4">
-          <button onClick={handleCreateRoom} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-700">
-            <Plus className="h-4 w-4" /> 새 채팅 만들기
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 pb-4">
-          <p className="px-2 text-xs font-semibold uppercase text-slate-500">채팅 리스트</p>
-          <div className="mt-2 space-y-1">
-            {rooms.map((room) => (
-              <button
-                key={room.id}
-                onClick={() => setCurrentRoomId(room.id)}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition ${currentRoomId === room.id ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-100"}`}
-              >
-                <span>{room.title || "제목 없음"}</span>
-                <span className="text-[10px] text-slate-400">{new Date(room.created_at).toLocaleTimeString()}</span>
-              </button>
-            ))}
-            {rooms.length === 0 && (
-              <p className="px-3 py-3 text-xs text-slate-500">채팅방이 없습니다.</p>
-            )}
+        {isSidebarCollapsed ? (
+          <div className="flex h-full flex-col items-center px-2 py-4">
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(false)}
+              aria-label="사이드바 확장"
+              title="사이드바 확장"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateRoom}
+              aria-label="새 채팅 만들기"
+              title="새 채팅 만들기"
+              className="mt-3 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-4 py-4">
+              <Link href="/" className="flex items-center gap-2 text-lg font-semibold hover:text-indigo-600">
+                <Sparkles className="h-5 w-5 text-indigo-600" />
+                Polaris
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(true)}
+                aria-label="사이드바 축소"
+                title="사이드바 축소"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
 
-        <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600">
-          <p className="font-semibold">내 정보</p>
-          <Link href="/mypage" className="mt-2 inline-flex text-xs font-semibold text-indigo-600 hover:underline">마이페이지</Link>
-        </div>
+            <div className="px-4 pb-4">
+              <button onClick={handleCreateRoom} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-700">
+                <Plus className="h-4 w-4" /> 새 채팅 만들기
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-2 pb-4">
+              <p className="px-2 text-xs font-semibold uppercase text-slate-500">채팅 리스트</p>
+              <div className="mt-2 space-y-1">
+                {rooms.map((room) => (
+                  <button
+                    key={room.id}
+                    onClick={() => setCurrentRoomId(room.id)}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm transition ${currentRoomId === room.id ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-100"}`}
+                  >
+                    <span>{room.title || "제목 없음"}</span>
+                    <span className="text-[10px] text-slate-400">{new Date(room.created_at).toLocaleTimeString()}</span>
+                  </button>
+                ))}
+                {rooms.length === 0 && (
+                  <p className="px-3 py-3 text-xs text-slate-500">채팅방이 없습니다.</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
       </aside>
 
       {/* Chat area */}
@@ -229,7 +265,7 @@ export default function ChatbotPage() {
             <h1 className="text-xl font-bold">{rooms.find(r => r.id === currentRoomId)?.title || "채팅"}</h1>
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-500">
-            <Link href="/survey" className="font-semibold text-indigo-600 hover:underline">선호도 재설정</Link>
+            <Link href="/mypage" className="font-semibold text-indigo-600 hover:underline">마이페이지</Link>
             <span className="h-6 w-px bg-slate-200" />
             <button onClick={logoutAndGoHome} className="hover:text-slate-700">로그아웃</button>
           </div>
