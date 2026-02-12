@@ -62,8 +62,9 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
     return (
         <div className="flex justify-center">
             <button
+                type="button"
                 onClick={() => login()}
-                className="px-4 py-2 border flex gap-2 border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-300 hover:shadow transition duration-150"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
             >
                 <img className="w-6 h-6" src="https://www.svgrepo.com/show/475656/google-color.svg" loading="lazy" alt="google logo" />
                 <span>{label}</span>
