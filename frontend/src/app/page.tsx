@@ -86,7 +86,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link
-                href={hasToken ? "/chatbot" : "/signup"}
+                href={hasToken ? "/chatbot" : "/login"}
                 className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-3 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-transform hover:-translate-y-0.5"
               >
                 {hasToken ? "챗봇 바로가기" : "지금 시작하기"} <ArrowRight className="h-4 w-4" />

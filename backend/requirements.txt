@@ -1,5 +1,6 @@
 fastapi
 python-dotenv
+tqdm
 
 uvicorn # ASGI Server
 pydantic # Data Validation
@@ -18,6 +19,9 @@ passlib[bcrypt] # Password Hashing
 python-multipart # File Upload
 google-auth
 requests
+qdrant-client
+sentence-transformers
+pillow
 
 # Testing
 pytest

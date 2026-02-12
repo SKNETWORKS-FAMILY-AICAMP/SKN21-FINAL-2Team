@@ -16,6 +16,7 @@ export default function IntroOverlay({ onDone }: Props) {
     if (!overlay || !title) return;
 
     const timers: ReturnType<typeof setTimeout>[] = [];
+    const rafs: number[] = [];
 
     const setOpacity = (el: HTMLElement, value: number, transition = "opacity 500ms ease-out") => {
       el.style.transition = transition;
@@ -23,11 +24,14 @@ export default function IntroOverlay({ onDone }: Props) {
     };
 
     // 초기 상태
-    setOpacity(title, 0, "none");
     overlay.style.opacity = "1";
 
     // 1) 텍스트 페이드인
-    timers.push(setTimeout(() => setOpacity(title, 1, "opacity 700ms ease-out"), 0));
+    rafs.push(
+      requestAnimationFrame(() => {
+        rafs.push(requestAnimationFrame(() => setOpacity(title, 1, "opacity 700ms ease-out")));
+      })
+    );
 
     // 2) 잠시 유지 후 페이드아웃
     timers.push(setTimeout(() => setOpacity(title, 0, "opacity 600ms ease-out"), 1400));
@@ -46,6 +50,7 @@ export default function IntroOverlay({ onDone }: Props) {
 
     return () => {
       timers.forEach(clearTimeout);
+      rafs.forEach(cancelAnimationFrame);
       overlay.style.opacity = "";
       overlay.style.pointerEvents = "";
       title.style.transition = "";

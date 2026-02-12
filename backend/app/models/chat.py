@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum, Float, func, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 from app.models.orm import BaseModel
 from app.models.enums import RoleType
@@ -14,7 +15,6 @@ class ChatRoom(BaseModel):
 
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
-
 class ChatMessage(BaseModel):
     __tablename__ = "chat_messages"
 
@@ -24,7 +24,7 @@ class ChatMessage(BaseModel):
     role = Column(Enum(RoleType), default=RoleType.human)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    image_path = Column(Text, nullable=True)
+    image_path = Column(LONGTEXT, nullable=True)
     bookmark_yn = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 

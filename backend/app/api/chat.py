@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -7,7 +8,7 @@ from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
 from app.core.security import get_current_user
-import re
+from app.retrieval.place import retrieval_place
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -99,7 +100,7 @@ def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = D
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    # 1. User Message 저장
+    # User Message 저장
     user_message = ChatMessage(
         room_id=room_id,
         message=message_in.message,
@@ -118,16 +119,19 @@ def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = D
         db.add(room)
         db.commit()
     
-    # 2. LLM 응답 생성
+    # LLM 응답 생성
+    context_str = retrieval_place(message_in)
+
     # image_path가 base64라고 가정하거나 URL. generate_response는 둘 다 처리 가능 (구현에 따라)
     # llm.py의 generate_response는 'image' 인자를 받음.
     ai_reply_text = generate_response(
         user_input=message_in.message,
         image=message_in.image_path, 
-        location=f"{message_in.latitude}, {message_in.longitude}" if message_in.latitude else None
+        location=f"{message_in.latitude}, {message_in.longitude}" if message_in.latitude else None,
+        context=context_str
     )
     
-    # 3. AI Message 저장
+    # AI Message 저장
     ai_message = ChatMessage(
         room_id=room_id,
         message=ai_reply_text,

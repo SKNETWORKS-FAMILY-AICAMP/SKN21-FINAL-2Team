@@ -1,21 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import IntroOverlay from "./IntroOverlay";
 
 const STORAGE_KEY = "introPlayed";
 
-export default function IntroGate() {
-  const [show, setShow] = useState(false);
+type IntroGateProps = {
+  children: ReactNode;
+};
+
+export default function IntroGate({ children }: IntroGateProps) {
+  const [show, setShow] = useState(true);
   const initialOverflow = useRef<string | null>(null);
 
   useEffect(() => {
-    const played = sessionStorage.getItem(STORAGE_KEY);
-    // if (!played) {
-    initialOverflow.current = document.body.style.overflow || "";
-    document.body.style.overflow = "hidden";
-    setShow(true);
-    // }
+    const played = localStorage.getItem(STORAGE_KEY);
+    if (!played) {
+      initialOverflow.current = document.body.style.overflow || "";
+      document.body.style.overflow = "hidden";
+      setShow(true);
+    } else {
+      setShow(false);
+    }
 
     return () => {
       if (initialOverflow.current !== null) {
@@ -25,11 +31,15 @@ export default function IntroGate() {
   }, []);
 
   const handleDone = () => {
-    sessionStorage.setItem(STORAGE_KEY, "1");
+    localStorage.setItem(STORAGE_KEY, "1");
     setShow(false);
     document.body.style.overflow = initialOverflow.current || "auto";
   };
 
-  if (!show) return null;
-  return <IntroOverlay onDone={handleDone} />;
+  return (
+    <>
+      {children}
+      {show && <IntroOverlay onDone={handleDone} />}
+    </>
+  );
 }

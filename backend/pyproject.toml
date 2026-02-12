@@ -1,0 +1,13 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pillow>=12.1.1",
+    "python-dotenv>=1.2.1",
+    "qdrant-client>=1.16.2",
+    "requests>=2.32.5",
+    "sentence-transformers>=5.2.2",
+]

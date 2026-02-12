@@ -31,8 +31,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-900`}
       >
-        <IntroGate />
-        <GoogleOAuthProvider clientId={CLIENT_ID}>{children}</GoogleOAuthProvider>
+        <IntroGate>
+          <GoogleOAuthProvider clientId={CLIENT_ID}>{children}</GoogleOAuthProvider>
+        </IntroGate>
       </body>
     </html>
   );

@@ -22,6 +22,7 @@
   color: #0f172a;
   text-align: center;
   white-space: nowrap;
+  opacity: 0;
 }
 
 .splitRow {

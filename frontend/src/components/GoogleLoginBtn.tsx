@@ -10,7 +10,6 @@ type Props = {
 
 export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Props) {
     const router = useRouter();
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
     const routeByStatus = (user: UserProfile) => {
         if (!user.is_join) {
@@ -29,7 +28,7 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
         scope: "https://www.googleapis.com/auth/calendar",
         onSuccess: async (codeResponse) => {
             try {
-                const res = await fetch(`${API_BASE}/auth/google/callback`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/auth/google/callback`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -53,11 +52,11 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 const user = await fetchCurrentUser();
                 routeByStatus(user);
             } catch (error) {
-                console.error("Login Error:", error);
+                console.error("Login Error:", error['message']);
                 alert("Login Failed");
             }
         },
-        onError: (errorResponse) => console.log(errorResponse),
+        onError: (errorResponse) => console.log(errorResponse['message']),
     });
 
     return (
