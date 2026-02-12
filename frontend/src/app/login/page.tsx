@@ -5,16 +5,25 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
+import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
 
 export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      router.replace("/chatbot");
-    }
+    const routeIfLoggedIn = async () => {
+      if (typeof window === "undefined") return;
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      try {
+        const user = await fetchCurrentUser();
+        router.replace(getPostLoginPath(user));
+      } catch {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+      }
+    };
+    routeIfLoggedIn();
   }, [router]);
 
   return (

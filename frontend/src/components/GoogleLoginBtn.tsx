@@ -2,7 +2,7 @@
 
 import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
-import { fetchCurrentUser, UserProfile } from "@/services/api";
+import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
 
 type Props = {
     label?: string;
@@ -10,18 +10,6 @@ type Props = {
 
 export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Props) {
     const router = useRouter();
-
-    const routeByStatus = (user: UserProfile) => {
-        if (!user.is_join) {
-            router.push("/signup/profile");
-            return;
-        }
-        if (!user.is_prefer) {
-            router.push("/survey");
-            return;
-        }
-        router.push("/chatbot");
-    };
 
     const login = useGoogleLogin({
         flow: "auth-code",
@@ -50,7 +38,7 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 }
 
                 const user = await fetchCurrentUser();
-                routeByStatus(user);
+                router.push(getPostLoginPath(user));
             } catch (error) {
                 console.error("Login Error:", error['message']);
                 alert("Login Failed");
