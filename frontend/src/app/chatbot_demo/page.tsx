@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
-    role: 'user' | 'bot';
+    role: 'human' | 'ai';
     text: string;
 }
 
@@ -26,34 +26,34 @@ const INITIAL_DEMO_ROOMS: DemoRoom[] = [
         id: "travel",
         title: "여행 추천",
         messages: [
-            { role: "user", text: "주말에 서울 근교로 반려견과 갈만한 곳 추천해줘." },
-            { role: "bot", text: "남한산성 산책 코스, 양평 두물머리, 가평 애견 동반 카페를 추천해요." },
-            { role: "user", text: "가평 쪽으로 반나절 코스도 짜줘." },
-            { role: "bot", text: "아침 카페 -> 호수 산책 -> 펫프렌들리 식당 순으로 4~5시간 코스가 좋아요." },
+            { role: "human", text: "주말에 서울 근교로 반려견과 갈만한 곳 추천해줘." },
+            { role: "ai", text: "남한산성 산책 코스, 양평 두물머리, 가평 애견 동반 카페를 추천해요." },
+            { role: "human", text: "가평 쪽으로 반나절 코스도 짜줘." },
+            { role: "ai", text: "아침 카페 -> 호수 산책 -> 펫프렌들리 식당 순으로 4~5시간 코스가 좋아요." },
         ],
     },
     {
         id: "vegan",
         title: "비건 맛집",
         messages: [
-            { role: "user", text: "강남역 근처 비건 식당 3곳만 알려줘." },
-            { role: "bot", text: "샐러드 중심 1곳, 비건 버거 1곳, 한식 비건 1곳으로 구성해볼게요." },
+            { role: "human", text: "강남역 근처 비건 식당 3곳만 알려줘." },
+            { role: "ai", text: "샐러드 중심 1곳, 비건 버거 1곳, 한식 비건 1곳으로 구성해볼게요." },
         ],
     },
     {
         id: "pet",
         title: "반려견 숙소",
         messages: [
-            { role: "user", text: "애견 동반 가능한 펜션 찾고 있어." },
-            { role: "bot", text: "마당 유무, 소형견/대형견 허용 여부, 추가 요금을 먼저 확인하는 게 좋아요." },
+            { role: "human", text: "애견 동반 가능한 펜션 찾고 있어." },
+            { role: "ai", text: "마당 유무, 소형견/대형견 허용 여부, 추가 요금을 먼저 확인하는 게 좋아요." },
         ],
     },
     {
         id: "actor",
         title: "배우 추천",
         messages: [
-            { role: "user", text: "송강 느낌의 로맨스 드라마 추천해줘." },
-            { role: "bot", text: "청춘 로맨스 톤의 작품 위주로 3개 추천해드릴게요." },
+            { role: "human", text: "송강 느낌의 로맨스 드라마 추천해줘." },
+            { role: "ai", text: "청춘 로맨스 톤의 작품 위주로 3개 추천해드릴게요." },
         ],
     },
 ];
@@ -80,7 +80,7 @@ export default function ChatbotDemoPage() {
             id: `demo-${Date.now()}`,
             title: `새 데모 채팅 ${roomNo}`,
             messages: [
-                { role: "bot", text: "데모 채팅이 시작되었습니다. 여행/맛집/취향 질문을 입력해보세요." },
+                { role: "ai", text: "데모 채팅이 시작되었습니다. 여행/맛집/취향 질문을 입력해보세요." },
             ],
         };
         setRooms((prev) => [newRoom, ...prev]);
@@ -126,7 +126,7 @@ export default function ChatbotDemoPage() {
             userText += `\n[Image Attached]`;
         }
 
-        const newUserMsg: ChatMessage = { role: 'user', text: userText };
+        const newUserMsg: ChatMessage = { role: 'human', text: userText };
         appendMessage(currentRoomId, newUserMsg);
 
         // Reset inputs immediately
@@ -136,7 +136,7 @@ export default function ChatbotDemoPage() {
         setIsTyping(true);
 
         await new Promise((resolve) => setTimeout(resolve, 450));
-        const newBotMsg: ChatMessage = { role: 'bot', text: getDemoReply(userText) };
+        const newBotMsg: ChatMessage = { role: 'ai', text: getDemoReply(userText) };
         appendMessage(currentRoomId, newBotMsg);
         setIsTyping(false);
     };
@@ -263,8 +263,8 @@ export default function ChatbotDemoPage() {
                 <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50 to-white px-6 py-6">
                     <div className="mx-auto flex max-w-3xl flex-col gap-4">
                         {chatLog.map((msg, i) => (
-                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
+                            <div key={i} className={`flex ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === 'human' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
                                     {msg.text}
                                 </div>
                             </div>
