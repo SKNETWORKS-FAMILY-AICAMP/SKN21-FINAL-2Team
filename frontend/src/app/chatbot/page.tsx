@@ -12,6 +12,124 @@ interface AttachedLocation {
   lng: number;
 }
 
+function renderInlineMarkdown(text: string) {
+  const tokenRegex = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+  const tokens = text.split(tokenRegex).filter(Boolean);
+
+  return tokens.map((token, idx) => {
+    if (token.startsWith("**") && token.endsWith("**")) {
+      return <strong key={idx}>{token.slice(2, -2)}</strong>;
+    }
+    if (token.startsWith("`") && token.endsWith("`")) {
+      return (
+        <code key={idx} className="rounded bg-slate-100 px-1 py-0.5 text-[12px] text-slate-700">
+          {token.slice(1, -1)}
+        </code>
+      );
+    }
+    if (token.startsWith("[") && token.includes("](") && token.endsWith(")")) {
+      const splitIndex = token.indexOf("](");
+      const label = token.slice(1, splitIndex);
+      const href = token.slice(splitIndex + 2, -1);
+      return (
+        <a
+          key={idx}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="text-indigo-600 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-700"
+        >
+          {label}
+        </a>
+      );
+    }
+    return <span key={idx}>{token}</span>;
+  });
+}
+
+function MarkdownMessage({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const nodes: JSX.Element[] = [];
+  let listItems: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+
+  const flushList = () => {
+    if (!listItems.length || !listType) return;
+    const items = listItems.map((item, idx) => <li key={idx}>{renderInlineMarkdown(item)}</li>);
+    nodes.push(
+      listType === "ul" ? (
+        <ul key={`ul-${nodes.length}`} className="my-2 ml-5 list-disc space-y-1">
+          {items}
+        </ul>
+      ) : (
+        <ol key={`ol-${nodes.length}`} className="my-2 ml-5 list-decimal space-y-1">
+          {items}
+        </ol>
+      )
+    );
+    listItems = [];
+    listType = null;
+  };
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      return;
+    }
+
+    const orderedMatch = line.match(/^\d+\.\s+(.+)$/);
+    if (line.startsWith("- ")) {
+      if (listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(line.slice(2).trim());
+      return;
+    }
+    if (orderedMatch) {
+      if (listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(orderedMatch[1].trim());
+      return;
+    }
+
+    flushList();
+
+    if (line.startsWith("### ")) {
+      nodes.push(
+        <h3 key={`h3-${idx}`} className="mt-2 mb-1 text-sm font-bold">
+          {renderInlineMarkdown(line.slice(4))}
+        </h3>
+      );
+      return;
+    }
+    if (line.startsWith("## ")) {
+      nodes.push(
+        <h2 key={`h2-${idx}`} className="mt-2 mb-1 text-base font-bold">
+          {renderInlineMarkdown(line.slice(3))}
+        </h2>
+      );
+      return;
+    }
+    if (line.startsWith("# ")) {
+      nodes.push(
+        <h1 key={`h1-${idx}`} className="mt-2 mb-1 text-lg font-bold">
+          {renderInlineMarkdown(line.slice(2))}
+        </h1>
+      );
+      return;
+    }
+
+    nodes.push(
+      <p key={`p-${idx}`} className="my-1">
+        {renderInlineMarkdown(line)}
+      </p>
+    );
+  });
+
+  flushList();
+  return <div className="prose prose-sm max-w-none prose-p:my-1">{nodes}</div>;
+}
+
 export default function ChatbotPage() {
   const router = useRouter();
   const [input, setInput] = useState('');
@@ -406,9 +524,13 @@ export default function ChatbotPage() {
                         </div>
                       )}
                       {!!msg.message && (
-                        <p className={`${(msg.latitude !== null && msg.latitude !== undefined && msg.longitude !== null && msg.longitude !== undefined) || !!msg.image_path ? 'mt-1' : ''}`}>
-                          {msg.message}
-                        </p>
+                        <div className={`${(msg.latitude !== null && msg.latitude !== undefined && msg.longitude !== null && msg.longitude !== undefined) || !!msg.image_path ? 'mt-1' : ''}`}>
+                          {msg.role === 'ai' ? (
+                            <MarkdownMessage text={msg.message} />
+                          ) : (
+                            <p>{msg.message}</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
