@@ -2,7 +2,7 @@ from pathlib import Path
 
 from src.config import CONTENT_TYPES, load_env
 from src.io_utils import read_jsonl
-from src.collectors.area_collector import collect_area_with_intro_merged_incremental
+from backend.app.scripts.src.area_collector import collect_area_with_intro_merged_incremental
 
 
 def run_one(

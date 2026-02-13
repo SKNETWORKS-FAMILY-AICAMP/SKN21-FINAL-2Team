@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any, Dict, List, Optional
 import requests
 
@@ -24,54 +23,43 @@ def tourapi_get(
     base_url: str,
     endpoint: str,
     params: Dict[str, Any],
-    timeout: float = 15.0,
-    retries: int = 5,
-    backoff_sec: float = 1.5,
+    timeout: float = 20.0,
+    retries: int = 3,
 ) -> Dict[str, Any]:
-    """
-    TourAPI GET with simple retry/backoff.
-    429/5xx에 대해 재시도.
-    """
     url = f"{base_url.rstrip('/')}/{endpoint}"
-
     last_err: Optional[Exception] = None
-    for attempt in range(1, retries + 1):
+
+    for _ in range(retries):
         try:
-            resp = requests.get(url, params=params, timeout=timeout)
-            status = resp.status_code
+            r = requests.get(url, params=params, timeout=timeout)
+            if r.status_code == 200:
+                data = r.json()
+                code = str(_safe_get(data, ["response", "header", "resultCode"], "")).strip()
+                msg = str(_safe_get(data, ["response", "header", "resultMsg"], "")).strip()
 
-            if status == 200:
-                data = resp.json()
-                # API 자체 오류 메시지 검사
-                code = _safe_get(data, ["response", "header", "resultCode"], "")
-                if str(code) not in ("0000", ""):
-                    msg = _safe_get(data, ["response", "header", "resultMsg"], "Unknown API error")
-                    raise TourAPIError(f"[{endpoint}] API error resultCode={code}, resultMsg={msg}")
-                return data
+                if code in ("0000", ""):
+                    return data
 
-            # 재시도 가능한 상태코드
-            if status in (429, 500, 502, 503, 504):
-                raise TourAPIError(f"[{endpoint}] HTTP {status}")
+                # 토큰/할당량 관련 메시지는 즉시 상위로 전달(중간저장 후 종료시키기 위함)
+                token_like = ["SERVICE_KEY", "LIMITED_NUMBER", "ACCESS DENIED", "인증", "할당", "초과"]
+                if any(k.lower() in msg.lower() for k in token_like):
+                    raise TourAPIError(f"[{endpoint}] TOKEN_OR_QUOTA code={code}, msg={msg}")
 
-            # 그 외는 즉시 실패
-            raise TourAPIError(f"[{endpoint}] HTTP {status}: {resp.text[:300]}")
+                raise TourAPIError(f"[{endpoint}] API code={code}, msg={msg}")
 
+            if r.status_code in (429, 500, 502, 503, 504):
+                last_err = TourAPIError(f"[{endpoint}] HTTP {r.status_code}")
+                continue
+
+            raise TourAPIError(f"[{endpoint}] HTTP {r.status_code}: {r.text[:300]}")
         except Exception as e:
             last_err = e
-            if attempt < retries:
-                sleep_s = backoff_sec * attempt
-                time.sleep(sleep_s)
-                continue
-            break
+            continue
 
-    raise TourAPIError(f"[{endpoint}] request failed after retries: {last_err}")
+    raise TourAPIError(f"[{endpoint}] request failed: {last_err}")
 
 
 def extract_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    response.body.items.item 파싱
-    item이 dict면 [dict], list면 그대로 반환.
-    """
     items = _safe_get(data, ["response", "body", "items", "item"], [])
     if isinstance(items, dict):
         return [items]

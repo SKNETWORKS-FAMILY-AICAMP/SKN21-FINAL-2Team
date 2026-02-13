@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.collectors.area_collector import collect_multi_categories_into_one_file
+from backend.app.scripts.src.area_collector import collect_multi_categories_into_one_file
 from src.config import (
     TOURAPI_BASE_URL,
     TOURAPI_KEY,

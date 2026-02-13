@@ -1,97 +1,122 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-# 1) 공통(목록 + common + intro 정규화 타깃)
-COMMON_NORMALIZED_KEYS = [
-    "contentid", "contenttypeid", "title",
-    "mapx", "mapy", "addr1", "addr2", "tel",
-    "overview", "firstimage", "firstimage2",
-    "cat1", "cat2", "cat3",
-    "lclsSystm1", "lclsSystm2", "lclsSystm3",
-    "lDongRegnCd", "lDongSignguCd",
-    "keyword", "dist",
-    # intro 정규화 키
-    "accomcount", "chkbabycarriage", "chkcreditcard", "chkpet",
-    "parking", "restdate", "usetime",
-]
-
-# 2) intro 원본 키 → 정규화 키 매핑 (contentType별로 이름이 달라지는 필드 흡수)
 INTRO_TO_NORMALIZED_MAP = {
-    # 수용인원
     "accomcount": "accomcount",
 
-    # 유모차
     "chkbabycarriage": "chkbabycarriage",
     "chkbabycarriageculture": "chkbabycarriage",
     "chkbabycarriageleports": "chkbabycarriage",
 
-    # 카드
     "chkcreditcard": "chkcreditcard",
     "chkcreditcardculture": "chkcreditcard",
     "chkcreditcardleports": "chkcreditcard",
 
-    # 반려동물
     "chkpet": "chkpet",
     "chkpetculture": "chkpet",
     "chkpetleports": "chkpet",
 
-    # 주차
     "parking": "parking",
     "parkingculture": "parking",
     "parkingleports": "parking",
 
-    # 휴무일
     "restdate": "restdate",
     "restdateculture": "restdate",
     "restdateleports": "restdate",
 
-    # 이용시간
     "usetime": "usetime",
     "usetimeculture": "usetime",
     "usetimeleports": "usetime",
 }
 
+ORDERED_KEEP_FIELDS = [
+    "contentid",
+    "title",
+    "contenttypeid_code",
+    "contenttypeid",
+    "firstimage",
 
-def pick_keys(row: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
-    out: Dict[str, Any] = {}
-    for k in keys:
-        if k in row and row[k] not in ("", None):
-            out[k] = row[k]
-    return out
+    "usetime",
+    "restdate",
+    "parking",
+
+    "addr1",
+    "addr2",
+    "mapx",
+    "mapy",
+
+    "tel",
+    "overview",
+
+    "areacode",
+    "cat1",
+    "cat2",
+    "cat3",
+    "lclsSystm1",
+    "lclsSystm2",
+    "lclsSystm3",
+    "lDongRegnCd",
+    "lDongSignguCd",
+
+    "accomcount",
+    "chkbabycarriage",
+    "chkcreditcard",
+    "chkpet",
+    "dist",
+]
+
+
+def _clean_value(v: Any) -> Any:
+    if isinstance(v, str):
+        s = v.strip()
+        if s == "" or s.lower() == "value":
+            return None
+        return s
+    return v
 
 
 def normalize_intro_fields(intro: Dict[str, Any]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     if not isinstance(intro, dict):
         return out
-    for src_k, val in intro.items():
-        if val in ("", None):
+    for k, v in intro.items():
+        nk = INTRO_TO_NORMALIZED_MAP.get(k)
+        if not nk:
             continue
-        dst_k = INTRO_TO_NORMALIZED_MAP.get(src_k)
-        if dst_k:
-            out[dst_k] = val
+        cv = _clean_value(v)
+        if cv is None:
+            continue
+        out[nk] = cv
     return out
 
 
 def normalize_common_record(base: Dict[str, Any], common: Dict[str, Any], intro: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    목록(base) + detailCommon2(common) + detailIntro2(intro)를 합쳐 공통 스키마로 정규화.
-    """
     merged: Dict[str, Any] = {}
-
-    # 우선순위: intro(normalized) > common > base (단, intro는 매핑키만)
-    merged.update(pick_keys(base, COMMON_NORMALIZED_KEYS))
-    merged.update(pick_keys(common, COMMON_NORMALIZED_KEYS))
+    if isinstance(base, dict):
+        merged.update(base)
+    if isinstance(common, dict):
+        merged.update(common)
     merged.update(normalize_intro_fields(intro))
 
-    # 최소 보정
-    if "mapy" not in merged and "maxy" in merged:
-        merged["mapy"] = merged["maxy"]
+    # mapy 보정 (혹시 maxy로 들어오는 케이스)
+    if ("mapy" not in merged or not str(merged.get("mapy", "")).strip()) and str(merged.get("maxy", "")).strip():
+        merged["mapy"] = merged.get("maxy")
 
-    # 문자열 trim
-    for k, v in list(merged.items()):
-        if isinstance(v, str):
-            merged[k] = v.strip()
+    # 값 정리 + firstimage2 제거
+    cleaned: Dict[str, Any] = {}
+    for k, v in merged.items():
+        if k == "firstimage2":
+            continue
+        cv = _clean_value(v)
+        if cv is None:
+            continue
+        cleaned[k] = cv
 
-    return merged
+    # 화이트리스트 + 순서 고정
+    out: Dict[str, Any] = {}
+    for key in ORDERED_KEEP_FIELDS:
+        if key in cleaned:
+            out[key] = cleaned[key]
+
+    return out
