@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { ArrowRight, Sparkles, Star, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { logoutApi } from "@/services/api";
 
 export default function Home() {
   const router = useRouter();
-  const [hasToken, setHasToken] = useState(() =>
-    typeof window !== "undefined" ? !!localStorage.getItem("access_token") : false
-  );
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    setHasToken(!!token);
+  }, []);
 
   const handleLogout = () => {
     if (typeof window !== "undefined") {

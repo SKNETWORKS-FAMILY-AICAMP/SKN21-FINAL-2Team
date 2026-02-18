@@ -11,8 +11,6 @@ load_dotenv()
 import base64
 from app.utils.geocoder import GeoCoder
 
-geocoder_client = GeoCoder()
-
 # download image from URL or Base64
 def download_image(url: str, timeout: int = 10) -> Image.Image | None:
     try:
@@ -39,6 +37,7 @@ def download_image(url: str, timeout: int = 10) -> Image.Image | None:
 
 def ingest_data(data):
     print(f"[INFO] Start ingestion.. total {len(data)} items.")
+    geocoder_client = GeoCoder()
 
     for item in data:
         # try:

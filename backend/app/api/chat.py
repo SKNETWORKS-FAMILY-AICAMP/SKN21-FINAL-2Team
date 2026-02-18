@@ -8,7 +8,22 @@ from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
 from app.core.security import get_current_user
-from app.retrieval.place import retrieval_place
+from app.agents.graph import workflow
+from app.agents.models.state import TravelState
+
+from langchain_core.messages import HumanMessage, AIMessage
+from app.models.enums import RoleType
+
+_graph_app = None
+
+def get_graph_app():
+    global _graph_app
+    if _graph_app is None:
+        print('init graph app')
+        _graph_app = workflow().compile()
+        print('compile graph app')
+    return _graph_app
+
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -90,11 +105,11 @@ def update_bookmark(message_id: int, bookmark: bool, current_user: User = Depend
     db.refresh(message)
     return message
 
-from app.services.llm import generate_response
+
 
 # 대화하기 (User Message 저장 -> LLM 생성 -> AI Message 저장 -> 반환)
 @router.post("/rooms/{room_id}/ask", response_model=ChatMessageResponse)
-def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # 채팅방 확인
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
@@ -118,18 +133,36 @@ def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = D
         room.title = _make_room_title(message_in.message)
         db.add(room)
         db.commit()
-    
-    # LLM 응답 생성
-    context_str = retrieval_place(message_in)
 
-    # image_path가 base64라고 가정하거나 URL. generate_response는 둘 다 처리 가능 (구현에 따라)
-    # llm.py의 generate_response는 'image' 인자를 받음.
-    ai_reply_text = generate_response(
+    chat_history = []
+    messages = room.messages
+    if messages:
+        for msg in messages:
+            if msg.role == RoleType.human:
+                chat_history.append(HumanMessage(content=msg.message))
+            elif msg.role == RoleType.ai:
+                chat_history.append(AIMessage(content=msg.message))
+
+    
+    # 그래프 입력 상태 구성
+    inputs = TravelState(
         user_input=message_in.message,
-        image=message_in.image_path, 
-        location=f"{message_in.latitude}, {message_in.longitude}" if message_in.latitude else None,
-        context=context_str
+        user=current_user,
+        room_id=room_id,
+        latitude=message_in.latitude,
+        longitude=message_in.longitude,
+        image_path=message_in.image_path,
+        messages=chat_history
     )
+    
+    # 그래프 실행 (Global Cache)
+    try:
+        result = await get_graph_app().ainvoke(inputs)
+        ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
+    except Exception as e:
+        print(f"Graph Execution Error: {e}")
+        print(f"Error Message : {e.args}, {e.__cause__}, {e.__context__}, {e.__traceback__}, {e.__dict__}")
+        ai_reply_text = "죄송합니다. 오류가 발생했습니다."
     
     # AI Message 저장
     ai_message = ChatMessage(
