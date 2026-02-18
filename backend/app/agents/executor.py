@@ -80,6 +80,9 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> st
     print("[Executor] No candidates — trying Tavily fallback")
     try:
         tavily = LLMFactory.get_tavily()
+        if not query:
+             query = "한국 여행 추천" # 쿼리가 비어있을 경우 기본값 설정
+        
         search_query = query
         if slots:
             location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
@@ -122,6 +125,7 @@ async def executor_node(state: TravelState):
     prefs_info = state.get("prefs_info", {})
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
+    image_path = state.get("image_path") # 이미지 경로 가져오기
 
     # 컨텍스트 구성
     place_context = _build_place_context(candidates)
@@ -151,12 +155,36 @@ async def executor_node(state: TravelState):
 
     llm = LLMFactory.get_llm(temperature=0.3)
 
+    # HumanMessage 구성 (멀티모달 지원)
+    content_blocks = []
+    
+    # 텍스트 추가
+    if user_input:
+        content_blocks.append({"type": "text", "text": f"사용자 입력: {user_input}"})
+    else:
+        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
+        if image_path:
+             content_blocks.append({"type": "text", "text": "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."})
+
+    # 이미지 추가
+    # 주의: image_path가 URL인지 로컬 경로인지에 따라 처리가 달라질 수 있음. 
+    # 현재는 URL로 가정하거나 LLM이 처리 가능한 path라고 가정.
+    if image_path:
+        content_blocks.append({
+            "type": "image_url",
+            "image_url": {"url": image_path}
+        })
+    
+    # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
+    if not content_blocks:
+          content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
+
+    human_message = HumanMessage(content=content_blocks)
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", EXECUTOR_PROMPT),
         MessagesPlaceholder(variable_name="messages"),
-        ("human", (
-            "사용자 입력: {user_input}\n\n"
-        ))
+        human_message
     ])
 
     response = await llm.ainvoke(prompt.invoke({

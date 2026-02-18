@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from app.agents.models.output import IntentOutput
+from app.agents.models.output import IntentOutput, IntentType, IntentSlots, InputType
 from app.services.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
 from app.utils.llm_factory import LLMFactory
@@ -50,8 +50,17 @@ def intent_node(state: TravelState):
     structured_llm = llm.with_structured_output(IntentOutput)
 
     user_input = state.get("user_input")
-
+    image_path = state.get("image_path")
+    
     if not user_input:
+        if image_path:
+             # 텍스트 없이 이미지만 있는 경우 -> 이미지 검색/장소 문의로 처리
+             return {
+                "intents": [IntentType.IMAGE_SIMILAR],
+                "primary_intent": IntentType.IMAGE_SIMILAR,
+                "slots": IntentSlots(input_type=InputType.IMAGE),
+                "prefs_info": prefs_info
+             }
         return state
 
     # 최근 10개 메시지만 사용
