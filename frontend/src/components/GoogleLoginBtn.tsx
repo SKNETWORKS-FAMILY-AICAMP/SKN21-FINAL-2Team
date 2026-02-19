@@ -1,7 +1,6 @@
 "use client";
 
 import { useGoogleLogin } from "@react-oauth/google";
-import { useRouter } from "next/navigation";
 import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
 
 type Props = {
@@ -9,7 +8,7 @@ type Props = {
 };
 
 export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Props) {
-    const router = useRouter();
+
 
     const login = useGoogleLogin({
         flow: "auth-code",
@@ -38,9 +37,13 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 }
 
                 const user = await fetchCurrentUser();
-                router.push(getPostLoginPath(user));
+                const targetPath = getPostLoginPath(user);
+                console.log("Login Success: User", user, "Redirecting to", targetPath);
+
+                // Use window.location.href to force a full page reload and ensure state is fresh
+                window.location.href = targetPath;
             } catch (error) {
-                console.error("Login Error:", error['message']);
+                console.error("Login Error:", error instanceof Error ? error.message : error);
                 alert("Login Failed");
             }
         },

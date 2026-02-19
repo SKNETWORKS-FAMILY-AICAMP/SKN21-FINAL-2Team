@@ -94,16 +94,18 @@ type FetchOpts = {
     method?: string;
     body?: any;
     headers?: HeadersInit;
+    cache?: RequestCache;
 };
 
 const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
-    const { method = 'GET', body, headers } = opts;
+    const { method = 'GET', body, headers, cache } = opts;
 
     const doFetch = async () => fetch(url, {
         method,
         headers: { ...getAuthHeaders(), ...headers },
         credentials: 'include',
         body: body ? JSON.stringify(body) : undefined,
+        cache,
     });
 
     let res = await doFetch();
@@ -168,7 +170,7 @@ export const sendChatMessage = async (
 };
 
 export const fetchCurrentUser = async (): Promise<UserProfile> => {
-    const response = await fetchWithAuth(`${API_URL}/users/me`);
+    const response = await fetchWithAuth(`${API_URL}/users/me`, { cache: 'no-store' });
     return response.json();
 };
 

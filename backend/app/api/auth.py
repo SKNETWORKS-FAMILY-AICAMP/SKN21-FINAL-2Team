@@ -18,7 +18,10 @@ def login_google(
     # verify_google_auth_code는 {id_info, access_token, refresh_token, ...} 반환
     auth_result = verify_google_auth_code(request.code)
     if not auth_result:
-        raise HTTPException(status_code=400, detail="Invalid Google Auth Code")
+        raise HTTPException(status_code=400, detail="Invalid Google Auth Code (Unknown Error)")
+        
+    if "error" in auth_result:
+        raise HTTPException(status_code=400, detail=f"Google Auth Error: {auth_result['error']}")
     
     id_info = auth_result["id_info"]
     social_access_token = auth_result["access_token"]

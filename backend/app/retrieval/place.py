@@ -10,7 +10,7 @@ from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
 
-geocoder_client = GeoCoder()
+
 
 class PlaceRetriever:
     _instance = None
@@ -276,6 +276,8 @@ def retrieval_place(message_in: ChatMessageCreate):
         user_long = message_in.longitude
         address = ''
         if user_lat and user_long:
+            # Instantiate geocoder on demand
+            geocoder_client = GeoCoder()
             geocode_data = geocoder_client.reverse_geocoder(user_lat, user_long)
             if geocode_data:
                 road_address = (geocode_data.get("road_address") or "").strip()
@@ -358,4 +360,12 @@ def retrieval_place(message_in: ChatMessageCreate):
         context_str = None
 
     print(f"[INFO] retrieval_place done context_exists={'yes' if context_str else 'no'}")
-    return context_str
+    
+    # Collect all results for the agent
+    all_results = []
+    if search_results:
+        all_results.extend(search_results)
+    if 'nearby_places' in locals() and nearby_places:
+        all_results.extend(nearby_places)
+        
+    return context_str, all_results

@@ -3,8 +3,7 @@ python-dotenv
 tqdm
 
 uvicorn # ASGI Server
-pydantic # Data Validation
-pydantic[email] # Email validation
+pydantic[email] # Data Validation & Email
 
 # LLM
 openai
@@ -27,3 +26,10 @@ pillow
 pytest
 httpx
 pytest-asyncio
+
+# Agents
+langgraph
+langchain
+langchain-openai
+langchain-community
+tavily-python

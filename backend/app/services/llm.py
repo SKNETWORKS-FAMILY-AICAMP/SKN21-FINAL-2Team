@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -7,7 +8,7 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def generate_response(user_input: str, image: str | None = None, location: str | None = None, context: str | None = None) -> str:
+def generate_response(user_input: str, image: Optional[str] = None, location: Optional[str] = None, context: Optional[str] = None) -> str:
     try:
         messages = [{"role": "system", "content": PROMPTS}]
 
