@@ -7,12 +7,16 @@ from app.agents.models.state import TravelState
 from app.utils.llm_factory import LLMFactory
 
 from app.models.user import User
+from app.database.connection import get_db
 
 
-def _build_user_preferences(user: User) -> Dict[str, Any]:
+def _build_user_preferences(user) -> str:
     """
     DB에서 사용자 선호도 가져오기
     """
+    if not user:
+        return "특별한 선호도 정보 없음"
+
     lines = []
     
     if user.with_yn:
@@ -41,9 +45,18 @@ def intent_node(state: TravelState):
     """
     print("--- Intent Agent ---")
 
-    # DB에서 사용자 프로필 가져오기
-    user = state.get("user")
-    prefs_info = _build_user_preferences(user)
+    # DB에서 사용자 프로필 가져오기 (user_id로 조회)
+    user_id = state.get("user_id")
+    db_gen = get_db()
+    db = next(db_gen)
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        prefs_info = _build_user_preferences(user)
+    finally:
+        try:
+            next(db_gen, None)  # generator cleanup (db.close() 호출)
+        except StopIteration:
+            pass
     
     # LLM 및 Structured Output 설정
     llm = LLMFactory.get_llm()
