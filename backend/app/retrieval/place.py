@@ -5,7 +5,7 @@ from qdrant_client.models import (
     Filter, FieldCondition, MatchValue, ScoredPoint
 )
 from sentence_transformers import SentenceTransformer
-from app.core.config import PLACES_COLLECTION, PHOTOS_COLLECTION, VECTOR_SIZE
+from app.core.config import PLACES_COLLECTION, PHOTOS_COLLECTION, TEXT_MODEL, CLIP_MODEL, TEXT_VECTOR_SIZE, IMG_VECTOR_SIZE
 from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
@@ -25,8 +25,13 @@ class PlaceRetriever:
         port = os.getenv('QDRANT_PORT', 6333)
         print(f"[INFO] Connecting to Qdrant at {host}:{port}")
         self.client = QdrantClient(host=host, port=port)
-        self.model = SentenceTransformer("clip-ViT-B-32")
-        print("[INFO] PlaceRetriever ready (model=clip-ViT-B-32)")
+        
+        # 듀얼 모델: 텍스트(BGE-M3) + 이미지(CLIP)
+        print(f"[INFO] Loading text model: {TEXT_MODEL}")
+        self.text_model = SentenceTransformer(TEXT_MODEL)
+        print(f"[INFO] Loading image model: {CLIP_MODEL}")
+        self.clip_model = SentenceTransformer(CLIP_MODEL)
+        print("[INFO] PlaceRetriever ready (dual model)")
 
     def _preview_results(self, results, top_n: int = 3):
         preview = []
@@ -45,11 +50,16 @@ class PlaceRetriever:
 
     def _build_category_filter(self, category: str = None) -> Filter | None:
         """카테고리 필터 생성"""
-        if not category:
-            return None
-        return Filter(
-            must=[FieldCondition(key="category", match=MatchValue(value=category))]
-        )
+        # [DEBUG] 카테고리 필터 임시 비활성화
+        if category:
+            print(f"[DEBUG] Category filter requested but DISABLED: {category}")
+        return None
+        
+        # if not category:
+        #     return None
+        # return Filter(
+        #     must=[FieldCondition(key="category", match=MatchValue(value=category))]
+        # )
 
     def search_text(self, query: str, limit: int = 5, category: str = None):
         """
@@ -57,7 +67,7 @@ class PlaceRetriever:
         Uses 'text_vec' in PLACES_COLLECTION.
         """
         print(f"[INFO] search_text start query='{query[:80]}' limit={limit} category={category}")
-        query_vec = self.model.encode(query).astype(np.float32)
+        query_vec = self.text_model.encode(query).astype(np.float32)
         print(f"[DEBUG] text query vector shape={query_vec.shape} dtype={query_vec.dtype}")
         
         query_filter = self._build_category_filter(category)
@@ -85,7 +95,7 @@ class PlaceRetriever:
             print("[WARN] Failed to download image for search.")
             return []
 
-        query_vec = self.model.encode(img).astype(np.float32)
+        query_vec = self.clip_model.encode(img).astype(np.float32)
         print(f"[DEBUG] image query vector shape={query_vec.shape} dtype={query_vec.dtype}")
 
         query_filter = self._build_category_filter(category)
@@ -122,7 +132,7 @@ class PlaceRetriever:
             return self.search_text(query, limit, category=category)
 
         # 1. Text Vector
-        text_emb = self.model.encode(query).astype(np.float32)
+        text_emb = self.text_model.encode(query).astype(np.float32)
         print(f"[DEBUG] hybrid text vector shape={text_emb.shape} dtype={text_emb.dtype}")
 
         # 2. Image Vector (Query Image)
@@ -132,7 +142,7 @@ class PlaceRetriever:
             print("[WARN] search_hybrid fallback=text_only (image download failed)")
             return self.search_text(query, limit, category=category)
         
-        img_emb = self.model.encode(img).astype(np.float32)
+        img_emb = self.clip_model.encode(img).astype(np.float32)
         print(f"[DEBUG] hybrid image vector shape={img_emb.shape} dtype={img_emb.dtype}")
 
         # 3. Prefetch candidates (we need a strategy here)

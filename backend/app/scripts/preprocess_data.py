@@ -50,20 +50,34 @@ def ingest_data(data):
         name = item.get("title", "")
         address = item.get("addr1", "") + " " + item.get("addr2", "")
         
-        # Description generation (combining relevant fields)
-        # desc_parts = []
-        # for key, value in item.items():
-        #     if isinstance(value, str) and key not in ["contentid", "title", "addr1", "addr2"]:
-        #         desc_parts.append(f"{key}: {value}")
+        # Description generation — 텍스트 임베딩에 사용될 핵심 정보 포함
+        raw_category = item.get("contenttypeid", "")
+        
+        # 카테고리 ID -> 한글 매핑
+        CONTENT_TYPE_MAP = {
+            "12": "관광지",
+            "14": "문화시설",
+            "15": "축제공연행사",
+            "28": "레포츠",
+            "32": "숙박",
+            "39": "음식점"
+        }
+        category = CONTENT_TYPE_MAP.get(str(raw_category), str(raw_category))
 
-        # description = " ".join(desc_parts)
-        description = ""
+        desc_parts = [name]
+        if category:
+            desc_parts.append(category)
+        if address.strip():
+            desc_parts.append(address.strip())
+        description = " ".join(desc_parts) + "\n"
+
+        # 부가 정보 추가
         for key, value in item.items():
-            if key == "usetime":
+            if key == "usetime" and value:
                 description += f"이용시간: {value}\n"
-            elif key == "parking":
+            elif key == "parking" and value:
                 description += f"주차: {value}\n"
-            elif key == "restdate":
+            elif key == "restdate" and value:
                 description += f"휴일: {value}\n"
     
         # 2) 주소 -> 좌표 변환
@@ -75,8 +89,7 @@ def ingest_data(data):
                 print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
                 pass
                 
-        # Category
-        category = item.get("contenttypeid", "") # Fixed for now or extract if available
+        # Category (이미 description 생성부에서 추출됨)
         
         # Image URLs
         first_image_url = item.get("firstimage", "")

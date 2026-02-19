@@ -20,54 +20,63 @@ class QdrantClientDB:
     def __init__(self):
         # Qdrant / Embedding init
         self.client = QdrantClient(host=os.getenv('QDRANT_HOST', "localhost"), port=os.getenv('QDRANT_PORT', 6333))
-        self.model = SentenceTransformer("clip-ViT-B-32")  # 512-dim
+        
+        # 듀얼 모델: 텍스트(BGE-M3) + 이미지(CLIP)
+        print(f"[INFO] Loading text model: {TEXT_MODEL}")
+        self.text_model = SentenceTransformer(TEXT_MODEL)
+        print(f"[INFO] Loading image model: {CLIP_MODEL}")
+        self.clip_model = SentenceTransformer(CLIP_MODEL)
 
         self.ensure_collections()
 
     # Qdrant schema
     def ensure_collections(self):
-        # 1) places: named vectors (text_vec, img_vec_agg)
-        if not self.client.collection_exists(PLACES_COLLECTION):
-            self.client.create_collection(
-                collection_name=PLACES_COLLECTION,
-                vectors_config={
-                    "text_vec": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                    "img_vec_agg": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                },
-                hnsw_config=HnswConfigDiff(
-                    on_disk=True,
-                    m=16,
-                    ef_construct=100,
-                ),
-                optimizers_config=OptimizersConfigDiff(
-                    indexing_threshold=20000
-                ),
-            )
-            # 필터 자주 쓰면 인덱스
-            self.client.create_payload_index(PLACES_COLLECTION, "region", PayloadSchemaType.KEYWORD)
-            self.client.create_payload_index(PLACES_COLLECTION, "category", PayloadSchemaType.KEYWORD)
+        # 기존 컬렉션 삭제 후 재생성
+        for col in [PLACES_COLLECTION, PHOTOS_COLLECTION]:
+            if self.client.collection_exists(col):
+                print(f"[INFO] Deleting existing collection: {col}")
+                self.client.delete_collection(col)
 
-        # 2) photos: image vector only
-        if not self.client.collection_exists(PHOTOS_COLLECTION):
-            self.client.create_collection(
-                collection_name=PHOTOS_COLLECTION,
-                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                hnsw_config=HnswConfigDiff(
-                    on_disk=True,
-                    m=16,
-                    ef_construct=100,
-                ),
-                optimizers_config=OptimizersConfigDiff(
-                    indexing_threshold=20000
-                ),
-            )
-            # group_by 키 성능 위해 인덱스 추천
-            self.client.create_payload_index(PHOTOS_COLLECTION, "place_id", PayloadSchemaType.KEYWORD)
+        # 1) places: named vectors (text_vec=1024, img_vec_agg=512)
+        self.client.create_collection(
+            collection_name=PLACES_COLLECTION,
+            vectors_config={
+                "text_vec": VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+                "img_vec_agg": VectorParams(size=IMG_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            },
+            hnsw_config=HnswConfigDiff(
+                on_disk=True,
+                m=16,
+                ef_construct=100,
+            ),
+            optimizers_config=OptimizersConfigDiff(
+                indexing_threshold=20000
+            ),
+        )
+        # 필터 자주 쓰면 인덱스
+        self.client.create_payload_index(PLACES_COLLECTION, "region", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PLACES_COLLECTION, "category", PayloadSchemaType.KEYWORD)
+
+        # 2) photos: image vector only (512)
+        self.client.create_collection(
+            collection_name=PHOTOS_COLLECTION,
+            vectors_config=VectorParams(size=IMG_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            hnsw_config=HnswConfigDiff(
+                on_disk=True,
+                m=16,
+                ef_construct=100,
+            ),
+            optimizers_config=OptimizersConfigDiff(
+                indexing_threshold=20000
+            ),
+        )
+        # group_by 키 성능 위해 인덱스 추천
+        self.client.create_payload_index(PHOTOS_COLLECTION, "place_id", PayloadSchemaType.KEYWORD)
 
     # Utils: aggregate image vectors (top-k mean)
     def aggregate_vectors(self, vectors: np.ndarray, top_k: int = 5) -> np.ndarray:
         if vectors is None or vectors.size == 0:
-            return np.zeros((VECTOR_SIZE,), dtype=np.float32)
+            return np.zeros((IMG_VECTOR_SIZE,), dtype=np.float32)
 
         if vectors.shape[0] > top_k:
             vectors = vectors[:top_k]
@@ -77,17 +86,17 @@ class QdrantClientDB:
         return agg.astype(np.float32)
 
     # 장소 저장
-    # - description -> places.text_vec
-    # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장
+    # - description -> places.text_vec (BGE-M3)
+    # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장 (CLIP)
     def add_place(self, payload: dict):
         place_id = int(payload['place_id'])
         description = payload['description']
         image_urls = payload['image_urls']
 
-        # 1) 텍스트 임베딩
-        text_vec = self.model.encode(description).astype(np.float32)
+        # 1) 텍스트 임베딩 (BGE-M3)
+        text_vec = self.text_model.encode(description).astype(np.float32)
 
-        # 2) 이미지 다운로드 -> 임베딩 -> photos upsert
+        # 2) 이미지 다운로드 -> 임베딩 (CLIP) -> photos upsert
         photo_points = []
         img_vecs = []
 
@@ -96,7 +105,7 @@ class QdrantClientDB:
             if img is None:
                 continue
 
-            img_vec = self.model.encode(img).astype(np.float32)
+            img_vec = self.clip_model.encode(img).astype(np.float32)
             img_vecs.append(img_vec)
 
             photo_points.append(
@@ -120,7 +129,7 @@ class QdrantClientDB:
         if img_vecs:
             img_vec_agg = self.aggregate_vectors(np.vstack(img_vecs), top_k=5)
         else:
-            img_vec_agg = np.zeros((VECTOR_SIZE,), dtype=np.float32)
+            img_vec_agg = np.zeros((IMG_VECTOR_SIZE,), dtype=np.float32)
 
         # 4) places upsert (named vectors)
         place_point = PointStruct(
