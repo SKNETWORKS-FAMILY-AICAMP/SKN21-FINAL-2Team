@@ -60,10 +60,13 @@ def _search_for_trip_planning(state: TravelState, retriever: PlaceRetriever) -> 
 
         print(f"[Retriever] Searching for itinerary item: '{search_query}'")
         try:
+            # itinerary 항목의 category를 필터에 활용
+            item_category = item.get("category")
             results = retriever.search_hybrid(
                 query=search_query,
                 image_url=image_path,
                 limit=3,
+                category=item_category,
             )
             if results:
                 for res in results:
@@ -110,6 +113,11 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
 
+    # slots에서 category 정보 추출
+    category = None
+    if slots:
+        category = slots.category if hasattr(slots, 'category') else (slots.get("category") if isinstance(slots, dict) else None)
+
     # slots에서 location 정보 추가
     if slots:
         location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
@@ -117,12 +125,13 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
             query += f"\n지역: {location}"
 
     # 1. 하이브리드 검색 (텍스트 + 이미지)
-    print(f"[Retriever] Hybrid search query: '{query[:100]}'")
+    print(f"[Retriever] Hybrid search query: '{query[:100]}' category={category}")
     try:
         results = retriever.search_hybrid(
             query=query,
             image_url=image_path,
             limit=5,
+            category=category,
         )
         if results:
             for res in results:

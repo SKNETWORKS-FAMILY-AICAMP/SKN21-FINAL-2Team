@@ -42,61 +42,51 @@ def ingest_data(data):
     for item in data:
         # try:
         # 1. Prepare fields
-        place_id = item.get("id")
-        name = item.get("name", "")
-        address = item.get("주소", "")
+        place_id = item.get("contentid")
+        name = item.get("title", "")
+        address = item.get("addr1", "") + " " + item.get("addr2", "")
         
         # Description generation (combining relevant fields)
-        desc_parts = []
-        for key, value in item.items():
-            if isinstance(value, str) and key not in ["id", "name", "주소"]:
-                desc_parts.append(f"{key}: {value}")
+        # desc_parts = []
+        # for key, value in item.items():
+        #     if isinstance(value, str) and key not in ["contentid", "title", "addr1", "addr2"]:
+        #         desc_parts.append(f"{key}: {value}")
 
-        description = " ".join(desc_parts)
-        
+        # description = " ".join(desc_parts)
+        description = ""
+        for key, value in item.items():
+            if key == "usetime":
+                description += f"이용시간: {value}\n"
+            elif key == "parking":
+                description += f"주차: {value}\n"
+            elif key == "restdate":
+                description += f"휴일: {value}\n"
+    
         # 2) 주소 -> 좌표 변환
-        latlng = geocoder_client.eocoder(address)
-        if latlng is None:
-            print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
-            pass
-        
-        # Region extraction (simple heuristic from address)
-        region = address.split(" ")[1] if len(address.split(" ")) > 1 else "기타"
-        
+        lat = item.get("mapx")
+        lng = item.get("mapy")
+        if lat is None or lng is None:
+            latlng = geocoder_client.eocoder(address)
+            if latlng is None:
+                print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
+                pass
+                
         # Category
-        category = "관광지" # Fixed for now or extract if available
+        category = item.get("contenttypeid", "") # Fixed for now or extract if available
         
         # Image URLs
+        first_image_url = item.get("firstimage", "")
         image_urls = item.get("photo_urls", [])
+        if first_image_url:
+            image_urls.insert(0, first_image_url)
             
         yield {
             "place_id": place_id,
             "description": description,
             "image_urls": image_urls, 
-            "region": region,
             "category": category,
             "address": address,
             "title": name,
-            "lat": latlng.get("lat") if latlng else 0,
-            "lng": latlng.get("lng") if latlng else 0,
+            "lat": lat,
+            "lng": lng
         }
-            # # 2. Add Place (which handles images internally)
-            # self.add_place(
-            #     place_id=place_id,
-            #     description=description,
-            #     image_urls=image_urls,
-            #     payload={
-            #         "region": region,
-            #         "category": category,
-            #         "address": address,
-            #         "title": name,
-            #         "lat": latlng.get("lat") if latlng else 0,
-            #         "lng": latlng.get("lng") if latlng else 0,
-            #     }
-            # )
-            
-                
-        # except Exception as e:
-        #     print(f"[ERROR] Failed to ingest item {item.get('name')}: {e}")
-            
-    # print(f"[INFO] Ingestion finished. Success: {success_count}/{len(data)}")

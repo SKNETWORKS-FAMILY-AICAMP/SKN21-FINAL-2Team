@@ -80,7 +80,7 @@ class QdrantClientDB:
     # - description -> places.text_vec
     # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장
     def add_place(self, payload: dict):
-        place_id = payload['place_id']
+        place_id = int(payload['place_id'])
         description = payload['description']
         image_urls = payload['image_urls']
 
@@ -106,7 +106,6 @@ class QdrantClientDB:
                     payload={
                         "place_id": place_id,
                         "photo_url": url,
-                        "region": payload.get("region"),
                         "category": payload.get("category"),
                         "address": payload.get("address"),
                         "title": payload.get("title"),
@@ -136,7 +135,6 @@ class QdrantClientDB:
                 "address": payload.get("address"),
                 "category": payload.get("category"),
                 "title": payload.get("title"),
-                "photo_count": len(image_urls),
                 "lat": payload.get("lat"),
                 "lng": payload.get("lng"),
             },
@@ -145,6 +143,8 @@ class QdrantClientDB:
 
         return {"place_id": place_id, "photos_upserted": len(photo_points)}
 
+# cd /Users/kim/SKN21-FINAL-2Team/backend
+# uv run python -m app.scripts.qdrant_setup
 if __name__ == "__main__":
     # Run ingestion
     client = QdrantClientDB()
@@ -153,15 +153,21 @@ if __name__ == "__main__":
     # We will try to find the file manually.
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # backend/app
     root_dir = os.path.dirname(base_dir) # backend
-    data_path = os.path.join(root_dir, "data", "visitkorea_data.json")
+    data_dir = os.path.join(root_dir, "data")
     
         
-    if not os.path.exists(data_path):
-        print(f"[ERROR] Date file not found: {data_path}")
+    if not os.path.exists(data_dir):
+        print(f"[ERROR] Date file not found: {data_dir}")
+
+    file_names = []
         
-    with open(data_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".jsonl"):
+            file_names.append(filename)
+            data_path = os.path.join(data_dir, filename)
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = [json.loads(line) for line in f]
+    
     success_count = 0
     for payload in ingest_data(data):
         client.add_place(payload)
@@ -169,3 +175,5 @@ if __name__ == "__main__":
         success_count += 1
         if success_count % 10 == 0:
             print(f"  - Progress: {success_count}/{len(data)} done.")
+
+    print("Finish Load Data - File : ", file_names)

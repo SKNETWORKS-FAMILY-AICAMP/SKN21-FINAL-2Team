@@ -10,8 +10,6 @@ from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
 
-
-
 class PlaceRetriever:
     _instance = None
 
@@ -45,33 +43,43 @@ class PlaceRetriever:
             )
         return preview
 
-    def search_text(self, query: str, limit: int = 5):
+    def _build_category_filter(self, category: str = None) -> Filter | None:
+        """카테고리 필터 생성"""
+        if not category:
+            return None
+        return Filter(
+            must=[FieldCondition(key="category", match=MatchValue(value=category))]
+        )
+
+    def search_text(self, query: str, limit: int = 5, category: str = None):
         """
         Text-based search for places.
         Uses 'text_vec' in PLACES_COLLECTION.
         """
-        print(f"[INFO] search_text start query='{query[:80]}' limit={limit}")
+        print(f"[INFO] search_text start query='{query[:80]}' limit={limit} category={category}")
         query_vec = self.model.encode(query).astype(np.float32)
         print(f"[DEBUG] text query vector shape={query_vec.shape} dtype={query_vec.dtype}")
         
+        query_filter = self._build_category_filter(category)
+
         # Search in places collection (text_vec)
-        # Using query_points instead of search
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
             query=query_vec.tolist(),
             using="text_vec",
             limit=limit,
             with_payload=True,
+            query_filter=query_filter,
         )
         print(f"[INFO] search_text hits={len(response.points)}")
         return response.points
 
-    def search_image(self, image_url: str, limit: int = 5, group_size: int = 3):
+    def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
         """
         Image-based search using Group By on PHOTOS_COLLECTION.
         Finds specific photos similar to the input image, then groups them by place_id.
         """
-        print(f"[INFO] search_image start image_url='{str(image_url)[:120]}' limit={limit} group_size={group_size}")
+        print(f"[INFO] search_image start image_url='{str(image_url)[:120]}' limit={limit} group_size={group_size} category={category}")
         img = download_image(image_url)
         if img is None:
             print("[WARN] Failed to download image for search.")
@@ -80,8 +88,9 @@ class PlaceRetriever:
         query_vec = self.model.encode(img).astype(np.float32)
         print(f"[DEBUG] image query vector shape={query_vec.shape} dtype={query_vec.dtype}")
 
+        query_filter = self._build_category_filter(category)
+
         # Search photos, grouped by place_id
-        # Using query_points_groups instead of search_groups
         response = self.client.query_points_groups(
             collection_name=PHOTOS_COLLECTION,
             query=query_vec.tolist(),
@@ -89,11 +98,12 @@ class PlaceRetriever:
             group_size=group_size,
             limit=limit,
             with_payload=True,
+            query_filter=query_filter,
         )
         print(f"[INFO] search_image groups={len(response.groups)}")
         return response.groups
 
-    def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, alpha: float = 0.5):
+    def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, alpha: float = 0.5, category: str = None):
         """
         Hybrid search combining Text and Image (Visual) similarity.
         - Text Query -> text_vec similarity
@@ -104,12 +114,12 @@ class PlaceRetriever:
         """
         print(
             f"[INFO] search_hybrid start query='{query[:80]}' image_url={'yes' if image_url else 'no'} "
-            f"limit={limit} alpha={alpha}"
+            f"limit={limit} alpha={alpha} category={category}"
         )
         
         if not image_url:
             print("[INFO] search_hybrid fallback=text_only (no image)")
-            return self.search_text(query, limit)
+            return self.search_text(query, limit, category=category)
 
         # 1. Text Vector
         text_emb = self.model.encode(query).astype(np.float32)
@@ -120,7 +130,7 @@ class PlaceRetriever:
         if img is None:
             # Fallback to text only if image download fails
             print("[WARN] search_hybrid fallback=text_only (image download failed)")
-            return self.search_text(query, limit)
+            return self.search_text(query, limit, category=category)
         
         img_emb = self.model.encode(img).astype(np.float32)
         print(f"[DEBUG] hybrid image vector shape={img_emb.shape} dtype={img_emb.dtype}")
@@ -139,6 +149,8 @@ class PlaceRetriever:
         candidates_limit = limit * 2
         print(f"[DEBUG] hybrid candidates_limit={candidates_limit}")
         
+        query_filter = self._build_category_filter(category)
+
         # Search by Text
         text_response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
@@ -146,6 +158,7 @@ class PlaceRetriever:
             using="text_vec",
             limit=candidates_limit,
             with_payload=True,
+            query_filter=query_filter,
         )
         text_hits = text_response.points
         print(f"[INFO] hybrid text_hits={len(text_hits)}")
@@ -157,6 +170,7 @@ class PlaceRetriever:
             using="img_vec_agg",
             limit=candidates_limit,
             with_payload=True,
+            query_filter=query_filter,
         )
         img_hits = img_response.points
         print(f"[INFO] hybrid image_hits={len(img_hits)}")

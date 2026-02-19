@@ -23,6 +23,7 @@ class InputType(str, Enum):
 class IntentSlots(BaseModel):
     input_type: InputType
     location: Optional[str] = None
+    category: Optional[str] = None  # 관광지, 문화시설, 축제공연행사, 레포츠, 숙박, 음식점
     dates: Optional[str] = None
     duration: Optional[str] = None
     party_size: Optional[int] = None
