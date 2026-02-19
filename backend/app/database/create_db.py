@@ -27,7 +27,7 @@ Table users {
   nickname varchar
   birthday date
   gender gender_type // 정의한 Enum 사용
-  contury_code varchar
+  country_code varchar
 
   // Google Login
   social_provider varchar
@@ -83,7 +83,7 @@ Table chat_messages {
 }
 
 Table country {
-    code varchar
+    code varchar [primary key]
     name varchar
 }
 
@@ -97,7 +97,7 @@ Ref: users.celeb_prefer_id > prefers.id
 Ref: users.variety_prefer_id > prefers.id
 
 // Users - 국적 연결 (1:N)
-Ref: users.contury_code > country.code
+Ref: users.country_code > country.code
 
 // 채팅방 및 메시지
 Ref: chat_rooms.user_id > users.id
@@ -236,6 +236,17 @@ def deploy_db_from_dbml():
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
             connection.commit()
             print("✅ DB 테이블이 성공적으로 생성되었습니다!")
+
+            # 기본 데이터 삽입 자동 호출
+            print("🚀 기본 데이터(prefers, country) 삽입을 시작합니다...")
+            try:
+                from app.database.insert_db import insert_prefer, insert_country
+                pref_res = insert_prefer()
+                cntry_res = insert_country()
+                print(f"   - prefers: inserted={pref_res['inserted']}, skipped={pref_res['skipped']}")
+                print(f"   - country: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
+            except Exception as e:
+                print(f"⚠️ 데이터 삽입 중 경고 발생: {e}")
             
     except Exception as e:
         print(f"❌ 오류 발생: {e}")

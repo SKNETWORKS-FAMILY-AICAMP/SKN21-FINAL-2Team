@@ -162,7 +162,7 @@ if __name__ == "__main__":
     file_names = []
         
     for filename in os.listdir(data_dir):
-        if filename.endswith(".jsonl"):
+        if filename.endswith(".jsonl") and not filename.startswith("25_"):
             file_names.append(filename)
             data_path = os.path.join(data_dir, filename)
             with open(data_path, 'r', encoding='utf-8') as f:

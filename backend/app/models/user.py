@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from app.models.orm import BaseModel
 from app.models.enums import GenderType
 from app.models.prefer import Prefer
+from app.models.country import Country
 
 class User(BaseModel):
     __tablename__ = "users"
@@ -28,7 +29,7 @@ class User(BaseModel):
     with_yn = Column(Boolean, nullable=True)
     dog_yn = Column(Boolean, nullable=True)
     vegan_yn = Column(Boolean, nullable=True)
-    country_code = Column(String(10), default="KRW", comment="Currency Code for Budget")
+    country_code = Column(String(10), ForeignKey("country.code"), nullable=True, comment="User Country Code")
     is_join = Column(Boolean, default=False)
     is_prefer = Column(Boolean, default=False)
 
