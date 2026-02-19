@@ -59,7 +59,7 @@ export default function IntroOverlay({ onDone }: Props) {
   }, [onDone]);
 
   return (
-    <div ref={overlayRef} className={styles.overlay}>
+    <div ref={overlayRef} className={styles.overlay} onClick={onDone}>
       <div className={styles.center}>
         <div ref={titleRef} className={`${styles.word} ${styles.layerCenter}`}>
           POLARIS KOREA RECOMMENDATIONS

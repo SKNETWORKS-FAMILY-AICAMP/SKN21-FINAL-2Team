@@ -1,0 +1,9 @@
+selenium==4.40.0
+beautifulsoup4==4.14.3
+pytesseract==0.3.13
+Pillow==12.1.0
+pandas==3.0.0
+webdriver-manager==4.0.2
+lxml==6.0.2
+requests==2.32.5
+python-dotenv==1.2.1

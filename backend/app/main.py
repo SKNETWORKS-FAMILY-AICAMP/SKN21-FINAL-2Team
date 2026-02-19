@@ -3,8 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
 from app.api import auth, users, chat
+from app.database.connection import Base, get_engine
+from app.models import user  # noqa: F401 - 모델 등록을 위해 import
 
 app = FastAPI()
+
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=get_engine())
 
 # CORS 설정 (프론트엔드 3000번 포트 허용)
 origins = [
