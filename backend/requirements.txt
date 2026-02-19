@@ -33,3 +33,4 @@ langchain
 langchain-openai
 langchain-community
 tavily-python
+langchain-tavily

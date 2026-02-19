@@ -157,11 +157,14 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     
     # 그래프 실행 (Global Cache)
     try:
+        print(f"[ChatAPI] Starting graph invocation for room_id={room_id}")
         result = await get_graph_app().ainvoke(inputs)
+        print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
     except Exception as e:
-        print(f"Graph Execution Error: {e}")
-        print(f"Error Message : {e.args}, {e.__cause__}, {e.__context__}, {e.__traceback__}, {e.__dict__}")
+        print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
+        import traceback
+        traceback.print_exc()
         ai_reply_text = "죄송합니다. 오류가 발생했습니다."
     
     # AI Message 저장

@@ -21,7 +21,11 @@ def download_image(url: str, timeout: int = 10) -> Image.Image | None:
             data = base64.b64decode(encoded)
             return Image.open(io.BytesIO(data)).convert("RGB")
             
-        # 2. URL Handling
+        # 2. Local Path Handling
+        if os.path.exists(url):
+            return Image.open(url).convert("RGB")
+            
+        # 3. URL Handling
         if url.startswith("http"):
             r = requests.get(url, timeout=timeout, stream=True)
             r.raise_for_status()
