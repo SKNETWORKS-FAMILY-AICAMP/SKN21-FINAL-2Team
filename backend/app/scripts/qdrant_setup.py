@@ -143,8 +143,8 @@ class QdrantClientDB:
 
         return {"place_id": place_id, "photos_upserted": len(photo_points)}
 
-# cd /Users/kim/SKN21-FINAL-2Team/backend
-# uv run python -m app.scripts.qdrant_setup
+# cd backend
+# docker exec -it skn21-final-2team-backend-1 python -m app.scripts.qdrant_setup
 if __name__ == "__main__":
     # Run ingestion
     client = QdrantClientDB()

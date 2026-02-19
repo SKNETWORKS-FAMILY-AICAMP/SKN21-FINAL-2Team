@@ -1,6 +1,9 @@
+import os
+import time
+import socket
+from pathlib import Path
 import pymysql
 from pydbml import PyDBML
-from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(override=True) # .env 로드
@@ -19,7 +22,21 @@ Enum role_type {
   ai
 }
 
-// 2. 회원 정보
+// 2. 선호도 마스터
+Table prefers {
+  id integer [primary key, increment]
+  category varchar // 'actor', 'movie', 'travel_theme' 등
+  type varchar
+  value varchar
+  image_path text // 파일 경로는 보통 text/varchar
+}
+
+// 3. 회원 정보 (국가 + 유저)
+Table country {
+    code varchar [primary key]
+    name varchar
+}
+
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
@@ -53,15 +70,6 @@ Table users {
   updated_at timestamp [default: `now()`]
 }
 
-// 3. 선호도 마스터
-Table prefers {
-  id integer [primary key, increment]
-  category varchar // 'actor', 'movie', 'travel_theme' 등
-  type varchar
-  value varchar
-  image_path text // 파일 경로는 보통 text/varchar
-}
-
 // 4. 채팅방 및 메시지
 Table chat_rooms {
   id integer [primary key, increment]
@@ -80,11 +88,6 @@ Table chat_messages {
   image_path text
   bookmark_yn bool [not null, default: false]
   created_at timestamp [default: `now()` ]
-}
-
-Table country {
-    code varchar [primary key]
-    name varchar
 }
 
 // --- 관계 설정 (Ref) ---
@@ -158,11 +161,6 @@ def deploy_db_from_dbml():
     # 단, 이미 길이가 지정된 경우는 제외해야 하지만, PyDBML은 기본적으로 타입명만 가져옴
     # 정규식으로 'varchar' 뒤에 '('가 오지 않는 경우만 치환
     sql_statements = re.sub(r"varchar(?!\()", "varchar(255)", sql_statements)
-
-    import os
-    import time
-    import socket
-    from pathlib import Path
     
     # .env 파일 로드 (상위 디렉토리까지 탐색) - main block에서 로드했지만 여기서도 안전하게
     # load_dotenv() # 이미 상단에서 로드됨
@@ -170,7 +168,6 @@ def deploy_db_from_dbml():
         load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env', override=True)
         
     # Docker 내부에서는 'mysql', 로컬에서는 'localhost'
-    
     host = os.getenv('MYSQL_HOST', 'localhost')
     port = int(os.getenv('MYSQL_PORT', 3307))
     
