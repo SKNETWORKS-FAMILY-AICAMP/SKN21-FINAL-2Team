@@ -15,13 +15,12 @@ export default function IntroGate({ children }: IntroGateProps) {
 
   useEffect(() => {
     const played = localStorage.getItem(STORAGE_KEY);
-    if (!played) {
-      initialOverflow.current = document.body.style.overflow || "";
-      document.body.style.overflow = "hidden";
-      setShow(true);
-    } else {
+    if (played) {
       setShow(false);
+      return;
     }
+    initialOverflow.current = document.body.style.overflow || "";
+    document.body.style.overflow = "hidden";
 
     return () => {
       if (initialOverflow.current !== null) {

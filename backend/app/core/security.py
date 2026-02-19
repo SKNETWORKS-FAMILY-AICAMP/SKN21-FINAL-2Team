@@ -100,7 +100,7 @@ def verify_google_auth_code(code: str):
     response = req.post(token_endpoint, data=data)
     if response.status_code != 200:
         print(f"Google Token Exchange Failed: {response.text}")
-        return None
+        return {"error": response.text}
         
     tokens = response.json()
     id_token_str = tokens.get("id_token")
@@ -126,4 +126,4 @@ def verify_google_auth_code(code: str):
         }
     except ValueError as e:
         print(f"Invalid Google ID Token: {e}")
-        return None
+        return {"error": str(e)}

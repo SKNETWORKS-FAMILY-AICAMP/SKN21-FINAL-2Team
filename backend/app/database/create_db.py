@@ -24,6 +24,8 @@ Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
   name varchar
+  nickname varchar
+  birthday date
   gender gender_type // 정의한 Enum 사용
   contury_code varchar
 

@@ -82,8 +82,8 @@ export default function SurveyPage() {
                     key={option}
                     onClick={() => setGender(option)}
                     className={`py-3 px-4 rounded-xl text-sm font-medium transition-all border ${gender === option
-                        ? "bg-black text-white border-black shadow-md"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      ? "bg-black text-white border-black shadow-md"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                       }`}
                   >
                     {option}
@@ -152,8 +152,8 @@ export default function SurveyPage() {
             disabled={!isFormValid}
             onClick={handleComplete}
             className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 ${isFormValid
-                ? "bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              ? "bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
           >
             Continue to Persona Setup <ArrowRight size={16} />

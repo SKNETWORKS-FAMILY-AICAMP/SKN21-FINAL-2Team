@@ -1,10 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
-from app.api import auth, users, chat
-from app.database.connection import Base, get_engine
-from app.models import user  # noqa: F401 - 모델 등록을 위해 import
+from app.api import auth, users, chat, prefer
 
 app = FastAPI()
 
@@ -29,6 +30,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(chat.router)
+app.include_router(prefer.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)

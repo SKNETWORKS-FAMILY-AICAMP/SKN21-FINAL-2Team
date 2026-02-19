@@ -12,7 +12,7 @@ from app.scripts.preprocess_data import download_image
 import os
 import json
 from app.core.config import *
-from app.scripts.preprocess_data import location_to_latlng
+from app.scripts.preprocess_data import ingest_data
 
 # CLIPProcessor가 자동으로 resize / center crop / normalize 수행
 
@@ -79,7 +79,11 @@ class QdrantClientDB:
     # 장소 저장
     # - description -> places.text_vec
     # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장
-    def add_place(self, place_id: str, description: str, image_urls: list[str], payload: dict):
+    def add_place(self, payload: dict):
+        place_id = payload['place_id']
+        description = payload['description']
+        image_urls = payload['image_urls']
+
         # 1) 텍스트 임베딩
         text_vec = self.model.encode(description).astype(np.float32)
 
@@ -141,74 +145,6 @@ class QdrantClientDB:
 
         return {"place_id": place_id, "photos_upserted": len(photo_points)}
 
-
-    def ingest_data(self, file_path: str):
-        import json
-        
-        if not os.path.exists(file_path):
-            print(f"[ERROR] Date file not found: {file_path}")
-            return
-            
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        print(f"[INFO] Start ingestion.. total {len(data)} items.")
-        
-        success_count = 0
-        for item in data:
-            try:
-                # 1. Prepare fields
-                place_id = item.get("id")
-                name = item.get("name", "")
-                address = item.get("주소", "")
-                
-                # Description generation (combining relevant fields)
-                desc_parts = []
-                for key, value in item.items():
-                    if isinstance(value, str) and key not in ["id", "name", "주소"]:
-                        desc_parts.append(f"{key}: {value}")
-
-                description = " ".join(desc_parts)
-                
-                # 2) 주소 -> 좌표 변환
-                latlng = location_to_latlng(address)
-                if latlng is None:
-                    print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
-                    pass
-                
-                # Region extraction (simple heuristic from address)
-                region = address.split(" ")[1] if len(address.split(" ")) > 1 else "기타"
-                
-                # Category
-                category = "관광지" # Fixed for now or extract if available
-                
-                # Image URLs
-                image_urls = item.get("photo_urls", [])
-                
-                # 2. Add Place (which handles images internally)
-                self.add_place(
-                    place_id=place_id,
-                    description=description,
-                    image_urls=image_urls,
-                    payload={
-                        "region": region,
-                        "category": category,
-                        "address": address,
-                        "title": name,
-                        "lat": latlng.get("lat") if latlng else 0,
-                        "lng": latlng.get("lng") if latlng else 0,
-                    }
-                )
-                
-                success_count += 1
-                if success_count % 10 == 0:
-                    print(f"  - Progress: {success_count}/{len(data)} done.")
-                    
-            except Exception as e:
-                print(f"[ERROR] Failed to ingest item {item.get('name')}: {e}")
-                
-        print(f"[INFO] Ingestion finished. Success: {success_count}/{len(data)}")
-
 if __name__ == "__main__":
     # Run ingestion
     client = QdrantClientDB()
@@ -219,4 +155,17 @@ if __name__ == "__main__":
     root_dir = os.path.dirname(base_dir) # backend
     data_path = os.path.join(root_dir, "data", "visitkorea_data.json")
     
-    client.ingest_data(data_path)
+        
+    if not os.path.exists(data_path):
+        print(f"[ERROR] Date file not found: {data_path}")
+        
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        
+    success_count = 0
+    for payload in ingest_data(data):
+        client.add_place(payload)
+
+        success_count += 1
+        if success_count % 10 == 0:
+            print(f"  - Progress: {success_count}/{len(data)} done.")

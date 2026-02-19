@@ -1,0 +1,202 @@
+import urllib.parse
+from typing import Dict, Any, List, Optional
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import SystemMessage, HumanMessage
+
+from app.agents.models.state import TravelState
+from app.agents.models.output import IntentType
+from app.services.prompts import EXECUTOR_PROMPT
+from app.utils.llm_factory import LLMFactory
+
+def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
+    """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
+    if not candidates:
+        return ""
+
+    lines = ["## 검색된 장소 정보"]
+    for i, c in enumerate(candidates, 1):
+        name = c.get("name", "이름 없음")
+        address = c.get("address", "")
+        desc = c.get("description", "")
+        category = c.get("category", "")
+        score = c.get("score", 0)
+        distance = c.get("distance_km")
+
+        # 네이버 지도 링크 생성
+        query = name or address
+        if query:
+            encoded = urllib.parse.quote(query)
+            map_url = f"https://map.naver.com/v5/search/{encoded}"
+        else:
+            map_url = ""
+
+        line = f"{i}. **{name}**"
+        if category:
+            line += f" ({category})"
+        line += f"\n   - 주소: {address}" if address else ""
+        line += f"\n   - 설명: {desc[:200]}" if desc else ""
+        if distance is not None:
+            line += f"\n   - 거리: {distance:.1f}km"
+        if map_url:
+            line += f"\n   - 네이버 지도: {map_url}"
+
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
+def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
+    """TRIP_PLANNING일 때, itinerary 연결 정보가 있는 candidates를 일정 형태로 구성"""
+    has_itinerary_info = any(c.get("itinerary_day") for c in candidates)
+    if not has_itinerary_info:
+        return ""
+
+    # 일차/시간대별로 그룹핑
+    schedule = {}
+    for c in candidates:
+        day = c.get("itinerary_day", 1)
+        time_slot = c.get("itinerary_time_slot", "")
+        activity = c.get("itinerary_activity", "")
+        key = (day, time_slot)
+        if key not in schedule:
+            schedule[key] = {"activity": activity, "places": []}
+        schedule[key]["places"].append(c)
+
+    lines = ["## 일정별 검색 결과"]
+    for (day, time_slot), info in sorted(schedule.items()):
+        lines.append(f"\n### {day}일차 - {time_slot}")
+        lines.append(f"활동: {info['activity']}")
+        for p in info["places"]:
+            name = p.get("name", "")
+            query = name or p.get("address", "")
+            map_url = f"https://map.naver.com/v5/search/{urllib.parse.quote(query)}" if query else ""
+            lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
+
+    return "\n".join(lines)
+
+def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> str:
+    # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
+    web_context = ""
+    print("[Executor] No candidates — trying Tavily fallback")
+    try:
+        tavily = LLMFactory.get_tavily()
+        if not query:
+             query = "한국 여행 추천" # 쿼리가 비어있을 경우 기본값 설정
+        
+        search_query = query
+        if slots:
+            location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
+            if location:
+                search_query = f"{location} 여행 {query}"
+        web_results = tavily.invoke(search_query)
+        if web_results:
+            web_lines = ["## 웹 검색 결과 (참고 정보)"]
+            for r in web_results:
+                if isinstance(r, dict):
+                    web_lines.append(f"- {r.get('content', '')[:200]}")
+                else:
+                    web_lines.append(f"- {str(r)[:200]}")
+            web_context = "\n".join(web_lines)
+            print(f"[Executor] Tavily fallback results: {len(web_results)}")
+    except Exception as e:
+        print(f"[Executor] Tavily fallback failed: {e}")
+
+    return web_context
+
+
+async def executor_node(state: TravelState):
+    """
+    여행 계획을 최종적으로 확정하는 노드
+    - 검증: 영업시간, 예약 필요 여부 확인
+    - 링크 생성: 네이버 지도 링크 생성
+    - 최종 답변 생성
+    """
+    print("--- Executor Agent ---")
+
+    # missing_slots가 있으면 (planner의 재질문) 바로 반환
+    missing_slots = state.get("missing_slots", [])
+    if missing_slots and state.get("answer"):
+        print(f"[Executor] Passing through — missing_slots answer already set")
+        return state
+
+    candidates = state.get("candidates", [])
+    user_input = state.get("user_input", "")
+    messages = state.get("messages", [])[-10:]
+    prefs_info = state.get("prefs_info", {})
+    primary_intent = state.get("primary_intent")
+    slots = state.get("slots")
+    image_path = state.get("image_path") # 이미지 경로 가져오기
+
+    # 컨텍스트 구성
+    place_context = _build_place_context(candidates)
+    itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else ""
+
+    # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
+    web_context = ""
+    if not candidates:
+        print("[Executor] No candidates — trying Tavily fallback")
+        web_context = _build_web_context(user_input, slots)
+
+    # 슬롯 정보 텍스트
+    slots_info = ""
+    if slots:
+        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
+        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
+
+    # candidates 부족 시 안내 메시지 추가
+    data_notice = ""
+    if not candidates and not web_context:
+        data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
+    elif candidates and len(candidates) < 3:
+        data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
+
+    # 최종 답변 생성
+    context_block = "\n\n".join(filter(None, [place_context, itinerary_context, web_context]))
+
+    llm = LLMFactory.get_llm(temperature=0.3)
+
+    # HumanMessage 구성 (멀티모달 지원)
+    content_blocks = []
+    
+    # 텍스트 추가
+    if user_input:
+        content_blocks.append({"type": "text", "text": f"사용자 입력: {user_input}"})
+    else:
+        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
+        if image_path:
+             content_blocks.append({"type": "text", "text": "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."})
+
+    # 이미지 추가
+    # 주의: image_path가 URL인지 로컬 경로인지에 따라 처리가 달라질 수 있음. 
+    # 현재는 URL로 가정하거나 LLM이 처리 가능한 path라고 가정.
+    if image_path:
+        content_blocks.append({
+            "type": "image_url",
+            "image_url": {"url": image_path}
+        })
+    
+    # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
+    if not content_blocks:
+          content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
+
+    human_message = HumanMessage(content=content_blocks)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", EXECUTOR_PROMPT),
+        MessagesPlaceholder(variable_name="messages"),
+        human_message
+    ])
+
+    response = await llm.ainvoke(prompt.invoke({
+        "messages": messages,
+        "user_input": user_input,
+        "slots_info": slots_info,
+        "prefs_info": prefs_info,
+        "context_block": context_block,
+        "data_notice": data_notice,
+    }))
+
+    answer = response.content
+    print(f"[Executor] Answer generated (length={len(answer)})")
+
+    return {"answer": answer}

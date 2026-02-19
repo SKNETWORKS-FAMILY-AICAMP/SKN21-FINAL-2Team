@@ -15,6 +15,8 @@ class ChatRoom(BaseModel):
 
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
+
+    
 class ChatMessage(BaseModel):
     __tablename__ = "chat_messages"
 

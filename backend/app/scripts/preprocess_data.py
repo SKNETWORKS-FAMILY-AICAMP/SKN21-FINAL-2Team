@@ -5,9 +5,11 @@ import json
 from PIL import Image
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# Do not override runtime/container environment variables.
+load_dotenv()
 
 import base64
+from app.utils.geocoder import GeoCoder
 
 # download image from URL or Base64
 def download_image(url: str, timeout: int = 10) -> Image.Image | None:
@@ -33,47 +35,68 @@ def download_image(url: str, timeout: int = 10) -> Image.Image | None:
         return None
 
 
-def location_to_latlng(location: str) -> tuple[float, float] | None:
-    """
-    네이버 Geocoding API를 사용하여 주소를 좌표(위도, 경도)로 변환합니다.
-    """
-    client_id = os.getenv("NAVER_CLIENT_ID")
-    client_secret = os.getenv("NAVER_CLIENT_SECRET")
+def ingest_data(data):
+    print(f"[INFO] Start ingestion.. total {len(data)} items.")
+    geocoder_client = GeoCoder()
 
-    endpoint = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
-    
-    headers = {
-        "Content-Type": "application/json",
-        "X-NCP-APIGW-API-KEY-ID": client_id,
-        "X-NCP-APIGW-API-KEY": client_secret,
-    }
-    
-    params = {
-        "query": location
-    }
-    
-    try:
-        response = requests.get(endpoint, headers=headers, params=params)
-        response.raise_for_status() # 에러 발생 시 예외 발생
-        data = response.json()
+    for item in data:
+        # try:
+        # 1. Prepare fields
+        place_id = item.get("id")
+        name = item.get("name", "")
+        address = item.get("주소", "")
         
-        if data['status'] == 'OK' and data['addresses']:
-            # 가장 검색 결과가 높은 첫 번째 주소 정보 가져오기
-            target = data['addresses'][0]
-            lat = float(target['y']) # 위도
-            lng = float(target['x']) # 경도
+        # Description generation (combining relevant fields)
+        desc_parts = []
+        for key, value in item.items():
+            if isinstance(value, str) and key not in ["id", "name", "주소"]:
+                desc_parts.append(f"{key}: {value}")
+
+        description = " ".join(desc_parts)
+        
+        # 2) 주소 -> 좌표 변환
+        latlng = geocoder_client.eocoder(address)
+        if latlng is None:
+            print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
+            pass
+        
+        # Region extraction (simple heuristic from address)
+        region = address.split(" ")[1] if len(address.split(" ")) > 1 else "기타"
+        
+        # Category
+        category = "관광지" # Fixed for now or extract if available
+        
+        # Image URLs
+        image_urls = item.get("photo_urls", [])
             
-            # 주소 정보와 함께 반환 (디버깅 용이)
-            return {
-                "lat": lat,
-                "lng": lng,
-                "road_address": target.get('roadAddress'),
-                "jibun_address": target.get('jibunAddress')
-            }
-        else:
-            print(f"검색 결과가 없습니다: {location}")
-            return None
+        yield {
+            "place_id": place_id,
+            "description": description,
+            "image_urls": image_urls, 
+            "region": region,
+            "category": category,
+            "address": address,
+            "title": name,
+            "lat": latlng.get("lat") if latlng else 0,
+            "lng": latlng.get("lng") if latlng else 0,
+        }
+            # # 2. Add Place (which handles images internally)
+            # self.add_place(
+            #     place_id=place_id,
+            #     description=description,
+            #     image_urls=image_urls,
+            #     payload={
+            #         "region": region,
+            #         "category": category,
+            #         "address": address,
+            #         "title": name,
+            #         "lat": latlng.get("lat") if latlng else 0,
+            #         "lng": latlng.get("lng") if latlng else 0,
+            #     }
+            # )
             
-    except Exception as e:
-        print(f"API 요청 중 오류 발생: {e}")
-        return None
+                
+        # except Exception as e:
+        #     print(f"[ERROR] Failed to ingest item {item.get('name')}: {e}")
+            
+    # print(f"[INFO] Ingestion finished. Success: {success_count}/{len(data)}")

@@ -8,13 +8,34 @@ export interface UserProfile {
     id: number;
     email: string;
     name?: string | null;
+    nickname?: string | null;
     gender?: string | null;
+    birthday?: string | null;
+    actor_prefer_id?: number | null;
+    movie_prefer_id?: number | null;
+    drama_prefer_id?: number | null;
+    celeb_prefer_id?: number | null;
+    variety_prefer_id?: number | null;
     is_join?: boolean | null;
     is_prefer?: boolean | null;
     dog_yn?: boolean | null;
     vegan_yn?: boolean | null;
     with_yn?: boolean | null;
 }
+
+export interface PreferItem {
+    id: number;
+    category?: string | null;
+    type?: string | null;
+    value?: string | null;
+    image_path?: string | null;
+}
+
+export const getPostLoginPath = (user: UserProfile): string => {
+    if (!user.is_join) return "/signup/profile";
+    if (!user.is_prefer) return "/survey";
+    return "/chatbot";
+};
 
 const getAuthHeaders = (): HeadersInit => {
     const token = safeLocalGet('access_token');
@@ -73,16 +94,18 @@ type FetchOpts = {
     method?: string;
     body?: any;
     headers?: HeadersInit;
+    cache?: RequestCache;
 };
 
 const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
-    const { method = 'GET', body, headers } = opts;
+    const { method = 'GET', body, headers, cache } = opts;
 
     const doFetch = async () => fetch(url, {
         method,
         headers: { ...getAuthHeaders(), ...headers },
         credentials: 'include',
         body: body ? JSON.stringify(body) : undefined,
+        cache,
     });
 
     let res = await doFetch();
@@ -147,7 +170,13 @@ export const sendChatMessage = async (
 };
 
 export const fetchCurrentUser = async (): Promise<UserProfile> => {
-    const response = await fetchWithAuth(`${API_URL}/users/me`);
+    const response = await fetchWithAuth(`${API_URL}/users/me`, { cache: 'no-store' });
+    return response.json();
+};
+
+export const fetchPrefers = async (preferType?: string): Promise<PreferItem[]> => {
+    const qs = preferType ? `?type=${encodeURIComponent(preferType)}` : "";
+    const response = await fetchWithAuth(`${API_URL}/prefers${qs}`);
     return response.json();
 };
 
