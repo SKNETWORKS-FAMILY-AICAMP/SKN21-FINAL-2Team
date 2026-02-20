@@ -12,6 +12,7 @@ class User(BaseModel):
     email = Column(String(255), unique=True, nullable=False)
     name = Column(String(255))
     nickname = Column(String(255), nullable=True)
+    profile_picture = Column(String(1000), nullable=True)
     gender = Column(Enum(GenderType))
     birthday = Column(DateTime, nullable=True)
     social_provider = Column(String(255))
@@ -28,7 +29,7 @@ class User(BaseModel):
     with_yn = Column(Boolean, nullable=True)
     dog_yn = Column(Boolean, nullable=True)
     vegan_yn = Column(Boolean, nullable=True)
-    country_code = Column(String(10), default="KRW", comment="Currency Code for Budget")
+    country_code = Column(String(10), nullable=True, comment="Currency Code for Budget")
     is_join = Column(Boolean, default=False)
     is_prefer = Column(Boolean, default=False)
 

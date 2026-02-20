@@ -25,14 +25,20 @@ export default function LoginPage() {
         }
 
         const data = await res.json();
-        const { access_token, refresh_token } = data;
+        const { access_token, is_join, profile_picture, name, email } = data;
 
-        // 토큰 저장
+        // 토큰 및 프로필 정보 저장
         localStorage.setItem("access_token", access_token);
-        localStorage.setItem("refresh_token", refresh_token);
+        if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
+        if (name) localStorage.setItem("user_name", name);
+        if (email) localStorage.setItem("user_email", email);
 
-        // 라우팅 (추후 백엔드에서 사용자 상태값 받아서 분기 처리 필요)
-        router.push("/chatbot");
+        // is_join 기반 라우팅
+        if (is_join) {
+          router.push("/chatbot");          // 기존 사용자 → 채팅
+        } else {
+          router.push("/signup/profile");   // 신규 사용자 → 추가정보 입력
+        }
 
       } catch (error) {
         console.error("Login Failed:", error);

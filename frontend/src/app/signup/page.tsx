@@ -4,13 +4,53 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function SignUpPage() {
   const router = useRouter();
 
-  const handleSignUp = () => {
-    router.push("/signup/profile");
-  };
+  const handleSignUp = useGoogleLogin({
+    onSuccess: async (codeResponse) => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google/callback`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const { access_token, is_join, profile_picture, name, email } = data;
+
+        // 토큰 및 프로필 정보 저장
+        localStorage.setItem("access_token", access_token);
+        if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
+        if (name) localStorage.setItem("user_name", name);
+        if (email) localStorage.setItem("user_email", email);
+
+        // is_join 기반 라우팅
+        if (is_join) {
+          router.push("/chatbot");          // 기존 사용자 → 채팅
+        } else {
+          router.push("/signup/profile");   // 신규 사용자 → 추가정보 입력
+        }
+
+      } catch (error) {
+        console.error("SignUp Failed:", error);
+        alert("Sign up failed. Please try again.");
+      }
+    },
+    onError: () => {
+      console.log("SignUp Failed");
+      alert("Google Sign up Failed");
+    },
+    flow: "auth-code",
+  });
 
   const handleBack = () => {
     router.push("/");
@@ -91,7 +131,7 @@ export default function SignUpPage() {
 
           <div className="space-y-4">
             <Button
-              onClick={handleSignUp}
+              onClick={() => handleSignUp()}
               variant="outline"
               className="w-full h-12 border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             >

@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
 from app.api import auth, users, chat, prefer
+from app.database.connection import Base, get_engine
+from app.models import user, chat as chat_model, prefer as prefer_model  # noqa: F401 - 테이블 등록용
 
 app = FastAPI()
 

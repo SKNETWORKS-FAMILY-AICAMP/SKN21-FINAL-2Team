@@ -19,15 +19,22 @@ Enum role_type {
   ai
 }
 
+Table country {
+    code varchar [primary key]
+    name varchar
+}
+
+
 // 2. 회원 정보
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
   name varchar
   nickname varchar
+  profile_picture varchar
   birthday date
   gender gender_type // 정의한 Enum 사용
-  contury_code varchar
+  country_code varchar
 
   // Google Login
   social_provider varchar
@@ -82,11 +89,6 @@ Table chat_messages {
   created_at timestamp [default: `now()` ]
 }
 
-Table country {
-    code varchar
-    name varchar
-}
-
 // --- 관계 설정 (Ref) ---
 
 // Users - 특정 선호도 연결 (1:N)
@@ -97,7 +99,7 @@ Ref: users.celeb_prefer_id > prefers.id
 Ref: users.variety_prefer_id > prefers.id
 
 // Users - 국적 연결 (1:N)
-Ref: users.contury_code > country.code
+Ref: users.country_code > country.code
 
 // 채팅방 및 메시지
 Ref: chat_rooms.user_id > users.id
@@ -219,6 +221,12 @@ def deploy_db_from_dbml():
         with connection.cursor() as cursor:
             # 외래키 제약 조건 잠시 해제 (순서 상관없이 테이블 생성 위함)
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+            
+            # 기존 테이블 삭제
+            tables = ["chat_messages", "chat_rooms", "prefers", "users", "country"]
+            for table in tables:
+                cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                print(f"🗑️ Table '{table}' dropped.")
             
             # 생성된 SQL 실행 (세미콜론으로 나누어 개별 실행)
             # 빈 줄이나 주석 라인 처리 필요할 수 있음

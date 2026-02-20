@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, ArrowRight, User, Globe, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -11,16 +11,57 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState("");
 
-  // Mock pre-filled data (실제 구현 시 API에서 가져옴)
-  const userData = {
-    name: "Leo Das",
-    email: "leo.das@example.com",
-  };
+  // 사용자 정보 State
+  const [userInfo, setUserInfo] = useState({
+    name: "",
+    email: "",
+    picture: "",
+  });
+
+  useEffect(() => {
+    // localStorage에서 정보 로드
+    const name = localStorage.getItem("user_name") || "";
+    const email = localStorage.getItem("user_email") || "";
+    const picture = localStorage.getItem("profile_picture") || "";
+
+    setUserInfo({ name, email, picture });
+  }, []);
 
   const isFormValid = nickname && gender && agreed;
 
-  const handleComplete = () => {
-    router.push("/survey");
+  const handleComplete = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("로그인이 필요합니다.");
+        router.push("/login");
+        return;
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nickname,
+          gender: gender.toLowerCase(), // "Male" -> "male"
+          is_join: true,               // 가입 완료 처리
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update profile");
+      }
+
+      // 성공 시 설문 조사 페이지로 이동
+      router.push("/survey");
+
+    } catch (error) {
+      console.error("Profile Update Failed:", error);
+      alert("프로필 저장에 실패했습니다.");
+    }
   };
 
   return (
@@ -32,8 +73,11 @@ export default function ProfilePage() {
         className="w-full max-w-xl"
       >
         <div className="mb-10 text-center">
+          {userInfo.picture && (
+            <img src={userInfo.picture} alt="Profile" className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-2 border-white shadow-md" />
+          )}
           <h1 className="text-3xl font-serif italic font-light text-gray-900 mb-2">
-            One last step, {userData.name.split(" ")[0]}
+            One last step, {userInfo.name.split(" ")[0]}
           </h1>
           <p className="text-sm text-gray-500 font-light">
             Help us personalize your travel experience.
@@ -46,13 +90,13 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Full Name</label>
               <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
-                {userData.name}
+                {userInfo.name}
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Email Address</label>
               <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
-                {userData.email}
+                {userInfo.email}
               </div>
             </div>
           </div>
