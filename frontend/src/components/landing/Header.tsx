@@ -30,12 +30,6 @@ export function Header() {
                 <div className="hidden md:flex items-center gap-4">
                     <button
                         onClick={() => router.push("/login")}
-                        className="text-gray-500 hover:text-black font-medium text-sm transition-colors px-4 py-2"
-                    >
-                        Log in
-                    </button>
-                    <button
-                        onClick={() => router.push("/signup")}
                         className="bg-black text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-gray-800 transition-colors"
                     >
                         Get Started
@@ -68,12 +62,6 @@ export function Header() {
                         <hr className="my-2 border-gray-100" />
                         <button
                             onClick={() => { setIsOpen(false); router.push("/login"); }}
-                            className="text-base font-medium text-gray-500 text-left"
-                        >
-                            Log in
-                        </button>
-                        <button
-                            onClick={() => { setIsOpen(false); router.push("/signup"); }}
                             className="bg-black text-white text-base font-medium px-4 py-2 rounded-full"
                         >
                             Get Started

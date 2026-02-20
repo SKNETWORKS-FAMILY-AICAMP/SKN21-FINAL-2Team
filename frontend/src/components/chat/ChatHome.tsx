@@ -12,6 +12,12 @@ interface Message {
     timestamp: string;
 }
 
+interface UserProfile {
+    name: string;
+    nickname: string;
+    profile_picture: string | null;
+}
+
 export function ChatHome() {
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -23,6 +29,7 @@ export function ChatHome() {
     ]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -32,6 +39,34 @@ export function ChatHome() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping]);
+
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const token = localStorage.getItem("access_token");
+                if (!token) return;
+
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setUserProfile({
+                        name: data.name,
+                        nickname: data.nickname,
+                        profile_picture: data.profile_picture,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile", error);
+            }
+        };
+
+        fetchUserProfile();
+    }, []);
 
     const handleSendMessage = async () => {
         if (!inputText.trim()) return;
@@ -67,6 +102,8 @@ export function ChatHome() {
         }
     };
 
+    const displayImage = userProfile?.profile_picture || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080";
+
     return (
         <div className="flex flex-col h-full bg-white relative">
             <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
@@ -80,7 +117,7 @@ export function ChatHome() {
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>
                     <div className="w-8 h-8 bg-gray-200 border-2 border-white rounded-full overflow-hidden shadow-sm">
                         <img
-                            src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080"
+                            src={displayImage}
                             className="w-full h-full object-cover grayscale"
                             alt="User"
                         />
@@ -97,7 +134,15 @@ export function ChatHome() {
                         className={`flex items-end gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
                     >
                         <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.sender === "user" ? "bg-gray-900" : "bg-black"}`}>
-                            {msg.sender === "user" ? <User size={14} /> : <span className="font-serif italic text-sm">T</span>}
+                            {msg.sender === "user" ? (
+                                userProfile?.profile_picture ? (
+                                    <img src={userProfile.profile_picture} className="w-full h-full object-cover rounded-full grayscale" alt="User" />
+                                ) : (
+                                    <User size={14} />
+                                )
+                            ) : (
+                                <span className="font-serif italic text-sm">T</span>
+                            )}
                         </div>
                         <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.sender === "user" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
                             {msg.content}

@@ -42,16 +42,17 @@ Table users {
   social_access_token varchar
   social_refresh_token varchar
   
-  // 기존 방식대로 유지 (특정 카테고리 고정)
-  actor_prefer_id integer
+  // Survey Prefers (Updated)
+  plan_prefer_id integer
+  member_prefer_id integer
+  transport_prefer_id integer
+  age_prefer_id integer
+  vibe_prefer_id integer
+  
+  // Content Prefers (Updated)
   movie_prefer_id integer
   drama_prefer_id integer
-  celeb_prefer_id integer
   variety_prefer_id integer
-
-  with_yn bool
-  dog_yn bool
-  vegan_yn bool
 
   is_join bool [not null, default: false]
   is_prefer bool [not null, default: false]
@@ -63,10 +64,10 @@ Table users {
 // 3. 선호도 마스터
 Table prefers {
   id integer [primary key, increment]
-  category varchar // 'actor', 'movie', 'travel_theme' 등
-  type varchar
+  category varchar // 'style', 'content' 등
+  type varchar // 'plan', 'member', 'transport', 'age', 'vibe', 'movie', 'drama', 'variety'
   value varchar
-  image_path text // 파일 경로는 보통 text/varchar
+  image_path text
 }
 
 // 4. 채팅방 및 메시지
@@ -91,14 +92,16 @@ Table chat_messages {
 
 // --- 관계 설정 (Ref) ---
 
-// Users - 특정 선호도 연결 (1:N)
-Ref: users.actor_prefer_id > prefers.id
+// Users - Survey 선호도 연결 (1:N)
+Ref: users.plan_prefer_id > prefers.id
+Ref: users.member_prefer_id > prefers.id
+Ref: users.transport_prefer_id > prefers.id
+Ref: users.age_prefer_id > prefers.id
+Ref: users.vibe_prefer_id > prefers.id
+
 Ref: users.movie_prefer_id > prefers.id
 Ref: users.drama_prefer_id > prefers.id
-Ref: users.celeb_prefer_id > prefers.id
 Ref: users.variety_prefer_id > prefers.id
-
-// Users - 국적 연결 (1:N)
 Ref: users.country_code > country.code
 
 // 채팅방 및 메시지

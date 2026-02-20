@@ -12,7 +12,8 @@ export default function LoginPage() {
   const handleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google/callback`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const res = await fetch(`${apiUrl}/api/auth/google/callback`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -144,12 +145,6 @@ export default function LoginPage() {
               Continue with Google
             </Button>
           </div>
-
-          <div className="mt-6 text-[11px] text-gray-400">
-            Don&apos;t have an account?{" "}
-            <Button variant="link" onClick={handleSignUpClick} className="font-bold text-black p-0 h-auto text-[11px]">Sign up</Button>
-          </div>
-
           <div className="mt-8 pt-8 border-t border-gray-100">
             <p className="text-[10px] text-gray-400 leading-relaxed">
               By clicking continue, you agree to our{" "}

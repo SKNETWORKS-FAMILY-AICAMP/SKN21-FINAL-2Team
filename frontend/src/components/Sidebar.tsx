@@ -4,10 +4,46 @@ import { Home, Grid, Bookmark, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+interface UserProfile {
+    name: string;
+    nickname: string;
+    profile_picture: string | null;
+}
 
 export function Sidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const token = localStorage.getItem("access_token");
+                if (!token) return;
+
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setUserProfile({
+                        name: data.name,
+                        nickname: data.nickname,
+                        profile_picture: data.profile_picture,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch user profile", error);
+            }
+        };
+
+        fetchUserProfile();
+    }, []);
 
     const menuItems = [
         { icon: Home, label: "Home", path: "/chatbot" },
@@ -16,8 +52,13 @@ export function Sidebar() {
     ];
 
     const handleSignOut = () => {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         router.push("/");
     };
+
+    const displayName = userProfile?.nickname || userProfile?.name || "User";
+    const displayImage = userProfile?.profile_picture || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080";
 
     return (
         <aside className="w-64 h-full bg-white flex flex-col border-r border-gray-200 rounded-lg">
@@ -69,14 +110,13 @@ export function Sidebar() {
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden ring-2 ring-white shadow-sm grayscale-[20%]">
                             <img
-                                src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080"
+                                src={displayImage}
                                 alt="Profile"
                                 className="w-full h-full object-cover"
                             />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[13px] font-semibold text-gray-900 leading-tight">Leo_Travels</span>
-                            <span className="text-[10px] text-gray-400 font-medium">Pro Member</span>
+                            <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate w-32">{displayName}</span>
                         </div>
                     </div>
                     <Settings

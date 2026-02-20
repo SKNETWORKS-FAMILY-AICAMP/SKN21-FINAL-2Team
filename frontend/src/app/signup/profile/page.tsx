@@ -17,6 +17,8 @@ export default function ProfilePage() {
     email: "",
     picture: "",
   });
+  const [countries, setCountries] = useState<{ code: string, name: string }[]>([]);
+  const [countryCode, setCountryCode] = useState("");
 
   useEffect(() => {
     // localStorage에서 정보 로드
@@ -25,9 +27,13 @@ export default function ProfilePage() {
     const picture = localStorage.getItem("profile_picture") || "";
 
     setUserInfo({ name, email, picture });
+
+    import("@/services/api").then(({ fetchCountries }) => {
+      fetchCountries().then(setCountries).catch(console.error);
+    });
   }, []);
 
-  const isFormValid = nickname && gender && agreed;
+  const isFormValid = nickname && gender && agreed && countryCode;
 
   const handleComplete = async () => {
     try {
@@ -38,7 +44,8 @@ export default function ProfilePage() {
         return;
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/me`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/users/me`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -47,6 +54,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           nickname,
           gender: gender.toLowerCase(), // "Male" -> "male"
+          country_code: countryCode,
           is_join: true,               // 가입 완료 처리
         }),
       });
@@ -145,11 +153,14 @@ export default function ProfilePage() {
                   <Globe size={12} /> Country
                 </label>
                 <div className="relative">
-                  <select className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer">
-                    <option value="kr">South Korea</option>
-                    <option value="us">United States</option>
-                    <option value="jp">Japan</option>
-                    <option value="uk">United Kingdom</option>
+                  <select
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer"
+                    onChange={(e) => setCountryCode(e.target.value)} // State update
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

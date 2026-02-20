@@ -11,16 +11,22 @@ export interface UserProfile {
     nickname?: string | null;
     gender?: string | null;
     birthday?: string | null;
-    actor_prefer_id?: number | null;
+
+    // Survey Prefers
+    plan_prefer_id?: number | null;
+    member_prefer_id?: number | null;
+    transport_prefer_id?: number | null;
+    age_prefer_id?: number | null;
+    vibe_prefer_id?: number | null;
+
+    // Content Prefers
     movie_prefer_id?: number | null;
     drama_prefer_id?: number | null;
-    celeb_prefer_id?: number | null;
     variety_prefer_id?: number | null;
+
+    country_code?: string | null;
     is_join?: boolean | null;
     is_prefer?: boolean | null;
-    dog_yn?: boolean | null;
-    vegan_yn?: boolean | null;
-    with_yn?: boolean | null;
 }
 
 export interface PreferItem {
@@ -182,6 +188,16 @@ export const fetchPrefers = async (preferType?: string): Promise<PreferItem[]> =
 
 export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/users/me`, { method: 'PATCH', body: payload });
+    return response.json();
+};
+
+export interface Country {
+    code: string;
+    name: string;
+}
+
+export const fetchCountries = async (): Promise<Country[]> => {
+    const response = await fetchWithAuth(`${API_URL}/common/countries`);
     return response.json();
 };
 

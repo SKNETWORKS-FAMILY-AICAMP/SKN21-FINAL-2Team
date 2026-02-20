@@ -73,7 +73,11 @@ def login_google(
     return {
         "access_token": access_token, 
         "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "is_join": user.is_join,
+        "profile_picture": user.profile_picture,
+        "name": user.name,
+        "email": user.email
     }
 
 @router.post("/refresh", response_model=Token)
