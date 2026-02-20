@@ -187,7 +187,7 @@ export default function MyPage() {
             <div>
               <label className="text-sm font-semibold text-slate-800">성별</label>
               <div className="mt-3 flex gap-3">
-                {[
+                {/* {[
                   { value: "female", label: "여성" },
                   { value: "male", label: "남성" },
                   { value: "other", label: "기타" },
@@ -200,7 +200,7 @@ export default function MyPage() {
                   >
                     {g.label}
                   </button>
-                ))}
+                ))} */}
               </div>
             </div>
             <div>

@@ -170,7 +170,7 @@ export default function SignUpProfilePage() {
             <div>
               <p className="block text-sm font-semibold text-slate-800">성별</p>
               <div className="mt-3 grid grid-cols-3 gap-3">
-                {genders.map((g) => (
+                {/* {genders.map((g) => (
                   <button
                     key={g.value}
                     type="button"
@@ -179,7 +179,7 @@ export default function SignUpProfilePage() {
                   >
                     {g.label}
                   </button>
-                ))}
+                ))} */}
               </div>
             </div>
 

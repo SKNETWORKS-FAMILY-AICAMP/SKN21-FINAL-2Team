@@ -1,7 +1,7 @@
 // src/app/chatbot/page.tsx
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from "next/link";
 import { sendChatMessage, fetchRooms, fetchRoom, createRoom, ChatMessage, ChatRoom, logoutApi } from '@/services/api';
 import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus, Sparkles, ChevronDown } from 'lucide-react';
@@ -49,7 +49,7 @@ function renderInlineMarkdown(text: string) {
 
 function MarkdownMessage({ text }: { text: string }) {
   const lines = text.split("\n");
-  const nodes: JSX.Element[] = [];
+  const nodes: React.JSX.Element[] = [];
   let listItems: string[] = [];
   let listType: "ul" | "ol" | null = null;
 
@@ -545,11 +545,10 @@ export default function ChatbotPage() {
               onClick={() => scrollToBottom()}
               aria-label="맨 아래로 이동"
               title="맨 아래로 이동"
-              className={`absolute right-6 bottom-4 z-20 rounded-full border bg-white p-2 shadow-md hover:text-indigo-600 ${
-                hasUnseenNewMessages
-                  ? 'border-indigo-300 text-indigo-600 shadow-indigo-300'
-                  : 'border-slate-200 text-slate-600'
-              }`}
+              className={`absolute right-6 bottom-4 z-20 rounded-full border bg-white p-2 shadow-md hover:text-indigo-600 ${hasUnseenNewMessages
+                ? 'border-indigo-300 text-indigo-600 shadow-indigo-300'
+                : 'border-slate-200 text-slate-600'
+                }`}
             >
               <ChevronDown className="h-4 w-4" />
             </button>
