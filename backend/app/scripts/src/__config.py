@@ -32,6 +32,8 @@ class Settings:
     tour_api_area_based_url: str
     tour_api_detail_intro_url: str
     tour_api_detail_info_url: str
+    tour_api_detail_pet_tour_url: str 
+    tour_api_search_keyword_url: str
 
     kakao_rest_api_key: str
 
@@ -67,6 +69,8 @@ def load_settings() -> Settings:
         tour_api_area_based_url=f"{base}/areaBasedList2",
         tour_api_detail_intro_url=f"{base}/detailIntro2",
         tour_api_detail_info_url=f"{base}/detailInfo2",
+        tour_api_detail_pet_tour_url=f"{base}/detailPetTour2",
+        tour_api_search_keyword_url=f"{base}/searchKeyword2",
 
         kakao_rest_api_key=os.getenv("KAKAO_REST_API_KEY", "").strip(),
 
