@@ -1,0 +1,86 @@
+
+# local에서 backend까지 모두 띄움
+# docker compose -f 'docker-compose.yml' up -d --build
+
+services:
+  mysql:
+    platform: linux/amd64
+    image: mysql:8.0
+    container_name: mysql_container
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  qdrant:
+    platform: linux/amd64
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+
+  backend:
+    platform: linux/amd64
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - mysql
+      - qdrant
+
+  frontend:
+    platform: linux/amd64
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=/api
+
+  nginx:
+    platform: linux/amd64
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  mysql_data:
+  qdrant_data:
