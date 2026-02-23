@@ -37,7 +37,7 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         if category:
             line += f" ({category})"
         line += f"\n   - 주소: {address}" if address else ""
-        line += f"\n   - 설명: {desc[:200]}" if desc else ""
+        line += f"\n   - 상세설명: {desc[:500]}" if desc else ""
         if distance is not None:
             line += f"\n   - 거리: {distance:.1f}km"
         if map_url:

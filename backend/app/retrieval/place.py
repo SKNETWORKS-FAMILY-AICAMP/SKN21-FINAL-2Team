@@ -10,7 +10,21 @@ from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
 
+
 class PlaceRetriever:
+    _instance = None
+    
+    # 카테고리 명칭 -> contenttypeid 매핑
+    CATEGORY_MAP = {
+        "관광지": "12",
+        "문화시설": "14",
+        "축제공연행사": "15",
+        "레포츠": "28",
+        "숙박": "32",
+        "쇼핑": "38",
+        "음식점": "39",
+        "카페": "39", # 카페는 보통 음식점(39)에 포함됨
+    }
     _instance = None
 
     @classmethod
@@ -44,9 +58,11 @@ class PlaceRetriever:
         return preview
 
     def _build_category_filter(self, category: str = None) -> Filter | None:
-        """카테고리 필터 생성"""
+        """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
         if not category:
             return None
+            
+        # DB에 '관광지', '음식점' 등으로 저장되어 있음
         return Filter(
             must=[FieldCondition(key="category", match=MatchValue(value=category))]
         )

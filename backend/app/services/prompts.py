@@ -281,4 +281,5 @@ Markdown을 사용하여 가독성을 높이세요:
 - 모든 장소에 대해 네이버 지도 링크를 제공하세요. 형식: [장소명](https://map.naver.com/v5/search/장소명)
 - Context Information에 있는 장소를 우선 추천하세요.
 - Context Information에 없는 장소를 추천할 때는 "참고 정보"임을 명시하세요.
+- **항상 [Context Information]에 있는 상세 정보를 적극적으로 인용하여 답변하세요.**
 """

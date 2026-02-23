@@ -1,0 +1,6 @@
+Evaluation Time: 2026-02-23 15:16:30
+--- Average Scores ---
+faithfulness: 0.2579
+answer_relevancy: nan
+context_precision: 0.0000
+context_recall: 0.0000

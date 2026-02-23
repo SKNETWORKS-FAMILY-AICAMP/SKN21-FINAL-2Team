@@ -50,21 +50,29 @@ def ingest_data(data):
         name = item.get("title", "")
         address = item.get("addr1", "") + " " + item.get("addr2", "")
         
-        # Description generation (combining relevant fields)
-        # desc_parts = []
-        # for key, value in item.items():
-        #     if isinstance(value, str) and key not in ["contentid", "title", "addr1", "addr2"]:
-        #         desc_parts.append(f"{key}: {value}")
-
-        # description = " ".join(desc_parts)
-        description = ""
+        # Description generation (richer context for RAG)
+        description_parts = []
+        if address:
+            description_parts.append(f"주소: {address}")
+            
         for key, value in item.items():
-            if key == "usetime":
-                description += f"이용시간: {value}\n"
-            elif key == "parking":
-                description += f"주차: {value}\n"
-            elif key == "restdate":
-                description += f"휴일: {value}\n"
+            if not value or not isinstance(value, str):
+                continue
+            if key in ["contentid", "title", "addr1", "addr2", "firstimage", "mapx", "mapy", "contenttypeid_code"]:
+                continue
+                
+            label = {
+                "usetime": "이용시간",
+                "parking": "주차",
+                "restdate": "휴무일",
+                "infotext": "안내",
+                "treatmenu": "주요메뉴",
+                "open_time": "영업시간",
+            }.get(key, key)
+            
+            description_parts.append(f"{label}: {value}")
+            
+        description = "\n".join(description_parts)
     
         # 2) 주소 -> 좌표 변환
         lat = item.get("mapx")

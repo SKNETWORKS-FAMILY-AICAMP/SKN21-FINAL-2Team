@@ -113,16 +113,22 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
 
-    # slots에서 category 정보 추출
+    # slots에서 category 정보 추출 및 쿼리 구성
     category = None
     if slots:
         category = slots.category if hasattr(slots, 'category') else (slots.get("category") if isinstance(slots, dict) else None)
-
-    # slots에서 location 정보 추가
-    if slots:
+        
         location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
         if location and location not in query:
-            query += f"\n지역: {location}"
+            query += f" {location}"
+            
+        themes = slots.themes if hasattr(slots, 'themes') else (slots.get("themes", []) if isinstance(slots, dict) else [])
+        if themes:
+            query += f" {' '.join(themes)}"
+            
+        must_have = slots.must_have if hasattr(slots, 'must_have') else (slots.get("must_have") if isinstance(slots, dict) else None)
+        if must_have:
+            query += f" {must_have}"
 
     # 1. 하이브리드 검색 (텍스트 + 이미지)
     print(f"[Retriever] Hybrid search query: '{query[:100]}' category={category}")
