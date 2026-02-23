@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Languages,
@@ -23,10 +23,39 @@ import { SettingsModal } from "@/components/SettingsModal";
 
 export default function MyPage() {
   const [userProfile, setUserProfile] = useState({
-    nickname: "Leo_Travels",
+    nickname: "",
     bio: "Explorer Lvl.3",
     preferences: ["Relaxation", "Food"],
+    profile_picture: "",
   });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUserProfile((prev) => ({
+            ...prev,
+            nickname: data.nickname || data.name || "User",
+            profile_picture: data.profile_picture || "",
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const divingStyleData = [
     { subject: "Relaxation", fullMark: 150 },
@@ -41,7 +70,7 @@ export default function MyPage() {
   }));
 
   const handleSaveSettings = (nickname: string, bio: string, preferences: string[]) => {
-    setUserProfile({ nickname, bio, preferences });
+    setUserProfile((prev) => ({ ...prev, nickname, bio, preferences }));
   };
 
   return (
@@ -72,20 +101,19 @@ export default function MyPage() {
                 className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-center gap-4 mb-5">
-                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
-                    <img
-                      src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                      alt="Profile"
-                      className="w-full h-full object-cover grayscale-[20%]"
-                    />
+                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
+                    {userProfile.profile_picture ? (
+                      <img
+                        src={userProfile.profile_picture}
+                        alt="Profile"
+                        className="w-full h-full object-cover grayscale-[20%]"
+                      />
+                    ) : (
+                      <span className="font-medium text-xs">No Image</span>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-bold text-base text-gray-900">{userProfile.nickname}</h3>
-                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mt-0.5">{userProfile.bio}</p>
-                    <div className="flex gap-2 mt-2">
-                      <span className="px-1.5 py-0.5 bg-black text-white text-[9px] font-bold rounded-sm uppercase tracking-wider">Pro</span>
-                      <span className="px-1.5 py-0.5 border border-gray-200 text-gray-500 text-[9px] font-bold rounded-sm uppercase tracking-wider">Verified</span>
-                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">

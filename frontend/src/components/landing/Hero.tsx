@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 export function Hero() {
     const router = useRouter();
 
+    const handleNavigation = () => {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            router.push("/chatbot");
+        } else {
+            router.push("/login");
+        }
+    };
+
     return (
         <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 z-0">
@@ -51,7 +60,7 @@ export function Hero() {
                             className="w-full bg-transparent text-white placeholder-white/70 outline-none text-lg font-light"
                         />
                         <button
-                            onClick={() => router.push("/login")}
+                            onClick={handleNavigation}
                             className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors"
                         >
                             Start

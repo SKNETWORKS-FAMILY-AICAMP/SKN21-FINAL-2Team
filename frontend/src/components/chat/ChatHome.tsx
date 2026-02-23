@@ -102,7 +102,8 @@ export function ChatHome() {
         }
     };
 
-    const displayImage = userProfile?.profile_picture || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080";
+    const displayName = userProfile?.nickname || userProfile?.name || "User";
+    const displayImage = userProfile?.profile_picture || "";
 
     return (
         <div className="flex flex-col h-full bg-white relative">
@@ -115,12 +116,16 @@ export function ChatHome() {
                 </div>
                 <div className="flex -space-x-2">
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>
-                    <div className="w-8 h-8 bg-gray-200 border-2 border-white rounded-full overflow-hidden shadow-sm">
-                        <img
-                            src={displayImage}
-                            className="w-full h-full object-cover grayscale"
-                            alt="User"
-                        />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs sm:text-sm ring-2 ring-white shadow-sm grayscale-[20%]">
+                        {displayImage ? (
+                            <img
+                                src={displayImage}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            displayName.charAt(0).toUpperCase()
+                        )}
                     </div>
                 </div>
             </header>

@@ -73,7 +73,7 @@ export default function PersonaSurveyPage() {
             // Submit all answers
             try {
                 // Map answers to API payload keys (e.g., plan -> plan_prefer_id)
-                const payload: any = { is_prefer: true };
+                const payload: any = { is_prefer: true, is_join: true };
                 Object.entries(newAnswers).forEach(([type, id]) => {
                     payload[`${type}_prefer_id`] = id;
                 });

@@ -58,7 +58,7 @@ export function Sidebar() {
     };
 
     const displayName = userProfile?.nickname || userProfile?.name || "User";
-    const displayImage = userProfile?.profile_picture || "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080";
+    const displayImage = userProfile?.profile_picture || "";
 
     return (
         <aside className="w-64 h-full bg-white flex flex-col border-r border-gray-200 rounded-lg">
@@ -108,12 +108,16 @@ export function Sidebar() {
                     )}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden ring-2 ring-white shadow-sm grayscale-[20%]">
-                            <img
-                                src={displayImage}
-                                alt="Profile"
-                                className="w-full h-full object-cover"
-                            />
+                        <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
+                            {displayImage ? (
+                                <img
+                                    src={displayImage}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                displayName.charAt(0).toUpperCase()
+                            )}
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate w-32">{displayName}</span>

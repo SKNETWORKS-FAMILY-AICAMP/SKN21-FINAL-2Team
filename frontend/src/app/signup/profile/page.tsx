@@ -55,7 +55,6 @@ export default function ProfilePage() {
           nickname,
           gender: gender.toLowerCase(), // "Male" -> "male"
           country_code: countryCode,
-          is_join: true,               // 가입 완료 처리
         }),
       });
 
