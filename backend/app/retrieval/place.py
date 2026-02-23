@@ -5,10 +5,14 @@ from qdrant_client.models import (
     Filter, FieldCondition, MatchValue, ScoredPoint
 )
 from sentence_transformers import SentenceTransformer
-from app.core.config import PLACES_COLLECTION, PHOTOS_COLLECTION, VECTOR_SIZE
+from app.core.config import (
+    PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
+    TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE
+)
 from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
+from app.services.vision import describe_image
 
 
 class PlaceRetriever:
@@ -39,8 +43,12 @@ class PlaceRetriever:
         port = os.getenv('QDRANT_PORT', 6333)
         print(f"[INFO] Connecting to Qdrant at {host}:{port}")
         self.client = QdrantClient(host=host, port=port)
-        self.model = SentenceTransformer("clip-ViT-B-32")
-        print("[INFO] PlaceRetriever ready (model=clip-ViT-B-32)")
+        
+        print(f"[INFO] Loading models: Text={TEXT_MODEL}, Vision={VISION_MODEL}")
+        self.text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
+        self.vision_model = SentenceTransformer(VISION_MODEL, device=DEVICE)
+        
+        print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
     def _preview_results(self, results, top_n: int = 3):
         preview = []
@@ -69,16 +77,14 @@ class PlaceRetriever:
 
     def search_text(self, query: str, limit: int = 5, category: str = None):
         """
-        Text-based search for places.
-        Uses 'text_vec' in PLACES_COLLECTION.
+        Text-based search for places (Semantic).
+        Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
         """
-        print(f"[INFO] search_text start query='{query[:80]}' limit={limit} category={category}")
-        query_vec = self.model.encode(query).astype(np.float32)
-        print(f"[DEBUG] text query vector shape={query_vec.shape} dtype={query_vec.dtype}")
+        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} category={category}")
+        query_vec = self.text_model.encode(query).astype(np.float32)
         
         query_filter = self._build_category_filter(category)
 
-        # Search in places collection (text_vec)
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
             query=query_vec.tolist(),
@@ -90,23 +96,40 @@ class PlaceRetriever:
         print(f"[INFO] search_text hits={len(response.points)}")
         return response.points
 
-    def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
+    def search_text_to_image(self, query: str, limit: int = 5, category: str = None):
         """
-        Image-based search using Group By on PHOTOS_COLLECTION.
-        Finds specific photos similar to the input image, then groups them by place_id.
+        Text-to-Image cross-modal search.
+        Uses CLIP Text Encoder to find images in 'img_vec_agg'.
         """
-        print(f"[INFO] search_image start image_url='{str(image_url)[:120]}' limit={limit} group_size={group_size} category={category}")
-        img = download_image(image_url)
-        if img is None:
-            print("[WARN] Failed to download image for search.")
-            return []
-
-        query_vec = self.model.encode(img).astype(np.float32)
-        print(f"[DEBUG] image query vector shape={query_vec.shape} dtype={query_vec.dtype}")
-
+        print(f"[INFO] search_text_to_image (Cross-modal) start query='{query[:80]}'")
+        # Using CLIP to encode text for image matching
+        query_vec = self.vision_model.encode(query).astype(np.float32)
+        
         query_filter = self._build_category_filter(category)
 
-        # Search photos, grouped by place_id
+        response = self.client.query_points(
+            collection_name=PLACES_COLLECTION,
+            query=query_vec.tolist(),
+            using="img_vec_agg",
+            limit=limit,
+            with_payload=True,
+            query_filter=query_filter,
+        )
+        return response.points
+
+    def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
+        """
+        Image-based search (Visual Similarity).
+        Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
+        """
+        print(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
+        img = download_image(image_url)
+        if img is None:
+            return []
+
+        query_vec = self.vision_model.encode(img).astype(np.float32)
+        query_filter = self._build_category_filter(category)
+
         response = self.client.query_points_groups(
             collection_name=PHOTOS_COLLECTION,
             query=query_vec.tolist(),
@@ -116,116 +139,103 @@ class PlaceRetriever:
             with_payload=True,
             query_filter=query_filter,
         )
-        print(f"[INFO] search_image groups={len(response.groups)}")
         return response.groups
 
-    def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, alpha: float = 0.5, category: str = None):
+    def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, category: str = None):
         """
-        Hybrid search combining Text and Image (Visual) similarity.
-        - Text Query -> text_vec similarity
-        - Image Query -> img_vec_agg (aggregated visual embedding of the place) similarity
-        
-        alpha: Weight for text score (0.0 to 1.0). Image weight will be (1 - alpha).
-               If image_url is None, performs only text search.
+        Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
+        1. Text Input -> BGE-M3 (Text DB) + CLIP Text (Image DB)
+        2. Image Input -> CLIP Vision (Image DB) + Emotional Extraction (Text DB)
         """
-        print(
-            f"[INFO] search_hybrid start query='{query[:80]}' image_url={'yes' if image_url else 'no'} "
-            f"limit={limit} alpha={alpha} category={category}"
-        )
-        
-        if not image_url:
-            print("[INFO] search_hybrid fallback=text_only (no image)")
-            return self.search_text(query, limit, category=category)
-
-        # 1. Text Vector
-        text_emb = self.model.encode(query).astype(np.float32)
-        print(f"[DEBUG] hybrid text vector shape={text_emb.shape} dtype={text_emb.dtype}")
-
-        # 2. Image Vector (Query Image)
-        img = download_image(image_url)
-        if img is None:
-            # Fallback to text only if image download fails
-            print("[WARN] search_hybrid fallback=text_only (image download failed)")
-            return self.search_text(query, limit, category=category)
-        
-        img_emb = self.model.encode(img).astype(np.float32)
-        print(f"[DEBUG] hybrid image vector shape={img_emb.shape} dtype={img_emb.dtype}")
-
-        # 3. Prefetch candidates (we need a strategy here)
-        # Since Qdrant doesn't support direct "weighted sum" of two different named vectors in one query easily without prefetch,
-        # we will fetch candidates using both vectors and merge scores manually or use Qdrant's batch search + manual fusion.
-        # Alternatively, we can use 2 separate searches and merge logic.
-        
-        # Strategy:
-        # Fetch top N results from Text Search
-        # Fetch top N results from Image Search (on PLACES_COLLECTION using img_vec_agg)
-        # Combine results using RRF or Weighted Sum.
-        # Here we implement Weighted Sum.
-        
-        candidates_limit = limit * 2
-        print(f"[DEBUG] hybrid candidates_limit={candidates_limit}")
+        print(f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'}")
         
         query_filter = self._build_category_filter(category)
+        candidates_limit = limit * 5
+        score_map = {} # place_id -> {score, payload, match_types}
 
-        # Search by Text
-        text_response = self.client.query_points(
-            collection_name=PLACES_COLLECTION,
-            query=text_emb.tolist(),
-            using="text_vec",
-            limit=candidates_limit,
-            with_payload=True,
-            query_filter=query_filter,
-        )
-        text_hits = text_response.points
-        print(f"[INFO] hybrid text_hits={len(text_hits)}")
-        
-        # Search by Image (Place's Aggregated Visual Vector)
-        img_response = self.client.query_points(
-            collection_name=PLACES_COLLECTION,
-            query=img_emb.tolist(),
-            using="img_vec_agg",
-            limit=candidates_limit,
-            with_payload=True,
-            query_filter=query_filter,
-        )
-        img_hits = img_response.points
-        print(f"[INFO] hybrid image_hits={len(img_hits)}")
-        
-        # Map: place_id -> {'text_score': 0, 'img_score': 0, 'payload': ...}
-        score_map = {}
-        
-        for h in text_hits:
-            if h.id not in score_map:
-                score_map[h.id] = {"text_score": 0.0, "img_score": 0.0, "payload": h.payload}
-            score_map[h.id]["text_score"] = h.score
+        def collect_hits(hits, weight, match_type):
+            for h in hits:
+                pid = h.id
+                if pid not in score_map:
+                    score_map[pid] = {"score": 0.0, "payload": h.payload, "matches": []}
+                # Scoring: Sum of (ScoredPoint.score * weight) + Fusion Boost
+                score_map[pid]["score"] += h.score * weight
+                score_map[pid]["matches"].append(match_type)
+
+        # --- A. Text Search Channel ---
+        if query and query.strip():
+            # 1. Scenario: Semantic Text Search (BGE-M3)
+            text_emb = self.text_model.encode(query).astype(np.float32)
+            t_t_hits = self.client.query_points(
+                collection_name=PLACES_COLLECTION,
+                query=text_emb.tolist(),
+                using="text_vec",
+                limit=candidates_limit,
+                with_payload=True,
+                query_filter=query_filter,
+            ).points
+            collect_hits(t_t_hits, 1.0, "text_semantic")
+
+            # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
+            clip_text_emb = self.vision_model.encode(query).astype(np.float32)
+            t_i_hits = self.client.query_points(
+                collection_name=PLACES_COLLECTION,
+                query=clip_text_emb.tolist(),
+                using="img_vec_agg",
+                limit=candidates_limit,
+                with_payload=True,
+                query_filter=query_filter,
+            ).points
+            collect_hits(t_i_hits, 0.5, "text_to_image")
+
+        # --- B. Image Search Channel ---
+        if image_url:
+            img = download_image(image_url)
+            if img:
+                # 3. Scenario: Visual Similarity (CLIP Vision)
+                img_emb = self.vision_model.encode(img).astype(np.float32)
+                i_i_hits = self.client.query_points(
+                    collection_name=PLACES_COLLECTION,
+                    query=img_emb.tolist(),
+                    using="img_vec_agg",
+                    limit=candidates_limit,
+                    with_payload=True,
+                    query_filter=query_filter,
+                ).points
+                collect_hits(i_i_hits, 1.0, "image_visual")
+
+                # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
+                emotional_text = describe_image(image_url)
+                if emotional_text:
+                    emo_emb = self.text_model.encode(emotional_text).astype(np.float32)
+                    i_e_hits = self.client.query_points(
+                        collection_name=PLACES_COLLECTION,
+                        query=emo_emb.tolist(),
+                        using="text_vec",
+                        limit=candidates_limit,
+                        with_payload=True,
+                        query_filter=query_filter,
+                    ).points
+                    collect_hits(i_e_hits, 0.8, "image_emotional")
+
+        # --- C. Fusion & Boosting ---
+        results = []
+        for pid, data in score_map.items():
+            final_score = data["score"]
+            # Fusion Boost: If the place matches multiple scenarios, it's a stronger candidate
+            num_matches = len(data["matches"])
+            if num_matches > 1:
+                final_score *= (1.0 + 0.2 * (num_matches - 1)) # 20% boost per extra scenario
             
-        for h in img_hits:
-            if h.id not in score_map:
-                score_map[h.id] = {"text_score": 0.0, "img_score": 0.0, "payload": h.payload}
-            score_map[h.id]["img_score"] = h.score
-            
-        # Compute Weighted Score
-        # Note: API returns Cosine Similarity (if configured). 
-        # range can be [-1, 1]. For safe weighted sum, usually 0..1 is preferred but raw sum often works for ranking.
-        final_results = []
-        for pid, scores in score_map.items():
-            final_score = (scores["text_score"] * alpha) + (scores["img_score"] * (1 - alpha))
-            final_results.append({
+            results.append({
                 "id": pid,
                 "score": final_score,
-                "payload": scores["payload"],
-                "text_score": scores["text_score"],
-                "img_score": scores["img_score"]
+                "payload": data["payload"],
+                "match_types": list(set(data["matches"]))
             })
-            
-        # Sort by final score
-        final_results.sort(key=lambda x: x["score"], reverse=True)
-        trimmed = final_results[:limit]
-        print(
-            f"[INFO] hybrid merged={len(score_map)} final={len(trimmed)} "
-            f"preview={self._preview_results(trimmed)}"
-        )
-        return trimmed
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:limit]
         
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
         """
@@ -254,13 +264,17 @@ class PlaceRetriever:
         # Calculate distance and filter
         results = []
         for p in all_points:
-            p_lat = p.payload.get("lat", 0)
-            p_lng = p.payload.get("lng", 0)
+            try:
+                p_lat = float(p.payload.get("lat", 0))
+                p_lng = float(p.payload.get("lng", 0))
+            except (ValueError, TypeError):
+                p_lat, p_lng = 0.0, 0.0
             
             if p_lat == 0 and p_lng == 0:
                 continue
                 
             dist = self._haversine(lat, lng, p_lat, p_lng)
+            # radius 반경 내에 있는 장소만 추가
             if dist <= radius_km:
                 results.append({
                     "id": p.id,
@@ -269,13 +283,16 @@ class PlaceRetriever:
                     "distance_km": dist
                 })
         
-        # Sort by distance (ascending)
+        # 거리가 가까운 순서대로 정렬
         results.sort(key=lambda x: x["distance_km"])
         trimmed = results[:limit]
         print(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")
         return trimmed
 
     def _haversine(self, lat1, lon1, lat2, lon2):
+        """
+        두 지점 간의 거리를 계산합니다.
+        """
         import math
         R = 6371  # Earth radius in km
         
@@ -324,32 +341,47 @@ def retrieval_place(message_in: ChatMessageCreate):
         search_results = retriever.search_hybrid(
             query=query,
             image_url=message_in.image_path,
-            limit=3
+            limit=5
         )
         print(f"[INFO] retrieval_place search_results_count={len(search_results) if search_results else 0}")
         
         formatted_results = []
         search_ids = []
         if search_results:            
-            formatted_results.append(f"### 🔎 Search Results")
+            formatted_results.append(f"### 🔎 Search Results (Hybrid Fusion)")
             for i, res in enumerate(search_results):
-                if isinstance(res, dict):
-                    payload = res.get('payload', {})
-                    rid = res.get('id')
-                    score = res.get('score')
-                else:
-                    payload = getattr(res, "payload", {}) or {}
-                    rid = getattr(res, "id", None)
-                    score = getattr(res, "score", None)
-
+                payload = res.get('payload', {})
+                rid = res.get('id')
+                score = res.get('score')
+                matches = res.get('match_types', [])
+                
                 search_ids.append(rid)
 
                 title = payload.get('title', 'Unknown')
                 category = payload.get('category', 'Unknown')
                 desc = payload.get('description', '')
                 addr = payload.get('address', '')
-                print(f"[DEBUG] retrieval_place result[{i}] id={rid} title='{title}' score={score}")
-                formatted_results.append(f"{i+1}. **{title}** ({category})\n   - Address: {addr}\n   - Description: {desc[:200]}...")
+                emo_desc = payload.get('emotional_description', '')
+                
+                # PHOTOS_COLLECTION에서 place_id가 일치하는 사진들을 가져옴
+                photos_response, _ = retriever.client.scroll(
+                    collection_name=PHOTOS_COLLECTION,
+                    scroll_filter=Filter(must=[FieldCondition(key="place_id", match=MatchValue(value=rid))]),
+                    limit=5,
+                    with_payload=True
+                )
+                photo_urls = [p.payload.get("image_url") for p in photos_response if p.payload.get("image_url")]
+
+                print(f"[DEBUG] retrieval_place result[{i}] id={rid} title='{title}' matches={matches}")
+                match_str = ", ".join(matches)
+                formatted_results.append(
+                    f"{i+1}. **{title}** ({category})\n"
+                    f"   - Match Reasons: {match_str}\n"
+                    f"   - Address: {addr}\n"
+                    f"   - Emotional Context: {emo_desc if emo_desc else 'N/A'}\n"
+                    f"   - Description: {desc[:200]}...\n"
+                    f"   - Photos: {', '.join(photo_urls[:3]) if photo_urls else 'No photos found'}"
+                )
         else:
             print("[WARN] retrieval_place no search results")
 

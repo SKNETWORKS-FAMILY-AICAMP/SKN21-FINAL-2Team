@@ -1,6 +1,12 @@
 import io
 import uuid
 import numpy as np
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
@@ -9,8 +15,7 @@ from qdrant_client.models import (
 from sentence_transformers import SentenceTransformer
 
 from app.scripts.preprocess_data import download_image
-import os
-import json
+
 from app.core.config import *
 from app.scripts.preprocess_data import ingest_data
 
@@ -19,55 +24,66 @@ from app.scripts.preprocess_data import ingest_data
 class QdrantClientDB:
     def __init__(self):
         # Qdrant / Embedding init
-        self.client = QdrantClient(host=os.getenv('QDRANT_HOST', "localhost"), port=os.getenv('QDRANT_PORT', 6333))
-        self.model = SentenceTransformer("clip-ViT-B-32")  # 512-dim
-
+        host = os.getenv('QDRANT_HOST')
+        port = os.getenv('QDRANT_PORT')
+        self.client = QdrantClient(host=host, port=int(port))
+        
+        # Load specialized models
+        self.text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
+        self.vision_model = SentenceTransformer(VISION_MODEL, device=DEVICE)
+        
+        print(f"[INFO] Models loaded on {DEVICE}")
         self.ensure_collections()
 
     # Qdrant schema
     def ensure_collections(self):
         # 1) places: named vectors (text_vec, img_vec_agg)
-        if not self.client.collection_exists(PLACES_COLLECTION):
-            self.client.create_collection(
-                collection_name=PLACES_COLLECTION,
-                vectors_config={
-                    "text_vec": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                    "img_vec_agg": VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                },
-                hnsw_config=HnswConfigDiff(
-                    on_disk=True,
-                    m=16,
-                    ef_construct=100,
-                ),
-                optimizers_config=OptimizersConfigDiff(
-                    indexing_threshold=20000
-                ),
-            )
-            # 필터 자주 쓰면 인덱스
-            self.client.create_payload_index(PLACES_COLLECTION, "region", PayloadSchemaType.KEYWORD)
-            self.client.create_payload_index(PLACES_COLLECTION, "category", PayloadSchemaType.KEYWORD)
+        if self.client.collection_exists(PLACES_COLLECTION):
+             # recreate for schema change
+             self.client.delete_collection(PLACES_COLLECTION)
+
+        self.client.create_collection(
+            collection_name=PLACES_COLLECTION,
+            vectors_config={
+                "text_vec": VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+                "img_vec_agg": VectorParams(size=VISION_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            },
+            hnsw_config=HnswConfigDiff(
+                on_disk=True,
+                m=16,
+                ef_construct=100,
+            ),
+            optimizers_config=OptimizersConfigDiff(
+                indexing_threshold=20000
+            ),
+        )
+        # 필터 자주 쓰면 인덱스
+        self.client.create_payload_index(PLACES_COLLECTION, "region", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PLACES_COLLECTION, "category", PayloadSchemaType.KEYWORD)
 
         # 2) photos: image vector only
-        if not self.client.collection_exists(PHOTOS_COLLECTION):
-            self.client.create_collection(
-                collection_name=PHOTOS_COLLECTION,
-                vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                hnsw_config=HnswConfigDiff(
-                    on_disk=True,
-                    m=16,
-                    ef_construct=100,
-                ),
-                optimizers_config=OptimizersConfigDiff(
-                    indexing_threshold=20000
-                ),
-            )
-            # group_by 키 성능 위해 인덱스 추천
-            self.client.create_payload_index(PHOTOS_COLLECTION, "place_id", PayloadSchemaType.KEYWORD)
+        if self.client.collection_exists(PHOTOS_COLLECTION):
+            self.client.delete_collection(PHOTOS_COLLECTION)
+
+        self.client.create_collection(
+            collection_name=PHOTOS_COLLECTION,
+            vectors_config=VectorParams(size=VISION_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            hnsw_config=HnswConfigDiff(
+                on_disk=True,
+                m=16,
+                ef_construct=100,
+            ),
+            optimizers_config=OptimizersConfigDiff(
+                indexing_threshold=20000
+            ),
+        )
+        # group_by 키 성능 위해 인덱스 추천
+        self.client.create_payload_index(PHOTOS_COLLECTION, "place_id", PayloadSchemaType.KEYWORD)
 
     # Utils: aggregate image vectors (top-k mean)
     def aggregate_vectors(self, vectors: np.ndarray, top_k: int = 5) -> np.ndarray:
         if vectors is None or vectors.size == 0:
-            return np.zeros((VECTOR_SIZE,), dtype=np.float32)
+            return np.zeros((VISION_VECTOR_SIZE,), dtype=np.float32)
 
         if vectors.shape[0] > top_k:
             vectors = vectors[:top_k]
@@ -77,17 +93,26 @@ class QdrantClientDB:
         return agg.astype(np.float32)
 
     # 장소 저장
-    # - description -> places.text_vec
-    # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장
+    # - description -> places.text_vec (BGE-M3)
+    # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장 (CLIP Vision)
     def add_place(self, payload: dict):
         place_id = int(payload['place_id'])
-        description = payload['description']
-        image_urls = payload['image_urls']
+        description = payload.get('description', "")
+        emotional_desc = payload.get('emotional_description', "")
+        image_urls = payload.get('image_urls', [])
+        
+        # 1) 텍스트 임베딩 (BGE-M3)
+        # Priority: emotional_description > description > title + address
+        title = payload.get("title", "")
+        address = payload.get("address", "") or payload.get("addr1", "")
+        
+        text_to_embed = emotional_desc if emotional_desc else description
+        if not text_to_embed:
+            text_to_embed = f"{title} {address}"
+            
+        text_vec = self.text_model.encode(text_to_embed).astype(np.float32)
 
-        # 1) 텍스트 임베딩
-        text_vec = self.model.encode(description).astype(np.float32)
-
-        # 2) 이미지 다운로드 -> 임베딩 -> photos upsert
+        # 2) 이미지 다운로드 -> 임베딩 -> photos upsert (CLIP Vision)
         photo_points = []
         img_vecs = []
 
@@ -96,9 +121,10 @@ class QdrantClientDB:
             if img is None:
                 continue
 
-            img_vec = self.model.encode(img).astype(np.float32)
+            # Explicitly use CLIP for images
+            img_vec = self.vision_model.encode(img).astype(np.float32)
             img_vecs.append(img_vec)
-
+            
             photo_points.append(
                 PointStruct(
                     id=str(uuid.uuid4()),
@@ -107,8 +133,8 @@ class QdrantClientDB:
                         "place_id": place_id,
                         "photo_url": url,
                         "category": payload.get("category"),
-                        "address": payload.get("address"),
-                        "title": payload.get("title"),
+                        "address": address,
+                        "title": title,
                     },
                 )
             )
@@ -120,7 +146,7 @@ class QdrantClientDB:
         if img_vecs:
             img_vec_agg = self.aggregate_vectors(np.vstack(img_vecs), top_k=5)
         else:
-            img_vec_agg = np.zeros((VECTOR_SIZE,), dtype=np.float32)
+            img_vec_agg = np.zeros((VISION_VECTOR_SIZE,), dtype=np.float32)
 
         # 4) places upsert (named vectors)
         place_point = PointStruct(
@@ -132,9 +158,10 @@ class QdrantClientDB:
             payload={
                 "place_id": place_id,
                 "description": description,
-                "address": payload.get("address"),
+                "emotional_description": emotional_desc,
+                "address": address,
                 "category": payload.get("category"),
-                "title": payload.get("title"),
+                "title": title,
                 "lat": payload.get("lat"),
                 "lng": payload.get("lng"),
             },
@@ -160,20 +187,23 @@ if __name__ == "__main__":
         print(f"[ERROR] Date file not found: {data_dir}")
 
     file_names = []
+    file_data = []
         
     for filename in os.listdir(data_dir):
         if filename.endswith(".jsonl") and not filename.startswith("25_"):
-            file_names.append(filename)
             data_path = os.path.join(data_dir, filename)
             with open(data_path, 'r', encoding='utf-8') as f:
                 data = [json.loads(line) for line in f]
-    
-    success_count = 0
-    for payload in ingest_data(data):
-        client.add_place(payload)
+                file_names.append((filename, len(data)))
+                file_data.append(data)
 
+    success_count = 0
+    # Flatten the list of lists into a single list of items
+    flat_data = [item for sublist in file_data for item in sublist]
+    for data in ingest_data(flat_data):
+        client.add_place(data)
         success_count += 1
         if success_count % 10 == 0:
-            print(f"  - Progress: {success_count}/{len(data)} done.")
+            print(f"  - Progress: {success_count}/{len(flat_data)} done.")
 
     print("Finish Load Data - File : ", file_names)
