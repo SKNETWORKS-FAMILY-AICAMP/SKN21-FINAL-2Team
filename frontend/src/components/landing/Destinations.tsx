@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, MapPin, Search, CalendarPlus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const categories = [
@@ -35,8 +35,69 @@ const destinations = {
     ],
 };
 
+
+// 데이터베이스에서 올 장소 정보의 '설계도(타입)'를 미리 작성해 둡니다.
+// interface Destination {
+//     id: number;
+//     name: string;
+//     image: string;
+//     rating: number;
+//     address: string;
+//     distance: string;
+// }
+// 그리고 useState에 'any' 대신 이 설계도 이름을 넣어줍니다.
+// const [displayItems, setDisplayItems] = useState<Destination[]>([]);
+
 export function Destinations() {
     const [activeTab, setActiveTab] = useState("hot-places");
+    const [displayItems, setDisplayItems] = useState<any[]>([]);
+
+    // 배열을 랜덤하게 섞어주는 함수 (Fisher-Yates Shuffle)
+    const shuffleArray = (array: any[]) => {
+        const newArr = [...array];
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+        }
+        return newArr;
+    };
+
+    // 탭이 바뀔 때마다 해당 카테고리의 데이터를 가져와 랜덤하게 섞어 상태에 저장합니다.
+    useEffect(() => {
+        const items = destinations[activeTab as keyof typeof destinations];
+        if (items) {
+            setDisplayItems(shuffleArray(items));
+        }
+    }, [activeTab]);
+
+    {/* // 탭이 바뀔 때마다 백엔드(DB) 서버에 해당 카테고리의 데이터를 3개 요청합니다.
+        //backend 데이터 연결 시 useEffect 대체할 부분.
+    useEffect(() => {
+        // 비동기(async) API 호출 함수 선언
+        const fetchDestinations = async () => {
+            try {
+                // 백엔드 API 주소로 GET 요청을 보냄 (category: 탭 이름, limit: 3개 제한)
+                // 현재 선택된 탭 이름(activeTab)을 주소 끝에 변수로 붙여줍니다.
+                const response = await fetch(`/api/destinations?category=${activeTab}&limit=3`);
+                
+                if (!response.ok) {
+                    throw new Error("데이터를 불러오는데 실패했습니다.");
+                }
+                
+                // 백엔드에서 준 무작위 3개 데이터를 JSON 형태로 변환
+                const data = await response.json(); 
+                
+                // 받아온 리스트를 화면에 보여줄 주머니(상태)에 쏙 담기!
+                setDisplayItems(data);
+            } catch (error) {
+                console.error("API 호출 에러:", error);
+                // // 주의: 여기에 에러 발생 시 처리할 로직 (예: "서버가 아파요 ㅠㅠ" 텍스트 띄우기) 추가 가능
+            }
+        };
+        // 방금 만든 비동기 함수를 실행!
+        fetchDestinations();
+        
+    }, [activeTab]); // activeTab(탭 이름)이 바뀔 때마다 위의 로직을 재실행*/}
 
     return (
         <section id="destinations" className="py-24 bg-gray-50/30">
@@ -68,8 +129,8 @@ export function Destinations() {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.4 }}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                        >
-                            {destinations[activeTab as keyof typeof destinations].map((place) => (
+                        > 
+                            {displayItems.map((place) => (
                                 <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
                                     <div className="relative aspect-[4/3] overflow-hidden">
                                         <img src={place.image} alt={place.name} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out" />
