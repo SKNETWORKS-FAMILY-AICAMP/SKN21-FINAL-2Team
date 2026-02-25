@@ -1,6 +1,9 @@
+import os
+import time
+import socket
+from pathlib import Path
 import pymysql
 from pydbml import PyDBML
-from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(override=True) # .env 로드
@@ -25,7 +28,7 @@ Table country {
 }
 
 
-// 2. 회원 정보
+// 2. 회원 정보 (국가 + 유저)
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
@@ -163,11 +166,6 @@ def deploy_db_from_dbml():
     # 단, 이미 길이가 지정된 경우는 제외해야 하지만, PyDBML은 기본적으로 타입명만 가져옴
     # 정규식으로 'varchar' 뒤에 '('가 오지 않는 경우만 치환
     sql_statements = re.sub(r"varchar(?!\()", "varchar(255)", sql_statements)
-
-    import os
-    import time
-    import socket
-    from pathlib import Path
     
     # .env 파일 로드 (상위 디렉토리까지 탐색) - main block에서 로드했지만 여기서도 안전하게
     # load_dotenv() # 이미 상단에서 로드됨
@@ -175,7 +173,6 @@ def deploy_db_from_dbml():
         load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env', override=True)
         
     # Docker 내부에서는 'mysql', 로컬에서는 'localhost'
-    
     host = os.getenv('MYSQL_HOST', 'localhost')
     port = int(os.getenv('MYSQL_PORT', 3307))
     
@@ -247,6 +244,17 @@ def deploy_db_from_dbml():
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
             connection.commit()
             print("✅ DB 테이블이 성공적으로 생성되었습니다!")
+
+            # 기본 데이터 삽입 자동 호출
+            print("🚀 기본 데이터(prefers, country) 삽입을 시작합니다...")
+            try:
+                from app.database.insert_db import insert_prefer, insert_country
+                pref_res = insert_prefer()
+                cntry_res = insert_country()
+                print(f"   - prefers: inserted={pref_res['inserted']}, skipped={pref_res['skipped']}")
+                print(f"   - country: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
+            except Exception as e:
+                print(f"⚠️ 데이터 삽입 중 경고 발생: {e}")
             
     except Exception as e:
         print(f"❌ 오류 발생: {e}")

@@ -7,6 +7,7 @@ from typing import Any, Iterable
 from app.database.connection import SessionLocal
 from app.models.prefer import Prefer
 from app.models.country import Country
+from app.models.country import Country
 
 PREFER_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "prefer"
 
@@ -144,6 +145,58 @@ def insert_prefer() -> dict[str, int]:
                 )
             )
             existing.add(key)
+            inserted += 1
+
+        db.commit()
+        return {"inserted": inserted, "skipped": skipped}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+def insert_country() -> dict[str, int]:
+    """
+    기본 국가 데이터를 country 테이블에 삽입한다.
+    """
+    countries = [
+        {"code": "ko", "name": "한국"},
+        {"code": "jp", "name": "일본"},
+        {"code": "it", "name": "이탈리아"},
+        {"code": "us", "name": "미국"},
+        {"code": "cn", "name": "중국"},
+        {"code": "fr", "name": "프랑스"},
+        {"code": "gb", "name": "영국"},
+        {"code": "de", "name": "독일"},
+        {"code": "es", "name": "스페인"},
+        {"code": "th", "name": "태국"},
+        {"code": "vn", "name": "베트남"},
+        {"code": "sg", "name": "싱가포르"},
+        {"code": "tw", "name": "대만"},
+        {"code": "ph", "name": "필리핀"},
+        {"code": "id", "name": "인도네시아"},
+        {"code": "my", "name": "말레이시아"},
+        {"code": "au", "name": "호주"},
+        {"code": "nz", "name": "뉴질랜드"},
+        {"code": "ca", "name": "캐나다"},
+        {"code": "mx", "name": "멕시코"},
+    ]
+
+    db = SessionLocal()
+    inserted = 0
+    skipped = 0
+
+    try:
+        existing = {row.code for row in db.query(Country.code).all()}
+
+        for item in countries:
+            if item["code"] in existing:
+                skipped += 1
+                continue
+
+            db.add(Country(code=item["code"], name=item["name"]))
+            existing.add(item["code"])
             inserted += 1
 
         db.commit()

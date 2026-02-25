@@ -29,7 +29,14 @@ pytest-asyncio
 
 # Agents
 langgraph
+langgraph-checkpoint-mysql[aiomysql]
 langchain
 langchain-openai
 langchain-community
 tavily-python
+langchain-tavily
+
+# Evaluation
+ragas
+pandas
+datasets

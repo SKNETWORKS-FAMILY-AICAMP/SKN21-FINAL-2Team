@@ -2,16 +2,37 @@ from dotenv import load_dotenv
 load_dotenv()
 import os                                               # 추가
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
-from app.api import auth, users, chat, prefer, common
-from app.database.connection import Base, get_engine
-from app.models import user, chat as chat_model, prefer as prefer_model, country as country_model  # noqa: F401 - 테이블 등록용
+from app.api import auth, users, chat, prefer
+from app.retrieval.place import PlaceRetriever
+from app.utils.llm_factory import LLMFactory
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 서버 시작 시 실행될 로직
+    print("[INFO] Starting up: Loading models...")
+    try:
+        # CLIP 모델 로드 (PlaceRetriever 초기화)
+        PlaceRetriever.get_instance()
+        
+        # LLM 및 Tavily 인스턴스 초기화
+        LLMFactory.get_llm()
+        LLMFactory.get_tavily()
+        
+        print("[INFO] All models loaded successfully.")
+    except Exception as e:
+        print(f"[ERROR] Failed to load models during startup: {e}")
+    
+    yield
+    # 서버 종료 시 실행될 로직
+    print("[INFO] Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
 
 @app.on_event("startup")
 def startup():

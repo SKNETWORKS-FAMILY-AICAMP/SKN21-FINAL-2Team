@@ -141,7 +141,7 @@ export default function ProfilePage() {
                   >
                     {option}
                   </button>
-                ))}
+                ))} */}
               </div>
             </div>
 

@@ -9,19 +9,20 @@ from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
 from app.core.security import get_current_user
 from app.agents.graph import workflow
-from app.agents.models.state import TravelState
+from app.database.checkpointer import get_checkpointer
 
-from langchain_core.messages import HumanMessage, AIMessage
-from app.models.enums import RoleType
+from langchain_core.messages import HumanMessage
 
 _graph_app = None
+_checkpointer = None
 
-def get_graph_app():
-    global _graph_app
+async def get_graph_app():
+    global _graph_app, _checkpointer
     if _graph_app is None:
         print('init graph app')
-        _graph_app = workflow().compile()
-        print('compile graph app')
+        _checkpointer = await get_checkpointer()
+        _graph_app = workflow().compile(checkpointer=_checkpointer)
+        print('compile graph app (with AsyncMySaver checkpointer)')
     return _graph_app
 
 
@@ -134,34 +135,29 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         db.add(room)
         db.commit()
 
-    chat_history = []
-    messages = room.messages
-    if messages:
-        for msg in messages:
-            if msg.role == RoleType.human:
-                chat_history.append(HumanMessage(content=msg.message))
-            elif msg.role == RoleType.ai:
-                chat_history.append(AIMessage(content=msg.message))
-
-    
-    # 그래프 입력 상태 구성
-    inputs = TravelState(
-        user_input=message_in.message,
-        user=current_user,
-        room_id=room_id,
-        latitude=message_in.latitude,
-        longitude=message_in.longitude,
-        image_path=message_in.image_path,
-        messages=chat_history
-    )
+    # 그래프 입력 상태 구성 (대화 이력은 checkpointer가 자동 관리)
+    inputs = {
+        "user_input": message_in.message,
+        "user_id": current_user.id,
+        "room_id": room_id,
+        "latitude": message_in.latitude,
+        "longitude": message_in.longitude,
+        "image_path": message_in.image_path,
+        "messages": [HumanMessage(content=message_in.message)],
+    }
     
     # 그래프 실행 (Global Cache)
     try:
-        result = await get_graph_app().ainvoke(inputs)
+        print(f"[ChatAPI] Starting graph invocation for room_id={room_id}")
+        config = {"configurable": {"thread_id": f"room_{room_id}"}}
+        graph_app = await get_graph_app()
+        result = await graph_app.ainvoke(inputs, config=config)
+        print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
     except Exception as e:
-        print(f"Graph Execution Error: {e}")
-        print(f"Error Message : {e.args}, {e.__cause__}, {e.__context__}, {e.__traceback__}, {e.__dict__}")
+        print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
+        import traceback
+        traceback.print_exc()
         ai_reply_text = "죄송합니다. 오류가 발생했습니다."
     
     # AI Message 저장

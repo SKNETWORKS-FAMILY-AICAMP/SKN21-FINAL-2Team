@@ -2,13 +2,12 @@ from typing import TypedDict, List, Dict, Any, Annotated
 from langgraph.graph.message import add_messages
 from app.agents.models.output import IntentType, IntentSlots
 from langchain_core.messages import BaseMessage
-from app.models.user import User
 
 class TravelState(TypedDict, total=False):
     _node_name: str
 
     # input data
-    user: User
+    user_id: int  # User ID만 전달 (intent에서 DB 조회)
     room_id: int
     latitude: float | None
     longitude: float | None

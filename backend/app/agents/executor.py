@@ -1,4 +1,7 @@
 import urllib.parse
+import os
+import base64
+import mimetypes
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -34,7 +37,7 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         if category:
             line += f" ({category})"
         line += f"\n   - 주소: {address}" if address else ""
-        line += f"\n   - 설명: {desc[:200]}" if desc else ""
+        line += f"\n   - 상세설명: {desc[:500]}" if desc else ""
         if distance is not None:
             line += f"\n   - 거리: {distance:.1f}km"
         if map_url:
@@ -104,6 +107,31 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> st
     return web_context
 
 
+def _get_image_data_url(image_path: str) -> str:
+    """이미지 경로가 로컬 파일이면 base64 데이터 URL로 변환, 아니면 그대로 반환"""
+    if not image_path:
+        return ""
+    
+    if image_path.startswith(("http://", "https://", "data:image")):
+        return image_path
+    
+    # 로컬 파일 경로인 경우
+    if os.path.exists(image_path):
+        try:
+            mime_type, _ = mimetypes.guess_type(image_path)
+            if not mime_type:
+                mime_type = "image/jpeg"
+            
+            with open(image_path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
+                return f"data:{mime_type};base64,{encoded}"
+        except Exception as e:
+            print(f"[Executor] Failed to encode local image {image_path}: {e}")
+            return image_path
+            
+    return image_path
+
+
 async def executor_node(state: TravelState):
     """
     여행 계획을 최종적으로 확정하는 노드
@@ -167,12 +195,11 @@ async def executor_node(state: TravelState):
              content_blocks.append({"type": "text", "text": "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."})
 
     # 이미지 추가
-    # 주의: image_path가 URL인지 로컬 경로인지에 따라 처리가 달라질 수 있음. 
-    # 현재는 URL로 가정하거나 LLM이 처리 가능한 path라고 가정.
     if image_path:
+        image_url = _get_image_data_url(image_path)
         content_blocks.append({
             "type": "image_url",
-            "image_url": {"url": image_path}
+            "image_url": {"url": image_url}
         })
     
     # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
