@@ -17,20 +17,6 @@ from app.services.vision import describe_image
 
 class PlaceRetriever:
     _instance = None
-    
-    # 카테고리 명칭 -> contenttypeid 매핑
-    CATEGORY_MAP = {
-        "관광지": "12",
-        "문화시설": "14",
-        "축제공연행사": "15",
-        "레포츠": "28",
-        "숙박": "32",
-        "쇼핑": "38",
-        "음식점": "39",
-        "카페": "39", # 카페는 보통 음식점(39)에 포함됨
-    }
-    _instance = None
-
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
@@ -50,21 +36,6 @@ class PlaceRetriever:
         
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
-    def _preview_results(self, results, top_n: int = 3):
-        preview = []
-        for r in results[:top_n]:
-            payload = r.get("payload", {})
-            preview.append(
-                {
-                    "id": str(r.get("id")),
-                    "title": payload.get("title"),
-                    "score": round(float(r.get("score", 0.0)), 4),
-                    "text_score": round(float(r.get("text_score", 0.0)), 4),
-                    "img_score": round(float(r.get("img_score", 0.0)), 4),
-                }
-            )
-        return preview
-
     def _build_category_filter(self, category: str = None) -> Filter | None:
         """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
         if not category:
@@ -72,7 +43,7 @@ class PlaceRetriever:
             
         # DB에 '관광지', '음식점' 등으로 저장되어 있음
         return Filter(
-            must=[FieldCondition(key="category", match=MatchValue(value=category))]
+            must=[FieldCondition(key="contenttypeid", match=MatchValue(value=category))]
         )
 
     def search_text(self, query: str, limit: int = 5, category: str = None):
@@ -169,7 +140,7 @@ class PlaceRetriever:
             t_t_hits = self.client.query_points(
                 collection_name=PLACES_COLLECTION,
                 query=text_emb.tolist(),
-                using="text_vec",
+                # using="text_vec",
                 limit=candidates_limit,
                 with_payload=True,
                 query_filter=query_filter,
@@ -179,9 +150,8 @@ class PlaceRetriever:
             # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
             clip_text_emb = self.vision_model.encode(query).astype(np.float32)
             t_i_hits = self.client.query_points(
-                collection_name=PLACES_COLLECTION,
+                collection_name=PHOTOS_COLLECTION,
                 query=clip_text_emb.tolist(),
-                using="img_vec_agg",
                 limit=candidates_limit,
                 with_payload=True,
                 query_filter=query_filter,
@@ -195,9 +165,8 @@ class PlaceRetriever:
                 # 3. Scenario: Visual Similarity (CLIP Vision)
                 img_emb = self.vision_model.encode(img).astype(np.float32)
                 i_i_hits = self.client.query_points(
-                    collection_name=PLACES_COLLECTION,
+                    collection_name=PHOTOS_COLLECTION,
                     query=img_emb.tolist(),
-                    using="img_vec_agg",
                     limit=candidates_limit,
                     with_payload=True,
                     query_filter=query_filter,
@@ -211,7 +180,6 @@ class PlaceRetriever:
                     i_e_hits = self.client.query_points(
                         collection_name=PLACES_COLLECTION,
                         query=emo_emb.tolist(),
-                        using="text_vec",
                         limit=candidates_limit,
                         with_payload=True,
                         query_filter=query_filter,

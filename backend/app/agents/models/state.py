@@ -16,6 +16,7 @@ class TravelState(TypedDict, total=False):
     # 대화 관리
     user_input: str
     messages: Annotated[List[BaseMessage], add_messages]
+    summary_messages: str
     
     # intent
     intents: List[IntentType]

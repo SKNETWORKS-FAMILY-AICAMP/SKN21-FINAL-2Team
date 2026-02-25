@@ -22,15 +22,14 @@ class InputType(str, Enum):
 
 class IntentSlots(BaseModel):
     input_type: InputType
-    location: Optional[str] = None
+    location: Optional[str] = None # 여행지
     category: Optional[str] = None  # 관광지, 문화시설, 축제공연행사, 레포츠, 숙박, 음식점
-    dates: Optional[str] = None
-    duration: Optional[str] = None
-    party_size: Optional[int] = None
-    budget_level: Optional[str] = None
-    themes: List[str] = []
-    must_have: Optional[str] = None
-    nice_to_have: Optional[str] = None
+    dates: Optional[str] = None # 여행 날짜
+    duration: Optional[str] = None # 여행 기간
+    party_size: Optional[int] = None # 인원수
+    budget_level: Optional[str] = None # 예산 범위
+    must_have: Optional[str] = None # 필수 포함 정보
+    nice_to_have: Optional[str] = None # 있으면 좋은 정보
 
 
 class IntentOutput(BaseModel):

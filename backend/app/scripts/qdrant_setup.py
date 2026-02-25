@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import json
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     # We will try to find the file manually.
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # backend/app
     root_dir = os.path.dirname(base_dir) # backend
-    data_dir = os.path.join(root_dir, "data")
+    data_dir = os.path.join(root_dir, "data", "llm_result")
     
         
     if not os.path.exists(data_dir):
