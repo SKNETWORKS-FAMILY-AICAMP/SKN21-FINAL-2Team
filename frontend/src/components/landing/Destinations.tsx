@@ -70,12 +70,11 @@ export function Destinations() {
             alert("로그인이 필요한 서비스입니다! 로그인 페이지로 이동합니다.");
             router.push("/login"); // 실제 존재하는 로그인 페이지 경로로 수정하세요
         } else {
-            // // 변경됨: 모달 또는 북마크 로직 대신, 챗봇으로 보낼 선택된 장소 데이터를 임시 저장합니다.
-            // 나중에 챗봇 페이지(/chatbot)에서 이 데이터를 꺼내서 LLM 프롬프트에 활용하면 됩니다.
+            // 나중에 explore 페이지 혹은 다른 곳에서 이 데이터를 꺼낼 수 있습니다.
             localStorage.setItem("selectedForChat", JSON.stringify(place));
 
-            // 챗봇 페이지로 바로 이동
-            router.push("/chatbot");
+            // Explore(또는 새로운 진입점)으로 이동
+            router.push("/explore");
 
             // 모달 상태 초기화 (현재는 모달을 꺼두었으므로 사실상 영향 없음)
             setSelectedPlace(null);

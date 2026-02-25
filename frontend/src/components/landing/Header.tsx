@@ -13,7 +13,7 @@ export function Header() {
     const handleNavigation = () => {
         const token = localStorage.getItem("access_token");
         if (token) {
-            router.push("/chatbot");
+            router.push("/explore");
         } else {
             router.push("/login");
         }

@@ -5,8 +5,13 @@ import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage } from "@/services/api";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export function ChatHome() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const roomIdParam = searchParams.get("roomId");
+
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
     const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -24,11 +29,16 @@ export function ChatHome() {
         scrollToBottom();
     }, [messages, isTyping]);
 
+    // Re-run initialization or room switch when roomIdParam changes
     useEffect(() => {
         const initializeChat = async () => {
+            setIsInitializing(true);
             try {
                 const token = localStorage.getItem("access_token");
-                if (!token) return;
+                if (!token) {
+                    window.location.href = "/login";
+                    return;
+                }
 
                 // Load user profile
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
@@ -40,17 +50,27 @@ export function ChatHome() {
                 if (res.ok) {
                     const data = await res.json();
                     setUserProfile(data);
+                } else {
+                    localStorage.removeItem("access_token");
+                    window.location.href = "/login";
+                    return;
                 }
 
                 // Load chat rooms
                 const fetchedRooms = await fetchRooms();
                 setRooms(fetchedRooms);
 
-                if (fetchedRooms.length > 0) {
+                if (roomIdParam) {
+                    const parsedRoomId = parseInt(roomIdParam, 10);
+                    setCurrentRoomId(parsedRoomId);
+                    await loadRoomMessages(parsedRoomId);
+                } else if (fetchedRooms.length > 0) {
                     // Load the most recent room
                     const latestRoomId = fetchedRooms[0].id;
                     setCurrentRoomId(latestRoomId);
                     await loadRoomMessages(latestRoomId);
+                    // Update URL without refreshing the page
+                    router.replace(`/chatbot?roomId=${latestRoomId}`);
                 } else {
                     // Create a new room if none exist
                     handleCreateNewRoom();
@@ -63,7 +83,7 @@ export function ChatHome() {
         };
 
         initializeChat();
-    }, []);
+    }, [roomIdParam, router]);
 
     const loadRoomMessages = async (roomId: number) => {
         try {
