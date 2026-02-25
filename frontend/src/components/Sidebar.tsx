@@ -1,7 +1,7 @@
 "use client";
 
 import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";

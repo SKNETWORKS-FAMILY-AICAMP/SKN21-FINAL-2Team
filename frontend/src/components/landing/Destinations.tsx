@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, MapPin, Search, CalendarPlus, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
 
 const categories = [
