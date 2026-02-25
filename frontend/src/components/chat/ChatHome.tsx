@@ -1,35 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, User, Sparkles } from "lucide-react";
+import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { motion } from "framer-motion";
-
-interface Message {
-    id: number;
-    content: string;
-    sender: "user" | "bot";
-    timestamp: string;
-}
-
-interface UserProfile {
-    name: string;
-    nickname: string;
-    profile_picture: string | null;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage } from "@/services/api";
 
 export function ChatHome() {
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 1,
-            content: "Welcome to Triver. Where are we heading next?",
-            sender: "bot",
-            timestamp: "10:00 AM",
-        },
-    ]);
+    const [rooms, setRooms] = useState<ChatRoom[]>([]);
+    const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [isInitializing, setIsInitializing] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -41,11 +25,12 @@ export function ChatHome() {
     }, [messages, isTyping]);
 
     useEffect(() => {
-        const fetchUserProfile = async () => {
+        const initializeChat = async () => {
             try {
                 const token = localStorage.getItem("access_token");
                 if (!token) return;
 
+                // Load user profile
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -54,45 +39,84 @@ export function ChatHome() {
 
                 if (res.ok) {
                     const data = await res.json();
-                    setUserProfile({
-                        name: data.name,
-                        nickname: data.nickname,
-                        profile_picture: data.profile_picture,
-                    });
+                    setUserProfile(data);
+                }
+
+                // Load chat rooms
+                const fetchedRooms = await fetchRooms();
+                setRooms(fetchedRooms);
+
+                if (fetchedRooms.length > 0) {
+                    // Load the most recent room
+                    const latestRoomId = fetchedRooms[0].id;
+                    setCurrentRoomId(latestRoomId);
+                    await loadRoomMessages(latestRoomId);
+                } else {
+                    // Create a new room if none exist
+                    handleCreateNewRoom();
                 }
             } catch (error) {
-                console.error("Failed to fetch user profile", error);
+                console.error("Failed to initialize chat", error);
+            } finally {
+                setIsInitializing(false);
             }
         };
 
-        fetchUserProfile();
+        initializeChat();
     }, []);
 
+    const loadRoomMessages = async (roomId: number) => {
+        try {
+            const roomData = await fetchRoom(roomId);
+            setMessages(roomData.messages || []);
+        } catch (error) {
+            console.error("Failed to load room messages", error);
+        }
+    };
+
+    const handleCreateNewRoom = async () => {
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(newRoom.id);
+            setMessages([]);
+        } catch (error) {
+            console.error("Failed to create a new room", error);
+        }
+    };
+
     const handleSendMessage = async () => {
-        if (!inputText.trim()) return;
+        if (!inputText.trim() || !currentRoomId) return;
 
-        const userMsg: Message = {
-            id: Date.now(),
-            content: inputText,
-            sender: "user",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-
-        setMessages((prev) => [...prev, userMsg]);
+        const userText = inputText;
         setInputText("");
         setIsTyping(true);
 
-        // 백엔드 API 호출 (실제 구현 시 연결)
-        setTimeout(() => {
-            const botMsg: Message = {
-                id: Date.now() + 1,
-                content: "백엔드 API와 연결 후 실제 응답이 표시됩니다.",
-                sender: "bot",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        try {
+            // Optimistically add user message to UI
+            const optimisticUserMsg: ChatMessage = {
+                id: Date.now(),
+                room_id: currentRoomId,
+                message: userText,
+                role: "human",
+                created_at: new Date().toISOString(),
             };
-            setMessages((prev) => [...prev, botMsg]);
+            setMessages((prev) => [...prev, optimisticUserMsg]);
+
+            // Call API
+            const botResponseMsg = await sendChatMessage(currentRoomId, userText);
+
+            // The backend returns the bot's message. 
+            // We should reload the room to ensure we have the persistent IDs, or just append it.
+            // Appending is faster.
+            setMessages((prev) => [...prev, botResponseMsg]);
+
+        } catch (error) {
+            console.error("Failed to send message", error);
+            // Optionally, show an error message in the UI
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -105,6 +129,14 @@ export function ChatHome() {
     const displayName = userProfile?.nickname || userProfile?.name || "User";
     const displayImage = userProfile?.profile_picture || "";
 
+    if (isInitializing) {
+        return (
+            <div className="flex w-full h-full items-center justify-center bg-white">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-full bg-white relative">
             <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
@@ -112,7 +144,10 @@ export function ChatHome() {
                     <h2 className="text-xl font-serif font-medium text-gray-900 flex items-center gap-2">
                         New Trip Planning <Sparkles size={14} className="text-gray-400" />
                     </h2>
-                    <p className="text-xs text-gray-400 font-medium tracking-wide uppercase mt-1">Session #8821 • SEOUL</p>
+                    <p className="text-xs text-gray-400 font-medium tracking-wide flex items-center gap-2 mt-1">
+                        <span>Current Room: {currentRoomId && rooms.find(r => r.id === currentRoomId)?.title || "새 채팅"}</span>
+                        <button onClick={handleCreateNewRoom} className="px-2 py-0.5 border border-gray-200 rounded-md hover:bg-gray-50 text-[10px]">새로 시작</button>
+                    </p>
                 </div>
                 <div className="flex -space-x-2">
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>
@@ -131,15 +166,22 @@ export function ChatHome() {
             </header>
 
             <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 scroll-smooth">
+                {messages.length === 0 && !isTyping && (
+                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                        <Sparkles className="w-8 h-8 mb-4 opacity-50" />
+                        <p className="text-sm font-medium">채팅을 시작해보세요!</p>
+                    </div>
+                )}
+
                 {messages.map((msg) => (
                     <motion.div
                         key={msg.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`flex items-end gap-3 ${msg.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
+                        className={`flex items-end gap-3 ${msg.role === "human" ? "flex-row-reverse" : "flex-row"}`}
                     >
-                        <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.sender === "user" ? "bg-gray-900" : "bg-black"}`}>
-                            {msg.sender === "user" ? (
+                        <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.role === "human" ? "bg-gray-900" : "bg-black"}`}>
+                            {msg.role === "human" ? (
                                 userProfile?.profile_picture ? (
                                     <img src={userProfile.profile_picture} className="w-full h-full object-cover rounded-full grayscale" alt="User" />
                                 ) : (
@@ -149,9 +191,12 @@ export function ChatHome() {
                                 <span className="font-serif italic text-sm">T</span>
                             )}
                         </div>
-                        <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.sender === "user" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
-                            {msg.content}
-                            <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.sender === "user" ? "text-gray-400 text-right" : "text-gray-400"}`}>{msg.timestamp}</div>
+                        <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.role === "human" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
+                            {/* Simple text rendering for now. In reality you might want React Markdown for AI output. */}
+                            <div className="whitespace-pre-wrap">{msg.message}</div>
+                            <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.role === "human" ? "text-gray-400 text-right" : "text-gray-400"}`}>
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
                         </div>
                     </motion.div>
                 ))}
@@ -186,8 +231,8 @@ export function ChatHome() {
                         </button>
                         <button
                             onClick={handleSendMessage}
-                            disabled={!inputText.trim()}
-                            className={`p-2 rounded-full transition-all duration-300 shadow-md ${inputText.trim() ? "bg-black text-white hover:scale-105" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                            disabled={!inputText.trim() || isTyping}
+                            className={`p-2 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white hover:scale-105" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                         >
                             <Send size={16} strokeWidth={2} />
                         </button>
@@ -200,3 +245,4 @@ export function ChatHome() {
         </div>
     );
 }
+

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
-from app.api import auth, users, chat, prefer
+from app.api import auth, users, chat, prefer, common, explore
 from app.retrieval.place import PlaceRetriever
 from app.utils.llm_factory import LLMFactory
 
@@ -64,6 +64,7 @@ app.include_router(users.router)
 app.include_router(chat.router)
 app.include_router(prefer.router)
 app.include_router(common.router)
+app.include_router(explore.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)
