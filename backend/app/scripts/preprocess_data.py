@@ -75,8 +75,8 @@ def ingest_data(data):
         new_payload = remove_empty_values(item)
         del(new_payload['contenttypeid_code'])
         
-        lat = float(item.get("mapx", "0"))
-        lng = float(item.get("mapy", "0"))
+        lat = float(item.get("mapy", "0"))
+        lng = float(item.get("mapx", "0"))
         address = item.get("addr", "")
         if len(address) > 0:
             result = GeoCoder().eocoder(address)
@@ -84,8 +84,8 @@ def ingest_data(data):
                 new_payload['road_address'] = result['road_address']
                 new_payload['old_address'] = result['jibun_address']
                 if lat == 0.0 or lng == 0.0:
-                    item['mapx'] = result['lat']
-                    item['mapy'] = result['lng']
+                    item['mapy'] = result['lat']
+                    item['mapx'] = result['lng']
         else:
             # 주소가 비어있는 경우
             if lat != 0.0 and lng != 0.0:
