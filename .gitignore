@@ -210,7 +210,6 @@ __marimo__/
 
 # dependencies
 node_modules
-*-lock.json
 .pnp
 .pnp.*
 .yarn/*
