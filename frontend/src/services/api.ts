@@ -9,6 +9,7 @@ export interface UserProfile {
     email: string;
     name?: string | null;
     nickname?: string | null;
+    profile_picture?: string | null;
     gender?: string | null;
     birthday?: string | null;
 

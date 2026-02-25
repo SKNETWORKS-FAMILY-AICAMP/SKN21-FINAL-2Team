@@ -197,6 +197,7 @@ def deploy_db_from_dbml():
         'db': db_name,
         'port': port,
         'charset': 'utf8mb4',
+        'collation': 'utf8mb4_0900_ai_ci',
         'cursorclass': pymysql.cursors.DictCursor
     }
     
@@ -222,8 +223,11 @@ def deploy_db_from_dbml():
             # 외래키 제약 조건 잠시 해제 (순서 상관없이 테이블 생성 위함)
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
             
-            # 기존 테이블 삭제
-            tables = ["chat_messages", "chat_rooms", "prefers", "users", "country"]
+            # 기존 테이블 삭제 (LangGraph 체크포인터 테이블 포함)
+            tables = [
+                "chat_messages", "chat_rooms", "prefers", "users", "country",
+                "checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"
+            ]
             for table in tables:
                 cursor.execute(f"DROP TABLE IF EXISTS {table}")
                 print(f"🗑️ Table '{table}' dropped.")

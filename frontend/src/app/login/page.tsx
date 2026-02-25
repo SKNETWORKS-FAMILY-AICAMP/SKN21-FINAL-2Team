@@ -12,8 +12,7 @@ export default function LoginPage() {
   const handleLogin = useGoogleLogin({
     onSuccess: async (codeResponse) => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        const res = await fetch(`${apiUrl}/api/auth/google/callback`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/auth/google/callback`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

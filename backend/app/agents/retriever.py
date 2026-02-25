@@ -91,6 +91,7 @@ def _search_for_general(state: TravelState) -> List[Dict[str, Any]]:
 
     # 1. 하이브리드 검색 (텍스트 + 이미지)
     print(f"[Retriever] Hybrid search query: '{query[:100]}' category={category}")
+    results = []
     try:
         results = retriever.search_hybrid(
             query=query,

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage } from "@/services/api";
+import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser } from "@/services/api";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export function ChatHome() {
@@ -41,16 +41,10 @@ export function ChatHome() {
                 }
 
                 // Load user profile
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
+                try {
+                    const data = await fetchCurrentUser();
                     setUserProfile(data);
-                } else {
+                } catch (err) {
                     localStorage.removeItem("access_token");
                     window.location.href = "/login";
                     return;

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, ArrowRight, User, Globe, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { fetchCountries, updateCurrentUser } from "@/services/api";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -27,10 +28,7 @@ export default function ProfilePage() {
     const picture = localStorage.getItem("profile_picture") || "";
 
     setUserInfo({ name, email, picture });
-
-    import("@/services/api").then(({ fetchCountries }) => {
-      fetchCountries().then(setCountries).catch(console.error);
-    });
+    fetchCountries().then(setCountries).catch(console.error);
   }, []);
 
   const isFormValid = nickname && gender && agreed && countryCode;
@@ -44,23 +42,11 @@ export default function ProfilePage() {
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-      const res = await fetch(`${apiUrl}/api/users/me`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          nickname,
-          gender: gender.toLowerCase(), // "Male" -> "male"
-          country_code: countryCode,
-        }),
+      await updateCurrentUser({
+        nickname,
+        gender: gender.toLowerCase() as any,
+        country_code: countryCode,
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to update profile");
-      }
 
       // 성공 시 설문 조사 페이지로 이동
       router.push("/survey");
