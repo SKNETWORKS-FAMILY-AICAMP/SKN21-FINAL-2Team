@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Languages,
   Ticket,
+  TrainFront,
+  Hotel,
+  UtensilsCrossed,
   CheckCircle2,
   MessageSquare,
   Sparkles,
@@ -26,11 +29,48 @@ type TripSummary = {
 
 type ReservationItem = {
   id: string;
+  category: "transportation" | "hotel" | "restaurant" | "activity" | "etc";
   title: string;
   subtitle: string;
   dateLabel: string;
+  reservationImageUrl?: string;
+  identifierLabel?: string;
+  identifierValue?: string;
+  destinationLabel?: string;
+  durationLabel?: string;
   details: { label: string; value: string }[];
 };
+
+function getReservationCategoryLabel(category: ReservationItem["category"]) {
+  switch (category) {
+    case "transportation":
+      return "Transportation";
+    case "hotel":
+      return "Hotel";
+    case "restaurant":
+      return "Restaurant";
+    case "activity":
+      return "Activity";
+    default:
+      return "Reservation";
+  }
+}
+
+function ReservationLogo({ category }: { category: ReservationItem["category"] }) {
+  const common = { size: 14 };
+  switch (category) {
+    case "transportation":
+      return <TrainFront {...common} />;
+    case "hotel":
+      return <Hotel {...common} />;
+    case "restaurant":
+      return <UtensilsCrossed {...common} />;
+    case "activity":
+      return <Ticket {...common} />;
+    default:
+      return <Ticket {...common} />;
+  }
+}
 
 function SimpleModal({
   open,
@@ -160,6 +200,124 @@ function JourneyDetailModal({
   );
 }
 
+function ReservationDetailModal({
+  open,
+  reservation,
+  photoUrl,
+  onPickPhoto,
+  onClose,
+}: {
+  open: boolean;
+  reservation: ReservationItem | null;
+  photoUrl?: string;
+  onPickPhoto: (file: File) => void;
+  onClose: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  if (!open || !reservation) return null;
+
+  const categoryLabel = getReservationCategoryLabel(reservation.category);
+  const effectivePhotoUrl = photoUrl || reservation.reservationImageUrl;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
+
+      <div className="relative z-10 w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col">
+        <div className="p-6 pb-4">
+          <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
+        </div>
+
+        <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onPickPhoto(file);
+              e.currentTarget.value = "";
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
+            aria-label="Upload reservation image"
+          >
+            {effectivePhotoUrl ? (
+              <img src={effectivePhotoUrl} alt="Reservation" className="w-full h-[180px] object-cover" />
+            ) : (
+              <div className="h-[180px] flex flex-col items-center justify-center">
+                <div className="text-lg font-bold">예매내역 사진</div>
+                <div className="text-xs text-gray-700 mt-1">(사진이 없을땐 여기에 클릭해서 업로드)</div>
+              </div>
+            )}
+          </button>
+
+          <div className="mt-4 space-y-1 text-sm text-gray-900">
+            <div className="font-semibold flex items-center gap-2">
+              <span>Reservation 1:</span>
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
+                <ReservationLogo category={reservation.category} />
+              </span>
+              <span>{categoryLabel}</span>
+            </div>
+            {reservation.identifierLabel && reservation.identifierValue && (
+              <div>
+                {reservation.identifierLabel}: <span className="font-semibold">{reservation.identifierValue}</span>
+              </div>
+            )}
+            {reservation.destinationLabel && (
+              <div>
+                Destination: <span className="font-semibold">{reservation.destinationLabel}</span>
+              </div>
+            )}
+            {reservation.durationLabel && (
+              <div>
+                Duration Time: <span className="font-semibold">{reservation.durationLabel}</span>
+              </div>
+            )}
+          </div>
+
+          {!!reservation.details?.length && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {reservation.details.map((d) => (
+                <div key={d.label} className="p-3 rounded-lg border border-gray-200 bg-white">
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400">{d.label}</div>
+                  <div className="text-xs font-semibold text-gray-900 mt-1">{d.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-3 text-[10px] text-gray-500">
+            (Mock) 나중에 Google Calendar 연동 후 이미지/상세정보를 불러오고, 예약 타입에 따라 로고/필드를 자동으로 매핑할 예정입니다.
+          </div>
+        </div>
+
+        <div className="px-6 pb-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
+          >
+            Menu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function computeDna(preferences: string[]) {
   const set = new Set(preferences);
 
@@ -193,6 +351,7 @@ export default function MyPage() {
 
   const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
   const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
+  const [reservationPhotoById, setReservationPhotoById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -253,15 +412,38 @@ export default function MyPage() {
   const reservations: ReservationItem[] = [
     {
       id: "res-1",
+      category: "transportation",
       title: "KTX Busan",
       subtitle: "Seoul → Busan",
       dateLabel: "10:00AM · 2026.02.23",
+      identifierLabel: "Transportation ID",
+      identifierValue: "KTX 67459",
+      destinationLabel: "Seoul → Busan",
+      durationLabel: "10:00AM ~ 12:00PM",
       details: [
         { label: "Type", value: "Train" },
         { label: "Provider", value: "Korail" },
         { label: "From", value: "Seoul Station" },
         { label: "To", value: "Busan Station" },
         { label: "Departure", value: "10:00AM" },
+      ],
+    },
+    {
+      id: "res-2",
+      category: "hotel",
+      title: "Park Hyatt Busan",
+      subtitle: "Haeundae · Busan",
+      dateLabel: "Check-in · 2026.02.23",
+      identifierLabel: "Hotel Booking ID",
+      identifierValue: "PHB 19824",
+      destinationLabel: "Busan",
+      durationLabel: "2026.02.23 ~ 2026.02.24",
+      details: [
+        { label: "Type", value: "Hotel" },
+        { label: "Guests", value: "2" },
+        { label: "Room", value: "Deluxe" },
+        { label: "Check-in", value: "3:00PM" },
+        { label: "Check-out", value: "11:00AM" },
       ],
     },
   ];
@@ -441,7 +623,7 @@ export default function MyPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
-                            <Ticket size={12} />
+                            <ReservationLogo category={res.category} />
                           </div>
                           <div>
                             <h4 className="text-[11px] font-bold text-gray-900 leading-tight">{res.title}</h4>
@@ -469,23 +651,22 @@ export default function MyPage() {
         onClose={() => setActiveTrip(null)}
       />
 
-      <SimpleModal
+      <ReservationDetailModal
         open={!!activeReservation}
-        title={activeReservation ? activeReservation.title : "Reservation"}
+        reservation={activeReservation}
+        photoUrl={activeReservation ? reservationPhotoById[activeReservation.id] : undefined}
+        onPickPhoto={(file) => {
+          if (!activeReservation) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const url = typeof reader.result === "string" ? reader.result : "";
+            if (!url) return;
+            setReservationPhotoById((prev) => ({ ...prev, [activeReservation.id]: url }));
+          };
+          reader.readAsDataURL(file);
+        }}
         onClose={() => setActiveReservation(null)}
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {(activeReservation?.details || []).map((d) => (
-            <div key={d.label} className="p-3 rounded-lg border border-gray-200 bg-white">
-              <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400">{d.label}</div>
-              <div className="text-xs font-semibold text-gray-900 mt-1">{d.value}</div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 text-[10px] text-gray-500">
-          (Mock) 나중에 Google Calendar 연동 후 예약 상세를 불러올 예정입니다.
-        </div>
-      </SimpleModal>
+      />
     </div>
   );
 }
