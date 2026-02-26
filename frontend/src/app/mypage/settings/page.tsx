@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 
@@ -423,8 +424,18 @@ export default function MyPageSettingsPage() {
         <Sidebar />
       </div>
 
-      <main className="flex-1 h-full min-w-0 bg-white rounded-lg border border-gray-200 overflow-y-auto">
-        <header className="p-6 border-b border-gray-100 flex items-end justify-between">
+      <motion.main
+        className="flex-1 h-full min-w-0 bg-white rounded-lg border border-gray-200 overflow-y-auto"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        <motion.header
+          className="p-6 border-b border-gray-100 flex items-end justify-between"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut", delay: 0.05 }}
+        >
           <div>
             <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("title")}</h1>
             <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Profile</p>
@@ -436,11 +447,16 @@ export default function MyPageSettingsPage() {
           >
             {t("back")}
           </button>
-        </header>
+        </motion.header>
 
         <div className="p-6 space-y-10 min-h-[120vh]">
           {/* Profile Settings */}
-          <section className="rounded-xl border border-gray-200 bg-white p-6">
+          <motion.section
+            className="rounded-xl border border-gray-200 bg-white p-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
               <div className="rounded-xl bg-gray-200 border border-gray-200 h-[220px] flex items-center justify-center text-gray-600 font-semibold">
                 {profilePictureUrl ? (
@@ -500,10 +516,15 @@ export default function MyPageSettingsPage() {
                 </div>
               </div>
             </div>
-          </section>
+          </motion.section>
 
           {/* Travel Notes */}
-          <section className="border-t border-gray-100 pt-8">
+          <motion.section
+            className="border-t border-gray-100 pt-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut", delay: 0.15 }}
+          >
             <h2 className="text-xl font-serif italic font-medium text-gray-900 mb-4">{t("travelNotes")}</h2>
             <div className="flex flex-wrap gap-3">
               {TRAVEL_NOTES.map((note) => {
@@ -524,10 +545,15 @@ export default function MyPageSettingsPage() {
                 );
               })}
             </div>
-          </section>
+          </motion.section>
 
           {/* Travel Preference */}
-          <section className="border-t border-gray-100 pt-8">
+          <motion.section
+            className="border-t border-gray-100 pt-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut", delay: 0.2 }}
+          >
             <h2 className="text-xl font-serif italic font-medium text-gray-900 mb-6">{t("travelPreference")}</h2>
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center justify-between gap-4">
@@ -599,107 +625,153 @@ export default function MyPageSettingsPage() {
                 {t("deactivate")}
               </button>
             </div>
-          </section>
+          </motion.section>
         </div>
-      </main>
+      </motion.main>
 
-      {deactivateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-[520px] rounded-xl border border-gray-200 bg-white">
-            <div className="p-6">
-              <h2 className="text-3xl font-semibold text-gray-900 mb-4">{t("deactivateTitle")}</h2>
-              <p className="text-sm text-gray-700 leading-relaxed mb-6">
-                {t("deactivateNote")}
-              </p>
+      <AnimatePresence>
+        {deactivateOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setDeactivateOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            />
 
-              <div className="mb-6">
-                <button
-                  type="button"
-                  disabled={!ENABLE_GOOGLE_CONFIRM}
-                  onClick={ENABLE_GOOGLE_CONFIRM ? confirmWithGoogle : undefined}
-                  className={
-                    ENABLE_GOOGLE_CONFIRM
-                      ? "bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                      : "bg-gray-200 text-gray-500 px-6 py-3 rounded-lg text-sm font-semibold cursor-not-allowed"
-                  }
-                >
-                  {t("deactivateConfirmGoogle")}
-                </button>
+            <motion.div
+              className="relative z-10 w-full max-w-[520px] rounded-xl border border-gray-200 bg-white"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            >
+              <div className="p-6">
+                <h2 className="text-3xl font-semibold text-gray-900 mb-4">{t("deactivateTitle")}</h2>
+                <p className="text-sm text-gray-700 leading-relaxed mb-6">{t("deactivateNote")}</p>
 
-                {!ENABLE_GOOGLE_CONFIRM && (
-                  <div className="mt-2 text-xs text-gray-500 font-medium">{t("deactivateGoogleSoon")}</div>
-                )}
-
-                {ENABLE_GOOGLE_CONFIRM && deactivateEmailConfirmed && (
-                  <div className="mt-2 text-xs text-gray-600 font-medium">{email}</div>
-                )}
-                {ENABLE_GOOGLE_CONFIRM && deactivateEmailError && (
-                  <div className="mt-2 text-xs text-red-500 font-semibold">{deactivateEmailError}</div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <div className="text-sm text-gray-800 font-medium leading-snug">
-                  {t("deactivateAgreement")}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={deactivateAgreementChecked}
-                  onChange={(e) => {
-                    setDeactivateAgreementChecked(e.target.checked);
-                    if (e.target.checked) setDeactivateAgreementError("");
-                  }}
-                  className="h-6 w-6 accent-black"
-                />
-              </div>
-              {deactivateAgreementError && (
-                <div className="-mt-4 mb-6 text-xs text-red-500 font-semibold">{deactivateAgreementError}</div>
-              )}
-
-              <div className="flex items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={requestDeactivate}
-                  className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                >
-                  {t("deactivatePrimary")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeactivateOpen(false)}
-                  className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                >
-                  {t("deactivateCancel")}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {deactivateShowFinalConfirm && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-              <div className="w-full max-w-[420px] rounded-xl border border-gray-200 bg-white p-6">
-                <div className="text-lg font-semibold text-gray-900 mb-5">{t("deactivateFinalConfirm")}</div>
-                <div className="flex items-center justify-end gap-3">
+                <div className="mb-6">
                   <button
                     type="button"
+                    disabled={!ENABLE_GOOGLE_CONFIRM}
+                    onClick={ENABLE_GOOGLE_CONFIRM ? confirmWithGoogle : undefined}
+                    className={
+                      ENABLE_GOOGLE_CONFIRM
+                        ? "bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                        : "bg-gray-200 text-gray-500 px-6 py-3 rounded-lg text-sm font-semibold cursor-not-allowed"
+                    }
+                  >
+                    {t("deactivateConfirmGoogle")}
+                  </button>
+
+                  {!ENABLE_GOOGLE_CONFIRM && (
+                    <div className="mt-2 text-xs text-gray-500 font-medium">{t("deactivateGoogleSoon")}</div>
+                  )}
+
+                  {ENABLE_GOOGLE_CONFIRM && deactivateEmailConfirmed && (
+                    <div className="mt-2 text-xs text-gray-600 font-medium">{email}</div>
+                  )}
+                  {ENABLE_GOOGLE_CONFIRM && deactivateEmailError && (
+                    <div className="mt-2 text-xs text-red-500 font-semibold">{deactivateEmailError}</div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <div className="text-sm text-gray-800 font-medium leading-snug">{t("deactivateAgreement")}</div>
+                  <input
+                    type="checkbox"
+                    checked={deactivateAgreementChecked}
+                    onChange={(e) => {
+                      setDeactivateAgreementChecked(e.target.checked);
+                      if (e.target.checked) setDeactivateAgreementError("");
+                    }}
+                    className="h-6 w-6 accent-black"
+                  />
+                </div>
+                {deactivateAgreementError && (
+                  <div className="-mt-4 mb-6 text-xs text-red-500 font-semibold">{deactivateAgreementError}</div>
+                )}
+
+                <div className="flex items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={requestDeactivate}
+                    className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    {t("deactivatePrimary")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeactivateOpen(false)}
+                    className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    {t("deactivateCancel")}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            <AnimatePresence>
+              {deactivateShowFinalConfirm && (
+                <motion.div
+                  className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <motion.button
+                    type="button"
+                    aria-label="Close"
+                    className="absolute inset-0 bg-black/40"
                     onClick={() => setDeactivateShowFinalConfirm(false)}
-                    className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  />
+
+                  <motion.div
+                    className="relative z-10 w-full max-w-[420px] rounded-xl border border-gray-200 bg-white p-6"
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   >
-                    {t("no")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={deactivateAccount}
-                    className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    {t("yes")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+                    <div className="text-lg font-semibold text-gray-900 mb-5">{t("deactivateFinalConfirm")}</div>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setDeactivateShowFinalConfirm(false)}
+                        className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
+                      >
+                        {t("no")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deactivateAccount}
+                        className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        {t("yes")}
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
