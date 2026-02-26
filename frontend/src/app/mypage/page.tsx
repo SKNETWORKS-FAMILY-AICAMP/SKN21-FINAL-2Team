@@ -116,6 +116,13 @@ type ReservationItem = {
   details: { label: string; value: string }[];
 };
 
+function formatReservationOrdinalLabel(language: AppLanguage, n: number) {
+  const safe = Math.max(1, Math.floor(n));
+  if (language === "ko") return `예약 ${safe}:`;
+  if (language === "ja") return `予約${safe}：`;
+  return `Reservation ${safe}:`;
+}
+
 type ChatTranscriptMessage = {
   role: "user" | "assistant";
   text: string;
@@ -678,7 +685,7 @@ export default function MyPage() {
         { role: "assistant", text: "(예시) Day1: 해운대/더베이101, Day2: 감천문화마을/자갈치" },
       ],
       detail: {
-        intro:
+        intro: 
           "Based on your preference with enjoying the Seaside view, as well as your recently bookings for both KTX and Park Hyatt Busan. Here are some recommendations",
         restaurantOptions: [
           { name: "Haeundae Restaurant", desc: "Which is lovely for the local seafood delights." },
@@ -692,7 +699,7 @@ export default function MyPage() {
     },
   ];
 
-  const reservations: ReservationItem[] = [
+  const [reservations, setReservations] = useState<ReservationItem[]>(() => [
     {
       id: "res-1",
       category: "transportation",
@@ -729,7 +736,23 @@ export default function MyPage() {
         { label: "Check-out", value: "11:00AM" },
       ],
     },
-  ];
+  ]);
+
+  const reservationIndexById = useMemo(() => {
+    const map: Record<string, number> = {};
+    reservations.forEach((r, idx) => {
+      map[r.id] = idx;
+    });
+    return map;
+  }, [reservations]);
+
+  const handleAddReservation = () => {
+  };
+
+  const handleDeleteReservation = (id: string) => {
+    setReservations((prev) => prev.filter((r) => r.id !== id));
+    if (activeReservation?.id === id) setActiveReservation(null);
+  };
 
   const dnaTraits = computeDna(userProfile.preferences);
   const topTrait = getTopTrait(dnaTraits);
@@ -883,30 +906,51 @@ export default function MyPage() {
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("reservation")}</h3>
+                    <button
+                      type="button"
+                      disabled
+                      onClick={handleAddReservation}
+                      className="text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-not-allowed"
+                    >
+                      Add
+                    </button>
                   </div>
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
                     {reservations.map((res) => (
-                      <button
+                      <div
                         key={res.id}
-                        type="button"
-                        onClick={() => setActiveReservation(res)}
-                        className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all cursor-pointer flex items-center justify-between text-left"
+                        className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-between gap-2"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
-                            <ReservationLogo category={res.category} />
-                          </div>
-                          <div>
-                            <h4 className="text-[11px] font-bold text-gray-900 leading-tight">{res.title}</h4>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[9px] text-gray-400 font-medium uppercase">{res.subtitle}</span>
-                              <span className="text-[9px] text-gray-300">•</span>
-                              <span className="text-[9px] text-gray-400 font-mono">{res.dateLabel}</span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveReservation(res)}
+                          className="flex-1 min-w-0 cursor-pointer flex items-center justify-between text-left"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
+                              <ReservationLogo category={res.category} />
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-[11px] font-bold text-gray-900 leading-tight truncate">{res.title}</h4>
+                              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                                <span className="text-[9px] text-gray-400 font-medium uppercase truncate">{res.subtitle}</span>
+                                <span className="text-[9px] text-gray-300">•</span>
+                                <span className="text-[9px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <CheckCircle2 size={14} className="text-black" />
-                      </button>
+                          <CheckCircle2 size={14} className="text-black flex-none" />
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled
+                          onClick={() => handleDeleteReservation(res.id)}
+                          className="flex-none text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-not-allowed"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </motion.div>
@@ -944,7 +988,10 @@ export default function MyPage() {
         labels={{
           reservationImage: t("reservationImage"),
           clickToUpload: t("clickToUpload"),
-          reservationOne: t("reservationOne"),
+          reservationOne: formatReservationOrdinalLabel(
+            language,
+            ((activeReservation && reservationIndexById[activeReservation.id]) ?? 0) + 1,
+          ),
           destination: t("destination"),
           durationTime: t("durationTime"),
         }}
