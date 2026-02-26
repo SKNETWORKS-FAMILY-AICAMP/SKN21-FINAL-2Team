@@ -3,6 +3,31 @@
 
 ### LLM 기반 초개인화 K-Culture 여행 에이전트  
 > 당신이 원하는 한국 여행의 모든 것
+---
+## 📑 목차
+
+1. [팀 소개](#Team-TRIVERS)  
+2. [프로젝트 개요](#About-The-Project)  
+3. [프로젝트 배경](#Background)  
+4. [프로젝트 목표](#Project-Goal)  
+5. [주요 기능](#Key-Features)  
+6. [기술 스택](#Tech-Stack)  
+7. [프로젝트 구조](#Project-Structure)  
+8. [ERD](#ERD)  
+9. [WBS](#WBS)
+10. (...)
+    
+---
+
+## 👥 Team TRIVERS
+
+| 이름 | 역할 |
+|------|------|
+| 전우영 | Service Planner |
+| 김가람 | Multimodal AI Engineer |
+| 박민정 | Frontend Developer |
+| 손현우 | UI/UX Designer |
+| 장이선 | Data Engineer |
 
 ---
 
@@ -17,15 +42,19 @@ LLM 기반 대화형 여행 추천 서비스입니다.
 
 ---
 
-## 👥 Team TRIVERS
+## 🧭 Background
 
-| 이름 | 역할 |
-|------|------|
-| 전우영 | Service Planner |
-| 김가람 | Multimodal AI Engineer |
-| 박민정 | Frontend Developer |
-| 손현우 | UI/UX Designer |
-| 장이선 | Data Engineer |
+### 1. 관광 수요의 역설
+K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나  
+체류 경험과 관광 수익의 질적 성장은 정체되어 있음.
+
+여행 정보, 지도, 예약 서비스가 파편화되어  
+사용자는 반복 검색과 이동을 경험함.
+
+### 2. 기존 시장 구조의 한계
+- 개인화 일정 설계 기능 부족
+- 검증되지 않은 추천 알고리즘
+- 실행 불가능한 일정 제안
 
 ---
 
@@ -63,29 +92,6 @@ Triver는 다음을 해결합니다:
 
 ---
 
-## 🧭 Background
-
-### 1. 관광 수요의 역설
-K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나  
-체류 경험과 관광 수익의 질적 성장은 정체되어 있음.
-
-여행 정보, 지도, 예약 서비스가 파편화되어  
-사용자는 반복 검색과 이동을 경험함.
-
-### 2. 기존 시장 구조의 한계
-- 개인화 일정 설계 기능 부족
-- 검증되지 않은 추천 알고리즘
-- 실행 불가능한 일정 제안
-
----
-
-## ✨ Vision
-
-> 검색에서 끝나는 여행이 아니라,  
-> **실제로 떠날 수 있는 일정까지 완성하는 AI 여행 에이전트**
-
----
-
 ## 🛠 Tech Stack
 
 ### 💻 Frontend
@@ -98,8 +104,6 @@ K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나
 | Visualization | ![Recharts](https://img.shields.io/badge/Recharts-FF6384?style=flat-square&logo=chartdotjs&logoColor=white) |
 | Testing | ![Jest](https://img.shields.io/badge/Jest-C21325?style=flat-square&logo=jest&logoColor=white) ![RTL](https://img.shields.io/badge/React_Testing_Library-E33332?style=flat-square&logo=testinglibrary&logoColor=white) |
 
----
-
 ### ⚙ Backend
 
 | Category | Tech |
@@ -110,8 +114,6 @@ K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나
 | ORM | ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat-square&logo=python&logoColor=white) |
 | AI / LLM | ![LangChain](https://img.shields.io/badge/LangChain-121212?style=flat-square) ![LangGraph](https://img.shields.io/badge/LangGraph-4B0082?style=flat-square) ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white) ![SentenceTransformers](https://img.shields.io/badge/Sentence--Transformers-FF6F00?style=flat-square&logo=huggingface&logoColor=white) |
 | Testing | ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white) |
-
----
 
 ### 🚀 Infrastructure
 
@@ -141,15 +143,14 @@ SKN21-FINAL-2Team/
 ```
 
 ---
+## 🗄 ERD
+
+![ERD](doc/RDB_ERD.png)
+
+---
 
 ## 📊 WBS
 
 ![WBS](doc/wbs.jpg)
-
----
-
-## 🗄 ERD
-
-![ERD](doc/RDB_ERD.png)
 
 ---
