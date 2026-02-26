@@ -69,6 +69,9 @@ const COUNTRIES = [
 const TRAVEL_NOTES = ["Religion", "Vegan", "Food Allergies", "Halal", "Gluten Free", "Culture"];
 const TRAVEL_STYLE_OPTIONS = ["Relaxation", "Adventure", "Culture", "Food", "Nature", "Luxury"];
 
+// TODO: Google 계정 확인(재인증) UI/연동 붙일 때 true로 전환
+const ENABLE_GOOGLE_CONFIRM = false;
+
 const I18N: Record<AppLanguage, Record<string, string>> = {
   en: {
     title: "Profile Settings",
@@ -86,6 +89,21 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     savedNotice: "Your information has been saved.",
     deactivate: "Deactivate Account →",
     back: "Back to MyPage",
+
+    deactivateTitle: "Deactivate Account",
+    deactivateNote:
+      "Note: Deactivating your account will temporarily hide your saved chats, information, and location bookmarks.",
+    deactivateConfirmGoogle: "Confirm with Google",
+    deactivateGoogleSoon: "(Coming soon) Google confirmation will be enabled later.",
+    deactivateAgreement:
+      "I understand that my account will be deactivated and access to Trivers will be paused.",
+    deactivatePrimary: "Deactivate Account",
+    deactivateCancel: "Cancel",
+    deactivateFinalConfirm: "Are you sure you wanna deactivate your account?",
+    yes: "Yes",
+    no: "No",
+    errConfirmEmail: "Please confirm your email",
+    errConfirmAgreement: "Please confirm the account termination agreement",
   },
   ko: {
     title: "프로필 설정",
@@ -103,6 +121,20 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     savedNotice: "저장되었습니다.",
     deactivate: "계정 탈퇴 →",
     back: "마이페이지로",
+
+    deactivateTitle: "계정 탈퇴",
+    deactivateNote:
+      "안내: 계정을 탈퇴하면 저장된 채팅, 정보, 위치 북마크가 일시적으로 숨김 처리됩니다.",
+    deactivateConfirmGoogle: "Google로 확인",
+    deactivateGoogleSoon: "(준비중) Google 확인 기능은 추후 활성화됩니다.",
+    deactivateAgreement: "계정이 탈퇴되고 Trivers 이용이 중지되는 것에 동의합니다.",
+    deactivatePrimary: "계정 탈퇴",
+    deactivateCancel: "취소",
+    deactivateFinalConfirm: "정말 계정을 탈퇴하시겠습니까?",
+    yes: "예",
+    no: "아니오",
+    errConfirmEmail: "이메일을 확인해주세요",
+    errConfirmAgreement: "계정 탈퇴 동의 항목을 확인해주세요",
   },
   ja: {
     title: "プロフィール設定",
@@ -120,6 +152,20 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     savedNotice: "保存しました。",
     deactivate: "アカウントを無効化 →",
     back: "マイページへ",
+
+    deactivateTitle: "アカウントを無効化",
+    deactivateNote:
+      "注意: アカウントを無効化すると、保存したチャット/情報/位置ブックマークが一時的に非表示になります。",
+    deactivateConfirmGoogle: "Googleで確認",
+    deactivateGoogleSoon: "(準備中) Google確認は後で有効になります。",
+    deactivateAgreement: "アカウントが無効化され、Triversへのアクセスが一時停止されることを理解しました。",
+    deactivatePrimary: "アカウントを無効化",
+    deactivateCancel: "キャンセル",
+    deactivateFinalConfirm: "本当にアカウントを無効化しますか?",
+    yes: "はい",
+    no: "いいえ",
+    errConfirmEmail: "メールを確認してください",
+    errConfirmAgreement: "退会同意を確認してください",
   },
 };
 
@@ -240,7 +286,7 @@ export default function MyPageSettingsPage() {
 
   const openDeactivateModal = () => {
     setDeactivateOpen(true);
-    setDeactivateEmailConfirmed(false);
+    setDeactivateEmailConfirmed(!ENABLE_GOOGLE_CONFIRM);
     setDeactivateAgreementChecked(false);
     setDeactivateShowFinalConfirm(false);
     setDeactivateEmailError("");
@@ -262,7 +308,7 @@ export default function MyPageSettingsPage() {
 
     if (!token) {
       setDeactivateEmailConfirmed(false);
-      setDeactivateEmailError("Please confirm your email");
+      setDeactivateEmailError(t("errConfirmEmail"));
       return;
     }
 
@@ -301,21 +347,25 @@ export default function MyPageSettingsPage() {
     }
 
     setDeactivateEmailConfirmed(false);
-    setDeactivateEmailError("Please confirm your email");
+    setDeactivateEmailError(t("errConfirmEmail"));
   };
 
   const requestDeactivate = () => {
     let ok = true;
 
-    if (!deactivateEmailConfirmed) {
-      setDeactivateEmailError("Please confirm your email");
-      ok = false;
+    if (ENABLE_GOOGLE_CONFIRM) {
+      if (!deactivateEmailConfirmed) {
+        setDeactivateEmailError(t("errConfirmEmail"));
+        ok = false;
+      } else {
+        setDeactivateEmailError("");
+      }
     } else {
       setDeactivateEmailError("");
     }
 
     if (!deactivateAgreementChecked) {
-      setDeactivateAgreementError("Please confirm the account termination agreement");
+      setDeactivateAgreementError(t("errConfirmAgreement"));
       ok = false;
     } else {
       setDeactivateAgreementError("");
@@ -559,28 +609,40 @@ export default function MyPageSettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
           <div className="w-full max-w-[520px] rounded-xl border border-gray-200 bg-white">
             <div className="p-6">
-              <h2 className="text-3xl font-semibold text-gray-900 mb-4">Deactivate Account</h2>
+              <h2 className="text-3xl font-semibold text-gray-900 mb-4">{t("deactivateTitle")}</h2>
               <p className="text-sm text-gray-700 leading-relaxed mb-6">
-                Note: Deactivating your account will temporarily hide your saved chats, information, and location bookmarks.
+                {t("deactivateNote")}
               </p>
 
               <div className="mb-6">
                 <button
                   type="button"
-                  onClick={confirmWithGoogle}
-                  className="bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  disabled={!ENABLE_GOOGLE_CONFIRM}
+                  onClick={ENABLE_GOOGLE_CONFIRM ? confirmWithGoogle : undefined}
+                  className={
+                    ENABLE_GOOGLE_CONFIRM
+                      ? "bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                      : "bg-gray-200 text-gray-500 px-6 py-3 rounded-lg text-sm font-semibold cursor-not-allowed"
+                  }
                 >
-                  Confirm with Google
+                  {t("deactivateConfirmGoogle")}
                 </button>
-                {deactivateEmailConfirmed && (
+
+                {!ENABLE_GOOGLE_CONFIRM && (
+                  <div className="mt-2 text-xs text-gray-500 font-medium">{t("deactivateGoogleSoon")}</div>
+                )}
+
+                {ENABLE_GOOGLE_CONFIRM && deactivateEmailConfirmed && (
                   <div className="mt-2 text-xs text-gray-600 font-medium">{email}</div>
                 )}
-                {deactivateEmailError && <div className="mt-2 text-xs text-red-500 font-semibold">{deactivateEmailError}</div>}
+                {ENABLE_GOOGLE_CONFIRM && deactivateEmailError && (
+                  <div className="mt-2 text-xs text-red-500 font-semibold">{deactivateEmailError}</div>
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="text-sm text-gray-800 font-medium leading-snug">
-                  I understand that my account will be deactivated and access to Trivers will be paused.
+                  {t("deactivateAgreement")}
                 </div>
                 <input
                   type="checkbox"
@@ -602,14 +664,14 @@ export default function MyPageSettingsPage() {
                   onClick={requestDeactivate}
                   className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Deactivate Account
+                  {t("deactivatePrimary")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeactivateOpen(false)}
                   className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Cancel
+                  {t("deactivateCancel")}
                 </button>
               </div>
             </div>
@@ -618,21 +680,21 @@ export default function MyPageSettingsPage() {
           {deactivateShowFinalConfirm && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
               <div className="w-full max-w-[420px] rounded-xl border border-gray-200 bg-white p-6">
-                <div className="text-lg font-semibold text-gray-900 mb-5">Are you sure you wanna deactivate your account?</div>
+                <div className="text-lg font-semibold text-gray-900 mb-5">{t("deactivateFinalConfirm")}</div>
                 <div className="flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setDeactivateShowFinalConfirm(false)}
                     className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
                   >
-                    No
+                    {t("no")}
                   </button>
                   <button
                     type="button"
                     onClick={deactivateAccount}
                     className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                   >
-                    Yes
+                    {t("yes")}
                   </button>
                 </div>
               </div>
