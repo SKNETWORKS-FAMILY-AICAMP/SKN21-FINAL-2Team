@@ -81,35 +81,35 @@ K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나
 
 ## 🛠 Tech Stack
 
-### Frontend
-- Next.js (v16.1)
-- React (v19.2)
-- TypeScript
-- Tailwind CSS (v4)
-- Framer Motion
-- Recharts
-- Lucide React
-- Jest
-- React Testing Library
+### 💻 Frontend
 
-### Backend
-- FastAPI
-- Uvicorn
-- Python (v3.13+)
-- MySQL
-- SQLAlchemy
-- qdrant-client
-- LangChain
-- LangGraph
-- OpenAI API
-- Sentence-Transformers
-- Pytest
-- RAGAS
+| Category | Tech |
+|----------|------|
+| Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) |
+| Language | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) |
+| Styling | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white) ![Framer](https://img.shields.io/badge/Framer_Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white) |
+| Visualization | ![Recharts](https://img.shields.io/badge/Recharts-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white) |
+| Testing | ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white) ![RTL](https://img.shields.io/badge/React_Testing_Library-E33332?style=for-the-badge&logo=testinglibrary&logoColor=white) |
 
-### Infrastructure
-- Nginx
-- Docker
-- Docker Compose
+
+### ⚙ Backend
+
+| Category | Tech |
+|----------|------|
+| Framework | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white) ![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=for-the-badge&logo=python&logoColor=white) |
+| Language | ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) |
+| Database | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=for-the-badge&logo=databricks&logoColor=white) |
+| ORM | ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=python&logoColor=white) |
+| AI / LLM | ![LangChain](https://img.shields.io/badge/LangChain-121212?style=for-the-badge&logo=chainlink&logoColor=white) ![LangGraph](https://img.shields.io/badge/LangGraph-4B0082?style=for-the-badge) ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white) ![SentenceTransformers](https://img.shields.io/badge/Sentence--Transformers-FF6F00?style=for-the-badge&logo=huggingface&logoColor=white) |
+| Testing | ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white) |
+
+
+### 🚀 Infrastructure
+
+| Category | Tech |
+|----------|------|
+| Web Server | ![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white) |
+| Container | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![DockerCompose](https://img.shields.io/badge/Docker_Compose-1D63ED?style=for-the-badge&logo=docker&logoColor=white) |
 
 ---
 
@@ -135,13 +135,13 @@ SKN21-FINAL-2Team/
 
 ## 📊 WBS
 
-![WBS](WBS.png)
+![WBS](doc\wbs.jpg)
 
 ---
 
 ## 🗄 ERD
 
-![ERD](RDB_ERD.png)
+![ERD](doc\RDB_ERD.png)
 
 ---
 
