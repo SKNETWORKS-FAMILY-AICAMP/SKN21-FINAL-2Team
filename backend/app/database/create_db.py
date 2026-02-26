@@ -22,26 +22,19 @@ Enum role_type {
   ai
 }
 
-// 2. 선호도 마스터
-Table prefers {
-  id integer [primary key, increment]
-  category varchar // 'actor', 'movie', 'travel_theme' 등
-  type varchar
-  value varchar
-  image_path text // 파일 경로는 보통 text/varchar
-}
-
-// 3. 회원 정보 (국가 + 유저)
 Table country {
     code varchar [primary key]
     name varchar
 }
 
+
+// 2. 회원 정보 (국가 + 유저)
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
   name varchar
   nickname varchar
+  profile_picture varchar
   birthday date
   gender gender_type // 정의한 Enum 사용
   country_code varchar
@@ -52,22 +45,32 @@ Table users {
   social_access_token varchar
   social_refresh_token varchar
   
-  // 기존 방식대로 유지 (특정 카테고리 고정)
-  actor_prefer_id integer
+  // Survey Prefers (Updated)
+  plan_prefer_id integer
+  member_prefer_id integer
+  transport_prefer_id integer
+  age_prefer_id integer
+  vibe_prefer_id integer
+  
+  // Content Prefers (Updated)
   movie_prefer_id integer
   drama_prefer_id integer
-  celeb_prefer_id integer
   variety_prefer_id integer
-
-  with_yn bool
-  dog_yn bool
-  vegan_yn bool
 
   is_join bool [not null, default: false]
   is_prefer bool [not null, default: false]
 
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
+}
+
+// 3. 선호도 마스터
+Table prefers {
+  id integer [primary key, increment]
+  category varchar // 'style', 'content' 등
+  type varchar // 'plan', 'member', 'transport', 'age', 'vibe', 'movie', 'drama', 'variety'
+  value varchar
+  image_path text
 }
 
 // 4. 채팅방 및 메시지
@@ -92,14 +95,16 @@ Table chat_messages {
 
 // --- 관계 설정 (Ref) ---
 
-// Users - 특정 선호도 연결 (1:N)
-Ref: users.actor_prefer_id > prefers.id
+// Users - Survey 선호도 연결 (1:N)
+Ref: users.plan_prefer_id > prefers.id
+Ref: users.member_prefer_id > prefers.id
+Ref: users.transport_prefer_id > prefers.id
+Ref: users.age_prefer_id > prefers.id
+Ref: users.vibe_prefer_id > prefers.id
+
 Ref: users.movie_prefer_id > prefers.id
 Ref: users.drama_prefer_id > prefers.id
-Ref: users.celeb_prefer_id > prefers.id
 Ref: users.variety_prefer_id > prefers.id
-
-// Users - 국적 연결 (1:N)
 Ref: users.country_code > country.code
 
 // 채팅방 및 메시지
@@ -192,6 +197,7 @@ def deploy_db_from_dbml():
         'db': db_name,
         'port': port,
         'charset': 'utf8mb4',
+        'collation': 'utf8mb4_0900_ai_ci',
         'cursorclass': pymysql.cursors.DictCursor
     }
     
@@ -216,6 +222,15 @@ def deploy_db_from_dbml():
         with connection.cursor() as cursor:
             # 외래키 제약 조건 잠시 해제 (순서 상관없이 테이블 생성 위함)
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+            
+            # 기존 테이블 삭제 (LangGraph 체크포인터 테이블 포함)
+            tables = [
+                "chat_messages", "chat_rooms", "prefers", "users", "country",
+                "checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"
+            ]
+            for table in tables:
+                cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                print(f"🗑️ Table '{table}' dropped.")
             
             # 생성된 SQL 실행 (세미콜론으로 나누어 개별 실행)
             # 빈 줄이나 주석 라인 처리 필요할 수 있음

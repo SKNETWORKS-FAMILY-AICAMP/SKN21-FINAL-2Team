@@ -11,6 +11,8 @@ load_dotenv()
 import base64
 from app.utils.geocoder import GeoCoder
 
+NONE_VALUES = [None, "", [], {}, 0, 0.0]
+
 # download image from URL or Base64
 def download_image(url: str, timeout: int = 10) -> Image.Image | None:
     try:
@@ -40,57 +42,57 @@ def download_image(url: str, timeout: int = 10) -> Image.Image | None:
 
 
 def ingest_data(data):
+    """
+    12_관광지     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'parking', 'pet_raw', 'restdate', 'tel', 'title', 'usetime']
+    39_음식점     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
+    15_축제공연행사 : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'tel', 'title']
+    28_레포츠     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'fees', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
+    32_숙박       : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
+    14_문화시설    : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
+    """
     print(f"[INFO] Start ingestion.. total {len(data)} items.")
-    geocoder_client = GeoCoder()
-
     for item in data:
-        # try:
-        # 1. Prepare fields
-        place_id = item.get("contentid")
-        name = item.get("title", "")
-        address = item.get("addr1", "") + " " + item.get("addr2", "")
-        
-        # Description generation (combining relevant fields)
-        # desc_parts = []
-        # for key, value in item.items():
-        #     if isinstance(value, str) and key not in ["contentid", "title", "addr1", "addr2"]:
-        #         desc_parts.append(f"{key}: {value}")
-
-        # description = " ".join(desc_parts)
-        description = ""
-        for key, value in item.items():
-            if key == "usetime":
-                description += f"이용시간: {value}\n"
-            elif key == "parking":
-                description += f"주차: {value}\n"
-            elif key == "restdate":
-                description += f"휴일: {value}\n"
-    
-        # 2) 주소 -> 좌표 변환
-        lat = item.get("mapx")
-        lng = item.get("mapy")
-        if lat is None or lng is None:
-            latlng = geocoder_client.eocoder(address)
-            if latlng is None:
-                print(f"[ERROR] 좌표 변환 실패, 건너뜀: {address}")
-                pass
-                
-        # Category
-        category = item.get("contenttypeid", "") # Fixed for now or extract if available
-        
-        # Image URLs
-        first_image_url = item.get("firstimage", "")
-        image_urls = item.get("photo_urls", [])
-        if first_image_url:
-            image_urls.insert(0, first_image_url)
+        def remove_empty_values(data):
+            """
+            재귀적으로 dict와 list 내부의 빈 값(None, "", [], {}, 0, 0.0)을 제거합니다.
+            """
+            if isinstance(data, dict):
+                # 딕셔너리 컴프리헨션을 사용해 재귀적으로 탐색
+                return {
+                    k: v for k, v in ((k, remove_empty_values(v)) for k, v in data.items())
+                    if v not in NONE_VALUES
+                }
+            elif isinstance(data, list):
+                # 리스트 내부 요소들도 재귀적으로 탐색
+                return [
+                    v for v in (remove_empty_values(i) for i in data)
+                    if v not in NONE_VALUES
+                ]
+            else:
+                # 더 이상 쪼갤 수 없는 값(str, int, bool 등)은 그대로 반환
+                return data
             
-        yield {
-            "place_id": place_id,
-            "description": description,
-            "image_urls": image_urls, 
-            "category": category,
-            "address": address,
-            "title": name,
-            "lat": lat,
-            "lng": lng
-        }
+        new_payload = remove_empty_values(item)
+        del(new_payload['contenttypeid_code'])
+        
+        lat = float(item.get("mapy", "0"))
+        lng = float(item.get("mapx", "0"))
+        address = item.get("addr", "")
+        if len(address) > 0:
+            result = GeoCoder().eocoder(address)
+            if result:
+                new_payload['road_address'] = result['road_address']
+                new_payload['old_address'] = result['jibun_address']
+                if lat == 0.0 or lng == 0.0:
+                    item['mapy'] = result['lat']
+                    item['mapx'] = result['lng']
+        else:
+            # 주소가 비어있는 경우
+            if lat != 0.0 and lng != 0.0:
+                latlng = GeoCoder().reverse_geocoder(lat, lng)
+                if latlng is not None:
+                    new_payload['road_address'] = latlng['road_address']
+                    new_payload['old_address'] = latlng['jibun_address']
+                    new_payload['addr'] = new_payload['road_address']
+
+        yield new_payload

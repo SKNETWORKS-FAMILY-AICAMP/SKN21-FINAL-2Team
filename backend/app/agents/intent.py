@@ -19,22 +19,22 @@ def _build_user_preferences(user) -> str:
 
     lines = []
     
-    if user.with_yn:
-        lines.append("- 👫 동행인이 있는 여행을 좋아합니다.")
-    if user.dog_yn:
-        lines.append("- 🐶 **반려견 동반 여행**을 선호합니다. 애견 동반 가능한 장소를 우선 추천해주세요.")
-    if user.vegan_yn:
-        lines.append("- 🥗 **비건(채식)** 식단을 선호합니다. 비건 메뉴가 있는 식당을 찾아주세요.")
-    if user.actor_prefer:
-        lines.append(f"- 🎬 좋아하는 배우: **{user.actor_prefer}** (관련 촬영지, 명소 추천 시 강조)")
-    if user.movie_prefer:
-        lines.append(f"- 🎥 좋아하는 영화: **{user.movie_prefer}** (촬영지 방문 희망)")
-    if user.drama_prefer:
-        lines.append(f"- 📺 좋아하는 드라마: **{user.drama_prefer}** (드라마 촬영지 방문 희망)")
-    if user.celeb_prefer:
-        lines.append(f"- ⭐ 좋아하는 셀럽: **{user.celeb_prefer}**")
-    if user.variety_prefer:
-        lines.append(f"- 📺 좋아하는 예능: **{user.variety_prefer}** (관련 촬영지 추천)")
+    # if user.with_yn:
+    #     lines.append("- 👫 동행인이 있는 여행을 좋아합니다.")
+    # if user.dog_yn:
+    #     lines.append("- 🐶 **반려견 동반 여행**을 선호합니다. 애견 동반 가능한 장소를 우선 추천해주세요.")
+    # if user.vegan_yn:
+    #     lines.append("- 🥗 **비건(채식)** 식단을 선호합니다. 비건 메뉴가 있는 식당을 찾아주세요.")
+    # if user.actor_prefer:
+    #     lines.append(f"- 🎬 좋아하는 배우: **{user.actor_prefer}** (관련 촬영지, 명소 추천 시 강조)")
+    # if user.movie_prefer:
+    #     lines.append(f"- 🎥 좋아하는 영화: **{user.movie_prefer}** (촬영지 방문 희망)")
+    # if user.drama_prefer:
+    #     lines.append(f"- 📺 좋아하는 드라마: **{user.drama_prefer}** (드라마 촬영지 방문 희망)")
+    # if user.celeb_prefer:
+    #     lines.append(f"- ⭐ 좋아하는 셀럽: **{user.celeb_prefer}**")
+    # if user.variety_prefer:
+    #     lines.append(f"- 📺 좋아하는 예능: **{user.variety_prefer}** (관련 촬영지 추천)")
     
     return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
 

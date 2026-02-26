@@ -18,30 +18,18 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
 
     lines = ["## 검색된 장소 정보"]
     for i, c in enumerate(candidates, 1):
-        name = c.get("name", "이름 없음")
-        address = c.get("address", "")
-        desc = c.get("description", "")
-        category = c.get("category", "")
-        score = c.get("score", 0)
-        distance = c.get("distance_km")
+        payload = c.get("payload", {})
+        lat = float(payload.get("mapy", "0"))
+        lng = float(payload.get("mapx", "0"))
 
         # 네이버 지도 링크 생성
-        query = name or address
+        query = payload.get("title")
+        
         if query:
             encoded = urllib.parse.quote(query)
-            map_url = f"https://map.naver.com/v5/search/{encoded}"
-        else:
-            map_url = ""
+            payload['map_url'] = f"https://map.naver.com/v5/search/{encoded}?c=15.00,{lng},{lat},0,dh"
 
-        line = f"{i}. **{name}**"
-        if category:
-            line += f" ({category})"
-        line += f"\n   - 주소: {address}" if address else ""
-        line += f"\n   - 설명: {desc[:200]}" if desc else ""
-        if distance is not None:
-            line += f"\n   - 거리: {distance:.1f}km"
-        if map_url:
-            line += f"\n   - 네이버 지도: {map_url}"
+        line = f"{i}. **{payload}**"
 
         lines.append(line)
 
@@ -70,7 +58,7 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
         lines.append(f"\n### {day}일차 - {time_slot}")
         lines.append(f"활동: {info['activity']}")
         for p in info["places"]:
-            name = p.get("name", "")
+            name = p.get("title", "")
             query = name or p.get("address", "")
             map_url = f"https://map.naver.com/v5/search/{urllib.parse.quote(query)}" if query else ""
             lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
@@ -132,6 +120,17 @@ def _get_image_data_url(image_path: str) -> str:
     return image_path
 
 
+def _build_missing_context(missing_slots: List[str]) -> str:
+    """missing_slots가 있으면, 해당 슬롯에 대한 질문을 생성"""
+    if not missing_slots:
+        return ""
+    
+    lines = ["## 추가 정보 필요"]
+    for slot in missing_slots:
+        lines.append(f"- {slot}")
+    
+    return "\n".join(lines)
+
 async def executor_node(state: TravelState):
     """
     여행 계획을 최종적으로 확정하는 노드
@@ -142,10 +141,11 @@ async def executor_node(state: TravelState):
     print("--- Executor Agent ---")
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
-    missing_slots = state.get("missing_slots", [])
-    if missing_slots and state.get("answer"):
+    missing_slots = state.get("missing_slots", None)
+    if missing_slots:
         print(f"[Executor] Passing through — missing_slots answer already set")
-        return state
+        missing_context = _build_missing_context(missing_slots)
+        return {'answer': missing_context}
 
     candidates = state.get("candidates", [])
     user_input = state.get("user_input", "")
@@ -157,10 +157,10 @@ async def executor_node(state: TravelState):
 
     # 컨텍스트 구성
     place_context = _build_place_context(candidates)
-    itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else ""
+    itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
 
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
-    web_context = ""
+    web_context = None
     if not candidates:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
@@ -173,9 +173,9 @@ async def executor_node(state: TravelState):
 
     # candidates 부족 시 안내 메시지 추가
     data_notice = ""
-    if not candidates and not web_context:
+    if candidates is None and web_context is None:
         data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
-    elif candidates and len(candidates) < 3:
+    elif candidates is not None and len(candidates) < 3:
         data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
 
     # 최종 답변 생성

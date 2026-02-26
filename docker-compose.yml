@@ -14,7 +14,7 @@ services:
   #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
   #   volumes:
   #     - mysql_data:/var/lib/mysql
-  #   command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+  #   command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
 
   qdrant:
     platform: linux/amd64
@@ -67,8 +67,6 @@ services:
       - /app/node_modules
     depends_on:
       - backend
-    environment:
-      - NEXT_PUBLIC_API_URL=/api
 
   nginx:
     platform: linux/amd64

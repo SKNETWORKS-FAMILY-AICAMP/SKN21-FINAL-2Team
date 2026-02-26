@@ -1,208 +1,213 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Check, ArrowRight, User, Globe, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { fetchCurrentUser, getPostLoginPath, updateCurrentUser } from "@/services/api";
-import { useEffect } from "react";
-import { Sparkles } from "lucide-react";
+import { fetchCountries, updateCurrentUser } from "@/services/api";
 
-const genders = [
-  { value: "female", label: "여성" },
-  { value: "male", label: "남성" },
-  { value: "other", label: "기타" },
-];
-
-export default function SignUpProfilePage() {
+export default function ProfilePage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [nickname, setNickname] = useState("");
-  const [birthday, setBirthday] = useState("");
-  const [gender, setGender] = useState<string>("female");
-  const [agree, setAgree] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const trimmedNickname = nickname.trim();
-  const canProceed =
-    trimmedNickname.length >= 2 &&
-    !!birthday &&
-    !!gender &&
-    agree &&
-    !loading &&
-    !profileLoading;
+  const [gender, setGender] = useState("");
+
+  // 사용자 정보 State
+  const [userInfo, setUserInfo] = useState({
+    name: "",
+    email: "",
+    picture: "",
+  });
+  const [countries, setCountries] = useState<{ code: string, name: string }[]>([]);
+  const [countryCode, setCountryCode] = useState("");
 
   useEffect(() => {
-    const guardByUserStatus = async () => {
-      if (typeof window === "undefined") return;
+    // localStorage에서 정보 로드
+    const name = localStorage.getItem("user_name") || "";
+    const email = localStorage.getItem("user_email") || "";
+    const picture = localStorage.getItem("profile_picture") || "";
+
+    setUserInfo({ name, email, picture });
+    fetchCountries().then(setCountries).catch(console.error);
+  }, []);
+
+  const isFormValid = nickname && gender && agreed && countryCode;
+
+  const handleComplete = async () => {
+    try {
       const token = localStorage.getItem("access_token");
       if (!token) {
-        setProfileLoading(false);
+        alert("로그인이 필요합니다.");
+        router.push("/login");
         return;
       }
-      try {
-        const user = await fetchCurrentUser();
-        setName(user.name ?? "");
-        setEmail(user.email ?? "");
-        setNickname(user.nickname ?? "");
-        setBirthday(user.birthday ? user.birthday.slice(0, 10) : "");
-        if (user.gender) {
-          setGender(user.gender);
-        }
-        if (!user.is_join) return;
-        router.replace(getPostLoginPath(user));
-      } catch {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-    guardByUserStatus();
-  }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loading) return;
-    if (!trimmedNickname) {
-      alert("닉네임을 입력해주세요.");
-      return;
-    }
-    if (trimmedNickname.length < 2) {
-      alert("닉네임은 2자 이상 입력해주세요.");
-      return;
-    }
-    if (!birthday) {
-      alert("생년월일을 입력해주세요.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const payload: {
-        name?: string;
-        nickname: string;
-        birthday: string;
-        gender: string;
-        is_join: boolean;
-      } = {
-        nickname: trimmedNickname,
-        birthday: `${birthday}T00:00:00`,
-        gender,
-        is_join: true,
-      };
-      if (name.trim()) {
-        payload.name = name.trim();
-      }
-      await updateCurrentUser(payload);
+      await updateCurrentUser({
+        nickname,
+        gender: gender.toLowerCase() as any,
+        country_code: countryCode,
+      });
+
+      // 성공 시 설문 조사 페이지로 이동
       router.push("/survey");
+
     } catch (error) {
-      alert("회원정보 저장에 실패했습니다.");
-      console.error(error);
-    } finally {
-      setLoading(false);
+      console.error("Profile Update Failed:", error);
+      alert("프로필 저장에 실패했습니다.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-16">
-        <div className="mb-8 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-slate-800 hover:text-indigo-600">
-            <Sparkles className="h-5 w-5 text-indigo-600" />
-            Polaris
-          </Link>
-          <Link href="/login" className="text-sm text-indigo-600 hover:underline">
-            이미 계정이 있으신가요?
-          </Link>
+    <div className="min-h-screen w-full bg-white flex items-center justify-center p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-xl"
+      >
+        <div className="mb-10 text-center">
+          {userInfo.picture && (
+            <img src={userInfo.picture} alt="Profile" className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-2 border-white shadow-md" />
+          )}
+          <h1 className="text-3xl font-serif italic font-light text-gray-900 mb-2">
+            One last step, {userInfo.name.split(" ")[0]}
+          </h1>
+          <p className="text-sm text-gray-500 font-light">
+            Help us personalize your travel experience.
+          </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-xl shadow-slate-100">
-          <div className="mb-6 space-y-2">
-            <p className="text-sm font-medium text-indigo-600">2단계 · 기본 정보</p>
-            <h1 className="text-3xl font-bold text-slate-900">회원정보 입력</h1>
-            <p className="text-sm text-slate-600">구글 계정 이름/이메일을 확인하고 닉네임, 생년월일, 성별을 입력해 주세요.</p>
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.04)] p-8 md:p-10 space-y-8">
+          {/* Read-only Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-60 pointer-events-none grayscale">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Full Name</label>
+              <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
+                {userInfo.name}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Email Address</label>
+              <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
+                {userInfo.email}
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-800">이름</label>
-              <input
-                type="text"
-                value={name}
-                readOnly
-                placeholder={profileLoading ? "불러오는 중..." : "구글 이름 정보 없음"}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-800">이메일</label>
-              <input
-                type="email"
-                value={email}
-                readOnly
-                placeholder={profileLoading ? "불러오는 중..." : "구글 이메일 정보 없음"}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-800">닉네임</label>
+          <div className="h-px bg-gray-100 w-full" />
+
+          {/* Editable Section */}
+          <div className="space-y-6">
+            {/* Nickname */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                <User size={12} /> Nickname
+              </label>
               <input
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                maxLength={50}
-                required
-                placeholder="닉네임을 입력하세요"
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-800">생년월일</label>
-              <input
-                type="date"
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                required
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none"
+                placeholder="How should we call you?"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all placeholder:text-gray-300 placeholder:font-light"
               />
             </div>
 
-            <div>
-              <p className="block text-sm font-semibold text-slate-800">성별</p>
-              <div className="mt-3 grid grid-cols-3 gap-3">
-                {/* {genders.map((g) => (
+            {/* Gender */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide">Gender</label>
+              <div className="grid grid-cols-3 gap-3">
+                {["Male", "Female", "Other"].map((option) => (
                   <button
-                    key={g.value}
-                    type="button"
-                    onClick={() => setGender(g.value)}
-                    className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-all ${gender === g.value ? "border-indigo-400 bg-indigo-50 text-indigo-700 shadow" : "border-slate-200 bg-white text-slate-600 hover:border-indigo-200"}`}
+                    key={option}
+                    onClick={() => setGender(option)}
+                    className={`py-3 px-4 rounded-xl text-sm font-medium transition-all border ${gender === option
+                      ? "bg-black text-white border-black shadow-md"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
                   >
-                    {g.label}
+                    {option}
                   </button>
-                ))} */}
+                ))}
               </div>
             </div>
 
-            <label className="flex items-start gap-3 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={agree}
-                onChange={(e) => setAgree(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              서비스 이용약관 및 개인정보 처리방침에 동의합니다.
-            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Country */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                  <Globe size={12} /> Country
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer"
+                    onChange={(e) => setCountryCode(e.target.value)} // State update
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={!canProceed}
-              className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-white font-semibold shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              {/* Language */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                  <MessageSquare size={12} /> Language
+                </label>
+                <div className="relative">
+                  <select className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer">
+                    <option value="en">English (US)</option>
+                    <option value="ko">Korean</option>
+                    <option value="ja">Japanese</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Privacy Checkbox */}
+            <div
+              className="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer transition-colors"
+              onClick={() => setAgreed(!agreed)}
             >
-              {loading ? "저장 중..." : "다음: 선호도 조사"}
-            </button>
-          </form>
+              <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${agreed ? "bg-black border-black" : "bg-white border-gray-300"}`}>
+                {agreed && <Check size={12} className="text-white" />}
+              </div>
+              <p className="text-[11px] text-gray-500 leading-relaxed select-none">
+                I agree to the collection and use of personal information for service provision.
+                <span className="block mt-1 text-gray-400">Your data is secured and will never be shared without consent.</span>
+              </p>
+            </div>
+          </div>
+
+          <button
+            disabled={!isFormValid}
+            onClick={handleComplete}
+            className={`w-full py-4 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300 ${isFormValid
+              ? "bg-black text-white hover:bg-gray-800 shadow-lg hover:shadow-xl translate-y-0"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+          >
+            Continue to Persona Setup <ArrowRight size={16} />
+          </button>
         </div>
-      </div>
+
+        <div className="text-center mt-8">
+          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors">
+            Skip setup (Demo only)
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ def login_google(
 
     email = id_info.get("email")
     name = id_info.get("name")
+    picture = id_info.get("picture")
     
     # 2. 사용자 확인 또는 생성
     user = db.query(User).filter(User.email == email).first()
@@ -38,6 +39,7 @@ def login_google(
         user = User(
             email=email,
             name=name,
+            profile_picture=picture,
             social_provider="google",
             social_id=id_info.get("sub"),
             social_access_token=social_access_token,
@@ -46,10 +48,12 @@ def login_google(
         db.add(user)
         db.commit()
     else:
-        # 기존 사용자: 토큰 업데이트
+        # 기존 사용자: 토큰 업데이트 및 프로필 이미지 없으면 추가
         user.social_access_token = social_access_token
         if social_refresh_token:
             user.social_refresh_token = social_refresh_token
+        if not user.profile_picture and picture:
+            user.profile_picture = picture
         db.add(user)
         db.commit()
         
@@ -73,7 +77,11 @@ def login_google(
     return {
         "access_token": access_token, 
         "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "is_join": user.is_join,
+        "profile_picture": user.profile_picture,
+        "name": user.name,
+        "email": user.email
     }
 
 @router.post("/refresh", response_model=Token)

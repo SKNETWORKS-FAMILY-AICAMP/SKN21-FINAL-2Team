@@ -46,7 +46,6 @@ primary_intent는 가장 주요한 intent 하나를 선택하십시오.
 - duration: 여행 기간 (예: "2박 3일")
 - party_size: 숫자로 명확하면 정수로, "가족"처럼 모호하면 null
 - budget_level: 가성비/저렴/싸게 => low, 보통/적당히 => medium, 럭셔리/비싸도 => high
-- themes: 여행 테마 리스트
 - must_have: 반드시 필요한 조건
 - nice_to_have: 있으면 좋은 조건
 
@@ -57,7 +56,6 @@ primary_intent는 가장 주요한 intent 하나를 선택하십시오.
 - chat_history에 있는 정보도 활용하십시오
 - 명확하지 않으면 추측하지 말고 null로 설정하십시오
 - location은 가능한 구체적으로 추출하십시오
-- themes는 리스트 형태로 반환하십시오
 
 # 중요 규칙
 - 반드시 IntentOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
@@ -81,7 +79,7 @@ PLANNER_PROMPT = """
 # 입력 정보
 - user_input: 사용자의 현재 입력
 - chat_history: 이전 대화 기록
-- slots: 추출된 슬롯 정보 (location, dates, duration, party_size, budget_level, themes 등)
+- slots: 추출된 슬롯 정보 (location, dates, duration, party_size, budget_level 등)
 - user_preferences: DB에서 가져온 사용자 선호도
 
 ---
@@ -119,6 +117,24 @@ PLANNER_PROMPT = """
 - 각 time_slot당 1~2개 활동이 적절합니다
 """
 
+
+IMAGE_TO_EMOTIONAL_PROMPT = """
+# 역할 정의 (Role)
+당신은 사용자가 입력한 이미지에서 느껴지는 감정과 장소적 특징을 분석하는 전문가입니다.
+
+# 입력 (Input)
+- 이미지: 사용자가 업로드한 이미지
+
+# 출력 (Output)
+- 감정 키워드: 이미지에서 느껴지는 감정 (예: '따뜻함', '평화로움', '활기참')
+- 장소 특징: 이미지의 장소적 특징 (예: '햇살이 드는 카페', '파도 소리가 들리는 바다')
+- 검색 키워드: 이 장소와 가장 유사한 장소들이 묘사될 법한 문장으로 작성하세요. 단순한 나열보다는 "햇살이 부드럽게 들어오는 조용한 카페의 전경"처럼 공간의 특징과 분위기가 결합된 완성형 문장이 검색 효율이 높습니다.
+
+# 규칙
+- 감정과 장소적 특징을 구체적이고 정서적으로 묘사하세요
+- 검색 엔진에서 이 이미지와 유사한 느낌의 장소를 찾기 위한 검색어로 활용될 것입니다
+- 결과는 1~2개의 짧은 문장으로 한국어로만 작성하세요
+"""
 
 EXECUTOR_PROMPT = """
 # 역할 정의 (Role)
@@ -163,8 +179,8 @@ EXECUTOR_PROMPT = """
 - 항상 [Context Information]에 제공된 정보를 최우선으로 사용하세요.
 - Context에 없는 정보는 추측하지 마세요.
 - Context에 없는 경우,  
-  → "제공된 정보에는 없지만"이라고 명확히 말하고  
-  → 일반적인 정보 또는 Context에 있는 유사한 장소를 추천하세요.
+  → "제공된 정보에는 없지만"이라고 말하지 말고  
+  → 일반적인 정보 또는 Context에 있는 유사한 장소를 추천해줄 수 있는 정보를 얻기 위한 질문을 추가하세요.
 
 ---
 
@@ -281,4 +297,6 @@ Markdown을 사용하여 가독성을 높이세요:
 - 모든 장소에 대해 네이버 지도 링크를 제공하세요. 형식: [장소명](https://map.naver.com/v5/search/장소명)
 - Context Information에 있는 장소를 우선 추천하세요.
 - Context Information에 없는 장소를 추천할 때는 "참고 정보"임을 명시하세요.
+- **항상 [Context Information]에 있는 상세 정보를 적극적으로 인용하여 답변하세요.**
 """
+PROMPTS = EXECUTOR_PROMPT
