@@ -176,7 +176,7 @@ export default function MyPageSettingsPage() {
 
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [language, setLanguage] = useState<AppLanguage>("en");
-  const [nickname, setNickname] = useState<string>("Kev_Trivers");
+  const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
   const [country, setCountry] = useState<string>("Korea");
   const [email, setEmail] = useState<string>("user@gmail.com");
   const [travelNotes, setTravelNotes] = useState<string[]>(["Religion", "Food Allergies"]);

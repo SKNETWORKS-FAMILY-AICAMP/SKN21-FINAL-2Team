@@ -21,7 +21,7 @@ const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 
 const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
   en: {
-    headerTitle: "Traveler's Profile",
+    headerTitle: "MyPage",
     headerSubtitle: "Traveler Profile",
     settings: "Settings",
     noImage: "No Image",
@@ -44,8 +44,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     menu: "Menu",
   },
   ko: {
-    headerTitle: "여행자 프로필",
-    headerSubtitle: "프로필",
+    headerTitle: "나의 페이지",
+    headerSubtitle: "여행자 프로필",
     settings: "설정",
     noImage: "이미지 없음",
     todayRec: "오늘의 추천",
@@ -67,8 +67,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     menu: "메뉴",
   },
   ja: {
-    headerTitle: "旅行者プロフィール",
-    headerSubtitle: "プロフィール",
+    headerTitle: "マイページ",
+    headerSubtitle: "旅行者プロフィール",
     settings: "設定",
     noImage: "画像なし",
     todayRec: "今日のおすすめ",
