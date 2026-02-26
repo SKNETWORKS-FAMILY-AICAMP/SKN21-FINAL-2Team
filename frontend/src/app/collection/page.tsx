@@ -14,8 +14,8 @@ const MOCK_COLLECTION = [
     { id: 6, src: "https://images.unsplash.com/photo-1767294274414-5e1e6c3974e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYXJ0JTIwZ2FsbGVyeSUyMGV4aGliaXRpb258ZW58MXx8fHwxNzcxNDAzNDUxfDA&ixlib=rb-4.1.0&q=80&w=1080", location: "Leeum Museum" },
     { id: 7, src: "https://images.unsplash.com/photo-1734828813144-7ac7ad69120f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxneWVvbmdib2tndW5nJTIwcGFsYWNlJTIwd2ludGVyJTIwc25vd3xlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Gyeongbokgung Palace" },
     { id: 8, src: "https://images.unsplash.com/photo-1739918559783-ed40311fc814?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHlsaXNoJTIwY29mZmVlJTIwc2hvcCUyMGludGVyaW9yJTIwd29vZHxlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Seongsu Cafe Street" },
-    { id: 9, src: "https://images.unsplash.com/photo-1770530436084-7be1789ecc5a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYW1ib28lMjBmb3Jlc3QlMjBreW90byUyMHRyYW5xdWlsfGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Damyang Bamboo Forest" },
-    { id: 10, src: "https://images.unsplash.com/photo-1771218829768-16501433f7d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb2Z0b3AlMjBwb29sJTIwc3Vuc2V0fGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Signiel Seoul" },
+    // { id: 9, src: "https://images.unsplash.com/photo-1770530436084-7be1789ecc5a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYW1ib28lMjBmb3Jlc3QlMjBreW90byUyMHRyYW5xdWlsfGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Damyang Bamboo Forest" },
+    // { id: 10, src: "https://images.unsplash.com/photo-1771218829768-16501433f7d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb2Z0b3AlMjBwb29sJTIwc3Vuc2V0fGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Signiel Seoul" },
 ];
 
 type CollectionItem = (typeof MOCK_COLLECTION)[0];
@@ -39,7 +39,7 @@ export default function CollectionPage() {
                 <header className="flex-none p-6 pb-4 border-b border-gray-100 flex items-end justify-between">
                     <div>
                         <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1 flex items-center gap-2">
-                            Collection <Grid size={16} className="text-gray-400" />
+                            My gallery <Grid size={16} className="text-gray-400" />
                         </h1>
                         <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Inspirations & Moments</p>
                     </div>

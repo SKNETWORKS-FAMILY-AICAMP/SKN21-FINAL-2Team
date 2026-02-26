@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
+import { fetchCurrentUser } from "@/services/api";
 
 export default function MyPage() {
   const [userProfile, setUserProfile] = useState({
@@ -35,20 +36,12 @@ export default function MyPage() {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUserProfile((prev) => ({
-            ...prev,
-            nickname: data.nickname || data.name || "User",
-            profile_picture: data.profile_picture || "",
-          }));
-        }
+        const data = await fetchCurrentUser();
+        setUserProfile((prev) => ({
+          ...prev,
+          nickname: data.nickname || data.name || "User",
+          profile_picture: data.profile_picture || "",
+        }));
       } catch (error) {
         console.error("Failed to fetch user profile", error);
       }
