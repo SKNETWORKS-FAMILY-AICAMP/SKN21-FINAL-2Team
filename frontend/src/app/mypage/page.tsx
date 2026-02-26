@@ -746,12 +746,28 @@ export default function MyPage() {
     return map;
   }, [reservations]);
 
+  const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
+
   const handleAddReservation = () => {
   };
 
   const handleDeleteReservation = (id: string) => {
     setReservations((prev) => prev.filter((r) => r.id !== id));
     if (activeReservation?.id === id) setActiveReservation(null);
+  };
+
+  const requestDeleteReservation = (reservation: ReservationItem) => {
+    setReservationToDelete(reservation);
+  };
+
+  const cancelDeleteReservation = () => {
+    setReservationToDelete(null);
+  };
+
+  const confirmDeleteReservation = () => {
+    if (!reservationToDelete) return;
+    handleDeleteReservation(reservationToDelete.id);
+    setReservationToDelete(null);
   };
 
   const dnaTraits = computeDna(userProfile.preferences);
@@ -944,9 +960,8 @@ export default function MyPage() {
 
                         <button
                           type="button"
-                          disabled
-                          onClick={() => handleDeleteReservation(res.id)}
-                          className="flex-none text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-not-allowed"
+                          onClick={() => requestDeleteReservation(res)}
+                          className="flex-none text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
                         >
                           Delete
                         </button>
@@ -996,6 +1011,59 @@ export default function MyPage() {
           durationTime: t("durationTime"),
         }}
       />
+
+      <AnimatePresence>
+        {!!reservationToDelete && (
+          <motion.div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <motion.button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 bg-black/40"
+              onClick={cancelDeleteReservation}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            />
+
+            <motion.div
+              className="relative z-10 w-full max-w-[420px] rounded-xl bg-white shadow-lg overflow-hidden"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            >
+              <div className="p-6">
+                <div className="text-lg font-semibold text-gray-900">
+                  Are you sure you wanna delete this reservation?
+                </div>
+                <div className="mt-5 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={cancelDeleteReservation}
+                    className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteReservation}
+                    className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
