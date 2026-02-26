@@ -42,17 +42,6 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "Destination",
     durationTime: "Duration Time",
     menu: "Menu",
-
-    assistant: "Assistant",
-    user: "User",
-    restaurantsOptions: "Restaurants Options",
-    localAttractions: "Local Tourist Attractions",
-    mockTripFallback: "(Mock) Chatbot route/recommendation summary will be shown here.",
-    categoryTransportation: "Transportation",
-    categoryHotel: "Hotel",
-    categoryRestaurant: "Restaurant",
-    categoryActivity: "Activity",
-    categoryReservation: "Reservation",
   },
   ko: {
     headerTitle: "여행자 프로필",
@@ -76,17 +65,6 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "목적지",
     durationTime: "소요 시간",
     menu: "메뉴",
-
-    assistant: "어시스턴트",
-    user: "사용자",
-    restaurantsOptions: "추천 식당",
-    localAttractions: "주요 관광지",
-    mockTripFallback: "(Mock) 챗봇 동선/추천 요약이 여기에 표시됩니다.",
-    categoryTransportation: "교통",
-    categoryHotel: "숙소",
-    categoryRestaurant: "식당",
-    categoryActivity: "액티비티",
-    categoryReservation: "예약",
   },
   ja: {
     headerTitle: "旅行者プロフィール",
@@ -110,17 +88,6 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "目的地",
     durationTime: "所要時間",
     menu: "メニュー",
-
-    assistant: "アシスタント",
-    user: "ユーザー",
-    restaurantsOptions: "おすすめレストラン",
-    localAttractions: "観光スポット",
-    mockTripFallback: "(Mock) チャットボットのルート/おすすめ要約がここに表示されます。",
-    categoryTransportation: "交通",
-    categoryHotel: "ホテル",
-    categoryRestaurant: "レストラン",
-    categoryActivity: "アクティビティ",
-    categoryReservation: "予約",
   },
 };
 
@@ -149,27 +116,18 @@ type ReservationItem = {
   details: { label: string; value: string }[];
 };
 
-function getReservationCategoryLabel(
-  category: ReservationItem["category"],
-  labels: {
-    transportation: string;
-    hotel: string;
-    restaurant: string;
-    activity: string;
-    reservation: string;
-  }
-) {
+function getReservationCategoryLabel(category: ReservationItem["category"]) {
   switch (category) {
     case "transportation":
-      return labels.transportation;
+      return "Transportation";
     case "hotel":
-      return labels.hotel;
+      return "Hotel";
     case "restaurant":
-      return labels.restaurant;
+      return "Restaurant";
     case "activity":
-      return labels.activity;
+      return "Activity";
     default:
-      return labels.reservation;
+      return "Reservation";
   }
 }
 
@@ -233,20 +191,12 @@ function JourneyDetailModal({
   onClose,
   title,
   menuLabel,
-  labels,
 }: {
   open: boolean;
   trip: TripSummary | null;
   onClose: () => void;
   title: string;
   menuLabel: string;
-  labels: {
-    assistant: string;
-    user: string;
-    restaurantsOptions: string;
-    localAttractions: string;
-    mockTripFallback: string;
-  };
 }) {
   const detail = trip?.detail;
 
@@ -285,13 +235,13 @@ function JourneyDetailModal({
             <div className="px-6 pb-4">
               <div className="rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
                 <p className="text-xs text-gray-700 leading-relaxed">
-                  {detail?.intro ?? labels.mockTripFallback}
+                  {detail?.intro ?? "(Mock) 챗봇 동선/추천 요약이 여기에 표시됩니다."}
                 </p>
 
                 {detail && (
                   <ol className="mt-4 space-y-4 text-xs text-gray-800">
                     <li>
-                      <div className="font-bold">1. {labels.restaurantsOptions}</div>
+                      <div className="font-bold">1. Restaurants Options</div>
                       <ul className="mt-2 space-y-1 list-disc pl-5">
                         {detail.restaurantOptions.map((r) => (
                           <li key={r.name}>
@@ -301,7 +251,7 @@ function JourneyDetailModal({
                       </ul>
                     </li>
                     <li>
-                      <div className="font-bold">2. {labels.localAttractions}</div>
+                      <div className="font-bold">2. Local Tourist Attractions</div>
                       <ul className="mt-2 space-y-1 list-disc pl-5">
                         {detail.attractions.map((a) => (
                           <li key={a.name}>
@@ -321,7 +271,7 @@ function JourneyDetailModal({
                         className={`p-3 rounded-lg border ${m.role === "assistant" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}
                       >
                         <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                          {m.role === "assistant" ? labels.assistant : labels.user}
+                          {m.role === "assistant" ? "Assistant" : "User"}
                         </div>
                         <div className="text-xs text-gray-800 leading-relaxed">{m.text}</div>
                       </div>
@@ -370,24 +320,11 @@ function ReservationDetailModal({
     reservationOne: string;
     destination: string;
     durationTime: string;
-    categoryTransportation: string;
-    categoryHotel: string;
-    categoryRestaurant: string;
-    categoryActivity: string;
-    categoryReservation: string;
   };
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const categoryLabel = reservation
-    ? getReservationCategoryLabel(reservation.category, {
-        transportation: labels.categoryTransportation,
-        hotel: labels.categoryHotel,
-        restaurant: labels.categoryRestaurant,
-        activity: labels.categoryActivity,
-        reservation: labels.categoryReservation,
-      })
-    : labels.categoryReservation;
+  const categoryLabel = reservation ? getReservationCategoryLabel(reservation.category) : "Reservation";
   const effectivePhotoUrl = reservation ? photoUrl || reservation.reservationImageUrl : undefined;
 
   return (
@@ -899,13 +836,6 @@ export default function MyPage() {
         onClose={() => setActiveTrip(null)}
         title={t("journeyDetail")}
         menuLabel={t("menu")}
-        labels={{
-          assistant: t("assistant"),
-          user: t("user"),
-          restaurantsOptions: t("restaurantsOptions"),
-          localAttractions: t("localAttractions"),
-          mockTripFallback: t("mockTripFallback"),
-        }}
       />
 
       <ReservationDetailModal
@@ -931,11 +861,6 @@ export default function MyPage() {
           reservationOne: t("reservationOne"),
           destination: t("destination"),
           durationTime: t("durationTime"),
-          categoryTransportation: t("categoryTransportation"),
-          categoryHotel: t("categoryHotel"),
-          categoryRestaurant: t("categoryRestaurant"),
-          categoryActivity: t("categoryActivity"),
-          categoryReservation: t("categoryReservation"),
         }}
       />
     </div>
