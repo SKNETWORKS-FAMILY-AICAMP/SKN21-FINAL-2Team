@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
-  Languages,
   Ticket,
   TrainFront,
   Hotel,
@@ -119,84 +118,102 @@ function JourneyDetailModal({
   trip: TripSummary | null;
   onClose: () => void;
 }) {
-  if (!open || !trip) return null;
-
-  const detail = trip.detail;
+  const detail = trip?.detail;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
-
-      <div className="relative z-10 w-full max-w-xl rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col">
-        <div className="p-6 pb-4">
-          <h2 className="text-3xl font-bold text-gray-900 text-center">Journey Detail</h2>
-        </div>
-
-        <div className="px-6 pb-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
-            <p className="text-xs text-gray-700 leading-relaxed">
-              {detail?.intro ?? "(Mock) 챗봇 동선/추천 요약이 여기에 표시됩니다."}
-            </p>
-
-            {detail && (
-              <ol className="mt-4 space-y-4 text-xs text-gray-800">
-                <li>
-                  <div className="font-bold">1. Restaurants Options</div>
-                  <ul className="mt-2 space-y-1 list-disc pl-5">
-                    {detail.restaurantOptions.map((r) => (
-                      <li key={r.name}>
-                        <span className="font-bold">{r.name}</span>: {r.desc}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-                <li>
-                  <div className="font-bold">2. Local Tourist Attractions</div>
-                  <ul className="mt-2 space-y-1 list-disc pl-5">
-                    {detail.attractions.map((a) => (
-                      <li key={a.name}>
-                        <span className="font-bold">{a.name}</span>: {a.desc}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              </ol>
-            )}
-
-            {!detail && (
-              <div className="mt-4 space-y-2">
-                {(trip.messages || []).map((m, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-3 rounded-lg border ${m.role === "assistant" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}
-                  >
-                    <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                      {m.role === "assistant" ? "Assistant" : "User"}
-                    </div>
-                    <div className="text-xs text-gray-800 leading-relaxed">{m.text}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="px-6 pb-6">
-          <button
+    <AnimatePresence>
+      {open && trip && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <motion.button
             type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/40"
             onClick={onClose}
-            className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          />
+
+          <motion.div
+            className="relative z-10 w-full max-w-xl rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
-            Menu
-          </button>
-        </div>
-      </div>
-    </div>
+            <div className="p-6 pb-4">
+              <h2 className="text-3xl font-bold text-gray-900 text-center">Journey Detail</h2>
+            </div>
+
+            <div className="px-6 pb-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
+                <p className="text-xs text-gray-700 leading-relaxed">
+                  {detail?.intro ?? "(Mock) 챗봇 동선/추천 요약이 여기에 표시됩니다."}
+                </p>
+
+                {detail && (
+                  <ol className="mt-4 space-y-4 text-xs text-gray-800">
+                    <li>
+                      <div className="font-bold">1. Restaurants Options</div>
+                      <ul className="mt-2 space-y-1 list-disc pl-5">
+                        {detail.restaurantOptions.map((r) => (
+                          <li key={r.name}>
+                            <span className="font-bold">{r.name}</span>: {r.desc}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                    <li>
+                      <div className="font-bold">2. Local Tourist Attractions</div>
+                      <ul className="mt-2 space-y-1 list-disc pl-5">
+                        {detail.attractions.map((a) => (
+                          <li key={a.name}>
+                            <span className="font-bold">{a.name}</span>: {a.desc}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  </ol>
+                )}
+
+                {!detail && (
+                  <div className="mt-4 space-y-2">
+                    {(trip.messages || []).map((m, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-lg border ${m.role === "assistant" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}
+                      >
+                        <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                          {m.role === "assistant" ? "Assistant" : "User"}
+                        </div>
+                        <div className="text-xs text-gray-800 leading-relaxed">{m.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 pb-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
+              >
+                Menu
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -215,106 +232,124 @@ function ReservationDetailModal({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  if (!open || !reservation) return null;
-
-  const categoryLabel = getReservationCategoryLabel(reservation.category);
-  const effectivePhotoUrl = photoUrl || reservation.reservationImageUrl;
+  const categoryLabel = reservation ? getReservationCategoryLabel(reservation.category) : "Reservation";
+  const effectivePhotoUrl = reservation ? photoUrl || reservation.reservationImageUrl : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-      />
-
-      <div className="relative z-10 w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col">
-        <div className="p-6 pb-4">
-          <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
-        </div>
-
-        <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onPickPhoto(file);
-              e.currentTarget.value = "";
-            }}
+    <AnimatePresence>
+      {open && reservation && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <motion.button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/40"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
           />
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
-            aria-label="Upload reservation image"
+          <motion.div
+            className="relative z-10 w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
-            {effectivePhotoUrl ? (
-              <img src={effectivePhotoUrl} alt="Reservation" className="w-full h-[180px] object-cover" />
-            ) : (
-              <div className="h-[180px] flex flex-col items-center justify-center">
-                <div className="text-lg font-bold">예매내역 사진</div>
-                <div className="text-xs text-gray-700 mt-1">(사진이 없을땐 여기에 클릭해서 업로드)</div>
-              </div>
-            )}
-          </button>
-
-          <div className="mt-4 space-y-1 text-sm text-gray-900">
-            <div className="font-semibold flex items-center gap-2">
-              <span>Reservation 1:</span>
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
-                <ReservationLogo category={reservation.category} />
-              </span>
-              <span>{categoryLabel}</span>
+            <div className="p-6 pb-4">
+              <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
             </div>
-            {reservation.identifierLabel && reservation.identifierValue && (
-              <div>
-                {reservation.identifierLabel}: <span className="font-semibold">{reservation.identifierValue}</span>
-              </div>
-            )}
-            {reservation.destinationLabel && (
-              <div>
-                Destination: <span className="font-semibold">{reservation.destinationLabel}</span>
-              </div>
-            )}
-            {reservation.durationLabel && (
-              <div>
-                Duration Time: <span className="font-semibold">{reservation.durationLabel}</span>
-              </div>
-            )}
-          </div>
 
-          {!!reservation.details?.length && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {reservation.details.map((d) => (
-                <div key={d.label} className="p-3 rounded-lg border border-gray-200 bg-white">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400">{d.label}</div>
-                  <div className="text-xs font-semibold text-gray-900 mt-1">{d.value}</div>
+            <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onPickPhoto(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
+                aria-label="Upload reservation image"
+              >
+                {effectivePhotoUrl ? (
+                  <img src={effectivePhotoUrl} alt="Reservation" className="w-full h-[180px] object-cover" />
+                ) : (
+                  <div className="h-[180px] flex flex-col items-center justify-center">
+                    <div className="text-lg font-bold">Reservation Image</div>
+                    <div className="text-xs text-gray-700 mt-1">(Click here to upload if no image is available)</div>
+                  </div>
+                )}
+              </button>
+
+              <div className="mt-4 space-y-1 text-sm text-gray-900">
+                <div className="font-semibold flex items-center gap-2">
+                  <span>Reservation 1:</span>
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
+                    <ReservationLogo category={reservation.category} />
+                  </span>
+                  <span>{categoryLabel}</span>
                 </div>
-              ))}
+                {reservation.identifierLabel && reservation.identifierValue && (
+                  <div>
+                    {reservation.identifierLabel}: <span className="font-semibold">{reservation.identifierValue}</span>
+                  </div>
+                )}
+                {reservation.destinationLabel && (
+                  <div>
+                    Destination: <span className="font-semibold">{reservation.destinationLabel}</span>
+                  </div>
+                )}
+                {reservation.durationLabel && (
+                  <div>
+                    Duration Time: <span className="font-semibold">{reservation.durationLabel}</span>
+                  </div>
+                )}
+              </div>
+
+              {!!reservation.details?.length && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {reservation.details.map((d) => (
+                    <div key={d.label} className="p-3 rounded-lg border border-gray-200 bg-white">
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400">{d.label}</div>
+                      <div className="text-xs font-semibold text-gray-900 mt-1">{d.value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 text-[10px] text-gray-500">
+                (Mock) 나중에 Google Calendar 연동 후 이미지/상세정보를 불러오고, 예약 타입에 따라 로고/필드를 자동으로 매핑할 예정입니다.
+              </div>
             </div>
-          )}
 
-          <div className="mt-3 text-[10px] text-gray-500">
-            (Mock) 나중에 Google Calendar 연동 후 이미지/상세정보를 불러오고, 예약 타입에 따라 로고/필드를 자동으로 매핑할 예정입니다.
-          </div>
-        </div>
-
-        <div className="px-6 pb-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
-          >
-            Menu
-          </button>
-        </div>
-      </div>
-    </div>
+            <div className="px-6 pb-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
+              >
+                Menu
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -484,7 +519,7 @@ export default function MyPage() {
                 className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-center gap-4 mb-5">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
                     {userProfile.profile_picture ? (
                       <img
                         src={userProfile.profile_picture}
@@ -506,18 +541,6 @@ export default function MyPage() {
                   >
                     Settings
                   </button>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100/50">
-                    <div className="flex items-center gap-2">
-                      <Languages size={14} className="text-gray-400" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-900 uppercase">Language</span>
-                        <span className="text-[9px] text-gray-500">English (US)</span>
-                      </div>
-                    </div>
-                    <button className="text-[9px] font-bold text-black border-b border-black leading-none pb-0.5 hover:opacity-70">Change</button>
-                  </div>
                 </div>
               </motion.div>
 
