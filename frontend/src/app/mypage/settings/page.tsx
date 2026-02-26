@@ -124,7 +124,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
 
     deactivateTitle: "계정 탈퇴",
     deactivateNote:
-      "안내: 계정을 탈퇴하면 저장된 채팅, 정보, 위치 북마크가 일시적으로 숨김 처리됩니다.",
+      "안내: 계정을 탈퇴하면 저장된 채팅, 정보, 위치 북마크가 일시적으로 숨겨집니다.",
     deactivateConfirmGoogle: "Google로 확인",
     deactivateGoogleSoon: "(준비중) Google 확인 기능은 추후 활성화됩니다.",
     deactivateAgreement: "계정이 탈퇴되고 Trivers 이용이 중지되는 것에 동의합니다.",
@@ -140,9 +140,9 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     title: "プロフィール設定",
     profilePicture: "プロフィール画像",
     editNickname: "ニックネーム編集",
-    country: "国",
+    country: "国/地域",
     switchLanguage: "言語切替",
-    confirmedEmail: "確認済みメール",
+    confirmedEmail: "確認済みメールアドレス",
     travelNotes: "旅行メモ",
     travelPreference: "旅行の好み",
     pref1: "旅行の好み 1",
@@ -155,17 +155,17 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
 
     deactivateTitle: "アカウントを無効化",
     deactivateNote:
-      "注意: アカウントを無効化すると、保存したチャット/情報/位置ブックマークが一時的に非表示になります。",
+      "注意：アカウントを無効化すると、保存したチャット、情報、位置ブックマークが一時的に非表示になります。",
     deactivateConfirmGoogle: "Googleで確認",
-    deactivateGoogleSoon: "(準備中) Google確認は後で有効になります。",
+    deactivateGoogleSoon: "（準備中）Googleでの確認は後ほど利用できます。",
     deactivateAgreement: "アカウントが無効化され、Triversへのアクセスが一時停止されることを理解しました。",
     deactivatePrimary: "アカウントを無効化",
     deactivateCancel: "キャンセル",
-    deactivateFinalConfirm: "本当にアカウントを無効化しますか?",
+    deactivateFinalConfirm: "本当にアカウントを無効化しますか？",
     yes: "はい",
     no: "いいえ",
     errConfirmEmail: "メールを確認してください",
-    errConfirmAgreement: "退会同意を確認してください",
+    errConfirmAgreement: "退会に同意してください",
   },
 };
 
@@ -407,8 +407,6 @@ export default function MyPageSettingsPage() {
 
   const onChangeLanguage = (next: AppLanguage) => {
     setLanguage(next);
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
-    window.dispatchEvent(new Event("triver:language"));
   };
 
   const onChangePreference = (index: 0 | 1 | 2, value: string) => {

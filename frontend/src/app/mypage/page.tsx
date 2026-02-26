@@ -49,18 +49,18 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     settings: "설정",
     noImage: "이미지 없음",
     todayRec: "오늘의 추천",
-    startPlanning: "플래닝 시작",
+    startPlanning: "계획 시작",
     scheduledJourney: "예정된 여정",
     reservation: "예약",
     open: "열기",
-    tripHint: "관련 채팅 요약 보기 (mock).",
+    tripHint: "관련 채팅 요약 보기 (데모).",
     dnaTitle: "Triver's Travel DNA",
     youAreA: "당신은",
     traveler: "여행자!",
     journeyDetail: "여정 상세",
     reservationDetails: "예약 상세",
     reservationImage: "예매내역 사진",
-    clickToUpload: "(사진이 없을땐 여기에 클릭해서 업로드)",
+    clickToUpload: "(사진이 없을 땐 여기를 클릭해 업로드)",
     reservationOne: "예약 1:",
     destination: "목적지",
     durationTime: "소요 시간",
@@ -73,18 +73,18 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     noImage: "画像なし",
     todayRec: "今日のおすすめ",
     startPlanning: "プラン開始",
-    scheduledJourney: "予定の旅",
+    scheduledJourney: "予定された旅程",
     reservation: "予約",
     open: "開く",
-    tripHint: "関連チャット要約を見る (mock)。",
+    tripHint: "関連チャット要約を見る（mock）。",
     dnaTitle: "Triver's Travel DNA",
     youAreA: "あなたは",
-    traveler: "旅行者!",
+    traveler: "旅行者！",
     journeyDetail: "旅の詳細",
     reservationDetails: "予約詳細",
     reservationImage: "予約画像",
     clickToUpload: "(画像がない場合はクリックしてアップロード)",
-    reservationOne: "予約 1:",
+    reservationOne: "予約1：",
     destination: "目的地",
     durationTime: "所要時間",
     menu: "メニュー",
@@ -115,6 +115,72 @@ type ReservationItem = {
   durationLabel?: string;
   details: { label: string; value: string }[];
 };
+
+type ChatTranscriptMessage = {
+  role: "user" | "assistant";
+  text: string;
+};
+
+const JOURNEY_CHAT_STORAGE_PREFIX = "triver:journey-chat:v1:";
+
+function loadJourneyChatTranscript(tripId: string): ChatTranscriptMessage[] | null {
+  try {
+    const raw = localStorage.getItem(`${JOURNEY_CHAT_STORAGE_PREFIX}${tripId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const normalized = parsed
+      .map((m: any) => ({ role: m?.role, text: m?.text }))
+      .filter(
+        (m: any): m is ChatTranscriptMessage =>
+          (m.role === "user" || m.role === "assistant") && typeof m.text === "string" && m.text.trim().length > 0,
+      );
+    return normalized.length ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildMockJourneyTranscript(trip: TripSummary): ChatTranscriptMessage[] {
+  const userSeed = trip.messages?.find((m) => m.role === "user")?.text;
+  const baseUser = userSeed || "Show me recommendations.";
+
+  if (trip.detail) {
+    const restaurants = trip.detail.restaurantOptions
+      .map((r) => `- ${r.name}: ${r.desc}`)
+      .join("\n");
+    const attractions = trip.detail.attractions
+      .map((a) => `- ${a.name}: ${a.desc}`)
+      .join("\n");
+
+    return [
+      { role: "user", text: baseUser },
+      { role: "assistant", text: trip.detail.intro },
+      { role: "assistant", text: `1. Restaurants Options\n${restaurants}` },
+      { role: "assistant", text: `2. Local Tourist Attractions\n${attractions}` },
+    ];
+  }
+
+  return trip.messages?.length ? trip.messages : [{ role: "user", text: baseUser }];
+}
+
+function LoadingIndicator() {
+  return (
+    <div className="relative h-9 w-32 rounded-full bg-gray-200 border border-gray-300 overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-center gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="relative w-5 h-5 rounded-full bg-gray-500/60">
+            <motion.div
+              className="absolute inset-0 rounded-full bg-green-500"
+              animate={{ opacity: [0.15, 1, 0.15] }}
+              transition={{ duration: 1.2, ease: "easeInOut", repeat: Infinity, delay: i * 0.22 }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function getReservationCategoryLabel(category: ReservationItem["category"]) {
   switch (category) {
@@ -198,7 +264,20 @@ function JourneyDetailModal({
   title: string;
   menuLabel: string;
 }) {
-  const detail = trip?.detail;
+  const [phase, setPhase] = useState<"loading" | "ready">("loading");
+
+  useEffect(() => {
+    if (!open || !trip) return;
+    setPhase("loading");
+    const timeoutId = window.setTimeout(() => setPhase("ready"), 4500);
+    return () => window.clearTimeout(timeoutId);
+  }, [open, trip?.id]);
+
+  const transcript = useMemo(() => {
+    if (!trip) return [] as ChatTranscriptMessage[];
+    const stored = loadJourneyChatTranscript(trip.id);
+    return stored ?? buildMockJourneyTranscript(trip);
+  }, [trip]);
 
   return (
     <AnimatePresence>
@@ -233,51 +312,55 @@ function JourneyDetailModal({
             </div>
 
             <div className="px-6 pb-4">
-              <div className="rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
-                <p className="text-xs text-gray-700 leading-relaxed">
-                  {detail?.intro ?? "(Mock) 챗봇 동선/추천 요약이 여기에 표시됩니다."}
-                </p>
-
-                {detail && (
-                  <ol className="mt-4 space-y-4 text-xs text-gray-800">
-                    <li>
-                      <div className="font-bold">1. Restaurants Options</div>
-                      <ul className="mt-2 space-y-1 list-disc pl-5">
-                        {detail.restaurantOptions.map((r) => (
-                          <li key={r.name}>
-                            <span className="font-bold">{r.name}</span>: {r.desc}
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                    <li>
-                      <div className="font-bold">2. Local Tourist Attractions</div>
-                      <ul className="mt-2 space-y-1 list-disc pl-5">
-                        {detail.attractions.map((a) => (
-                          <li key={a.name}>
-                            <span className="font-bold">{a.name}</span>: {a.desc}
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  </ol>
-                )}
-
-                {!detail && (
-                  <div className="mt-4 space-y-2">
-                    {(trip.messages || []).map((m, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 rounded-lg border ${m.role === "assistant" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}
-                      >
-                        <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                          {m.role === "assistant" ? "Assistant" : "User"}
-                        </div>
-                        <div className="text-xs text-gray-800 leading-relaxed">{m.text}</div>
+              <div className="relative rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
+                <AnimatePresence mode="wait">
+                  {phase === "loading" ? (
+                    <motion.div
+                      key="loading"
+                      className="min-h-[220px]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="absolute left-4 bottom-4">
+                        <LoadingIndicator />
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="messages"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-2"
+                    >
+                      {transcript.map((m, idx) => {
+                        const isUser = m.role === "user";
+                        return (
+                          <motion.div
+                            key={`${m.role}-${idx}-${m.text.slice(0, 12)}`}
+                            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.25, delay: idx * 0.08 }}
+                            className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={
+                                isUser
+                                  ? "max-w-[85%] rounded-2xl rounded-br-md bg-black text-white px-4 py-3 text-xs leading-relaxed shadow-sm"
+                                  : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 text-gray-900 px-4 py-3 text-xs leading-relaxed border border-gray-200"
+                              }
+                            >
+                              <div className="whitespace-pre-wrap">{m.text}</div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
@@ -587,8 +670,8 @@ export default function MyPage() {
       id: "trip-1",
       title: "Trip to Busan (Mock)",
       messages: [
-        { role: "user", text: "부산 1박2일로 동선 추천해줘" },
-        { role: "assistant", text: "해운대 → 광안리 → 자갈치시장 중심으로 동선을 제안드릴게요." },
+        { role: "user", text: "Recommend me a travel destination from Busan" },
+        { role: "assistant", text: "Haeundae → Gwangalli → Jagalchi Market 중심으로 동선을 제안드릴게요." },
         { role: "assistant", text: "(예시) Day1: 해운대/더베이101, Day2: 감천문화마을/자갈치" },
       ],
       detail: {
