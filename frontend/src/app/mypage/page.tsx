@@ -166,7 +166,7 @@ function buildMockJourneyTranscript(trip: TripSummary): ChatTranscriptMessage[] 
 
 function LoadingIndicator() {
   return (
-    <div className="relative h-9 w-32 rounded-full bg-gray-200 border border-gray-300 overflow-hidden">
+    <div className="relative h-9 w-32 rounded-full bg-gray-200 shadow-sm overflow-hidden">
       <div className="absolute inset-0 flex items-center justify-center gap-4">
         {[0, 1, 2].map((i) => (
           <div key={i} className="relative w-5 h-5 rounded-full bg-gray-500/60">
@@ -269,7 +269,7 @@ function JourneyDetailModal({
   useEffect(() => {
     if (!open || !trip) return;
     setPhase("loading");
-    const timeoutId = window.setTimeout(() => setPhase("ready"), 4500);
+    const timeoutId = window.setTimeout(() => setPhase("ready"), 3000);
     return () => window.clearTimeout(timeoutId);
   }, [open, trip?.id]);
 
@@ -350,7 +350,7 @@ function JourneyDetailModal({
                               className={
                                 isUser
                                   ? "max-w-[85%] rounded-2xl rounded-br-md bg-black text-white px-4 py-3 text-xs leading-relaxed shadow-sm"
-                                  : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 text-gray-900 px-4 py-3 text-xs leading-relaxed border border-gray-200"
+                                  : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 text-gray-900 px-4 py-3 text-xs leading-relaxed shadow-sm"
                               }
                             >
                               <div className="whitespace-pre-wrap">{m.text}</div>
@@ -592,6 +592,7 @@ export default function MyPage() {
         const parsed = JSON.parse(raw) as any;
 
         const nextNickname = typeof parsed?.nickname === "string" ? parsed.nickname : undefined;
+        const nextBio = typeof parsed?.bio === "string" ? parsed.bio : undefined;
         const nextPrefs = Array.isArray(parsed?.travelPreferences)
           ? (parsed.travelPreferences.filter((x: unknown) => typeof x === "string") as string[])
           : Array.isArray(parsed?.preferences)
@@ -601,6 +602,7 @@ export default function MyPage() {
         setUserProfile((prev) => ({
           ...prev,
           nickname: nextNickname ?? prev.nickname,
+          bio: nextBio ?? prev.bio,
           preferences: nextPrefs && nextPrefs.length ? nextPrefs.slice(0, 3) : prev.preferences,
         }));
       } catch {
@@ -656,6 +658,7 @@ export default function MyPage() {
       const next = {
         ...parsed,
         nickname,
+        bio,
         // Settings page expects a fixed-length tuple, but we keep it flexible here.
         travelPreferences: preferences.slice(0, 3),
       };

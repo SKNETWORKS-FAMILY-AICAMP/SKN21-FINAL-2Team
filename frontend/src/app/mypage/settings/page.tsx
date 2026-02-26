@@ -9,6 +9,7 @@ type AppLanguage = "en" | "ko" | "ja";
 
 type ProfileSettings = {
   nickname: string;
+  bio: string;
   country: string;
   email: string;
   language: AppLanguage;
@@ -78,6 +79,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     title: "Profile Settings",
     profilePicture: "Profile Picture",
     editNickname: "Edit Nickname",
+    miniBio: "Mini Bio",
     country: "Country",
     switchLanguage: "Switch Language",
     confirmedEmail: "Confirmed Email",
@@ -110,6 +112,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     title: "프로필 설정",
     profilePicture: "프로필 사진",
     editNickname: "닉네임 변경",
+    miniBio: "한줄 소개",
     country: "국가",
     switchLanguage: "언어 변경",
     confirmedEmail: "확인된 이메일",
@@ -141,6 +144,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     title: "プロフィール設定",
     profilePicture: "プロフィール画像",
     editNickname: "ニックネーム編集",
+    miniBio: "ひとこと",
     country: "国/地域",
     switchLanguage: "言語切替",
     confirmedEmail: "確認済みメールアドレス",
@@ -178,6 +182,7 @@ export default function MyPageSettingsPage() {
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [language, setLanguage] = useState<AppLanguage>("en");
   const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
+  const [bio, setBio] = useState<string>("Explorer Lvl.3");
   const [country, setCountry] = useState<string>("Korea");
   const [email, setEmail] = useState<string>("user@gmail.com");
   const [travelNotes, setTravelNotes] = useState<string[]>(["Religion", "Food Allergies"]);
@@ -211,6 +216,7 @@ export default function MyPageSettingsPage() {
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<ProfileSettings>;
         if (typeof parsed.nickname === "string") setNickname(parsed.nickname);
+        if (typeof parsed.bio === "string") setBio(parsed.bio);
         if (typeof parsed.country === "string") setCountry(parsed.country);
         if (typeof parsed.email === "string") setEmail(parsed.email);
         if (Array.isArray(parsed.travelNotes)) setTravelNotes(parsed.travelNotes.filter((x) => typeof x === "string"));
@@ -265,6 +271,7 @@ export default function MyPageSettingsPage() {
   const handleSave = () => {
     const payload: ProfileSettings = {
       nickname,
+      bio,
       country,
       email,
       language,
@@ -473,6 +480,15 @@ export default function MyPageSettingsPage() {
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     className="w-full sm:max-w-[280px] h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-xs font-bold text-gray-900 mb-2">{t("miniBio")}</div>
+                  <input
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-900"
                   />
                 </div>
 
