@@ -384,11 +384,35 @@ export default function MyPage() {
     profile_picture: "",
   });
 
+  const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
+
   const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
   const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
   const [reservationPhotoById, setReservationPhotoById] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // Load local saved settings first (frontend-only prototype)
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as any;
+        const nextNickname = typeof parsed?.nickname === "string" ? parsed.nickname : undefined;
+        const nextPrefs = Array.isArray(parsed?.travelPreferences)
+          ? (parsed.travelPreferences.filter((x: unknown) => typeof x === "string") as string[])
+          : Array.isArray(parsed?.preferences)
+            ? (parsed.preferences.filter((x: unknown) => typeof x === "string") as string[])
+            : undefined;
+
+        setUserProfile((prev) => ({
+          ...prev,
+          nickname: nextNickname ?? prev.nickname,
+          preferences: nextPrefs && nextPrefs.length ? nextPrefs.slice(0, 3) : prev.preferences,
+        }));
+      }
+    } catch {
+      // ignore
+    }
+
     const fetchUserProfile = async () => {
       try {
         const token = localStorage.getItem("access_token");
@@ -404,8 +428,8 @@ export default function MyPage() {
           const data = await res.json();
           setUserProfile((prev) => ({
             ...prev,
-            nickname: data.nickname || data.name || "User",
-            profile_picture: data.profile_picture || "",
+            nickname: prev.nickname || data.nickname || data.name || "User",
+            profile_picture: data.profile_picture || prev.profile_picture || "",
           }));
         }
       } catch (error) {
@@ -418,6 +442,21 @@ export default function MyPage() {
 
   const handleSaveSettings = (nickname: string, bio: string, preferences: string[]) => {
     setUserProfile((prev) => ({ ...prev, nickname, bio, preferences }));
+
+    // Keep Settings page and MyPage in sync for the prototype
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as any) : {};
+      const next = {
+        ...parsed,
+        nickname,
+        // Settings page expects a fixed-length tuple, but we keep it flexible here.
+        travelPreferences: preferences.slice(0, 3),
+      };
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
   };
 
   const trips: TripSummary[] = [
