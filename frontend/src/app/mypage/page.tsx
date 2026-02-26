@@ -423,7 +423,7 @@ export default function MyPage() {
   const trips: TripSummary[] = [
     {
       id: "trip-1",
-      title: "Trip to Busan",
+      title: "Trip to Busan (Mock)",
       messages: [
         { role: "user", text: "부산 1박2일로 동선 추천해줘" },
         { role: "assistant", text: "해운대 → 광안리 → 자갈치시장 중심으로 동선을 제안드릴게요." },
@@ -620,7 +620,7 @@ export default function MyPage() {
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Open</span>
                         </div>
                         <p className="mt-1 text-[10px] text-gray-500">
-                          Tap to view related chat summary (mock).
+                          Tap to view related chat summary.
                         </p>
                       </button>
                     ))}
