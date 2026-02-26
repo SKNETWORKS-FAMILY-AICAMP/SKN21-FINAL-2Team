@@ -79,6 +79,13 @@ K-컬쳐 인기와 함께 방한 관광객은 증가하고 있으나
 
 ---
 
+## ✨ Vision
+
+> 검색에서 끝나는 여행이 아니라,  
+> **실제로 떠날 수 있는 일정까지 완성하는 AI 여행 에이전트**
+
+---
+
 ## 🛠 Tech Stack
 
 ### 💻 Frontend
@@ -135,19 +142,12 @@ SKN21-FINAL-2Team/
 
 ## 📊 WBS
 
-![WBS](doc\wbs.jpg)
+![WBS](doc/wbs.jpg)
 
 ---
 
 ## 🗄 ERD
 
-![ERD](doc\RDB_ERD.png)
-
----
-
-## ✨ Vision
-
-> 검색에서 끝나는 여행이 아니라,  
-> **실제로 떠날 수 있는 일정까지 완성하는 AI 여행 에이전트**
+![ERD](doc/RDB_ERD.png)
 
 ---
