@@ -38,7 +38,7 @@ const features = [
         description: "Forget the hassle of manual scheduling. Our intelligent system optimizes your routes in real-time, accounting for traffic patterns, opening hours, and geographical proximity.",
         icon: Calendar,
         image: "https://images.unsplash.com/photo-1764344558503-0579b0b0cb73?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxVcmJhbiUyMHBhcmslMjBjaXR5JTIwcGVvcGxlJTIwcmVsYXhpbmd8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-        mockupImage: "https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=1000&auto=format&fit=crop", // Chatbot/Search mock
+        mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Chatbot/Search mock
     },
     {
         title: "Integrated booking",
