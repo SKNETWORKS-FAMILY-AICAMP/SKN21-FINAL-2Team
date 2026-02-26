@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 
@@ -83,6 +83,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     pref2: "Travel Preference 2",
     pref3: "Travel Preference 3",
     save: "Save",
+    savedNotice: "Your information has been saved.",
     deactivate: "Deactivate Account →",
     back: "Back to MyPage",
   },
@@ -99,6 +100,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     pref2: "여행 선호도 2",
     pref3: "여행 선호도 3",
     save: "저장",
+    savedNotice: "저장되었습니다.",
     deactivate: "계정 탈퇴 →",
     back: "마이페이지로",
   },
@@ -115,6 +117,7 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
     pref2: "旅行の好み 2",
     pref3: "旅行の好み 3",
     save: "保存",
+    savedNotice: "保存しました。",
     deactivate: "アカウントを無効化 →",
     back: "マイページへ",
   },
@@ -122,6 +125,8 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
 
 export default function MyPageSettingsPage() {
   const router = useRouter();
+
+  const saveNoticeTimerRef = useRef<number | null>(null);
 
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [language, setLanguage] = useState<AppLanguage>("en");
@@ -134,6 +139,14 @@ export default function MyPageSettingsPage() {
     "Food",
     "Culture",
   ]);
+  const [saveNotice, setSaveNotice] = useState<string>("");
+
+  const [deactivateOpen, setDeactivateOpen] = useState<boolean>(false);
+  const [deactivateEmailConfirmed, setDeactivateEmailConfirmed] = useState<boolean>(false);
+  const [deactivateAgreementChecked, setDeactivateAgreementChecked] = useState<boolean>(false);
+  const [deactivateShowFinalConfirm, setDeactivateShowFinalConfirm] = useState<boolean>(false);
+  const [deactivateEmailError, setDeactivateEmailError] = useState<string>("");
+  const [deactivateAgreementError, setDeactivateAgreementError] = useState<string>("");
 
   const t = useMemo(() => {
     const dict = I18N[language] ?? I18N.en;
@@ -167,6 +180,14 @@ export default function MyPageSettingsPage() {
     } catch {
       // ignore
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (saveNoticeTimerRef.current) {
+        window.clearTimeout(saveNoticeTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -206,6 +227,132 @@ export default function MyPageSettingsPage() {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     window.dispatchEvent(new Event("triver:language"));
+    window.dispatchEvent(new Event("triver:profile-settings"));
+
+    setSaveNotice(t("savedNotice"));
+    if (saveNoticeTimerRef.current) {
+      window.clearTimeout(saveNoticeTimerRef.current);
+    }
+    saveNoticeTimerRef.current = window.setTimeout(() => {
+      setSaveNotice("");
+    }, 2500);
+  };
+
+  const openDeactivateModal = () => {
+    setDeactivateOpen(true);
+    setDeactivateEmailConfirmed(false);
+    setDeactivateAgreementChecked(false);
+    setDeactivateShowFinalConfirm(false);
+    setDeactivateEmailError("");
+    setDeactivateAgreementError("");
+  };
+
+  const confirmWithGoogle = async () => {
+    setDeactivateEmailError("");
+
+    const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+    const isPlaceholderEmail = (value: string) => value.trim().toLowerCase() === "user@gmail.com";
+
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem("access_token");
+    } catch {
+      token = null;
+    }
+
+    if (!token) {
+      setDeactivateEmailConfirmed(false);
+      setDeactivateEmailError("Please confirm your email");
+      return;
+    }
+
+    const candidates: string[] = [];
+    if (typeof email === "string" && !isPlaceholderEmail(email)) candidates.push(email);
+
+    try {
+      const fromLocal = localStorage.getItem("user_email");
+      if (fromLocal) candidates.push(fromLocal);
+    } catch {
+      // ignore
+    }
+
+    const best = candidates.find((c) => typeof c === "string" && isValidEmail(c) && !isPlaceholderEmail(c));
+    if (best) {
+      setEmail(best);
+      setDeactivateEmailConfirmed(true);
+      setDeactivateEmailError("");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json();
+      if (typeof data?.email === "string" && isValidEmail(data.email) && !isPlaceholderEmail(data.email)) {
+        setEmail(data.email);
+        setDeactivateEmailConfirmed(true);
+        setDeactivateEmailError("");
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    setDeactivateEmailConfirmed(false);
+    setDeactivateEmailError("Please confirm your email");
+  };
+
+  const requestDeactivate = () => {
+    let ok = true;
+
+    if (!deactivateEmailConfirmed) {
+      setDeactivateEmailError("Please confirm your email");
+      ok = false;
+    } else {
+      setDeactivateEmailError("");
+    }
+
+    if (!deactivateAgreementChecked) {
+      setDeactivateAgreementError("Please confirm the account termination agreement");
+      ok = false;
+    } else {
+      setDeactivateAgreementError("");
+    }
+
+    if (!ok) return;
+    setDeactivateShowFinalConfirm(true);
+  };
+
+  const deactivateAccount = () => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (
+          k.startsWith("triver:") ||
+          k === "access_token" ||
+          k === "refresh_token" ||
+          k === "user_email" ||
+          k === "user_name" ||
+          k === "profile_picture"
+        ) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+
+    window.dispatchEvent(new Event("triver:language"));
+    window.dispatchEvent(new Event("triver:profile-settings"));
+
+    setDeactivateOpen(false);
+    setDeactivateShowFinalConfirm(false);
+    router.push("/");
   };
 
   const onChangeLanguage = (next: AppLanguage) => {
@@ -389,12 +536,17 @@ export default function MyPageSettingsPage() {
               </button>
             </div>
 
+            {saveNotice && (
+              <div className="mt-2 flex justify-end">
+                <div className="text-[11px] text-gray-500 font-medium">{saveNotice}</div>
+              </div>
+            )}
+
             <div className="mt-2 flex justify-end">
               <button
                 type="button"
-                disabled
-                className="text-xs text-gray-400 font-medium hover:opacity-90 disabled:cursor-not-allowed"
-                title="Coming soon"
+                onClick={openDeactivateModal}
+                className="text-xs text-gray-700 font-medium hover:opacity-90"
               >
                 {t("deactivate")}
               </button>
@@ -402,6 +554,92 @@ export default function MyPageSettingsPage() {
           </section>
         </div>
       </main>
+
+      {deactivateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-[520px] rounded-xl border border-gray-200 bg-white">
+            <div className="p-6">
+              <h2 className="text-3xl font-semibold text-gray-900 mb-4">Deactivate Account</h2>
+              <p className="text-sm text-gray-700 leading-relaxed mb-6">
+                Note: Deactivating your account will temporarily hide your saved chats, information, and location bookmarks.
+              </p>
+
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={confirmWithGoogle}
+                  className="bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Confirm with Google
+                </button>
+                {deactivateEmailConfirmed && (
+                  <div className="mt-2 text-xs text-gray-600 font-medium">{email}</div>
+                )}
+                {deactivateEmailError && <div className="mt-2 text-xs text-red-500 font-semibold">{deactivateEmailError}</div>}
+              </div>
+
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="text-sm text-gray-800 font-medium leading-snug">
+                  I understand that my account will be deactivated and access to Trivers will be paused.
+                </div>
+                <input
+                  type="checkbox"
+                  checked={deactivateAgreementChecked}
+                  onChange={(e) => {
+                    setDeactivateAgreementChecked(e.target.checked);
+                    if (e.target.checked) setDeactivateAgreementError("");
+                  }}
+                  className="h-6 w-6 accent-black"
+                />
+              </div>
+              {deactivateAgreementError && (
+                <div className="-mt-4 mb-6 text-xs text-red-500 font-semibold">{deactivateAgreementError}</div>
+              )}
+
+              <div className="flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={requestDeactivate}
+                  className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Deactivate Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeactivateOpen(false)}
+                  className="flex-1 bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {deactivateShowFinalConfirm && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-[420px] rounded-xl border border-gray-200 bg-white p-6">
+                <div className="text-lg font-semibold text-gray-900 mb-5">Are you sure you wanna deactivate your account?</div>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeactivateShowFinalConfirm(false)}
+                    className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deactivateAccount}
+                    className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -14,6 +14,82 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
+
+type AppLanguage = "en" | "ko" | "ja";
+
+const LANGUAGE_STORAGE_KEY = "triver:language:v1";
+
+const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
+  en: {
+    headerTitle: "Traveler's Profile",
+    headerSubtitle: "Traveler Profile",
+    settings: "Settings",
+    noImage: "No Image",
+    todayRec: "Today's Recommendation",
+    startPlanning: "Start Planning",
+    scheduledJourney: "Scheduled Journey",
+    reservation: "Reservation",
+    open: "Open",
+    tripHint: "Tap to view related chat summary (mock).",
+    dnaTitle: "Triver's Travel DNA",
+    youAreA: "You are a",
+    traveler: "Traveler!",
+    journeyDetail: "Journey Detail",
+    reservationDetails: "Reservation Details",
+    reservationImage: "Reservation Image",
+    clickToUpload: "(Click here to upload if no image is available)",
+    reservationOne: "Reservation 1:",
+    destination: "Destination",
+    durationTime: "Duration Time",
+    menu: "Menu",
+  },
+  ko: {
+    headerTitle: "여행자 프로필",
+    headerSubtitle: "프로필",
+    settings: "설정",
+    noImage: "이미지 없음",
+    todayRec: "오늘의 추천",
+    startPlanning: "플래닝 시작",
+    scheduledJourney: "예정된 여정",
+    reservation: "예약",
+    open: "열기",
+    tripHint: "관련 채팅 요약 보기 (mock).",
+    dnaTitle: "Triver's Travel DNA",
+    youAreA: "당신은",
+    traveler: "여행자!",
+    journeyDetail: "여정 상세",
+    reservationDetails: "예약 상세",
+    reservationImage: "예매내역 사진",
+    clickToUpload: "(사진이 없을땐 여기에 클릭해서 업로드)",
+    reservationOne: "예약 1:",
+    destination: "목적지",
+    durationTime: "소요 시간",
+    menu: "메뉴",
+  },
+  ja: {
+    headerTitle: "旅行者プロフィール",
+    headerSubtitle: "プロフィール",
+    settings: "設定",
+    noImage: "画像なし",
+    todayRec: "今日のおすすめ",
+    startPlanning: "プラン開始",
+    scheduledJourney: "予定の旅",
+    reservation: "予約",
+    open: "開く",
+    tripHint: "関連チャット要約を見る (mock)。",
+    dnaTitle: "Triver's Travel DNA",
+    youAreA: "あなたは",
+    traveler: "旅行者!",
+    journeyDetail: "旅の詳細",
+    reservationDetails: "予約詳細",
+    reservationImage: "予約画像",
+    clickToUpload: "(画像がない場合はクリックしてアップロード)",
+    reservationOne: "予約 1:",
+    destination: "目的地",
+    durationTime: "所要時間",
+    menu: "メニュー",
+  },
+};
 
 type TripSummary = {
   id: string;
@@ -113,10 +189,14 @@ function JourneyDetailModal({
   open,
   trip,
   onClose,
+  title,
+  menuLabel,
 }: {
   open: boolean;
   trip: TripSummary | null;
   onClose: () => void;
+  title: string;
+  menuLabel: string;
 }) {
   const detail = trip?.detail;
 
@@ -149,7 +229,7 @@ function JourneyDetailModal({
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
             <div className="p-6 pb-4">
-              <h2 className="text-3xl font-bold text-gray-900 text-center">Journey Detail</h2>
+              <h2 className="text-3xl font-bold text-gray-900 text-center">{title}</h2>
             </div>
 
             <div className="px-6 pb-4">
@@ -207,7 +287,7 @@ function JourneyDetailModal({
                 onClick={onClose}
                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
               >
-                Menu
+                {menuLabel}
               </button>
             </div>
           </motion.div>
@@ -223,12 +303,24 @@ function ReservationDetailModal({
   photoUrl,
   onPickPhoto,
   onClose,
+  title,
+  menuLabel,
+  labels,
 }: {
   open: boolean;
   reservation: ReservationItem | null;
   photoUrl?: string;
   onPickPhoto: (file: File) => void;
   onClose: () => void;
+  title: string;
+  menuLabel: string;
+  labels: {
+    reservationImage: string;
+    clickToUpload: string;
+    reservationOne: string;
+    destination: string;
+    durationTime: string;
+  };
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -264,7 +356,7 @@ function ReservationDetailModal({
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
             <div className="p-6 pb-4">
-              <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
+              <h2 className="text-3xl font-bold text-gray-900 text-center">{title}</h2>
             </div>
 
             <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
@@ -290,15 +382,15 @@ function ReservationDetailModal({
                   <img src={effectivePhotoUrl} alt="Reservation" className="w-full h-[180px] object-cover" />
                 ) : (
                   <div className="h-[180px] flex flex-col items-center justify-center">
-                    <div className="text-lg font-bold">Reservation Image</div>
-                    <div className="text-xs text-gray-700 mt-1">(Click here to upload if no image is available)</div>
+                    <div className="text-lg font-bold">{labels.reservationImage}</div>
+                    <div className="text-xs text-gray-700 mt-1">{labels.clickToUpload}</div>
                   </div>
                 )}
               </button>
 
               <div className="mt-4 space-y-1 text-sm text-gray-900">
                 <div className="font-semibold flex items-center gap-2">
-                  <span>Reservation 1:</span>
+                  <span>{labels.reservationOne}</span>
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 border border-gray-200 text-gray-700">
                     <ReservationLogo category={reservation.category} />
                   </span>
@@ -311,12 +403,12 @@ function ReservationDetailModal({
                 )}
                 {reservation.destinationLabel && (
                   <div>
-                    Destination: <span className="font-semibold">{reservation.destinationLabel}</span>
+                    {labels.destination}: <span className="font-semibold">{reservation.destinationLabel}</span>
                   </div>
                 )}
                 {reservation.durationLabel && (
                   <div>
-                    Duration Time: <span className="font-semibold">{reservation.durationLabel}</span>
+                    {labels.durationTime}: <span className="font-semibold">{reservation.durationLabel}</span>
                   </div>
                 )}
               </div>
@@ -343,7 +435,7 @@ function ReservationDetailModal({
                 onClick={onClose}
                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
               >
-                Menu
+                {menuLabel}
               </button>
             </div>
           </motion.div>
@@ -377,6 +469,7 @@ function getTopTrait(traits: { label: string; score: number }[]) {
 
 export default function MyPage() {
   const router = useRouter();
+  const [language, setLanguage] = useState<AppLanguage>("en");
   const [userProfile, setUserProfile] = useState({
     nickname: "",
     bio: "Explorer Lvl.3",
@@ -386,16 +479,35 @@ export default function MyPage() {
 
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
 
+  const t = useMemo(() => {
+    const dict = MYPAGE_I18N[language] ?? MYPAGE_I18N.en;
+    return (key: string) => dict[key] ?? MYPAGE_I18N.en[key] ?? key;
+  }, [language]);
+
   const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
   const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
   const [reservationPhotoById, setReservationPhotoById] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Load local saved settings first (frontend-only prototype)
-    try {
-      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (raw) {
+    const applyLanguage = () => {
+      const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (raw === "en" || raw === "ko" || raw === "ja") {
+        setLanguage(raw);
+      } else {
+        setLanguage("en");
+      }
+    };
+    applyLanguage();
+
+    const onLang = () => applyLanguage();
+    window.addEventListener("triver:language", onLang);
+
+    const applySavedSettings = () => {
+      try {
+        const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (!raw) return;
         const parsed = JSON.parse(raw) as any;
+
         const nextNickname = typeof parsed?.nickname === "string" ? parsed.nickname : undefined;
         const nextPrefs = Array.isArray(parsed?.travelPreferences)
           ? (parsed.travelPreferences.filter((x: unknown) => typeof x === "string") as string[])
@@ -408,10 +520,16 @@ export default function MyPage() {
           nickname: nextNickname ?? prev.nickname,
           preferences: nextPrefs && nextPrefs.length ? nextPrefs.slice(0, 3) : prev.preferences,
         }));
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    };
+
+    const onProfileSettings = () => applySavedSettings();
+    window.addEventListener("triver:profile-settings", onProfileSettings);
+
+    // Load local saved settings first (frontend-only prototype)
+    applySavedSettings();
 
     const fetchUserProfile = async () => {
       try {
@@ -438,6 +556,11 @@ export default function MyPage() {
     };
 
     fetchUserProfile();
+
+    return () => {
+      window.removeEventListener("triver:language", onLang);
+      window.removeEventListener("triver:profile-settings", onProfileSettings);
+    };
   }, []);
 
   const handleSaveSettings = (nickname: string, bio: string, preferences: string[]) => {
@@ -539,8 +662,8 @@ export default function MyPage() {
         <div className="p-6">
           <header className="mb-6 flex items-end justify-between border-b border-gray-100 pb-4">
             <div>
-              <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">Traveler's Profile</h1>
-              <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Traveler Profile</p>
+              <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
+              <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">{t("headerSubtitle")}</p>
             </div>
             <SettingsModal
               initialNickname={userProfile.nickname}
@@ -566,7 +689,7 @@ export default function MyPage() {
                         className="w-full h-full object-cover grayscale-[20%]"
                       />
                     ) : (
-                      <span className="font-medium text-xs">No Image</span>
+                      <span className="font-medium text-xs">{t("noImage")}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -578,7 +701,7 @@ export default function MyPage() {
                     onClick={() => router.push("/mypage/settings")}
                     className="whitespace-nowrap bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
                   >
-                    Settings
+                    {t("settings")}
                   </button>
                 </div>
               </motion.div>
@@ -590,7 +713,7 @@ export default function MyPage() {
                 className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
               >
                 <div className="mb-3 border-b border-gray-50 pb-2">
-                  <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">Triver's Travel DNA</h3>
+                  <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("dnaTitle")}</h3>
                 </div>
                 <div className="space-y-1.5">
                   {dnaTraits.map((trait) => (
@@ -601,9 +724,9 @@ export default function MyPage() {
                   ))}
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-sm font-bold text-gray-900">You are a</p>
+                  <p className="text-sm font-bold text-gray-900">{t("youAreA")}</p>
                   <p className="text-base font-extrabold text-gray-900">{topTrait.label}</p>
-                  <p className="text-sm font-bold text-gray-900">Traveler!</p>
+                  <p className="text-sm font-bold text-gray-900">{t("traveler")}</p>
                 </div>
               </motion.div>
             </div>
@@ -619,7 +742,7 @@ export default function MyPage() {
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
                     <div className="flex items-center gap-2 text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mb-3">
-                      <Sparkles size={10} className="text-white" /> Today's Recommendation
+                      <Sparkles size={10} className="text-white" /> {t("todayRec")}
                     </div>
                     <h2 className="text-xl font-serif italic font-light mb-2 tracking-wide">Seongsu-dong K-Beauty Tour</h2>
                     <p className="text-white/60 text-xs font-light max-w-md leading-relaxed">
@@ -631,7 +754,7 @@ export default function MyPage() {
                     onClick={() => router.push("/chatbot")}
                     className="whitespace-nowrap flex items-center gap-2 bg-white text-black px-4 py-2.5 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-all uppercase tracking-wide"
                   >
-                    <MessageSquare size={12} /> Start Planning
+                    <MessageSquare size={12} /> {t("startPlanning")}
                   </button>
                 </div>
               </motion.div>
@@ -644,7 +767,7 @@ export default function MyPage() {
                   className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors flex flex-col min-h-[320px]"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
-                    <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">Scheduled Journey</h3>
+                    <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("scheduledJourney")}</h3>
                   </div>
                   <div className="space-y-2.5 flex-1">
                     {trips.map((trip) => (
@@ -656,10 +779,10 @@ export default function MyPage() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-gray-900 leading-tight">{trip.title}</span>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Open</span>
+                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{t("open")}</span>
                         </div>
                         <p className="mt-1 text-[10px] text-gray-500">
-                          Tap to view related chat summary.
+                          {t("tripHint")}
                         </p>
                       </button>
                     ))}
@@ -673,7 +796,7 @@ export default function MyPage() {
                   className="p-5 rounded-xl border border-gray-200 bg-white flex flex-col hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
-                    <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">Reservation</h3>
+                    <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("reservation")}</h3>
                   </div>
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
                     {reservations.map((res) => (
@@ -711,6 +834,8 @@ export default function MyPage() {
         open={!!activeTrip}
         trip={activeTrip}
         onClose={() => setActiveTrip(null)}
+        title={t("journeyDetail")}
+        menuLabel={t("menu")}
       />
 
       <ReservationDetailModal
@@ -728,6 +853,15 @@ export default function MyPage() {
           reader.readAsDataURL(file);
         }}
         onClose={() => setActiveReservation(null)}
+        title={t("reservationDetails")}
+        menuLabel={t("menu")}
+        labels={{
+          reservationImage: t("reservationImage"),
+          clickToUpload: t("clickToUpload"),
+          reservationOne: t("reservationOne"),
+          destination: t("destination"),
+          durationTime: t("durationTime"),
+        }}
       />
     </div>
   );
