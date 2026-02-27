@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useGoogleLogin } from "@react-oauth/google";
 import {
   Ticket,
   TrainFront,
@@ -613,7 +614,11 @@ export default function MyPage() {
     profile_picture: "",
   });
 
+  const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
+
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const CALENDAR_LINKED_STORAGE_KEY = "triver:gcal-linked:v1";
 
   const t = useMemo(() => {
     const dict = MYPAGE_I18N[language] ?? MYPAGE_I18N.en;
@@ -695,11 +700,60 @@ export default function MyPage() {
 
     fetchUserProfile();
 
+    try {
+      const linked = localStorage.getItem(CALENDAR_LINKED_STORAGE_KEY);
+      if (linked === "true") {
+        setCalendarLinkNotice("Google Calendar linked");
+      }
+    } catch {
+      // ignore
+    }
+
     return () => {
       window.removeEventListener("triver:language", onLang);
       window.removeEventListener("triver:profile-settings", onProfileSettings);
     };
   }, []);
+
+  const connectGoogleCalendar = useGoogleLogin({
+    flow: "auth-code",
+    scope: "https://www.googleapis.com/auth/calendar.readonly",
+    onSuccess: async (codeResponse) => {
+      try {
+        setCalendarLinkNotice("Linking Google Calendar...");
+        const res = await fetch(`${API_BASE}/api/auth/google/callback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to link Google Calendar");
+        }
+
+        const data = await res.json();
+        if (data?.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+        }
+        if (data?.refresh_token) {
+          localStorage.setItem("refresh_token", data.refresh_token);
+        }
+        localStorage.setItem(CALENDAR_LINKED_STORAGE_KEY, "true");
+        setCalendarLinkNotice("Google Calendar linked");
+
+        // NOTE: Actual reservation sync will call a dedicated Calendar endpoint later.
+        // For now we only ensure the account has granted Calendar scope.
+      } catch (e) {
+        console.error(e);
+        setCalendarLinkNotice("Failed to link Google Calendar");
+      }
+    },
+    onError: () => {
+      setCalendarLinkNotice("Google Calendar link canceled");
+    },
+  });
 
   const handleSaveSettings = (nickname: string, bio: string, preferences: string[]) => {
     setUserProfile((prev) => ({ ...prev, nickname, bio, preferences }));
@@ -795,6 +849,18 @@ export default function MyPage() {
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 
   const handleAddReservation = () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+    } catch {
+      router.push("/login");
+      return;
+    }
+
+    connectGoogleCalendar();
   };
 
   const handleDeleteReservation = (id: string) => {
@@ -971,13 +1037,17 @@ export default function MyPage() {
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("reservation")}</h3>
                     <button
                       type="button"
-                      disabled
                       onClick={handleAddReservation}
-                      className="text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-not-allowed"
+                      className="text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
                     >
                       Add
                     </button>
                   </div>
+                  {!!calendarLinkNotice && (
+                    <div className="-mt-3 mb-3 text-[10px] text-gray-400 font-medium">
+                      {calendarLinkNotice}
+                    </div>
+                  )}
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
                     {reservations.map((res) => (
                       <div
