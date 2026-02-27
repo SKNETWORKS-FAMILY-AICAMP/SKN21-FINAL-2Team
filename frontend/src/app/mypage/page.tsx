@@ -11,9 +11,9 @@ import {
   CheckCircle2,
   MessageSquare,
   Sparkles,
+  X,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { SettingsModal } from "@/components/SettingsModal";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -42,6 +42,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "Destination",
     durationTime: "Duration Time",
     menu: "Menu",
+    save: "Save",
+    removePhoto: "Remove photo",
   },
   ko: {
     headerTitle: "나의 페이지",
@@ -65,6 +67,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "목적지",
     durationTime: "소요 시간",
     menu: "메뉴",
+    save: "저장",
+    removePhoto: "사진 삭제",
   },
   ja: {
     headerTitle: "マイページ",
@@ -88,6 +92,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     destination: "目的地",
     durationTime: "所要時間",
     menu: "メニュー",
+    save: "保存",
+    removePhoto: "写真を削除",
   },
 };
 
@@ -153,22 +159,24 @@ function buildMockJourneyTranscript(trip: TripSummary): ChatTranscriptMessage[] 
   const baseUser = userSeed || "Show me recommendations.";
 
   if (trip.detail) {
-    const restaurants = trip.detail.restaurantOptions
-      .map((r) => `- ${r.name}: ${r.desc}`)
-      .join("\n");
-    const attractions = trip.detail.attractions
-      .map((a) => `- ${a.name}: ${a.desc}`)
-      .join("\n");
+    const restaurants = trip.detail.restaurantOptions.map((r) => `- ${r.name}: ${r.desc}`).join("\n");
+    const attractions = trip.detail.attractions.map((a) => `- ${a.name}: ${a.desc}`).join("\n");
 
-    return [
-      { role: "user", text: baseUser },
-      { role: "assistant", text: trip.detail.intro },
-      { role: "assistant", text: `1. Restaurants Options\n${restaurants}` },
-      { role: "assistant", text: `2. Local Tourist Attractions\n${attractions}` },
-    ];
+    const merged = [
+      trip.detail.intro,
+      restaurants ? `1. Restaurants Options\n${restaurants}` : "",
+      attractions ? `2. Local Tourist Attractions\n${attractions}` : "",
+    ]
+      .filter((x) => typeof x === "string" && x.trim().length > 0)
+      .join("\n\n");
+
+    // NOTE: mock transcript is intentionally a single bubble.
+    return [{ role: "assistant", text: merged || baseUser }];
   }
 
-  return trip.messages?.length ? trip.messages : [{ role: "user", text: baseUser }];
+  // If no detail exists, still return a single bubble.
+  const fallbackAssistant = trip.messages?.filter((m) => m.role === "assistant").map((m) => m.text).join("\n\n");
+  return [{ role: "assistant", text: fallbackAssistant?.trim().length ? fallbackAssistant : baseUser }];
 }
 
 function LoadingIndicator() {
@@ -391,7 +399,7 @@ function ReservationDetailModal({
   open,
   reservation,
   photoUrl,
-  onPickPhoto,
+  onSavePhoto,
   onClose,
   title,
   menuLabel,
@@ -400,7 +408,7 @@ function ReservationDetailModal({
   open: boolean;
   reservation: ReservationItem | null;
   photoUrl?: string;
-  onPickPhoto: (file: File) => void;
+  onSavePhoto: (nextUrl: string | null) => void;
   onClose: () => void;
   title: string;
   menuLabel: string;
@@ -410,12 +418,20 @@ function ReservationDetailModal({
     reservationOne: string;
     destination: string;
     durationTime: string;
+    removePhoto: string;
   };
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !reservation) return;
+    const initial = photoUrl || reservation.reservationImageUrl || null;
+    setDraftPhotoUrl(typeof initial === "string" && initial.trim().length ? initial : null);
+  }, [open, reservation, photoUrl]);
 
   const categoryLabel = reservation ? getReservationCategoryLabel(reservation.category) : "Reservation";
-  const effectivePhotoUrl = reservation ? photoUrl || reservation.reservationImageUrl : undefined;
+  const effectivePhotoUrl = draftPhotoUrl || undefined;
 
   return (
     <AnimatePresence>
@@ -445,7 +461,15 @@ function ReservationDetailModal({
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           >
-            <div className="p-6 pb-4">
+            <div className="relative p-6 pb-4">
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={onClose}
+                className="absolute right-4 top-4 w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-700 flex items-center justify-center hover:bg-gray-50"
+              >
+                <X size={16} />
+              </button>
               <h2 className="text-3xl font-bold text-gray-900 text-center">{title}</h2>
             </div>
 
@@ -457,7 +481,14 @@ function ReservationDetailModal({
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) onPickPhoto(file);
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const url = typeof reader.result === "string" ? reader.result : "";
+                    if (!url) return;
+                    setDraftPhotoUrl(url);
+                  };
+                  reader.readAsDataURL(file);
                   e.currentTarget.value = "";
                 }}
               />
@@ -477,6 +508,18 @@ function ReservationDetailModal({
                   </div>
                 )}
               </button>
+
+              {!!effectivePhotoUrl && (
+                <div className="mt-2 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setDraftPhotoUrl(null)}
+                    className="text-[11px] font-semibold text-gray-600 hover:text-black"
+                  >
+                    {labels.removePhoto}
+                  </button>
+                </div>
+              )}
 
               <div className="mt-4 space-y-1 text-sm text-gray-900">
                 <div className="font-semibold flex items-center gap-2">
@@ -522,7 +565,10 @@ function ReservationDetailModal({
             <div className="px-6 pb-6">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  onSavePhoto(draftPhotoUrl);
+                  onClose();
+                }}
                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
               >
                 {menuLabel}
@@ -543,9 +589,9 @@ function computeDna(preferences: string[]) {
   const cultureCurious = set.has("Culture") ? 5 : set.has("Adventure") ? 4 : 3;
 
   return [
-    { label: "Food-Driven", score: foodDriven },
-    { label: "Calm Explorer", score: calmExplorer },
-    { label: "Culture Curious", score: cultureCurious },
+    { label: "🍜 Food-Driven", score: foodDriven },
+    { label: "🌿 Calm Explorer", score: calmExplorer },
+    { label: "🎭 Culture Curious", score: cultureCurious },
   ];
 }
 
@@ -775,7 +821,14 @@ export default function MyPage() {
 
   const renderStars = (score: number, max = 5) => {
     const safe = Math.max(0, Math.min(max, score));
-    return "★".repeat(safe) + "☆".repeat(max - safe);
+    const filled = "★".repeat(safe);
+    const empty = "☆".repeat(max - safe);
+    return (
+      <span className="whitespace-nowrap">
+        <span className="text-yellow-400">{filled}</span>
+        <span className="text-gray-300">{empty}</span>
+      </span>
+    );
   };
 
   return (
@@ -790,12 +843,6 @@ export default function MyPage() {
               <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
               <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">{t("headerSubtitle")}</p>
             </div>
-            <SettingsModal
-              initialNickname={userProfile.nickname}
-              initialBio={userProfile.bio}
-              initialPreferences={userProfile.preferences}
-              onSave={handleSaveSettings}
-            />
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
@@ -824,7 +871,7 @@ export default function MyPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/mypage/settings")}
-                    className="whitespace-nowrap bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+                    className="whitespace-nowrap mt-2 bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
                   >
                     {t("settings")}
                   </button>
@@ -844,7 +891,7 @@ export default function MyPage() {
                   {dnaTraits.map((trait) => (
                     <div key={trait.label} className="flex items-center justify-between">
                       <span className="text-xs text-gray-700 font-medium">{trait.label}</span>
-                      <span className="text-xs text-gray-900 font-bold tracking-wide">{renderStars(trait.score)}</span>
+                      <span className="text-xs font-bold tracking-wide">{renderStars(trait.score)}</span>
                     </div>
                   ))}
                 </div>
@@ -987,19 +1034,21 @@ export default function MyPage() {
         open={!!activeReservation}
         reservation={activeReservation}
         photoUrl={activeReservation ? reservationPhotoById[activeReservation.id] : undefined}
-        onPickPhoto={(file) => {
+        onSavePhoto={(nextUrl) => {
           if (!activeReservation) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            const url = typeof reader.result === "string" ? reader.result : "";
-            if (!url) return;
-            setReservationPhotoById((prev) => ({ ...prev, [activeReservation.id]: url }));
-          };
-          reader.readAsDataURL(file);
+          setReservationPhotoById((prev) => {
+            const next = { ...prev };
+            if (!nextUrl) {
+              delete next[activeReservation.id];
+              return next;
+            }
+            next[activeReservation.id] = nextUrl;
+            return next;
+          });
         }}
         onClose={() => setActiveReservation(null)}
         title={t("reservationDetails")}
-        menuLabel={t("menu")}
+        menuLabel={t("save")}
         labels={{
           reservationImage: t("reservationImage"),
           clickToUpload: t("clickToUpload"),
@@ -1009,6 +1058,7 @@ export default function MyPage() {
           ),
           destination: t("destination"),
           durationTime: t("durationTime"),
+          removePhoto: t("removePhoto"),
         }}
       />
 
