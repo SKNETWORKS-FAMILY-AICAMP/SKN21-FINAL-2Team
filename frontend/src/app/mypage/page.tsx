@@ -15,6 +15,127 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsModal } from "@/components/SettingsModal";
 
+type AppLanguage = "en" | "ko" | "ja";
+
+type TripMessage = {
+  role: "user" | "assistant";
+  text: string;
+};
+
+type TripSummary = {
+  id: string;
+  title: string;
+  messages: TripMessage[];
+  detail?: {
+    intro: string;
+    restaurantOptions?: { name: string; desc: string }[];
+    attractions?: { name: string; desc: string }[];
+  };
+};
+
+type ReservationCategory = "transportation" | "hotel" | "food" | "ticket";
+
+type ReservationItem = {
+  id: string;
+  category: ReservationCategory;
+  title: string;
+  subtitle: string;
+  dateLabel: string;
+  identifierLabel: string;
+  identifierValue: string;
+  destinationLabel: string;
+  durationLabel: string;
+  details: { label: string; value: string }[];
+};
+
+type DnaTrait = { label: string; score: number };
+
+const LANGUAGE_STORAGE_KEY = "triver:language:v1";
+
+const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
+  en: {
+    headerTitle: "My Page",
+    headerSubtitle: "Your travel profile",
+    noImage: "No Image",
+    settings: "Settings",
+
+    dnaTitle: "TRIVER'S TRAVEL DNA",
+    youAreA: "You are a",
+    traveler: "traveler",
+
+    todayRec: "TODAY'S RECOMMENDATION",
+    startPlanning: "Start Planning",
+
+    scheduledJourney: "Scheduled Journey",
+    journeyDetail: "Journey Detail",
+    open: "Open",
+    tripHint: "Tap to view the chat-style itinerary summary.",
+
+    reservation: "Reservation",
+    reservationDetails: "Reservation Details",
+    reservationImage: "Reservation Image",
+    clickToUpload: "Click to upload",
+    destination: "Destination",
+    durationTime: "Duration / Time",
+
+    menu: "Menu",
+  },
+  ko: {
+    headerTitle: "마이페이지",
+    headerSubtitle: "나의 여행 프로필",
+    noImage: "이미지 없음",
+    settings: "설정",
+
+    dnaTitle: "TRIVER'S TRAVEL DNA",
+    youAreA: "당신은",
+    traveler: "여행자",
+
+    todayRec: "오늘의 추천",
+    startPlanning: "플래닝 시작",
+
+    scheduledJourney: "예정된 여행",
+    journeyDetail: "여정 상세",
+    open: "열기",
+    tripHint: "눌러서 채팅형 요약을 확인하세요.",
+
+    reservation: "예약",
+    reservationDetails: "예약 상세",
+    reservationImage: "예약 이미지",
+    clickToUpload: "클릭해서 업로드",
+    destination: "목적지",
+    durationTime: "기간 / 시간",
+
+    menu: "메뉴",
+  },
+  ja: {
+    headerTitle: "マイページ",
+    headerSubtitle: "旅行プロフィール",
+    noImage: "画像なし",
+    settings: "設定",
+
+    dnaTitle: "TRIVER'S TRAVEL DNA",
+    youAreA: "あなたは",
+    traveler: "旅行者",
+
+    todayRec: "本日のおすすめ",
+    startPlanning: "プラン開始",
+
+    scheduledJourney: "予定の旅",
+    journeyDetail: "旅程詳細",
+    open: "開く",
+    tripHint: "タップしてチャット形式の要約を確認します。",
+
+    reservation: "予約",
+    reservationDetails: "予約詳細",
+    reservationImage: "予約画像",
+    clickToUpload: "クリックしてアップロード",
+    destination: "目的地",
+    durationTime: "期間 / 時間",
+
+    menu: "メニュー",
+  },
+};
+
 export default function MyPage() {
   const router = useRouter();
   const [language, setLanguage] = useState<AppLanguage>("en");
@@ -523,5 +644,455 @@ export default function MyPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+type ChatTranscriptMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+};
+
+function formatReservationOrdinalLabel(language: AppLanguage, n: number) {
+  const safe = Math.max(1, Math.floor(n));
+  switch (language) {
+    case "ko":
+      return `예약 ${safe}`;
+    case "ja":
+      return `予約 ${safe}`;
+    default:
+      return `Reservation ${safe}`;
+  }
+}
+
+function computeDna(preferences: string[]): DnaTrait[] {
+  const normalized = new Set(preferences.map((p) => String(p)));
+
+  const hasFood = normalized.has("Food");
+  const hasLuxury = normalized.has("Luxury");
+  const hasRelaxation = normalized.has("Relaxation");
+  const hasNature = normalized.has("Nature");
+  const hasCulture = normalized.has("Culture");
+  const hasAdventure = normalized.has("Adventure");
+
+  return [
+    {
+      label: "Food-Driven",
+      score: hasFood ? 5 : hasLuxury ? 4 : 3,
+    },
+    {
+      label: "Calm Explorer",
+      score: hasRelaxation ? 5 : hasNature ? 4 : 3,
+    },
+    {
+      label: "Culture Curious",
+      score: hasCulture ? 5 : hasAdventure ? 4 : 3,
+    },
+  ];
+}
+
+function getTopTrait(traits: DnaTrait[]): DnaTrait {
+  if (!traits.length) return { label: "", score: 0 };
+  return traits.reduce((best, cur) => (cur.score > best.score ? cur : best), traits[0]);
+}
+
+function ReservationLogo({ category }: { category: ReservationCategory }) {
+  switch (category) {
+    case "transportation":
+      return <TrainFront size={16} />;
+    case "hotel":
+      return <Hotel size={16} />;
+    case "food":
+      return <UtensilsCrossed size={16} />;
+    case "ticket":
+    default:
+      return <Ticket size={16} />;
+  }
+}
+
+function loadJourneyChatTranscript(tripId: string): ChatTranscriptMessage[] | null {
+  try {
+    const raw = localStorage.getItem(`triver:journey-chat:v1:${tripId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as any;
+    if (!Array.isArray(parsed)) return null;
+    const cleaned = parsed
+      .map((m: any, idx: number) => ({
+        id: typeof m?.id === "string" ? m.id : `m-${idx}`,
+        role: m?.role === "user" || m?.role === "assistant" ? m.role : null,
+        text: typeof m?.text === "string" ? m.text : "",
+      }))
+      .filter((m: any) => (m.role === "user" || m.role === "assistant") && m.text);
+    return cleaned.length ? (cleaned as ChatTranscriptMessage[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildMockJourneyTranscript(trip: TripSummary): ChatTranscriptMessage[] {
+  const base: ChatTranscriptMessage[] = trip.messages.map((m, idx) => ({
+    id: `base-${idx}`,
+    role: m.role,
+    text: m.text,
+  }));
+
+  const extra: ChatTranscriptMessage[] = [];
+  if (trip.detail?.intro) {
+    extra.push({ id: "detail-intro", role: "assistant", text: trip.detail.intro });
+  }
+
+  if (trip.detail?.restaurantOptions?.length) {
+    extra.push({
+      id: "detail-rest-header",
+      role: "assistant",
+      text: "Restaurant options:",
+    });
+    trip.detail.restaurantOptions.forEach((r, idx) => {
+      extra.push({
+        id: `detail-rest-${idx}`,
+        role: "assistant",
+        text: `- ${r.name}: ${r.desc}`,
+      });
+    });
+  }
+
+  if (trip.detail?.attractions?.length) {
+    extra.push({
+      id: "detail-att-header",
+      role: "assistant",
+      text: "Attractions:",
+    });
+    trip.detail.attractions.forEach((a, idx) => {
+      extra.push({
+        id: `detail-att-${idx}`,
+        role: "assistant",
+        text: `- ${a.name}: ${a.desc}`,
+      });
+    });
+  }
+
+  return [...base, ...extra];
+}
+
+function LoadingIndicator() {
+  const dotBase = "w-2 h-2 rounded-full";
+  const off = "#E5E7EB"; // gray-200
+  const on = "#22C55E"; // green-500
+
+  return (
+    <div className="flex items-center gap-2">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          // eslint-disable-next-line react/no-array-index-key
+          key={i}
+          className={dotBase}
+          style={{ backgroundColor: off }}
+          animate={{ backgroundColor: [off, on, off] }}
+          transition={{
+            duration: 0.9,
+            ease: "easeInOut",
+            repeat: Infinity,
+            delay: i * 0.18,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function JourneyDetailModal({
+  open,
+  trip,
+  onClose,
+  title,
+  menuLabel,
+}: {
+  open: boolean;
+  trip: TripSummary | null;
+  onClose: () => void;
+  title: string;
+  menuLabel: string;
+}) {
+  const [phase, setPhase] = useState<"loading" | "ready">("loading");
+  const [visibleCount, setVisibleCount] = useState(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const transcript = useMemo(() => {
+    if (!trip) return [];
+    return loadJourneyChatTranscript(trip.id) ?? buildMockJourneyTranscript(trip);
+  }, [trip]);
+
+  useEffect(() => {
+    if (!open || !trip) return;
+    setPhase("loading");
+    setVisibleCount(0);
+    const timer = window.setTimeout(() => {
+      setPhase("ready");
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [open, trip]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (phase !== "ready") return;
+    if (!transcript.length) return;
+
+    setVisibleCount(0);
+    let idx = 0;
+    const interval = window.setInterval(() => {
+      idx += 1;
+      setVisibleCount((prev) => {
+        const next = Math.min(transcript.length, Math.max(prev, idx));
+        return next;
+      });
+      if (idx >= transcript.length) {
+        window.clearInterval(interval);
+      }
+    }, 180);
+
+    return () => window.clearInterval(interval);
+  }, [open, phase, transcript.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (phase !== "ready") return;
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [open, phase, visibleCount]);
+
+  if (!open || !trip) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        <motion.button
+          type="button"
+          aria-label="Close"
+          className="absolute inset-0 bg-black/40"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        />
+
+        <motion.div
+          className="relative z-10 w-full max-w-[720px] rounded-2xl bg-white shadow-lg overflow-hidden"
+          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+        >
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{menuLabel}</div>
+              <div className="text-base font-semibold text-gray-900 truncate">{title}</div>
+              <div className="text-xs text-gray-500 truncate mt-0.5">{trip.title}</div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-none bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-opacity uppercase tracking-wide"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="p-5">
+            {phase === "loading" ? (
+              <div className="w-full rounded-xl bg-white shadow-sm p-6 flex items-center justify-center">
+                <LoadingIndicator />
+              </div>
+            ) : (
+              <div
+                ref={listRef}
+                className="max-h-[420px] overflow-y-auto pr-1 space-y-3"
+              >
+                <AnimatePresence initial={false}>
+                  {transcript.slice(0, visibleCount).map((m) => (
+                    <motion.div
+                      key={m.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18 }}
+                      className={m.role === "user" ? "flex justify-end" : "flex justify-start"}
+                    >
+                      <div
+                        className={
+                          m.role === "user"
+                            ? "max-w-[85%] rounded-2xl bg-black text-white px-4 py-3 text-sm whitespace-pre-wrap"
+                            : "max-w-[85%] rounded-2xl bg-white shadow-sm text-gray-900 px-4 py-3 text-sm whitespace-pre-wrap"
+                        }
+                      >
+                        {m.text}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function ReservationDetailModal({
+  open,
+  reservation,
+  photoUrl,
+  onPickPhoto,
+  onClose,
+  title,
+  menuLabel,
+  labels,
+}: {
+  open: boolean;
+  reservation: ReservationItem | null;
+  photoUrl?: string;
+  onPickPhoto: (file: File) => void;
+  onClose: () => void;
+  title: string;
+  menuLabel: string;
+  labels: {
+    reservationImage: string;
+    clickToUpload: string;
+    reservationOne: string;
+    destination: string;
+    durationTime: string;
+  };
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  if (!open || !reservation) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        <motion.button
+          type="button"
+          aria-label="Close"
+          className="absolute inset-0 bg-black/40"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        />
+
+        <motion.div
+          className="relative z-10 w-full max-w-[780px] rounded-2xl bg-white shadow-lg overflow-hidden"
+          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+        >
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{menuLabel}</div>
+              <div className="text-base font-semibold text-gray-900 truncate">{title}</div>
+              <div className="text-xs text-gray-500 truncate mt-0.5">{labels.reservationOne}</div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-none bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-opacity uppercase tracking-wide"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                {labels.reservationImage}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="w-full aspect-[4/3] rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-300 transition-colors overflow-hidden flex items-center justify-center"
+              >
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoUrl} alt="Reservation" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-gray-800">{labels.clickToUpload}</div>
+                    <div className="text-[10px] text-gray-400 mt-1">{reservation.identifierValue}</div>
+                  </div>
+                )}
+              </button>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  onPickPhoto(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-xl border border-gray-100 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{labels.destination}</div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">{reservation.destinationLabel}</div>
+              </div>
+              <div className="rounded-xl border border-gray-100 p-4">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  {labels.durationTime}
+                </div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">{reservation.durationLabel}</div>
+              </div>
+
+              <div className="rounded-xl border border-gray-100 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-gray-900 truncate">{reservation.title}</div>
+                    <div className="text-[11px] text-gray-500 truncate mt-0.5">{reservation.subtitle}</div>
+                  </div>
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 flex-none">
+                    <ReservationLogo category={reservation.category} />
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 font-medium">{reservation.identifierLabel}</span>
+                    <span className="text-gray-900 font-mono font-semibold">{reservation.identifierValue}</span>
+                  </div>
+
+                  {reservation.details.map((d) => (
+                    <div key={d.label} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 font-medium">{d.label}</span>
+                      <span className="text-gray-900 font-semibold">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
