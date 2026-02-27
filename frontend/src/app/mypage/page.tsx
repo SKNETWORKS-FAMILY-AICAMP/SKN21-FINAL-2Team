@@ -14,7 +14,6 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { SettingsModal } from "@/components/SettingsModal";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -590,9 +589,9 @@ function computeDna(preferences: string[]) {
   const cultureCurious = set.has("Culture") ? 5 : set.has("Adventure") ? 4 : 3;
 
   return [
-    { label: "Food-Driven", score: foodDriven },
-    { label: "Calm Explorer", score: calmExplorer },
-    { label: "Culture Curious", score: cultureCurious },
+    { label: "🍜 Food-Driven", score: foodDriven },
+    { label: "🌿 Calm Explorer", score: calmExplorer },
+    { label: "🎭 Culture Curious", score: cultureCurious },
   ];
 }
 
@@ -822,7 +821,14 @@ export default function MyPage() {
 
   const renderStars = (score: number, max = 5) => {
     const safe = Math.max(0, Math.min(max, score));
-    return "★".repeat(safe) + "☆".repeat(max - safe);
+    const filled = "★".repeat(safe);
+    const empty = "☆".repeat(max - safe);
+    return (
+      <span className="whitespace-nowrap">
+        <span className="text-yellow-400">{filled}</span>
+        <span className="text-gray-300">{empty}</span>
+      </span>
+    );
   };
 
   return (
@@ -837,12 +843,6 @@ export default function MyPage() {
               <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
               <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">{t("headerSubtitle")}</p>
             </div>
-            <SettingsModal
-              initialNickname={userProfile.nickname}
-              initialBio={userProfile.bio}
-              initialPreferences={userProfile.preferences}
-              onSave={handleSaveSettings}
-            />
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
@@ -891,7 +891,7 @@ export default function MyPage() {
                   {dnaTraits.map((trait) => (
                     <div key={trait.label} className="flex items-center justify-between">
                       <span className="text-xs text-gray-700 font-medium">{trait.label}</span>
-                      <span className="text-xs text-gray-900 font-bold tracking-wide">{renderStars(trait.score)}</span>
+                      <span className="text-xs font-bold tracking-wide">{renderStars(trait.score)}</span>
                     </div>
                   ))}
                 </div>
