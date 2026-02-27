@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useGoogleLogin } from "@react-oauth/google";
 import {
   Ticket,
   TrainFront,
@@ -56,7 +57,7 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     reservation: "예약",
     open: "열기",
     tripHint: "관련 채팅 요약 보기 (데모).",
-    dnaTitle: "Triver's Travel DNA",
+    dnaTitle: "트리버의 여행 DNA",
     youAreA: "당신은",
     traveler: "여행자!",
     journeyDetail: "여정 상세",
@@ -81,7 +82,7 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     reservation: "予約",
     open: "開く",
     tripHint: "関連チャット要約を見る（mock）。",
-    dnaTitle: "Triver's Travel DNA",
+    dnaTitle: "トリバーの旅行DNA",
     youAreA: "あなたは",
     traveler: "旅行者！",
     journeyDetail: "旅の詳細",
@@ -613,7 +614,11 @@ export default function MyPage() {
     profile_picture: "",
   });
 
+  const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
+
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const CALENDAR_LINKED_STORAGE_KEY = "triver:gcal-linked:v1";
 
   const t = useMemo(() => {
     const dict = MYPAGE_I18N[language] ?? MYPAGE_I18N.en;
@@ -695,11 +700,60 @@ export default function MyPage() {
 
     fetchUserProfile();
 
+    try {
+      const linked = localStorage.getItem(CALENDAR_LINKED_STORAGE_KEY);
+      if (linked === "true") {
+        setCalendarLinkNotice("Google Calendar linked");
+      }
+    } catch {
+      // ignore
+    }
+
     return () => {
       window.removeEventListener("triver:language", onLang);
       window.removeEventListener("triver:profile-settings", onProfileSettings);
     };
   }, []);
+
+  const connectGoogleCalendar = useGoogleLogin({
+    flow: "auth-code",
+    scope: "https://www.googleapis.com/auth/calendar.readonly",
+    onSuccess: async (codeResponse) => {
+      try {
+        setCalendarLinkNotice("Linking Google Calendar...");
+        const res = await fetch(`${API_BASE}/api/auth/google/callback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Failed to link Google Calendar");
+        }
+
+        const data = await res.json();
+        if (data?.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+        }
+        if (data?.refresh_token) {
+          localStorage.setItem("refresh_token", data.refresh_token);
+        }
+        localStorage.setItem(CALENDAR_LINKED_STORAGE_KEY, "true");
+        setCalendarLinkNotice("Google Calendar linked");
+
+        // NOTE: Actual reservation sync will call a dedicated Calendar endpoint later.
+        // For now we only ensure the account has granted Calendar scope.
+      } catch (e) {
+        console.error(e);
+        setCalendarLinkNotice("Failed to link Google Calendar");
+      }
+    },
+    onError: () => {
+      setCalendarLinkNotice("Google Calendar link canceled");
+    },
+  });
 
   const handleSaveSettings = (nickname: string, bio: string, preferences: string[]) => {
     setUserProfile((prev) => ({ ...prev, nickname, bio, preferences }));
@@ -795,6 +849,18 @@ export default function MyPage() {
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 
   const handleAddReservation = () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+    } catch {
+      router.push("/login");
+      return;
+    }
+
+    connectGoogleCalendar();
   };
 
   const handleDeleteReservation = (id: string) => {
@@ -850,7 +916,7 @@ export default function MyPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
+                className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-center gap-4 mb-5">
                   <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
@@ -882,7 +948,7 @@ export default function MyPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
+                className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
                 <div className="mb-3 border-b border-gray-50 pb-2">
                   <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("dnaTitle")}</h3>
@@ -936,7 +1002,7 @@ export default function MyPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors flex flex-col min-h-[320px]"
+                  className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex flex-col min-h-[320px]"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("scheduledJourney")}</h3>
@@ -965,19 +1031,23 @@ export default function MyPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="p-5 rounded-xl border border-gray-200 bg-white flex flex-col hover:border-gray-300 transition-colors"
+                  className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("reservation")}</h3>
                     <button
                       type="button"
-                      disabled
                       onClick={handleAddReservation}
-                      className="text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-not-allowed"
+                      className="text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
                     >
                       Add
                     </button>
                   </div>
+                  {!!calendarLinkNotice && (
+                    <div className="-mt-3 mb-3 text-[10px] text-gray-400 font-medium">
+                      {calendarLinkNotice}
+                    </div>
+                  )}
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
                     {reservations.map((res) => (
                       <div
@@ -1117,3 +1187,4 @@ export default function MyPage() {
     </div>
   );
 }
+
