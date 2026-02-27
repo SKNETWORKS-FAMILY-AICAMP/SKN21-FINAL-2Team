@@ -451,33 +451,41 @@ export default function MyPageSettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
       >
-        <motion.header
-          className="p-6 border-b border-gray-100 flex items-end justify-between"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut", delay: 0.05 }}
-        >
-          <div>
-            <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("title")}</h1>
-            <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Profile</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push("/mypage")}
-            className="bg-black text-white px-4 py-2.5 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
-          >
-            {t("back")}
-          </button>
-        </motion.header>
-
-        <div className="p-6 space-y-10 min-h-[120vh]">
-          {/* Profile Settings */}
-          <motion.section
-            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-            initial={{ opacity: 0, y: 10 }}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={language}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
           >
+            <motion.header
+              className="p-6 border-b border-gray-100 flex items-end justify-between"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut", delay: 0.05 }}
+            >
+              <div>
+                <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("title")}</h1>
+                <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Profile</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/mypage")}
+                className="bg-black text-white px-4 py-2.5 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+              >
+                {t("back")}
+              </button>
+            </motion.header>
+
+            <div className="p-6 space-y-10 min-h-[120vh]">
+              {/* Profile Settings */}
+              <motion.section
+                className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 }}
+              >
             <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
               <div className="rounded-xl bg-gray-200 border border-gray-200 h-[220px] flex items-center justify-center text-gray-600 font-semibold">
                 {profilePictureUrl ? (
@@ -655,8 +663,10 @@ export default function MyPageSettingsPage() {
                 {t("deactivate")}
               </button>
             </div>
-          </motion.section>
-        </div>
+              </motion.section>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </motion.main>
 
       <AnimatePresence>
