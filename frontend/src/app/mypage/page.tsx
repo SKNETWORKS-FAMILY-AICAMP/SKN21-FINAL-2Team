@@ -850,7 +850,7 @@ export default function MyPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
+                className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-center gap-4 mb-5">
                   <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
@@ -882,7 +882,7 @@ export default function MyPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors"
+                className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
                 <div className="mb-3 border-b border-gray-50 pb-2">
                   <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("dnaTitle")}</h3>
@@ -936,7 +936,7 @@ export default function MyPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="p-5 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors flex flex-col min-h-[320px]"
+                  className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex flex-col min-h-[320px]"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("scheduledJourney")}</h3>
@@ -965,7 +965,7 @@ export default function MyPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="p-5 rounded-xl border border-gray-200 bg-white flex flex-col hover:border-gray-300 transition-colors"
+                  className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-5 border-b border-gray-50 pb-2">
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("reservation")}</h3>

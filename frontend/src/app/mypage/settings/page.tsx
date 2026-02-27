@@ -71,6 +71,20 @@ const COUNTRIES = [
 const TRAVEL_NOTES = ["Religion", "Vegan", "Food Allergies", "Halal", "Gluten Free", "Culture"];
 const TRAVEL_STYLE_OPTIONS = ["Relaxation", "Adventure", "Culture", "Food", "Nature", "Luxury"];
 
+const TRAVEL_STYLE_EMOJI: Record<string, string> = {
+  Relaxation: "🧘",
+  Adventure: "🧗",
+  Culture: "🏛️",
+  Food: "🍜",
+  Nature: "🌿",
+  Luxury: "💎",
+};
+
+const formatTravelStyleOptionLabel = (opt: string) => {
+  const emoji = TRAVEL_STYLE_EMOJI[opt] ?? "✨";
+  return `${emoji} ${opt}`;
+};
+
 // TODO: Google 계정 확인(재인증) UI/연동 붙일 때 true로 전환
 const ENABLE_GOOGLE_CONFIRM = false;
 
@@ -432,7 +446,7 @@ export default function MyPageSettingsPage() {
       </div>
 
       <motion.main
-        className="flex-1 h-full min-w-0 bg-white rounded-lg border border-gray-200 overflow-y-auto"
+        className="flex-1 h-full min-w-0 bg-white rounded-lg border border-gray-200 shadow-sm overflow-y-auto"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
@@ -459,7 +473,7 @@ export default function MyPageSettingsPage() {
         <div className="p-6 space-y-10 min-h-[120vh]">
           {/* Profile Settings */}
           <motion.section
-            className="rounded-xl border border-gray-200 bg-white p-6"
+            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.1 }}
@@ -536,7 +550,7 @@ export default function MyPageSettingsPage() {
 
           {/* Travel Notes */}
           <motion.section
-            className="border-t border-gray-100 pt-8"
+            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.15 }}
@@ -565,7 +579,7 @@ export default function MyPageSettingsPage() {
 
           {/* Travel Preference */}
           <motion.section
-            className="border-t border-gray-100 pt-8"
+            className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.2 }}
@@ -581,7 +595,7 @@ export default function MyPageSettingsPage() {
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
                 </select>
@@ -595,7 +609,7 @@ export default function MyPageSettingsPage() {
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
                 </select>
@@ -609,7 +623,7 @@ export default function MyPageSettingsPage() {
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt}
+                      {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
                 </select>
