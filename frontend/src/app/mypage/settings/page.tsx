@@ -4,8 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { Moon, Sun } from "lucide-react";
 
 type AppLanguage = "en" | "ko" | "ja";
+
+type ThemeMode = "light" | "dark";
 
 type ProfileSettings = {
   nickname: string;
@@ -19,6 +22,7 @@ type ProfileSettings = {
 
 const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
 const LANGUAGE_STORAGE_KEY = "triver:language:v1";
+const THEME_STORAGE_KEY = "triver:theme:v1";
 
 const COUNTRIES = [
   "Korea",
@@ -195,6 +199,7 @@ export default function MyPageSettingsPage() {
 
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [language, setLanguage] = useState<AppLanguage>("en");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
   const [bio, setBio] = useState<string>("Explorer Lvl.3");
   const [country, setCountry] = useState<string>("Korea");
@@ -219,11 +224,21 @@ export default function MyPageSettingsPage() {
     return (key: string) => dict[key] ?? I18N.en[key] ?? key;
   }, [language]);
 
+  const isTravelStyleOptionDisabled = (slotIndex: number, opt: string) => {
+    // Prevent duplicate selections across the 3 preference slots.
+    return travelPreferences.some((v, i) => i !== slotIndex && v === opt);
+  };
+
   useEffect(() => {
     try {
       const savedLang = (localStorage.getItem(LANGUAGE_STORAGE_KEY) || "") as AppLanguage;
       if (savedLang === "en" || savedLang === "ko" || savedLang === "ja") {
         setLanguage(savedLang);
+      }
+
+      const savedTheme = (localStorage.getItem(THEME_STORAGE_KEY) || "") as ThemeMode;
+      if (savedTheme === "dark" || savedTheme === "light") {
+        setThemeMode(savedTheme);
       }
 
       const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -248,6 +263,18 @@ export default function MyPageSettingsPage() {
       // ignore
     }
   }, []);
+
+  const toggleThemeMode = () => {
+    setThemeMode((prev) => {
+      const next: ThemeMode = prev === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     return () => {
@@ -440,7 +467,10 @@ export default function MyPageSettingsPage() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
+    <div
+      className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden"
+      style={themeMode === "dark" ? { filter: "invert(1) hue-rotate(180deg)" } : undefined}
+    >
       <div className="flex-none h-full">
         <Sidebar />
       </div>
@@ -469,16 +499,28 @@ export default function MyPageSettingsPage() {
                 <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("title")}</h1>
                 <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Profile</p>
               </div>
-              <button
-                type="button"
-                onClick={() => router.push("/mypage")}
-                className="bg-black text-white px-4 py-2.5 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
-              >
-                {t("back")}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  aria-pressed={themeMode === "dark"}
+                  onClick={toggleThemeMode}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white text-gray-900 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                >
+                  {themeMode === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/mypage")}
+                  className="bg-black text-white px-4 py-2.5 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+                >
+                  {t("back")}
+                </button>
+              </div>
             </motion.header>
 
-            <div className="p-6 space-y-10 min-h-[120vh]">
+            <div className="p-6 space-y-8">
               {/* Profile Settings */}
               <motion.section
                 className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
@@ -489,7 +531,12 @@ export default function MyPageSettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
               <div className="rounded-xl bg-gray-200 border border-gray-200 h-[220px] flex items-center justify-center text-gray-600 font-semibold">
                 {profilePictureUrl ? (
-                  <img src={profilePictureUrl} alt="Profile" className="w-full h-full object-cover rounded-xl grayscale-[20%]" />
+                  <img
+                    src={profilePictureUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover rounded-xl grayscale-[20%]"
+                    style={themeMode === "dark" ? { filter: "invert(1) hue-rotate(180deg)" } : undefined}
+                  />
                 ) : (
                   <span>{t("profilePicture")}</span>
                 )}
@@ -592,7 +639,7 @@ export default function MyPageSettingsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut", delay: 0.2 }}
           >
-            <h2 className="text-xl font-serif italic font-medium text-gray-900 mb-6">{t("travelPreference")}</h2>
+            <h2 className="text-xl font-serif italic font-medium text-gray-900 mb-4">{t("travelPreference")}</h2>
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center justify-between gap-4">
                 <div className="text-sm font-semibold text-gray-900">• {t("pref1")}</div>
@@ -602,7 +649,7 @@ export default function MyPageSettingsPage() {
                   className="w-[180px] h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-semibold text-gray-900"
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
+                    <option key={opt} value={opt} disabled={isTravelStyleOptionDisabled(0, opt)}>
                       {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
@@ -616,7 +663,7 @@ export default function MyPageSettingsPage() {
                   className="w-[180px] h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-semibold text-gray-900"
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
+                    <option key={opt} value={opt} disabled={isTravelStyleOptionDisabled(1, opt)}>
                       {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
@@ -630,7 +677,7 @@ export default function MyPageSettingsPage() {
                   className="w-[180px] h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-semibold text-gray-900"
                 >
                   {TRAVEL_STYLE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
+                    <option key={opt} value={opt} disabled={isTravelStyleOptionDisabled(2, opt)}>
                       {formatTravelStyleOptionLabel(opt)}
                     </option>
                   ))}
