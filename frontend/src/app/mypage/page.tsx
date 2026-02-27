@@ -824,7 +824,7 @@ export default function MyPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/mypage/settings")}
-                    className="whitespace-nowrap bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+                    className="whitespace-nowrap mt-2 bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
                   >
                     {t("settings")}
                   </button>
