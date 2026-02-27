@@ -1,8 +1,7 @@
-import io
-import uuid
 import numpy as np
 import os
 import json
+import uuid
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -44,10 +43,7 @@ class QdrantClientDB:
 
         self.client.create_collection(
             collection_name=PLACES_COLLECTION,
-            vectors_config={
-                "text_vec": VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-                "img_vec_agg": VectorParams(size=VISION_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
-            },
+            vectors_config=VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
             hnsw_config=HnswConfigDiff(
                 on_disk=True,
                 m=16,
@@ -58,9 +54,8 @@ class QdrantClientDB:
             ),
         )
         # 필터 자주 쓰면 인덱스
-        self.client.create_payload_index(PLACES_COLLECTION, "region", PayloadSchemaType.KEYWORD)
-        self.client.create_payload_index(PLACES_COLLECTION, "category", PayloadSchemaType.KEYWORD)
-
+        self.client.create_payload_index(PLACES_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
+        
         # 2) photos: image vector only
         if self.client.collection_exists(PHOTOS_COLLECTION):
             self.client.delete_collection(PHOTOS_COLLECTION)
@@ -78,43 +73,24 @@ class QdrantClientDB:
             ),
         )
         # group_by 키 성능 위해 인덱스 추천
-        self.client.create_payload_index(PHOTOS_COLLECTION, "place_id", PayloadSchemaType.KEYWORD)
-
-    # Utils: aggregate image vectors (top-k mean)
-    def aggregate_vectors(self, vectors: np.ndarray, top_k: int = 5) -> np.ndarray:
-        if vectors is None or vectors.size == 0:
-            return np.zeros((VISION_VECTOR_SIZE,), dtype=np.float32)
-
-        if vectors.shape[0] > top_k:
-            vectors = vectors[:top_k]
-
-        agg = vectors.mean(axis=0)
-        agg = agg / (np.linalg.norm(agg) + 1e-12)
-        return agg.astype(np.float32)
+        self.client.create_payload_index(PHOTOS_COLLECTION, "contentid", PayloadSchemaType.KEYWORD)
 
     # 장소 저장
     # - description -> places.text_vec (BGE-M3)
     # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장 (CLIP Vision)
     def add_place(self, payload: dict):
-        place_id = int(payload['place_id'])
-        description = payload.get('description', "")
-        emotional_desc = payload.get('emotional_description', "")
-        image_urls = payload.get('image_urls', [])
-        
-        # 1) 텍스트 임베딩 (BGE-M3)
-        # Priority: emotional_description > description > title + address
-        title = payload.get("title", "")
-        address = payload.get("address", "") or payload.get("addr1", "")
-        
-        text_to_embed = emotional_desc if emotional_desc else description
-        if not text_to_embed:
-            text_to_embed = f"{title} {address}"
-            
-        text_vec = self.text_model.encode(text_to_embed).astype(np.float32)
+        llm_text = payload.pop('llm_text', '')
 
-        # 2) 이미지 다운로드 -> 임베딩 -> photos upsert (CLIP Vision)
+        contentid = int(payload['contentid'])
+        
+        # [IMAGE] : Photo Collection ================================
+        # # 2) 이미지 다운로드 -> 임베딩 -> photos upsert (CLIP Vision)
+        image_urls = payload.get('image_urls', [])
+        image = payload.get('image')
+        if image:
+            image_urls.append(image)
+
         photo_points = []
-        img_vecs = []
 
         for url in image_urls:
             img = download_image(url)
@@ -123,52 +99,29 @@ class QdrantClientDB:
 
             # Explicitly use CLIP for images
             img_vec = self.vision_model.encode(img).astype(np.float32)
-            img_vecs.append(img_vec)
             
             photo_points.append(
                 PointStruct(
-                    id=str(uuid.uuid4()),
+                    id=str(uuid.uuid4()),  # 고유 UUID 사용
                     vector=img_vec.tolist(),
-                    payload={
-                        "place_id": place_id,
-                        "photo_url": url,
-                        "category": payload.get("category"),
-                        "address": address,
-                        "title": title,
-                    },
+                    payload=payload,
                 )
             )
 
         if photo_points:
             self.client.upsert(collection_name=PHOTOS_COLLECTION, points=photo_points)
 
-        # 3) places 대표 이미지 벡터(img_vec_agg)
-        if img_vecs:
-            img_vec_agg = self.aggregate_vectors(np.vstack(img_vecs), top_k=5)
-        else:
-            img_vec_agg = np.zeros((VISION_VECTOR_SIZE,), dtype=np.float32)
+        # [Text] : Place Collection ================================
+        # 3) places upsert (named vectors)
+        text_vec = self.text_model.encode(llm_text).astype(np.float32)
 
-        # 4) places upsert (named vectors)
         place_point = PointStruct(
-            id=place_id,
-            vector={
-                "text_vec": text_vec.tolist(),
-                "img_vec_agg": img_vec_agg.tolist(),
-            },
-            payload={
-                "place_id": place_id,
-                "description": description,
-                "emotional_description": emotional_desc,
-                "address": address,
-                "category": payload.get("category"),
-                "title": title,
-                "lat": payload.get("lat"),
-                "lng": payload.get("lng"),
-            },
+            id=contentid,
+            vector=text_vec.tolist(),
+            payload=payload,
         )
         self.client.upsert(collection_name=PLACES_COLLECTION, points=[place_point])
 
-        return {"place_id": place_id, "photos_upserted": len(photo_points)}
 
 # cd backend
 # docker exec -it skn21-final-2team-backend-1 python -m app.scripts.qdrant_setup
@@ -180,7 +133,7 @@ if __name__ == "__main__":
     # We will try to find the file manually.
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # backend/app
     root_dir = os.path.dirname(base_dir) # backend
-    data_dir = os.path.join(root_dir, "data")
+    data_dir = os.path.join(root_dir, "data", "llm_result")
     
         
     if not os.path.exists(data_dir):

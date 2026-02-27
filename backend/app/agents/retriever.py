@@ -7,44 +7,12 @@ from app.utils.llm_factory import LLMFactory
 from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
 
-
-def _normalize_result(res) -> Dict[str, Any]:
-    """검색 결과를 통일된 dict 형태로 정규화"""
-    if isinstance(res, dict):
-        payload = res.get("payload", {})
-        return {
-            "id": str(res.get("id", "")),
-            "name": payload.get("title", ""),
-            "address": payload.get("address", ""),
-            "description": payload.get("description", ""),
-            "category": payload.get("category", ""),
-            "score": round(float(res.get("score", 0.0)), 4),
-            "lat": payload.get("lat"),
-            "lng": payload.get("lng"),
-            "image_url": payload.get("image_url", ""),
-            "distance_km": res.get("distance_km"),
-        }
-    else:
-        # ScoredPoint 등 Qdrant 객체
-        payload = getattr(res, "payload", {}) or {}
-        return {
-            "id": str(getattr(res, "id", "")),
-            "name": payload.get("title", ""),
-            "address": payload.get("address", ""),
-            "description": payload.get("description", ""),
-            "category": payload.get("category", ""),
-            "score": round(float(getattr(res, "score", 0.0)), 4),
-            "lat": payload.get("lat"),
-            "lng": payload.get("lng"),
-            "image_url": payload.get("image_url", ""),
-            "distance_km": None,
-        }
-
-
-def _search_for_trip_planning(state: TravelState, retriever: PlaceRetriever) -> List[Dict[str, Any]]:
+def _search_for_trip_planning(state: TravelState) -> List[Dict[str, Any]]:
     """
     TRIP_PLANNING: planner가 생성한 itinerary의 각 항목에 대해 장소 검색
     """
+    retriever = PlaceRetriever.get_instance()
+
     itinerary = state.get("itinerary", [])
     image_path = state.get("image_path")
     all_candidates = []
@@ -68,26 +36,18 @@ def _search_for_trip_planning(state: TravelState, retriever: PlaceRetriever) -> 
                 limit=3,
                 category=item_category,
             )
-            if results:
-                for res in results:
-                    normalized = _normalize_result(res)
-                    if normalized["id"] not in seen_ids:
-                        # 일정 항목 정보를 후보에 연결
-                        normalized["itinerary_day"] = item.get("day")
-                        normalized["itinerary_time_slot"] = item.get("time_slot")
-                        normalized["itinerary_activity"] = item.get("activity")
-                        all_candidates.append(normalized)
-                        seen_ids.add(normalized["id"])
         except Exception as e:
             print(f"[Retriever] Search error for '{search_query}': {e}")
 
-    return all_candidates
+    return results
 
 
-def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[Dict[str, Any]]:
+def _search_for_general(state: TravelState) -> List[Dict[str, Any]]:
     """
     일반 검색: 사용자 입력 + 위치/이미지 기반으로 장소 검색
     """
+    retriever = PlaceRetriever.get_instance()
+
     user_input = state.get("user_input", "")
     image_path = state.get("image_path")
     latitude = state.get("latitude")
@@ -106,10 +66,10 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
             if geocode_data:
                 road = (geocode_data.get("road_address") or "").strip()
                 jibun = (geocode_data.get("jibun_address") or "").strip()
-                address = " ".join(part for part in [road, jibun] if part).strip()
-                if address:
-                    query += f"\n위치: {address}"
-                    print(f"[Retriever] Enriched query with address: {address}")
+                if road:
+                    query += f"\n현재 내 위치 주소: {road}"
+                if jibun:
+                    query += f"\n현재 내 위치 구주소: {jibun}"
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
 
@@ -118,20 +78,20 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
     if slots:
         category = slots.category if hasattr(slots, 'category') else (slots.get("category") if isinstance(slots, dict) else None)
         
-        location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
-        if location and location not in query:
-            query += f" {location}"
-            
-        themes = slots.themes if hasattr(slots, 'themes') else (slots.get("themes", []) if isinstance(slots, dict) else [])
-        if themes:
-            query += f" {' '.join(themes)}"
-            
-        must_have = slots.must_have if hasattr(slots, 'must_have') else (slots.get("must_have") if isinstance(slots, dict) else None)
-        if must_have:
-            query += f" {must_have}"
+        # if location and location not in query:
+        #     query += f"\n 관심 장소 주소: {location}"
+                        
+        # must_have = slots.must_have if hasattr(slots, 'must_have') else (slots.get("must_have") if isinstance(slots, dict) else None)
+        # if must_have:
+        #     query += f"\n 필수 포함 정보: {must_have}"
+        
+        # nice_to_have = slots.nice_to_have if hasattr(slots, 'nice_to_have') else (slots.get("nice_to_have") if isinstance(slots, dict) else None)
+        # if nice_to_have:
+        #     query += f"\n 있으면 좋은 정보: {nice_to_have}"
 
     # 1. 하이브리드 검색 (텍스트 + 이미지)
     print(f"[Retriever] Hybrid search query: '{query[:100]}' category={category}")
+    results = []
     try:
         results = retriever.search_hybrid(
             query=query,
@@ -139,35 +99,10 @@ def _search_for_general(state: TravelState, retriever: PlaceRetriever) -> List[D
             limit=5,
             category=category,
         )
-        if results:
-            for res in results:
-                normalized = _normalize_result(res)
-                if normalized["id"] not in seen_ids:
-                    all_candidates.append(normalized)
-                    seen_ids.add(normalized["id"])
     except Exception as e:
         print(f"[Retriever] Hybrid search error: {e}")
 
-    # 2. 위치 기반 주변 검색 (위도/경도가 있는 경우)
-    if latitude and longitude:
-        print(f"[Retriever] Nearby search: lat={latitude}, lng={longitude}")
-        try:
-            nearby_results = retriever.search_nearby(
-                lat=latitude,
-                lng=longitude,
-                limit=3,
-                radius_km=5.0,
-            )
-            if nearby_results:
-                for res in nearby_results:
-                    normalized = _normalize_result(res)
-                    if normalized["id"] not in seen_ids:
-                        all_candidates.append(normalized)
-                        seen_ids.add(normalized["id"])
-        except Exception as e:
-            print(f"[Retriever] Nearby search error: {e}")
-
-    return all_candidates
+    return results
 
 
 def retriever_node(state: TravelState):
@@ -183,19 +118,23 @@ def retriever_node(state: TravelState):
     print("--- Retriever Agent ---")
 
     # missing_slots가 있으면 (planner가 추가 정보 요청 중) 검색 생략
-    missing_slots = state.get("missing_slots", [])
-    if missing_slots and state.get("answer"):
+    missing_slots = state.get("missing_slots", None)
+    if missing_slots:
         print(f"[Retriever] Skipping search — missing_slots={missing_slots}")
         return state
 
     primary_intent = state.get("primary_intent")
-    retriever = PlaceRetriever.get_instance()
+
+    print(f"[Retriever] Start General search!!!! primary intent: {primary_intent}")
+    candidates = _search_for_general(state)
 
     if primary_intent == IntentType.TRIP_PLANNING:
-        candidates = _search_for_trip_planning(state, retriever)
-    else:
-        candidates = _search_for_general(state, retriever)
+        print("[Retriever] Start Trip planning search!!!!")
+        candidates.extend(_search_for_trip_planning(state))
 
-    print(f"[Retriever] Total candidates: {len(candidates)}")
+    print(f"[Retriever] Total candidates: {candidates}")
+
+    # 중복 제거
+    
 
     return {"candidates": candidates}
