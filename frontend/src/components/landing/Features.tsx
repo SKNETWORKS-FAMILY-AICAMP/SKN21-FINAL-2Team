@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Calendar, MapPin, Sparkles, X, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../../utils";
 
 const demoContent = {
     "Hyper personalized": {
