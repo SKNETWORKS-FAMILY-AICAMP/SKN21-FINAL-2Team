@@ -1,5 +1,8 @@
 // src/services/api.ts
 
+import { decodeJwt } from 'jose';
+import { parseApiError, handleApiError, clearAuth } from './errorHandler';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const safeLocalGet = (key: string) => (typeof window !== "undefined" ? localStorage.getItem(key) : null);
@@ -86,7 +89,12 @@ const refreshAccessToken = async () => {
         credentials: 'include',
         body: JSON.stringify({ refresh_token }),
     });
-    if (!res.ok) throw new Error('Refresh failed');
+    if (!res.ok) {
+        const apiError = await parseApiError(res);
+        const action = handleApiError(apiError);
+        if (action === 'redirect') return; // 이미 리다이렉트 처리됨
+        throw new Error(`Refresh failed: ${apiError.error_code}`);
+    }
     const data = await res.json();
     if (typeof window !== "undefined") {
         localStorage.setItem('access_token', data.access_token);
@@ -95,6 +103,53 @@ const refreshAccessToken = async () => {
         }
     }
     return data.access_token as string;
+};
+
+/**
+ * JWT 토큰 만료 여부를 클라이언트에서 확인 (SECRET_KEY 없이 payload만 디코딩)
+ */
+const isTokenExpired = (token: string): boolean => {
+    try {
+        const { exp } = decodeJwt(token);
+        if (!exp) return true;
+        // 만료 30초 전부터 만료로 간주 (여유 확보)
+        return Date.now() >= (Number(exp) - 30) * 1000;
+    } catch {
+        return true;
+    }
+};
+
+/**
+ * access_token 유효성 검증 → 실패 시 refresh → 둘 다 실패 시 에러
+ */
+export const verifyAndRefreshToken = async (): Promise<{ valid: boolean }> => {
+    const token = safeLocalGet('access_token');
+    if (!token) {
+        clearAuth();
+        throw new Error('No access token');
+    }
+
+    // 1) 클라이언트 만료 체크 (빠른 판단)
+    if (!isTokenExpired(token)) {
+        try {
+            const res = await fetch(`${API_URL}/auth/verify`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include',
+            });
+            if (res.ok) return { valid: true };
+        } catch {
+            // 네트워크 에러 → refresh 시도로 fallthrough
+        }
+    }
+
+    // 2) 만료 또는 검증 실패 → refresh 시도
+    try {
+        await refreshAccessToken();
+        return { valid: true };
+    } catch {
+        clearAuth();
+        throw new Error('Session expired');
+    }
 };
 
 type FetchOpts = {
@@ -116,17 +171,23 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     });
 
     let res = await doFetch();
-    if (res.status === 401 || res.status === 400) {
-        try {
-            await refreshAccessToken();
-            res = await doFetch();
-        } catch {
-            throw new Error('Unauthorized');
-        }
-    }
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Request failed');
+        const apiError = await parseApiError(res);
+        const action = handleApiError(apiError);
+
+        if (action === 'retry') {
+            // 토큰 refresh 후 재시도
+            try {
+                await refreshAccessToken();
+                res = await doFetch();
+            } catch {
+                throw new Error('Unauthorized');
+            }
+        } else if (action === 'redirect') {
+            throw new Error('Session expired');
+        } else {
+            throw new Error(apiError.message || 'Request failed');
+        }
     }
     return res;
 };

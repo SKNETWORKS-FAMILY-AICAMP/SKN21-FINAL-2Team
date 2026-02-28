@@ -6,57 +6,16 @@ from app.services.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
 from app.utils.llm_factory import LLMFactory
 
-from app.models.user import User
-from app.database.connection import get_db
-
-
-def _build_user_preferences(user) -> str:
-    """
-    DB에서 사용자 선호도 가져오기
-    """
-    if not user:
-        return "특별한 선호도 정보 없음"
-
-    lines = []
-    
-    # if user.with_yn:
-    lines.append("- 👫 동행인이 있는 여행을 좋아합니다.")
-    # if user.dog_yn:
-    lines.append("- 🐶 **반려견 동반 여행**을 선호합니다. 애견 동반 가능한 장소를 우선 추천해주세요.")
-    # if user.vegan_yn:
-    #     lines.append("- 🥗 **비건(채식)** 식단을 선호합니다. 비건 메뉴가 있는 식당을 찾아주세요.")
-    # if user.actor_prefer:
-    #     lines.append(f"- 🎬 좋아하는 배우: **{user.actor_prefer}** (관련 촬영지, 명소 추천 시 강조)")
-    # if user.movie_prefer:
-    #     lines.append(f"- 🎥 좋아하는 영화: **{user.movie_prefer}** (촬영지 방문 희망)")
-    # if user.drama_prefer:
-    #     lines.append(f"- 📺 좋아하는 드라마: **{user.drama_prefer}** (드라마 촬영지 방문 희망)")
-    # if user.celeb_prefer:
-    #     lines.append(f"- ⭐ 좋아하는 셀럽: **{user.celeb_prefer}**")
-    # if user.variety_prefer:
-    #     lines.append(f"- 📺 좋아하는 예능: **{user.variety_prefer}** (관련 촬영지 추천)")
-    
-    return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
-
 
 async def intent_node(state: TravelState):
     """
     사용자 의도 분석 Agent
+    - DB 접근 없이, state에 주입된 prefs_info를 그대로 사용
     """
     print("--- Intent Agent ---")
 
-    # DB에서 사용자 프로필 가져오기 (user_id로 조회)
-    user_id = state.get("user_id")
-    db_gen = get_db()
-    db = next(db_gen)
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        prefs_info = _build_user_preferences(user)
-    finally:
-        try:
-            next(db_gen, None)  # generator cleanup (db.close() 호출)
-        except StopIteration:
-            pass
+    # API 레이어에서 주입된 사용자 선호도 정보 사용
+    prefs_info = state.get("prefs_info", "특별한 선호도 정보 없음")
     
     # LLM 및 Structured Output 설정
     llm = LLMFactory.get_llm()
@@ -94,7 +53,6 @@ async def intent_node(state: TravelState):
     print("Intent Result : ", result)
 
     # State에 결과 저장
-    # llm 결과와 db 프로필을 모두 포함
     return {
         "intents": result.intents,
         "primary_intent": result.primary_intent,

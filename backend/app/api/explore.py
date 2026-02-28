@@ -4,7 +4,7 @@ from typing import List, Dict
 import random
 
 from app.retrieval.place import PlaceRetriever
-from app.core.config import PLACES_COLLECTION, PHOTOS_COLLECTION
+from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 router = APIRouter(prefix="/api/explore", tags=["explore"])
@@ -105,3 +105,89 @@ def get_random_places():
             )
 
     return results
+
+
+# =====================================================
+# 카테고리별 장소 검색 (사용자 취향 기반)
+# =====================================================
+
+class CategoryPlacesRequest(BaseModel):
+    user_prefs: str  # 사용자 취향 텍스트 (예: "자연 경관을 좋아하고 맛집 탐방을 즐김")
+
+
+class CategoryPlaceItem(BaseModel):
+    contentid: str
+    title: str
+    address: str
+    image_url: str
+    score: float
+    description: str
+
+
+SEARCH_CATEGORIES = ["관광지", "음식점", "숙박", "레포츠", "문화시설", "축제공연행사"]
+
+
+@router.post("/category-places", response_model=Dict[str, List[CategoryPlaceItem]])
+async def get_category_places(request: CategoryPlacesRequest):
+    """
+    사용자 취향(user_prefs)을 기반으로 카테고리별 장소 3개를 VectorDB에서 검색합니다.
+    - places 컬렉션의 contenttypeid 필드로 카테고리 필터링
+    - 하이브리드 검색 (텍스트 시맨틱 + CLIP cross-modal)
+    """
+    retriever = PlaceRetriever.get_instance()
+    client = retriever.client
+
+    results: Dict[str, List[CategoryPlaceItem]] = {}
+
+    for cat in SEARCH_CATEGORIES:
+        try:
+            search_results = await retriever.search_hybrid(
+                query=request.user_prefs,
+                limit=3,
+                category=cat,
+            )
+
+            items = []
+            for res in search_results:
+                payload = res.get("payload", {})
+                pid = res.get("id")
+                score = res.get("score", 0.0)
+
+                # PHOTOS_COLLECTION에서 사진 1장 조회
+                image_url = ""
+                try:
+                    photos_response, _ = client.scroll(
+                        collection_name=PHOTOS_COLLECTION,
+                        scroll_filter=Filter(
+                            must=[FieldCondition(key="place_id", match=MatchValue(value=pid))]
+                        ),
+                        limit=1,
+                        with_payload=True,
+                    )
+                    if photos_response and photos_response[0].payload:
+                        image_url = photos_response[0].payload.get("image_url", "")
+                except Exception as e:
+                    print(f"[WARN] Failed to fetch photo for place_id {pid}: {e}")
+
+                if not image_url:
+                    image_url = payload.get("firstimage", "")
+
+                items.append(
+                    CategoryPlaceItem(
+                        contentid=str(pid),
+                        title=payload.get("title", "Unknown"),
+                        address=payload.get("address", "Unknown"),
+                        image_url=image_url,
+                        score=round(score, 4),
+                        description=payload.get("description", "")[:200],
+                    )
+                )
+
+            results[cat] = items
+
+        except Exception as e:
+            print(f"[WARN] Category '{cat}' search failed: {e}")
+            results[cat] = []
+
+    return results
+

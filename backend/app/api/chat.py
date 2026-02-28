@@ -7,7 +7,7 @@ from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
-from app.core.security import get_current_user
+from app.utils.security import get_current_user
 from app.agents.graph import workflow
 from app.database.checkpointer import get_checkpointer
 
@@ -24,6 +24,39 @@ async def get_graph_app():
         _graph_app = workflow().compile(checkpointer=_checkpointer)
         print('compile graph app (with AsyncMySaver checkpointer)')
     return _graph_app
+
+
+def _build_user_preferences(user: User) -> str:
+    """
+    DB의 사용자 정보를 기반으로 선호도 텍스트를 생성합니다.
+    LLM Agent에 전달할 prefs_info 문자열을 반환합니다.
+    """
+    if not user:
+        return "특별한 선호도 정보 없음"
+
+    lines = []
+
+    # 여행 선호도 (Survey Prefers)
+    if user.plan_prefer and user.plan_prefer.value:
+        lines.append(f"- 📋 여행 계획 스타일: **{user.plan_prefer.value}**")
+    if user.member_prefer and user.member_prefer.value:
+        lines.append(f"- 👫 여행 멤버: **{user.member_prefer.value}**")
+    if user.transport_prefer and user.transport_prefer.value:
+        lines.append(f"- 🚗 선호 교통수단: **{user.transport_prefer.value}**")
+    if user.age_prefer and user.age_prefer.value:
+        lines.append(f"- 🎂 연령대: **{user.age_prefer.value}**")
+    if user.vibe_prefer and user.vibe_prefer.value:
+        lines.append(f"- ✨ 선호 분위기: **{user.vibe_prefer.value}**")
+
+    # 콘텐츠 선호도 (Content Prefers)
+    if user.movie_prefer and user.movie_prefer.value:
+        lines.append(f"- 🎥 좋아하는 영화: **{user.movie_prefer.value}** (촬영지 방문 희망)")
+    if user.drama_prefer and user.drama_prefer.value:
+        lines.append(f"- 📺 좋아하는 드라마: **{user.drama_prefer.value}** (드라마 촬영지 방문 희망)")
+    if user.variety_prefer and user.variety_prefer.value:
+        lines.append(f"- 📺 좋아하는 예능: **{user.variety_prefer.value}** (관련 촬영지 추천)")
+
+    return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
 
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -135,6 +168,9 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         db.add(room)
         db.commit()
 
+    # Backend에서 사용자 선호도 조회 후 LLM에 전달
+    prefs_info = _build_user_preferences(current_user)
+
     # 그래프 입력 상태 구성 (대화 이력은 checkpointer가 자동 관리)
     inputs = {
         "user_input": message_in.message,
@@ -143,8 +179,10 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         "latitude": message_in.latitude,
         "longitude": message_in.longitude,
         "image_path": message_in.image_path,
+        "prefs_info": prefs_info,
         "messages": [HumanMessage(content=message_in.message)],
     }
+
     
     # 그래프 실행 (Global Cache)
     try:

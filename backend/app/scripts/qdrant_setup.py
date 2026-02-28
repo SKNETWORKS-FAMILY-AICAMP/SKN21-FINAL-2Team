@@ -15,7 +15,7 @@ from sentence_transformers import SentenceTransformer
 
 from app.scripts.preprocess_data import download_image
 
-from app.core.config import *
+from app.utils.config import *
 from app.scripts.preprocess_data import ingest_data
 
 # CLIPProcessor가 자동으로 resize / center crop / normalize 수행

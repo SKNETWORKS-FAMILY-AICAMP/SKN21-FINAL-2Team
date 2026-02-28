@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser } from "@/services/api";
+import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken } from "@/services/api";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -36,8 +36,10 @@ export function ChatHome() {
         const initializeChat = async () => {
             setIsInitializing(true);
             try {
-                const token = localStorage.getItem("access_token");
-                if (!token) {
+                // 토큰 유효성 검증 (만료 시 자동 refresh 시도)
+                try {
+                    await verifyAndRefreshToken();
+                } catch {
                     window.location.href = "/login";
                     return;
                 }
@@ -47,7 +49,6 @@ export function ChatHome() {
                     const data = await fetchCurrentUser();
                     setUserProfile(data);
                 } catch (err) {
-                    localStorage.removeItem("access_token");
                     window.location.href = "/login";
                     return;
                 }

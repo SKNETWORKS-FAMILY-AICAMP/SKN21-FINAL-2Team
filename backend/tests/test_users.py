@@ -1,4 +1,4 @@
-from app.core.security import create_access_token
+from app.utils.security import create_access_token
 from app.models.user import User
 
 def get_auth_headers(email="test@example.com"):

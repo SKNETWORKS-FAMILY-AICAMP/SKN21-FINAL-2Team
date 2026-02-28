@@ -4,7 +4,8 @@ from datetime import timedelta
 from app.database.connection import get_db
 from app.models.user import User
 from app.schemas.user import UserResponse, Token, GoogleLoginRequest, RefreshRequest
-from app.core.security import create_access_token, create_refresh_token, verify_refresh_token, verify_google_auth_code
+from app.utils.security import create_access_token, create_refresh_token, verify_refresh_token, verify_google_auth_code, get_current_user
+from app.utils.error_handler import AppException, ErrorCode
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -18,10 +19,10 @@ def login_google(
     # verify_google_auth_code는 {id_info, access_token, refresh_token, ...} 반환
     auth_result = verify_google_auth_code(request.code)
     if not auth_result:
-        raise HTTPException(status_code=400, detail="Invalid Google Auth Code (Unknown Error)")
+        raise AppException(ErrorCode.GOOGLE_AUTH_FAILED, "Invalid Google Auth Code (Unknown Error)", 400)
         
     if "error" in auth_result:
-        raise HTTPException(status_code=400, detail=f"Google Auth Error: {auth_result['error']}")
+        raise AppException(ErrorCode.GOOGLE_AUTH_FAILED, f"Google Auth Error: {auth_result['error']}", 400)
     
     id_info = auth_result["id_info"]
     social_access_token = auth_result["access_token"]
@@ -89,17 +90,15 @@ def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
     refresh_token = request.refresh_token
 
     if not refresh_token:
-        raise HTTPException(status_code=401, detail="Empty refresh token")
+        raise AppException(ErrorCode.REFRESH_TOKEN_INVALID, "Empty refresh token", 401)
     
-    # 1. 리프레시 토큰 검증
+    # 1. 리프레시 토큰 검증 (AppException 자동 발생)
     email = verify_refresh_token(refresh_token)
-    if not email:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
     
     # 2. 사용자 확인
     user = db.query(User).filter(User.email == email).first()
     if not user:
-         raise HTTPException(status_code=401, detail="User not found")
+         raise AppException(ErrorCode.USER_NOT_FOUND, "User not found", 401)
          
     # 3. 새로운 액세스 토큰 발급
     access_token = create_access_token(user.email)
@@ -119,3 +118,18 @@ def logout(response: Response):
         path="/",
     )
     return {"message": "logged out"}
+
+
+@router.get("/verify")
+async def verify_token(current_user: User = Depends(get_current_user)):
+    """
+    access_token 유효성 검증.
+    유효하면 사용자 기본 정보 반환, 만료/무효 시 AppException 자동 발생.
+    """
+    return {
+        "valid": True,
+        "email": current_user.email,
+        "name": current_user.name,
+        "is_join": current_user.is_join,
+        "is_prefer": current_user.is_prefer,
+    }

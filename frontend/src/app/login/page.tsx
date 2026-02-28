@@ -25,10 +25,11 @@ export default function LoginPage() {
         }
 
         const data = await res.json();
-        const { access_token, is_join, profile_picture, name, email } = data;
+        const { access_token, refresh_token, is_join, profile_picture, name, email } = data;
 
         // 토큰 및 프로필 정보 저장
         localStorage.setItem("access_token", access_token);
+        if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
         if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
         if (name) localStorage.setItem("user_name", name);
         if (email) localStorage.setItem("user_email", email);

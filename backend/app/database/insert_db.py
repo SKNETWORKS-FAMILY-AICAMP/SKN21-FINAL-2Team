@@ -161,26 +161,17 @@ def insert_country() -> dict[str, int]:
     기본 국가 데이터를 country 테이블에 삽입한다.
     """
     countries = [
-        {"code": "ko", "name": "한국"},
-        {"code": "jp", "name": "일본"},
-        {"code": "it", "name": "이탈리아"},
+        {"code": "kr", "name": "대한민국"},
         {"code": "us", "name": "미국"},
+        {"code": "jp", "name": "일본"},
         {"code": "cn", "name": "중국"},
         {"code": "fr", "name": "프랑스"},
-        {"code": "gb", "name": "영국"},
         {"code": "de", "name": "독일"},
         {"code": "es", "name": "스페인"},
-        {"code": "th", "name": "태국"},
-        {"code": "vn", "name": "베트남"},
-        {"code": "sg", "name": "싱가포르"},
-        {"code": "tw", "name": "대만"},
-        {"code": "ph", "name": "필리핀"},
-        {"code": "id", "name": "인도네시아"},
-        {"code": "my", "name": "말레이시아"},
-        {"code": "au", "name": "호주"},
-        {"code": "nz", "name": "뉴질랜드"},
-        {"code": "ca", "name": "캐나다"},
-        {"code": "mx", "name": "멕시코"},
+        {"code": "it", "name": "이탈리아"},
+        {"code": "pt", "name": "포르투갈"},
+        {"code": "ru", "name": "러시아"},
+        {"code": "other", "name": "기타"}
     ]
 
     db = SessionLocal()

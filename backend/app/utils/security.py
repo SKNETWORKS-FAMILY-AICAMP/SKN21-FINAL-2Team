@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import jwt, JWTError
+from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.models.user import User
+from app.utils.error_handler import AppException, ErrorCode
 import os
 from dotenv import load_dotenv
 
@@ -47,36 +48,36 @@ def create_refresh_token(user_id: str):
 
 # Dependency to get current user (Access Token Validation)
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
-            raise credentials_exception
+            raise AppException(ErrorCode.TOKEN_INVALID, "Token payload is missing subject", 401)
         if payload.get("type") != "access":
-             raise credentials_exception
+            raise AppException(ErrorCode.TOKEN_INVALID, "Not an access token", 401)
+    except ExpiredSignatureError:
+        raise AppException(ErrorCode.TOKEN_EXPIRED, "Access token has expired", 401)
     except JWTError:
-        raise credentials_exception
+        raise AppException(ErrorCode.TOKEN_INVALID, "Invalid access token", 401)
     
     # 이메일로 사용자 조회
     user = db.query(User).filter(User.email == email).first()
     if user is None:
-        raise credentials_exception
+        raise AppException(ErrorCode.USER_NOT_FOUND, "User not found", 401)
     return user
 
 # Helper to verify refresh token
 def verify_refresh_token(token: str):
+    """refresh_token 검증. 성공 시 email 반환, 실패 시 AppException 발생."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != "refresh":
-             return None
-        return payload.get("sub") # email
+            raise AppException(ErrorCode.REFRESH_TOKEN_INVALID, "Not a refresh token", 401)
+        return payload.get("sub")  # email
+    except ExpiredSignatureError:
+        raise AppException(ErrorCode.REFRESH_TOKEN_EXPIRED, "Refresh token has expired", 401)
     except JWTError:
-        return None
+        raise AppException(ErrorCode.REFRESH_TOKEN_INVALID, "Invalid refresh token", 401)
 
 from google.oauth2 import id_token
 from google.auth.transport import requests

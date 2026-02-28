@@ -5,7 +5,7 @@ from qdrant_client.models import (
     Filter, FieldCondition, MatchValue, ScoredPoint
 )
 from sentence_transformers import SentenceTransformer
-from app.core.config import (
+from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE
 )

@@ -5,7 +5,8 @@ import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchRooms, fetchCurrentUser, ChatRoom } from "@/services/api";
+import { fetchRooms, fetchCurrentUser, ChatRoom, logoutApi } from "@/services/api";
+import { clearAuth } from "@/services/errorHandler";
 
 interface UserProfile {
     name: string;
@@ -89,8 +90,13 @@ export function Sidebar() {
 
                 // Sort rooms to show the latest first if they aren't already
                 setRooms(roomsData || []);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch sidebar data", error);
+                // 토큰 만료/무효 시 로그인 페이지로 리다이렉트
+                if (error?.message === "Unauthorized" || error?.message === "Session expired") {
+                    clearAuth();
+                    window.location.href = "/login";
+                }
             }
         };
 
@@ -109,7 +115,8 @@ export function Sidebar() {
         { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
     ];
 
-    const handleSignOut = () => {
+    const handleSignOut = async () => {
+        await logoutApi();
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         router.push("/");

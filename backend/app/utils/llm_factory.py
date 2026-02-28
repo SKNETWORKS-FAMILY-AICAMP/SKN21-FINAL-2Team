@@ -1,6 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.tavily_search import TavilySearchResults
-from app.core.config import LLM_MODEL
+from app.utils.config import LLM_MODEL
 
 class LLMFactory:
     _llm_instance = None

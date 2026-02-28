@@ -11,6 +11,7 @@ import logging
 from app.api import auth, users, chat, prefer, common, explore
 from app.retrieval.place import PlaceRetriever
 from app.utils.llm_factory import LLMFactory
+from app.utils.error_handler import AppException, app_exception_handler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
     print("[INFO] Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
+app.add_exception_handler(AppException, app_exception_handler)
 
 @app.on_event("startup")
 def startup():

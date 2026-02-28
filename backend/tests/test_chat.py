@@ -1,4 +1,4 @@
-from app.core.security import create_access_token
+from app.utils.security import create_access_token
 from app.models.user import User
 from app.models.chat import ChatSession, ChatMessage
 from unittest.mock import patch
