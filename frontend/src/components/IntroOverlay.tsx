@@ -62,7 +62,7 @@ export default function IntroOverlay({ onDone }: Props) {
     <div ref={overlayRef} className={styles.overlay} onClick={onDone}>
       <div className={styles.center}>
         <div ref={titleRef} className={`${styles.word} ${styles.layerCenter}`}>
-          POLARIS KOREA RECOMMENDATIONS
+          TRIVER KOREA RECOMMENDATIONS
         </div>
       </div>
     </div>

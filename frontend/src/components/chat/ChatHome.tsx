@@ -6,6 +6,8 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser } from "@/services/api";
 import { useSearchParams, useRouter } from "next/navigation";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export function ChatHome() {
     const searchParams = useSearchParams();
@@ -206,8 +208,18 @@ export function ChatHome() {
                             )}
                         </div>
                         <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.role === "human" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
-                            {/* Simple text rendering for now. In reality you might want React Markdown for AI output. */}
-                            <div className="whitespace-pre-wrap">{msg.message}</div>
+                            {(() => {
+                                if (msg.role === "ai") {
+                                    return (
+                                        <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {msg.message}
+                                            </ReactMarkdown>
+                                        </div>
+                                    );
+                                }
+                                return <div className="whitespace-pre-wrap">{msg.message}</div>;
+                            })()}
                             <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.role === "human" ? "text-gray-400 text-right" : "text-gray-400"}`}>
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </div>

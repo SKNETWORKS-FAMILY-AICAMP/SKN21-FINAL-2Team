@@ -8,7 +8,7 @@ from app.services.prompts import PLANNER_PROMPT
 from app.utils.llm_factory import LLMFactory
 from app.agents.models.output import PlannerOutput
 
-def planner_node(state: TravelState):
+async def planner_node(state: TravelState):
     """
     여행 계획을 생성하는 Agent
     - 대화의 흐름과 사용자의 input을 분석해 장소 검색을 하기 위해서 어떤 정보들이 필요한지 llm이 결정해서 state에 저장한다.
@@ -35,7 +35,7 @@ def planner_node(state: TravelState):
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", PLANNER_PROMPT),
-        MessagesPlaceholder(variable_name="chat_history"),
+        MessagesPlaceholder(variable_name="messages"),
         ("human", (
             "사용자 입력: {user_input}\n\n"
             "슬롯 정보:\n{slots_info}\n\n"
@@ -46,8 +46,8 @@ def planner_node(state: TravelState):
     chain = prompt | structured_llm
 
     try:
-        result = chain.invoke({
-            "chat_history": messages,
+        result = await chain.ainvoke({
+            "messages": messages,
             "user_input": user_input,
             "slots_info": slots_info or "없음",
             "prefs_info": prefs_info or "없음",

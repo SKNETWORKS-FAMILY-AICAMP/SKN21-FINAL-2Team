@@ -88,19 +88,23 @@ class PlaceRetriever:
         )
         return response.points
 
-    def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
+    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
         """
         Image-based search (Visual Similarity).
         Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
         """
         print(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
+        
+        # NOTE: download_image is sync, but it's usually fast if it's a local path or cached.
         img = download_image(image_url)
         if img is None:
             return []
 
+        # encode is sync (CPU/GPU bound), but we can't easily make it async without to_thread
         query_vec = self.vision_model.encode(img).astype(np.float32)
         query_filter = self._build_category_filter(category)
 
+        # qdrant-client sync call
         response = self.client.query_points_groups(
             collection_name=PHOTOS_COLLECTION,
             query=query_vec.tolist(),
@@ -112,7 +116,7 @@ class PlaceRetriever:
         )
         return response.groups
 
-    def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, category: str = None):
+    async def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, category: str = None, emotional_text: str = None):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
         1. Text Input -> BGE-M3 (Text DB) + CLIP Text (Image DB)
@@ -174,7 +178,9 @@ class PlaceRetriever:
                 collect_hits(i_i_hits, 1.0, "image_visual")
 
                 # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
-                emotional_text = describe_image(image_url)
+                if not emotional_text:
+                    emotional_text = await describe_image(image_url)
+                
                 if emotional_text:
                     emo_emb = self.text_model.encode(emotional_text).astype(np.float32)
                     i_e_hits = self.client.query_points(
@@ -274,7 +280,7 @@ class PlaceRetriever:
         return d
 
 
-def retrieval_place(message_in: ChatMessageCreate):
+async def retrieval_place(message_in: ChatMessageCreate):
     # Retrieval (Search Places)
     context_str = None
     try:        
@@ -306,7 +312,7 @@ def retrieval_place(message_in: ChatMessageCreate):
         if len(address) > 0:
             query += f'\n## location : ({user_lat}, {user_long}), address : {address}'
         # Main Search (Hybrid)
-        search_results = retriever.search_hybrid(
+        search_results = await retriever.search_hybrid(
             query=query,
             image_url=message_in.image_path,
             limit=5

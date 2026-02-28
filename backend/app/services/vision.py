@@ -10,7 +10,7 @@ from app.services.prompts import IMAGE_TO_EMOTIONAL_PROMPT
 
 load_dotenv()
 
-def describe_image(image_data: str) -> Optional[str]:
+async def describe_image(image_data: str) -> Optional[str]:
     """
     Extracts emotional and descriptive text from an image using GPT-4o-mini.
     image_data: Base64 string or URL.
@@ -38,7 +38,8 @@ def describe_image(image_data: str) -> Optional[str]:
             ])
         ])
 
-        response = LLMFactory.get_llm().invoke(prompt)
+        llm = LLMFactory.get_llm()
+        response = await llm.ainvoke(prompt)
         description = response.content.strip()
         print(f"[INFO] describe_image output: {description}")
         return description

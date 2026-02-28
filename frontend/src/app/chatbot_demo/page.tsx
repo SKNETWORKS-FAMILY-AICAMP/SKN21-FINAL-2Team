@@ -4,6 +4,8 @@
 import { useRef, useState } from 'react';
 import Link from "next/link";
 import { Paperclip, Image as ImageIcon, MapPin, X, Menu, Plus, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
     role: 'human' | 'ai';
@@ -27,9 +29,9 @@ const INITIAL_DEMO_ROOMS: DemoRoom[] = [
         title: "여행 추천",
         messages: [
             { role: "human", text: "주말에 서울 근교로 반려견과 갈만한 곳 추천해줘." },
-            { role: "ai", text: "남한산성 산책 코스, 양평 두물머리, 가평 애견 동반 카페를 추천해요." },
+            { role: "ai", text: "남한산성 산책 코스, **양평 두물머리**, *가평 애견 동반 카페*를 추천해요." },
             { role: "human", text: "가평 쪽으로 반나절 코스도 짜줘." },
-            { role: "ai", text: "아침 카페 -> 호수 산책 -> 펫프렌들리 식당 순으로 4~5시간 코스가 좋아요." },
+            { role: "ai", text: "다음과 같은 **4~5시간 코스**를 추천합니다:\n\n1. **아침 카페**: 펫프렌들리 카페 방문\n2. **호수 산책**: 가평 호수 주변 산책\n3. **점심 식사**: 애견 동반 가능 식당\n\n즐거운 여행 되세요!" },
         ],
     },
     {
@@ -209,7 +211,7 @@ export default function ChatbotDemoPage() {
                         <div className="flex items-center justify-between px-4 py-4">
                             <Link href="/home" className="flex items-center gap-2 text-lg font-semibold hover:text-indigo-600">
                                 <Sparkles className="h-5 w-5 text-indigo-600" />
-                                Polaris
+                                Triver
                             </Link>
                             <button
                                 type="button"
@@ -265,7 +267,15 @@ export default function ChatbotDemoPage() {
                         {chatLog.map((msg, i) => (
                             <div key={i} className={`flex ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === 'human' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
-                                    {msg.text}
+                                    {msg.role === 'ai' ? (
+                                        <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {msg.text}
+                                            </ReactMarkdown>
+                                        </div>
+                                    ) : (
+                                        msg.text
+                                    )}
                                 </div>
                             </div>
                         ))}

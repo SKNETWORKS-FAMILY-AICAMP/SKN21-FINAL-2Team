@@ -4,16 +4,19 @@ import base64
 import mimetypes
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
-from app.services.prompts import EXECUTOR_PROMPT
+from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
 from app.utils.llm_factory import LLMFactory
 
 def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
     """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
     if not candidates:
+        return ""
+
+    if len(candidates) == 0:
         return ""
 
     lines = ["## 검색된 장소 정보"]
@@ -140,13 +143,6 @@ async def executor_node(state: TravelState):
     """
     print("--- Executor Agent ---")
 
-    # missing_slots가 있으면 (planner의 재질문) 바로 반환
-    missing_slots = state.get("missing_slots", None)
-    if missing_slots:
-        print(f"[Executor] Passing through — missing_slots answer already set")
-        missing_context = _build_missing_context(missing_slots)
-        return {'answer': missing_context}
-
     candidates = state.get("candidates", [])
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
@@ -161,7 +157,7 @@ async def executor_node(state: TravelState):
 
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = None
-    if not candidates:
+    if len(candidates) == 0:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
 
@@ -181,7 +177,7 @@ async def executor_node(state: TravelState):
     # 최종 답변 생성
     context_block = "\n\n".join(filter(None, [place_context, itinerary_context, web_context]))
 
-    llm = LLMFactory.get_llm(temperature=0.3)
+    llm = LLMFactory.get_llm(temperature=0.5)
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
@@ -226,4 +222,40 @@ async def executor_node(state: TravelState):
     answer = response.content
     print(f"[Executor] Answer generated (length={len(answer)})")
 
-    return {"answer": answer}
+    return {"messages": AIMessage(content=answer), "answer": answer}
+
+
+async def executor_missing_node(state: TravelState):
+    """
+    여행 계획에서 부족한 정보를 재질문하는 node
+    """
+    print("--- Executor Missing Agent ---")
+
+    # missing_slots가 있으면 (planner의 재질문) 바로 반환
+    missing_slots = state.get("missing_slots", [])
+
+    print(f"[Executor] Missing slots: {missing_slots}")
+    missing_context = _build_missing_context(missing_slots)
+    
+    human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", EXECUTOR_MISSING_INFO_PROMPT),
+        MessagesPlaceholder(variable_name="messages"),
+        human_message
+    ])
+
+    llm = LLMFactory.get_llm(temperature=0.3)
+    response = await llm.ainvoke(prompt.invoke({
+        "messages": state.get("messages")[-10:],
+        "user_input": state.get("user_input"),
+        "slots_info": state.get("slots"),
+        "prefs_info": state.get("prefs_info"),
+        "missing_info": missing_context,
+    }))
+
+    answer = response.content
+    print(f"[Executor] Answer generated (length={len(answer)})")
+
+    return {"messages": AIMessage(content=answer), "answer": answer}
+

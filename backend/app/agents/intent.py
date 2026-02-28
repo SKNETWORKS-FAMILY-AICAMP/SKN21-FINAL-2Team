@@ -20,9 +20,9 @@ def _build_user_preferences(user) -> str:
     lines = []
     
     # if user.with_yn:
-    #     lines.append("- 👫 동행인이 있는 여행을 좋아합니다.")
+    lines.append("- 👫 동행인이 있는 여행을 좋아합니다.")
     # if user.dog_yn:
-    #     lines.append("- 🐶 **반려견 동반 여행**을 선호합니다. 애견 동반 가능한 장소를 우선 추천해주세요.")
+    lines.append("- 🐶 **반려견 동반 여행**을 선호합니다. 애견 동반 가능한 장소를 우선 추천해주세요.")
     # if user.vegan_yn:
     #     lines.append("- 🥗 **비건(채식)** 식단을 선호합니다. 비건 메뉴가 있는 식당을 찾아주세요.")
     # if user.actor_prefer:
@@ -39,7 +39,7 @@ def _build_user_preferences(user) -> str:
     return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
 
 
-def intent_node(state: TravelState):
+async def intent_node(state: TravelState):
     """
     사용자 의도 분석 Agent
     """
@@ -86,7 +86,7 @@ def intent_node(state: TravelState):
     ])
 
     chain = prompt | structured_llm
-    result = chain.invoke({
+    result = await chain.ainvoke({
         "messages": messages, 
         "user_input": user_input
     })
