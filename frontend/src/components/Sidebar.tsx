@@ -13,17 +13,65 @@ interface UserProfile {
     profile_picture: string | null;
 }
 
+type AppLanguage = "en" | "ko" | "ja";
+
+const LANGUAGE_STORAGE_KEY = "triver:language:v1";
+
+const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
+    en: {
+        home: "Home",
+        collection: "Collection",
+        bookmark: "Bookmark",
+        newChat: "+ New Chat",
+        recentChats: "Recent Chats",
+        profile: "Profile",
+        signOut: "Sign out",
+    },
+    ko: {
+        home: "홈",
+        collection: "컬렉션",
+        bookmark: "북마크",
+        newChat: "+ 새 채팅",
+        recentChats: "최근 채팅",
+        profile: "프로필",
+        signOut: "로그아웃",
+    },
+    ja: {
+        home: "ホーム",
+        collection: "コレクション",
+        bookmark: "ブックマーク",
+        newChat: "+ 新規チャット",
+        recentChats: "最近のチャット",
+        profile: "プロフィール",
+        signOut: "ログアウト",
+    },
+};
+
 export function Sidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [language, setLanguage] = useState<AppLanguage>("en");
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
 
     useEffect(() => {
+        const applyLanguage = () => {
+            const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+            if (raw === "en" || raw === "ko" || raw === "ja") {
+                setLanguage(raw);
+            } else {
+                setLanguage("en");
+            }
+        };
+        applyLanguage();
+
+        const onLang = () => applyLanguage();
+        window.addEventListener("triver:language", onLang);
+
         const fetchSidebarData = async () => {
             try {
                 const token = localStorage.getItem("access_token");
@@ -47,12 +95,18 @@ export function Sidebar() {
         };
 
         fetchSidebarData();
+
+        return () => {
+            window.removeEventListener("triver:language", onLang);
+        };
     }, []);
 
+    const dict = SIDEBAR_I18N[language] ?? SIDEBAR_I18N.en;
+
     const menuItems = [
-        { icon: Home, label: "Home", path: "/explore" },
-        { icon: Grid, label: "Collection", path: "/collection" },
-        { icon: Bookmark, label: "Bookmark", path: "/bookmark" },
+        { icon: Home, label: dict.home, path: "/explore" },
+        { icon: Grid, label: dict.collection, path: "/collection" },
+        { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
     ];
 
     const handleSignOut = () => {
@@ -137,13 +191,13 @@ export function Sidebar() {
                                 ? "p-3 rounded-2xl"
                                 : "w-full justify-between gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium"
                         )}
-                        title={actuallyCollapsed ? "New Chat" : undefined}
+                        title={actuallyCollapsed ? dict.newChat : undefined}
                     >
                         {actuallyCollapsed ? (
                             <Edit3 size={16} strokeWidth={1.5} />
                         ) : (
                             <div className="flex items-center gap-3">
-                                <span className="tracking-wide">+ New Chat</span>
+                                <span className="tracking-wide">{dict.newChat}</span>
                             </div>
                         )}
                     </button>
@@ -173,7 +227,7 @@ export function Sidebar() {
                         <button
                             onClick={() => setIsCollapsed(false)}
                             className="p-3 text-gray-400 hover:text-black hover:bg-gray-50 rounded-2xl transition-colors"
-                            title="Recent Chats"
+                            title={dict.recentChats}
                         >
                             <MessageSquare size={16} strokeWidth={1.5} />
                         </button>
@@ -190,7 +244,7 @@ export function Sidebar() {
                         pathname === "/mypage" ? "bg-gray-100 shadow-sm" : "hover:bg-gray-50",
                         actuallyCollapsed ? "justify-center p-2" : "justify-between p-3"
                     )}
-                    title={actuallyCollapsed ? "Profile" : undefined}
+                    title={actuallyCollapsed ? dict.profile : undefined}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-9 h-9 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
@@ -231,7 +285,7 @@ export function Sidebar() {
                             className="flex items-center gap-1 hover:text-red-600 transition-colors"
                         >
                             <LogOut size={10} />
-                            Sign out
+                            {dict.signOut}
                         </button>
                     </div>
                 ) : (
@@ -241,7 +295,7 @@ export function Sidebar() {
                             handleSignOut();
                         }}
                         className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
-                        title="Sign out"
+                        title={dict.signOut}
                     >
                         <LogOut size={16} strokeWidth={1.5} />
                     </button>
