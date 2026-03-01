@@ -35,6 +35,7 @@ backend/
     ├── conftest.py
     ├── test_auth.py
     ├── test_chat.py
+    ├── test_chat_stream.py
     └── test_users.py
 ```
 
@@ -175,15 +176,15 @@ JWT 인증 및 Google OAuth 처리를 담당합니다.
 | `/api/chat/rooms/{room_id}`                | GET    | 채팅방 상세 조회 (메시지 포함)                                                      |
 | `/api/chat/messages`                       | POST   | 메시지 저장 (단순 저장, LLM 호출 없음)                                              |
 | `/api/chat/messages/{message_id}/bookmark` | PATCH  | 메시지 북마크 토글                                                                  |
-| `/api/chat/rooms/{room_id}/ask`            | POST   | **핵심 엔드포인트**: 사용자 메시지 저장 → RAG 검색 → LLM 응답 생성 → AI 메시지 저장 |
+| `/api/chat/rooms/{room_id}/ask`            | POST   | **핵심 엔드포인트**: 사용자 메시지 저장 → LangGraph 실행 → AI 메시지 저장 (일괄 응답) |
+| `/api/chat/rooms/{room_id}/ask/stream`     | POST   | **SSE 스트리밍**: 사용자 메시지 저장 → LangGraph `astream_events()` → 노드 진행 이벤트 + LLM 토큰 SSE 전송 → AI 메시지 저장 |
 
-**`/ask` 엔드포인트 처리 흐름:**
-1. 채팅방 소유권 확인
-2. 사용자 메시지 DB 저장
-3. 방 제목 자동 설정 (첫 메시지 기준, 최대 30자)
-4. `retrieval_place()`로 Qdrant에서 관련 장소 검색 (Context 생성)
-5. `generate_response()`로 GPT-4o-mini 호출
-6. AI 응답 메시지 DB 저장 후 반환
+**`/ask/stream` SSE 스트리밍 엔드포인트:**
+1. 채팅방 소유권 확인 & 사용자 메시지 DB 저장
+2. LangGraph `astream_events()` 로 그래프 실행
+3. 노드 진행 이벤트 전송: `{"step": "intent", "status": "start/done"}`
+4. LLM 토큰 스트리밍: `{"token": "..."}`
+5. AI 메시지 DB 저장 후 완료 이벤트: `{"done": true, "message_id": ...}`
 
 ---
 
@@ -469,6 +470,19 @@ pytest 공통 픽스처를 정의합니다.
 | `test_get_sessions`         | 채팅방 목록 조회 확인                 |
 | `test_send_message_stream`  | 스트리밍 메시지 테스트 (미구현, pass) |
 | `test_get_session_messages` | 채팅방 메시지 목록 조회 확인          |
+
+---
+
+### `tests/test_chat_stream.py`
+SSE 스트리밍 엔드포인트 (`/ask/stream`) 자동 테스트입니다. `httpx.AsyncClient` + LLM/Graph Mock 사용.
+
+| 테스트                            | 설명                                          |
+| --------------------------------- | --------------------------------------------- |
+| `test_sse_event_format`           | SSE 라인이 `data: {...}` 형식인지 확인        |
+| `test_step_events_order`          | 노드 step 이벤트 순서 확인 (intent→retriever→executor) |
+| `test_token_streaming`            | token 이벤트 1개 이상 수신 확인               |
+| `test_done_event_with_message_id` | 마지막 이벤트에 done + message_id 포함 확인   |
+| `test_ai_message_saved_to_db`     | 스트리밍 후 DB에 AI 메시지 저장 확인          |
 
 ---
 

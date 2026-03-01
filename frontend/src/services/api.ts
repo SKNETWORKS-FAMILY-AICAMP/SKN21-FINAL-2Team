@@ -237,6 +237,90 @@ export const sendChatMessage = async (
     return response.json();
 };
 
+export const sendChatMessageStream = async (
+    roomId: number,
+    message: string,
+    callbacks: {
+        onToken: (token: string) => void;
+        onStep: (step: string, status: string) => void;
+        onDone: (fullMessage: string, messageId: number, createdAt: string) => void;
+        onError?: (error: string) => void;
+    },
+    image?: string | null,
+    location?: string | null
+): Promise<void> => {
+    let latitude = null;
+    let longitude = null;
+
+    if (location) {
+        const parts = location.split(',');
+        if (parts.length >= 2) {
+            latitude = parseFloat(parts[0].trim());
+            longitude = parseFloat(parts[1].trim());
+        }
+    }
+
+    const body = {
+        room_id: roomId,
+        message,
+        image_path: image,
+        latitude,
+        longitude,
+        role: 'human',
+    };
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const response = await fetch(`${API_URL}/chat/rooms/${roomId}/ask/stream`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        callbacks.onError?.(response.statusText);
+        return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) return;
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE 라인 파싱
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+                const data = JSON.parse(line.slice(6));
+                if (data.token) {
+                    callbacks.onToken(data.token);
+                } else if (data.step) {
+                    callbacks.onStep(data.step, data.status);
+                } else if (data.done) {
+                    callbacks.onDone(data.full_message || '', data.message_id, data.created_at);
+                }
+            } catch {
+                // JSON 파싱 실패 무시
+            }
+        }
+    }
+};
+
 export const fetchCurrentUser = async (): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/users/me`, { cache: 'no-store' });
     return response.json();

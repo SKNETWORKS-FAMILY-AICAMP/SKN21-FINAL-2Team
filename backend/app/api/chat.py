@@ -1,5 +1,7 @@
 import re
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
@@ -211,3 +213,108 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     db.refresh(ai_message)
     
     return ai_message
+
+
+
+
+# 대화하기 — SSE 스트리밍
+@router.post("/rooms/{room_id}/ask/stream")
+async def ask_chat_stream(
+    room_id: int,
+    message_in: ChatMessageCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # 채팅방 확인
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    # User Message 저장
+    user_message = ChatMessage(
+        room_id=room_id,
+        message=message_in.message,
+        role=RoleType.human,
+        latitude=message_in.latitude,
+        longitude=message_in.longitude,
+        image_path=message_in.image_path,
+        bookmark_yn=False,
+    )
+    db.add(user_message)
+    db.commit()
+
+    # 방 제목 자동 설정
+    if not room.title or room.title.lower() == "new chat":
+        room.title = _make_room_title(message_in.message)
+        db.add(room)
+        db.commit()
+
+    # 사용자 선호도
+    prefs_info = _build_user_preferences(current_user)
+
+    inputs = {
+        "user_input": message_in.message,
+        "user_id": current_user.id,
+        "room_id": room_id,
+        "latitude": message_in.latitude,
+        "longitude": message_in.longitude,
+        "image_path": message_in.image_path,
+        "prefs_info": prefs_info,
+        "messages": [HumanMessage(content=message_in.message)],
+    }
+    config = {"configurable": {"thread_id": f"room_{room_id}"}}
+
+    async def event_generator():
+        full_answer = ""
+        in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
+        try:
+            graph_app = await get_graph_app()
+            # 그래프에서 노드 이름을 동적으로 가져옴 (__start__, __end__ 등 내부 노드 제외)
+            graph_nodes = {name for name in graph_app.nodes if not name.startswith("__")}
+            async for event in graph_app.astream_events(inputs, config=config, version="v2"):
+                kind = event.get("event", "")
+                name = event.get("name", "")
+
+                # 노드 시작/종료 이벤트
+                if kind == "on_chain_start" and name in graph_nodes:
+                    yield f"data: {json.dumps({'step': name, 'status': 'start'})}\n\n"
+                    if name in ("executor", "executor_missing"):
+                        in_executor = True
+                elif kind == "on_chain_end" and name in graph_nodes:
+                    yield f"data: {json.dumps({'step': name, 'status': 'done'})}\n\n"
+                    if name in ("executor", "executor_missing"):
+                        in_executor = False
+
+                # LLM 토큰 스트리밍 (executor 노드의 LLM만)
+                elif kind == "on_chat_model_stream" and in_executor:
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        full_answer += chunk.content
+                        yield f"data: {json.dumps({'token': chunk.content})}\n\n"
+
+        except Exception as e:
+            print(f"[ChatAPI] Stream error in room_id {room_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            if not full_answer:
+                full_answer = "죄송합니다. 오류가 발생했습니다."
+                yield f"data: {json.dumps({'token': full_answer})}\n\n"
+
+        # AI 메시지 DB 저장
+        if not full_answer:
+            full_answer = "죄송합니다. 답변을 생성하지 못했습니다."
+
+        ai_message = ChatMessage(
+            room_id=room_id,
+            message=full_answer,
+            role=RoleType.ai,
+            image_path=None,
+            bookmark_yn=False,
+        )
+        db.add(ai_message)
+        db.commit()
+        db.refresh(ai_message)
+
+        yield f"data: {json.dumps({'done': True, 'message_id': ai_message.id, 'created_at': ai_message.created_at.isoformat()})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

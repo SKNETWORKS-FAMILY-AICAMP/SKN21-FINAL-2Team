@@ -210,16 +210,22 @@ async def executor_node(state: TravelState):
         human_message
     ])
 
-    response = await llm.ainvoke(prompt.invoke({
+    prompt_value = prompt.invoke({
         "messages": messages,
         "user_input": user_input,
         "slots_info": slots_info,
         "prefs_info": prefs_info,
         "context_block": context_block,
         "data_notice": data_notice,
-    }))
+    })
 
-    answer = response.content
+    # astream을 사용하여 토큰 단위 스트리밍 (astream_events가 자동 캡처)
+    full_content = ""
+    async for chunk in llm.astream(prompt_value):
+        if chunk.content:
+            full_content += chunk.content
+
+    answer = full_content
     print(f"[Executor] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}

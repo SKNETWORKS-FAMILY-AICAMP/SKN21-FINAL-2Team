@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { createRoom, fetchRoom, fetchRooms, sendChatMessage, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken } from "@/services/api";
+import { createRoom, fetchRoom, fetchRooms, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken } from "@/services/api";
+import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,8 +20,12 @@ export function ChatHome() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [showPipeline, setShowPipeline] = useState(false);
+    const [pipelineSteps, setPipelineSteps] = useState<PipelineSteps>(createInitialPipelineSteps());
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
+    const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -108,31 +113,82 @@ export function ChatHome() {
         const userText = inputText;
         setInputText("");
         setIsTyping(true);
+        setIsStreaming(true);
+        setShowPipeline(true);
+        setPipelineSteps(createInitialPipelineSteps());
+
+        // Optimistically add user message
+        const optimisticUserMsg: ChatMessage = {
+            id: Date.now(),
+            room_id: currentRoomId,
+            message: userText,
+            role: "human",
+            created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, optimisticUserMsg]);
+
+        // AI 메시지를 빈 상태로 미리 추가 (토큰이 올 때마다 업데이트)
+        const streamingId = Date.now() + 1;
+        setStreamingMsgId(streamingId);
+        const placeholderAiMsg: ChatMessage = {
+            id: streamingId,
+            room_id: currentRoomId,
+            message: "",
+            role: "ai",
+            created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, placeholderAiMsg]);
 
         try {
-            // Optimistically add user message to UI
-            const optimisticUserMsg: ChatMessage = {
-                id: Date.now(),
-                room_id: currentRoomId,
-                message: userText,
-                role: "human",
-                created_at: new Date().toISOString(),
-            };
-            setMessages((prev) => [...prev, optimisticUserMsg]);
-
-            // Call API
-            const botResponseMsg = await sendChatMessage(currentRoomId, userText);
-
-            // The backend returns the bot's message. 
-            // We should reload the room to ensure we have the persistent IDs, or just append it.
-            // Appending is faster.
-            setMessages((prev) => [...prev, botResponseMsg]);
-
+            await sendChatMessageStream(currentRoomId, userText, {
+                onToken: (token) => {
+                    // 첫 토큰 수신 시 파이프라인 숨김
+                    setShowPipeline(false);
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === streamingId
+                                ? { ...m, message: m.message + token }
+                                : m
+                        )
+                    );
+                },
+                onStep: (step, status) => {
+                    // executor의 done은 무시 → 첫 토큰 도착까지 "답변 생성 중" 유지
+                    if ((step === "executor" || step === "executor_missing") && status === "done") return;
+                    // 백엔드 "start" → 프론트 "running" 매핑
+                    const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
+                    setPipelineSteps((prev) => ({
+                        ...prev,
+                        [step]: mappedStatus,
+                    }));
+                },
+                onDone: (_fullMessage, messageId, createdAt) => {
+                    // 서버에서 확정된 ID와 타임스탬프로 교체
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === streamingId
+                                ? { ...m, id: messageId, created_at: createdAt || m.created_at }
+                                : m
+                        )
+                    );
+                    setStreamingMsgId(null);
+                },
+                onError: (err) => {
+                    console.error("Stream error", err);
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === streamingId
+                                ? { ...m, message: "죄송합니다. 오류가 발생했습니다." }
+                                : m
+                        )
+                    );
+                },
+            });
         } catch (error) {
             console.error("Failed to send message", error);
-            // Optionally, show an error message in the UI
         } finally {
             setIsTyping(false);
+            setIsStreaming(false);
         }
     };
 
@@ -190,56 +246,70 @@ export function ChatHome() {
                     </div>
                 )}
 
-                {messages.map((msg) => (
+                {messages.map((msg) => {
+                    // 스트리밍 중 빈 AI 메시지는 숨김 (파이프라인만 보이도록)
+                    if (isStreaming && msg.id === streamingMsgId && !msg.message && showPipeline) {
+                        return null;
+                    }
+                    // 스트리밍 중 빈 AI 메시지는 숨김 (토큰 도착 후 보임)
+                    if (isStreaming && msg.id === streamingMsgId && !msg.message) {
+                        return null;
+                    }
+
+                    return (
+                        <motion.div
+                            key={msg.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`flex items-end gap-3 ${msg.role === "human" ? "flex-row-reverse" : "flex-row"}`}
+                        >
+                            <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.role === "human" ? "bg-gray-900" : "bg-black"}`}>
+                                {msg.role === "human" ? (
+                                    userProfile?.profile_picture ? (
+                                        <img src={userProfile.profile_picture} className="w-full h-full object-cover rounded-full grayscale" alt="User" />
+                                    ) : (
+                                        <User size={14} />
+                                    )
+                                ) : (
+                                    <span className="font-serif italic text-sm">T</span>
+                                )}
+                            </div>
+                            <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.role === "human" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
+                                {(() => {
+                                    if (msg.role === "ai") {
+                                        return (
+                                            <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {msg.message}
+                                                </ReactMarkdown>
+                                            </div>
+                                        );
+                                    }
+                                    return <div className="whitespace-pre-wrap">{msg.message}</div>;
+                                })()}
+                                <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.role === "human" ? "text-gray-400 text-right" : "text-gray-400"}`}>
+                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                            </div>
+                        </motion.div>
+                    );
+                })}
+
+                {/* 파이프라인 진행 표시 — messages.map과 독립적으로 표시 */}
+                {showPipeline && (
                     <motion.div
-                        key={msg.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`flex items-end gap-3 ${msg.role === "human" ? "flex-row-reverse" : "flex-row"}`}
+                        exit={{ opacity: 0 }}
+                        className="flex items-start gap-3"
                     >
-                        <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.role === "human" ? "bg-gray-900" : "bg-black"}`}>
-                            {msg.role === "human" ? (
-                                userProfile?.profile_picture ? (
-                                    <img src={userProfile.profile_picture} className="w-full h-full object-cover rounded-full grayscale" alt="User" />
-                                ) : (
-                                    <User size={14} />
-                                )
-                            ) : (
-                                <span className="font-serif italic text-sm">T</span>
-                            )}
-                        </div>
-                        <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.role === "human" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
-                            {(() => {
-                                if (msg.role === "ai") {
-                                    return (
-                                        <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                {msg.message}
-                                            </ReactMarkdown>
-                                        </div>
-                                    );
-                                }
-                                return <div className="whitespace-pre-wrap">{msg.message}</div>;
-                            })()}
-                            <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.role === "human" ? "text-gray-400 text-right" : "text-gray-400"}`}>
-                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-
-                {isTyping && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-end gap-3">
                         <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-black text-white shadow-sm">
                             <span className="font-serif italic text-sm">T</span>
                         </div>
-                        <div className="bg-white border border-gray-100 p-4 rounded-[24px] rounded-bl-sm flex gap-1 shadow-sm">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                        </div>
+                        <PipelineProgress steps={pipelineSteps} visible={true} />
                     </motion.div>
                 )}
+
                 <div ref={messagesEndRef} />
             </div>
 
