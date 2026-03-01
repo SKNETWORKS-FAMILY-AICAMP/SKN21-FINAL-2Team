@@ -183,8 +183,9 @@ JWT 인증 및 Google OAuth 처리를 담당합니다.
 1. 채팅방 소유권 확인 & 사용자 메시지 DB 저장
 2. LangGraph `astream_events()` 로 그래프 실행
 3. 노드 진행 이벤트 전송: `{"step": "intent", "status": "start/done"}`
-4. LLM 토큰 스트리밍: `{"token": "..."}`
-5. AI 메시지 DB 저장 후 완료 이벤트: `{"done": true, "message_id": ...}`
+4. Intent 노드 종료 시 `summary_query`로 채팅방 제목 자동 업데이트 (기본값인 경우에만)
+5. LLM 토큰 스트리밍: `{"token": "..."}`
+6. AI 메시지 DB 저장 후 완료 이벤트: `{"done": true, "message_id": ..., "room_title": "..."}`
 
 ---
 

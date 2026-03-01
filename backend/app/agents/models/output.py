@@ -36,6 +36,7 @@ class IntentOutput(BaseModel):
     intents: List[IntentType]
     primary_intent: IntentType
     slots: IntentSlots
+    summary_query: str = Field(description="사용자의 질문 내용을 15자 이내로 요약한 문장")
 
 # # Planner Output
 class PlannerItineraryItem(BaseModel):

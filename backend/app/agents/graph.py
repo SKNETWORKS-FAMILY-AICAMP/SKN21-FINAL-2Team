@@ -47,3 +47,4 @@ if __name__ == '__main__':
     # inputs = {"user_input": "I want to go to Jeju next week with my friend for healing."}
     # result = app.invoke(inputs)
     # print(result.get("answer"))
+

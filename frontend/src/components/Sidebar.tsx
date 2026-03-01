@@ -5,7 +5,7 @@ import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchRooms, fetchCurrentUser, ChatRoom, logoutApi } from "@/services/api";
+import { fetchRooms, fetchCurrentUser, ChatRoom, logoutApi, createRoom } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
 
 interface UserProfile {
@@ -102,8 +102,20 @@ export function Sidebar() {
 
         fetchSidebarData();
 
+        // ChatHome에서 방 생성/제목 변경 시 목록 갱신
+        const onRoomsUpdated = async () => {
+            try {
+                const roomsData = await fetchRooms();
+                setRooms(roomsData || []);
+            } catch (e) {
+                console.error("Failed to refresh rooms", e);
+            }
+        };
+        window.addEventListener("triver:rooms-updated", onRoomsUpdated);
+
         return () => {
             window.removeEventListener("triver:language", onLang);
+            window.removeEventListener("triver:rooms-updated", onRoomsUpdated);
         };
     }, []);
 
@@ -191,7 +203,16 @@ export function Sidebar() {
                 {/* New Chat Button */}
                 <div className={cn("pt-2", actuallyCollapsed ? "flex justify-center" : "")}>
                     <button
-                        onClick={() => router.push("/chatbot")}
+                        onClick={async () => {
+                            try {
+                                const newRoom = await createRoom("새로운 여행 계획");
+                                setRooms((prev) => [newRoom, ...prev]);
+                                router.push(`/chatbot?roomId=${newRoom.id}`);
+                            } catch (e) {
+                                console.error("Failed to create room from sidebar", e);
+                                router.push("/chatbot");
+                            }
+                        }}
                         className={cn(
                             "flex items-center transition-all duration-300 group bg-black text-white hover:bg-gray-800 shadow-md",
                             actuallyCollapsed

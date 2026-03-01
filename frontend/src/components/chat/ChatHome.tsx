@@ -102,6 +102,10 @@ export function ChatHome() {
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
+            // Sidebar에 방 목록 변경 알림
+            window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+            // URL 업데이트
+            router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
             console.error("Failed to create a new room", error);
         }
@@ -173,6 +177,13 @@ export function ChatHome() {
                     );
                     setStreamingMsgId(null);
                 },
+                onRoomTitle: (roomTitle) => {
+                    // Intent 완료 직후 즉시 제목 업데이트 (파이프라인 완료 전)
+                    setRooms(prev => prev.map(r =>
+                        r.id === currentRoomId ? { ...r, title: roomTitle } : r
+                    ));
+                    window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+                },
                 onError: (err) => {
                     console.error("Stream error", err);
                     setMessages((prev) =>
@@ -215,12 +226,8 @@ export function ChatHome() {
             <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
                 <div>
                     <h2 className="text-xl font-serif font-medium text-gray-900 flex items-center gap-2">
-                        New Trip Planning <Sparkles size={14} className="text-gray-400" />
+                        {currentRoomId && rooms.find(r => r.id === currentRoomId)?.title || "New Trip Planning"} <Sparkles size={14} className="text-gray-400" />
                     </h2>
-                    <p className="text-xs text-gray-400 font-medium tracking-wide flex items-center gap-2 mt-1">
-                        <span>Current Room: {currentRoomId && rooms.find(r => r.id === currentRoomId)?.title || "새 채팅"}</span>
-                        <button onClick={handleCreateNewRoom} className="px-2 py-0.5 border border-gray-200 rounded-md hover:bg-gray-50 text-[10px]">새로 시작</button>
-                    </p>
                 </div>
                 <div className="flex -space-x-2">
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>

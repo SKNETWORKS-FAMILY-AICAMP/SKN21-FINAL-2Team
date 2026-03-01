@@ -164,11 +164,8 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     db.add(user_message)
     db.commit()
     
-    # 방 제목 자동 설정 (없거나 기본값일 때)
-    if not room.title or room.title.lower() == "new chat":
-        room.title = _make_room_title(message_in.message)
-        db.add(room)
-        db.commit()
+    # 방 제목 자동 설정 (초기값인 경우에만)
+    # 아래 graph_app.ainvoke 결과에서 summary_query를 받아와서 업데이트하도록 이동
 
     # Backend에서 사용자 선호도 조회 후 LLM에 전달
     prefs_info = _build_user_preferences(current_user)
@@ -194,6 +191,14 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         result = await graph_app.ainvoke(inputs, config=config)
         print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
+        
+        # 방 제목 자동 설정 (기본값인 경우에만 요약된 제목으로 업데이트)
+        summary_query = result.get("summary_query")
+        if summary_query and (not room.title or room.title == "새로운 여행 계획"):
+            room.title = summary_query
+            db.add(room)
+            db.commit()
+            db.refresh(room)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
         import traceback
@@ -243,11 +248,7 @@ async def ask_chat_stream(
     db.add(user_message)
     db.commit()
 
-    # 방 제목 자동 설정
-    if not room.title or room.title.lower() == "new chat":
-        room.title = _make_room_title(message_in.message)
-        db.add(room)
-        db.commit()
+    # 방 제목 자동 설정 로직은 스트림 이벤트를 통해 처리하도록 이동
 
     # 사용자 선호도
     prefs_info = _build_user_preferences(current_user)
@@ -284,6 +285,20 @@ async def ask_chat_stream(
                     yield f"data: {json.dumps({'step': name, 'status': 'done'})}\n\n"
                     if name in ("executor", "executor_missing"):
                         in_executor = False
+                    
+                    # Intent 노드 종료 시점에 summary_query로 제목 즉시 업데이트
+                    if name == "intent":
+                        output = event.get("data", {}).get("output")
+                        if output and "summary_query" in output:
+                            summary_query = output["summary_query"]
+                            if summary_query and (not room.title or room.title == "새로운 여행 계획"):
+                                room.title = summary_query
+                                db.add(room)
+                                db.commit()
+                                db.refresh(room)
+                                print(f"[ChatAPI] Room title updated to: {summary_query}")
+                                # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
+                                yield f"data: {json.dumps({'room_title': room.title})}\n\n"
 
                 # LLM 토큰 스트리밍 (executor 노드의 LLM만)
                 elif kind == "on_chat_model_stream" and in_executor:
@@ -291,6 +306,7 @@ async def ask_chat_stream(
                     if chunk and hasattr(chunk, "content") and chunk.content:
                         full_answer += chunk.content
                         yield f"data: {json.dumps({'token': chunk.content})}\n\n"
+
 
         except Exception as e:
             print(f"[ChatAPI] Stream error in room_id {room_id}: {e}")
@@ -315,6 +331,6 @@ async def ask_chat_stream(
         db.commit()
         db.refresh(ai_message)
 
-        yield f"data: {json.dumps({'done': True, 'message_id': ai_message.id, 'created_at': ai_message.created_at.isoformat()})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'message_id': ai_message.id, 'created_at': ai_message.created_at.isoformat(), 'room_title': room.title})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

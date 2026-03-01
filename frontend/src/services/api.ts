@@ -243,7 +243,8 @@ export const sendChatMessageStream = async (
     callbacks: {
         onToken: (token: string) => void;
         onStep: (step: string, status: string) => void;
-        onDone: (fullMessage: string, messageId: number, createdAt: string) => void;
+        onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string) => void;
+        onRoomTitle?: (roomTitle: string) => void;
         onError?: (error: string) => void;
     },
     image?: string | null,
@@ -311,8 +312,11 @@ export const sendChatMessageStream = async (
                     callbacks.onToken(data.token);
                 } else if (data.step) {
                     callbacks.onStep(data.step, data.status);
+                } else if (data.room_title && !data.done) {
+                    // Intent 완료 직후 즉시 전송되는 제목 업데이트
+                    callbacks.onRoomTitle?.(data.room_title);
                 } else if (data.done) {
-                    callbacks.onDone(data.full_message || '', data.message_id, data.created_at);
+                    callbacks.onDone(data.full_message || '', data.message_id, data.created_at, data.room_title);
                 }
             } catch {
                 // JSON 파싱 실패 무시

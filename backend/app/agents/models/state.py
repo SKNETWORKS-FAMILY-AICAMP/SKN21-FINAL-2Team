@@ -16,12 +16,13 @@ class TravelState(TypedDict, total=False):
     # 대화 관리
     user_input: str
     messages: Annotated[List[BaseMessage], add_messages]
-    summary_messages: str
+    summary_message: str
     
     # intent
     intents: List[IntentType]
     primary_intent: IntentType
     slots: IntentSlots
+    summary_query: str
     user_preferences: Dict[str, Any]           # 선호도 조사
     prefs_info: str
     

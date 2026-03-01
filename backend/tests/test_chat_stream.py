@@ -77,7 +77,7 @@ async def _mock_astream_events(*args, **kwargs):
     """LangGraph astream_events를 모킹 — 노드 이벤트 + LLM 토큰"""
     # intent 노드
     yield {"event": "on_chain_start", "name": "intent", "data": {}}
-    yield {"event": "on_chain_end", "name": "intent", "data": {}}
+    yield {"event": "on_chain_end", "name": "intent", "data": {"output": {"summary_query": "요약된 제목"}}}
 
     # retriever 노드
     yield {"event": "on_chain_start", "name": "retriever", "data": {}}
@@ -98,6 +98,7 @@ async def _mock_astream_events(*args, **kwargs):
 def _get_mock_graph_app():
     mock_app = AsyncMock()
     mock_app.astream_events = _mock_astream_events
+    mock_app.nodes = {"intent": None, "planner": None, "retriever": None, "executor": None, "executor_missing": None}
     return mock_app
 
 
@@ -196,6 +197,34 @@ async def test_done_event_with_message_id(user_and_room):
             assert last_data.get("done") is True
             assert "message_id" in last_data
             assert isinstance(last_data["message_id"], int)
+            assert "room_title" in last_data
+
+@pytest.mark.asyncio
+async def test_room_title_updated_to_summary(user_and_room):
+    """첫 질문 시 방 제목이 요약본으로 업데이트되는지 확인"""
+    user, room, token, db = user_and_room
+    # 초기 제목 설정
+    room.title = "새로운 여행 계획"
+    db.add(room)
+    db.commit()
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            
+            # DB에서 제목 확인
+            db.refresh(room)
+            assert room.title == "요약된 제목"
+            
+            # 마지막 이벤트에서도 확인
+            lines = response.text.strip().split("\n\n")
+            last_data = json.loads(lines[-1][6:])
+            assert last_data["room_title"] == "요약된 제목"
 
 
 @pytest.mark.asyncio

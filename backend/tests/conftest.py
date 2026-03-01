@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database.connection import get_db, Base
 from app.models.user import User
-from app.models.chat import ChatSession, ChatMessage
+from app.models.chat import ChatRoom, ChatMessage
 from app.models.prefer import Prefer
 from app.models.enums import GenderType, BoolType, RoleType
 
