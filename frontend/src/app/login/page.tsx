@@ -35,11 +35,13 @@ export default function LoginPage() {
         if (email) localStorage.setItem("user_email", email);
 
         // is_join 기반 라우팅
-        if (is_join) {
-          router.push("/chatbot");          // 기존 사용자 → 채팅
-        } else {
-          router.push("/signup/profile");   // 신규 사용자 → 추가정보 입력
-        }
+        const user = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/users/me`, {
+          headers: { "Authorization": `Bearer ${access_token}` }
+        }).then(r => r.json());
+
+        const { getPostLoginPath } = await import("@/services/api");
+        const targetPath = getPostLoginPath(user);
+        router.push(targetPath);
 
       } catch (error) {
         console.error("Login Failed:", error);

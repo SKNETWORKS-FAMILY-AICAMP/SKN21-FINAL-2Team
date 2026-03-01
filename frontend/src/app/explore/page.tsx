@@ -40,8 +40,51 @@ const CONTENTS = [
 ];
 
 import { Sidebar } from "@/components/Sidebar";
+import { fetchCategoryPlaces, fetchCurrentUser, type CategoryPlaceItem, type UserProfile } from "@/services/api";
+import { useEffect, useState } from "react";
 
 export default function ExplorePage() {
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [yourChoices, setYourChoices] = useState<{
+        restaurants: CategoryPlaceItem[];
+        tourist: CategoryPlaceItem[];
+        activities: CategoryPlaceItem[];
+    }>({
+        restaurants: [],
+        tourist: [],
+        activities: [],
+    });
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const initExplore = async () => {
+            setIsLoading(true);
+            try {
+                // 1. 사용자 정보 가져오기
+                const user = await fetchCurrentUser();
+                setUserProfile(user);
+
+                // 2. 사용자 취향 기반 추천 장소 가져오기
+                // (일단 이름이나 기본적인 취향 텍스트가 없으면 "추천"으로 호출)
+                const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
+                const data = await fetchCategoryPlaces(userPrefs);
+
+                // 3. UI 카테고리에 맞게 매핑
+                setYourChoices({
+                    restaurants: data["음식점"] || [],
+                    tourist: data["문화시설"] || [],
+                    activities: data["축제공연행사"] || [],
+                });
+            } catch (error) {
+                console.error("Failed to fetch explore data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        initExplore();
+    }, []);
+
     return (
         <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
             {/* Sidebar */}
@@ -63,7 +106,9 @@ export default function ExplorePage() {
                                     <h3 className="text-2xl font-serif font-medium text-gray-900 flex items-center gap-2">
                                         Your Choices <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
-                                    <p className="text-xs text-gray-400 mt-1">Curated recommendations based on your preferences</p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {userProfile?.name ? `${userProfile.name}님을 위한 맞춤 여행지` : "Curated recommendations based on your preferences"}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400 border border-gray-100 rounded-full px-3 py-1">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -73,77 +118,85 @@ export default function ExplorePage() {
 
                             {/* Scrollable Content */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-6 z-10">
-                                {/* Section 1: Restaurants */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                            🍽️ Local Eats
-                                        </h4>
-                                        <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
+                                {isLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        {YOUR_CHOICES.restaurants.map((item) => (
-                                            <motion.div key={item.id} whileHover={{ y: -3 }} className="group cursor-pointer">
-                                                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
-                                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                        <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.rating}
-                                                    </div>
-                                                </div>
-                                                <h5 className="text-sm font-medium text-gray-900 leading-tight">{item.name}</h5>
-                                                <p className="text-[11px] text-gray-400">{item.category}</p>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </div>
+                                ) : (
+                                    <>
+                                        {/* Section 1: Restaurants */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                    🍽️ Local Eats
+                                                </h4>
+                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                {yourChoices.restaurants.map((item) => (
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
+                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
+                                                            </div>
+                                                        </div>
+                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
+                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                {/* Section 2: Tourist Spots */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                            📸 Must-Visit Spots
-                                        </h4>
-                                        <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        {YOUR_CHOICES.tourist.map((item) => (
-                                            <motion.div key={item.id} whileHover={{ y: -3 }} className="group cursor-pointer">
-                                                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
-                                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                        <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.rating}
-                                                    </div>
-                                                </div>
-                                                <h5 className="text-sm font-medium text-gray-900 leading-tight">{item.name}</h5>
-                                                <p className="text-[11px] text-gray-400">{item.category}</p>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </div>
+                                        {/* Section 2: Tourist Spots */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                    📸 Must-Visit Spots
+                                                </h4>
+                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                {yourChoices.tourist.map((item) => (
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
+                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
+                                                            </div>
+                                                        </div>
+                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
+                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                {/* Section 3: Activities */}
-                                <div>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                            🎨 Unique Experiences
-                                        </h4>
-                                        <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        {YOUR_CHOICES.activities.map((item) => (
-                                            <motion.div key={item.id} whileHover={{ y: -3 }} className="group cursor-pointer">
-                                                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
-                                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                        <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.rating}
-                                                    </div>
-                                                </div>
-                                                <h5 className="text-sm font-medium text-gray-900 leading-tight">{item.name}</h5>
-                                                <p className="text-[11px] text-gray-400">{item.category}</p>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </div>
+                                        {/* Section 3: Activities */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                                    🎨 Unique Experiences
+                                                </h4>
+                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                {yourChoices.activities.map((item) => (
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
+                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
+                                                            </div>
+                                                        </div>
+                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
+                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Decorative Background */}

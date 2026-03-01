@@ -36,30 +36,41 @@ class PlaceRetriever:
         
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
-    def _build_category_filter(self, category: str = None) -> Filter | None:
+    def _build_category_filter(self, category: str = None, has_image: bool = False) -> Filter | None:
         """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
-        if not category:
+        must_conditions = []
+        must_not_conditions = []
+        
+        if category:
+            # DB에 '관광지', '음식점' 등으로 저장되어 있음
+            must_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=category)))
+            
+        if has_image:
+            # 'image' 필드가 비어있지 않은 것만 필터링
+            from qdrant_client.models import IsEmptyCondition, PayloadField
+            must_not_conditions.append(IsEmptyCondition(is_empty=PayloadField(key="image")))
+
+        if not must_conditions and not must_not_conditions:
             return None
             
-        # DB에 '관광지', '음식점' 등으로 저장되어 있음
         return Filter(
-            must=[FieldCondition(key="contenttypeid", match=MatchValue(value=category))]
+            must=must_conditions if must_conditions else None,
+            must_not=must_not_conditions if must_not_conditions else None
         )
 
-    def search_text(self, query: str, limit: int = 5, category: str = None):
+    def search_text(self, query: str, limit: int = 5, category: str = None, has_image: bool = False):
         """
         Text-based search for places (Semantic).
         Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
         """
-        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} category={category}")
+        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} category={category} has_image={has_image}")
         query_vec = self.text_model.encode(query).astype(np.float32)
         
-        query_filter = self._build_category_filter(category)
+        query_filter = self._build_category_filter(category, has_image)
 
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
             query=query_vec.tolist(),
-            using="text_vec",
             limit=limit,
             with_payload=True,
             query_filter=query_filter,

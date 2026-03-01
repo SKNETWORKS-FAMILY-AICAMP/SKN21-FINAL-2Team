@@ -44,7 +44,7 @@ export interface PreferItem {
 export const getPostLoginPath = (user: UserProfile): string => {
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    return "/chatbot";
+    return "/explore";
 };
 
 const getAuthHeaders = (): HeadersInit => {
@@ -344,6 +344,23 @@ export interface Country {
 
 export const fetchCountries = async (): Promise<Country[]> => {
     const response = await fetchWithAuth(`${API_URL}/common/countries`);
+    return response.json();
+};
+
+export interface CategoryPlaceItem {
+    contentid: string;
+    title: string;
+    address: string;
+    image_url: string;
+    score: number;
+    description: string;
+}
+
+export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<string, CategoryPlaceItem[]>> => {
+    const response = await fetchWithAuth(`${API_URL}/explore/category-places`, {
+        method: 'POST',
+        body: { user_prefs: userPrefs }
+    });
     return response.json();
 };
 

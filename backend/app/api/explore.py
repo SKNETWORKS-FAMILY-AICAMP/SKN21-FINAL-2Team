@@ -132,45 +132,32 @@ async def get_category_places(request: CategoryPlacesRequest):
     """
     사용자 취향(user_prefs)을 기반으로 카테고리별 장소 3개를 VectorDB에서 검색합니다.
     - places 컬렉션의 contenttypeid 필드로 카테고리 필터링
-    - 하이브리드 검색 (텍스트 시맨틱 + CLIP cross-modal)
     """
     retriever = PlaceRetriever.get_instance()
-    client = retriever.client
 
     results: Dict[str, List[CategoryPlaceItem]] = {}
 
     for cat in SEARCH_CATEGORIES:
         try:
-            search_results = await retriever.search_hybrid(
+            # 매번 동일한 결과가 나오지 않도록 검색 범위를 넓히고 (limit=20)
+            search_results = retriever.search_text(
                 query=request.user_prefs,
-                limit=3,
+                limit=20,
                 category=cat,
+                has_image=True
             )
 
+            # 결과 중 3개를 무작위로 샘플링
+            sampled_results = random.sample(search_results, min(3, len(search_results)))
+
             items = []
-            for res in search_results:
-                payload = res.get("payload", {})
-                pid = res.get("id")
-                score = res.get("score", 0.0)
+            for res in sampled_results:
+                payload = res.payload or {}
+                pid = res.id
+                score = res.score
 
-                # PHOTOS_COLLECTION에서 사진 1장 조회
-                image_url = ""
-                try:
-                    photos_response, _ = client.scroll(
-                        collection_name=PHOTOS_COLLECTION,
-                        scroll_filter=Filter(
-                            must=[FieldCondition(key="place_id", match=MatchValue(value=pid))]
-                        ),
-                        limit=1,
-                        with_payload=True,
-                    )
-                    if photos_response and photos_response[0].payload:
-                        image_url = photos_response[0].payload.get("image_url", "")
-                except Exception as e:
-                    print(f"[WARN] Failed to fetch photo for place_id {pid}: {e}")
-
-                if not image_url:
-                    image_url = payload.get("firstimage", "")
+                # 응답에 payload에 있는 image를 사용
+                image_url = payload.get("image", payload.get("firstimage", ""))
 
                 items.append(
                     CategoryPlaceItem(
