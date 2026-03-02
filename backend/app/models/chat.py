@@ -12,6 +12,7 @@ class ChatRoom(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String(255))
     created_at = Column(DateTime, server_default=func.now())
+    history = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
@@ -24,10 +25,26 @@ class ChatMessage(BaseModel):
     room_id = Column(Integer, ForeignKey("chat_rooms.id"))
     message = Column(Text)
     role = Column(Enum(RoleType), default=RoleType.human)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
     image_path = Column(LONGTEXT, nullable=True)
     bookmark_yn = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
     room = relationship("ChatRoom", back_populates="messages")
+    places = relationship("ChatPlace", back_populates="message")
+
+
+class ChatPlace(BaseModel):
+    __tablename__ = "chat_places"
+
+    id = Column(Integer, primary_key=True, index=True)
+    messages_id = Column(Integer, ForeignKey("chat_messages.id"))
+    place_id = Column(Integer, nullable=True)
+    name = Column(String(255), nullable=True)
+    adress = Column(String(255), nullable=True)
+    image_path = Column(String(255), nullable=True)
+    mapx = Column(Float, nullable=True)
+    mapy = Column(Float, nullable=True)
+    boomark_yn = Column(Boolean, default=False)
+
+    message = relationship("ChatMessage", back_populates="places")
+

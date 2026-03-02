@@ -22,22 +22,20 @@ Enum role_type {
   ai
 }
 
+// 2. 회원 정보
 Table country {
     code varchar [primary key]
     name varchar
 }
 
-
-// 2. 회원 정보 (국가 + 유저)
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
   name varchar
   nickname varchar
   profile_picture varchar
-  birthday date
   gender gender_type // 정의한 Enum 사용
-  country_code varchar
+  contury_code varchar
 
   // Google Login
   social_provider varchar
@@ -45,71 +43,84 @@ Table users {
   social_access_token varchar
   social_refresh_token varchar
   
-  // Survey Prefers (Updated)
-  plan_prefer_id integer
-  member_prefer_id integer
-  transport_prefer_id integer
-  age_prefer_id integer
-  vibe_prefer_id integer
-  
-  // Content Prefers (Updated)
-  movie_prefer_id integer
-  drama_prefer_id integer
-  variety_prefer_id integer
+  // 선호도 조사 및 특이사항
+  plan_prefer varchar
+  vibe_prefer varchar
+  time_prefer varchar
+  extra_prefer1 varchar
+  extra_prefer2 varchar
+  extra_prefer3 varchar
 
   is_join bool [not null, default: false]
-  is_prefer bool [not null, default: false]
-
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
 
-// 3. 선호도 마스터
-Table prefers {
-  id integer [primary key, increment]
-  category varchar // 'style', 'content' 등
-  type varchar // 'plan', 'member', 'transport', 'age', 'vibe', 'movie', 'drama', 'variety'
-  value varchar
-  image_path text
-}
-
-// 4. 채팅방 및 메시지
+// 3. 채팅방
 Table chat_rooms {
   id integer [primary key, increment]
   user_id integer
   title varchar
   created_at timestamp [default: `now()`]
+  history text
 }
 
+// 4. 채팅방 & 추천 장소
 Table chat_messages {
   id integer [primary key, increment]
   room_id integer
   message text
   role role_type [default: 'human'] // 정의한 Enum 사용
-  latitude float
-  longitude float
   image_path text
   bookmark_yn bool [not null, default: false]
   created_at timestamp [default: `now()` ]
 }
 
+Table chat_places {
+  id integer [primary key, increment]
+  messages_id integer
+  place_id integer
+  name varchar
+  adress varchar
+  image_path varchar
+  mapx float
+  mapy float
+  boomark_yn bool [not null, default: false]
+}
+
+// 5. 핫플레이스 DB
+Table hot_places {
+  id integer [primary key, increment]
+  name text
+  adress text
+  feature text
+  tag1 text
+  tag2 text
+  image_path varchar
+}
+
+// 6. 예매내역 이미지 DB
+Table reservation_list {
+  id integer [primary key, increment]
+  user_id integer
+  category varchar
+  name varchar
+  date date
+  image_path varchar
+}
+
 // --- 관계 설정 (Ref) ---
 
-// Users - Survey 선호도 연결 (1:N)
-Ref: users.plan_prefer_id > prefers.id
-Ref: users.member_prefer_id > prefers.id
-Ref: users.transport_prefer_id > prefers.id
-Ref: users.age_prefer_id > prefers.id
-Ref: users.vibe_prefer_id > prefers.id
-
-Ref: users.movie_prefer_id > prefers.id
-Ref: users.drama_prefer_id > prefers.id
-Ref: users.variety_prefer_id > prefers.id
-Ref: users.country_code > country.code
+// Users - 국적 연결 (1:N)
+Ref: users.contury_code > country.code
 
 // 채팅방 및 메시지
-Ref: chat_rooms.user_id > users.id
-Ref: chat_messages.room_id > chat_rooms.id
+Ref: users.id < chat_rooms.user_id
+Ref: chat_rooms.id < chat_messages.room_id
+Ref: chat_messages.id < chat_places.messages_id
+
+// 예약 내역
+Ref: users.id < reservation_list.user_id
 """
 
 def deploy_db_from_dbml():
@@ -225,7 +236,9 @@ def deploy_db_from_dbml():
             
             # 기존 테이블 삭제 (LangGraph 체크포인터 테이블 포함)
             tables = [
-                "chat_messages", "chat_rooms", "prefers", "users", "country",
+                "chat_places", "chat_messages", "chat_rooms",
+                "reservation_list", "hot_places",
+                "users", "country",
                 "checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"
             ]
             for table in tables:
@@ -249,13 +262,11 @@ def deploy_db_from_dbml():
             connection.commit()
             print("✅ DB 테이블이 성공적으로 생성되었습니다!")
 
-            # 기본 데이터 삽입 자동 호출
-            print("🚀 기본 데이터(prefers, country) 삽입을 시작합니다...")
+            # 기본 데이터 삽입 자동 호출 (country)
+            print("🚀 기본 데이터(country) 삽입을 시작합니다...")
             try:
-                from app.database.insert_db import insert_prefer, insert_country
-                pref_res = insert_prefer()
+                from app.database.insert_db import insert_country
                 cntry_res = insert_country()
-                print(f"   - prefers: inserted={pref_res['inserted']}, skipped={pref_res['skipped']}")
                 print(f"   - country: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
             except Exception as e:
                 print(f"⚠️ 데이터 삽입 중 경고 발생: {e}")
