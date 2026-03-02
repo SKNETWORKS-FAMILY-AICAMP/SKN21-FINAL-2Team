@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum, Float, func, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum, Float, func, Boolean, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import LONGTEXT
 
@@ -13,9 +13,12 @@ class ChatRoom(BaseModel):
     title = Column(String(255))
     created_at = Column(DateTime, server_default=func.now())
     history = Column(Text, nullable=True)
-
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
+    adult_num = Column(Integer, nullable=True)
+    child_num = Column(Integer, nullable=True)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
 
     
 class ChatMessage(BaseModel):
@@ -29,7 +32,8 @@ class ChatMessage(BaseModel):
     image_path = Column(Text().with_variant(LONGTEXT(), "mysql"), nullable=True)
     bookmark_yn = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
-
+    longitude = Column(Float, nullable=True)
+    latitude = Column(Float, nullable=True)
     room = relationship("ChatRoom", back_populates="messages")
     places = relationship("ChatPlace", back_populates="message")
 
@@ -43,8 +47,8 @@ class ChatPlace(BaseModel):
     name = Column(String(255), nullable=True)
     adress = Column(String(255), nullable=True)
     image_path = Column(String(255), nullable=True)
-    mapx = Column(Float, nullable=True)
-    mapy = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    latitude = Column(Float, nullable=True)
     boomark_yn = Column(Boolean, default=False)
 
     message = relationship("ChatMessage", back_populates="places")

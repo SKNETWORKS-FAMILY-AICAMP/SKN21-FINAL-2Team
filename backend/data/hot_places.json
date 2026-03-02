@@ -1,0 +1,234 @@
+[
+    {
+        "name": "성수동",
+        "feature": "서울의 브루클린, 브랜드 팝업스토어의 성지,팝업 체험,붉은 벽돌 카페",
+        "adress": "서울특별시 성동구 성수동",
+        "tag1": "팝업스토어",
+        "tag2": "감성카페",
+        "image_path": "hot_places/seongsudong.png"
+    },
+    {
+        "name": "한남동",
+        "feature": "프리미엄 감성과 글로벌 패션 브랜드의 조화, 디자이너 쇼룸 쇼핑, 파인 다아낭",
+        "adress": "서울특별시 용산구 한남동",
+        "tag1": "고급 식사",
+        "tag2": "리움 미술관",
+        "image_path": "hot_places/hannamdong.jpg"
+    },
+    {
+        "name": "익선동",
+        "feature": "좁은 한옥 골목 사이 화려한 상점들이 밀집,한옥 식당 데이트, 개화기 의상 체험, 운세 뽑기",
+        "adress": "서울특별시 종로구 익선동",
+        "tag1": "한복체험",
+        "tag2": "전통거리",
+        "image_path": "hot_places/ikseondong.jpg"
+    },
+    {
+        "name": "을지로",
+        "feature": "인쇄소 골목 사이 숨겨진 빈티지 가게들, 노가리 골목 야장 즐기기, 간판 없는 바 탐방",
+        "adress": "서울특별시 종로구 을지로",
+        "tag1": "힙지로",
+        "tag2": "야시장",
+        "image_path": "hot_places/Euljiro.jpg"
+    },
+    {
+        "name": "압구정 로데오",
+        "feature": "럭셔리함과 힙스터 문화의 결합, 도산공원 인근 카페 웨이팅, 편집숍 쇼핑, 북적이는 밤거리",
+        "adress": "서울특별시 강남구 압구정 로데오",
+        "tag1": "럭셔리 쇼핑",
+        "tag2": "도산공원 카페",
+        "image_path": "hot_places/apgujeong.jpg"
+    },
+    {
+        "name": "용리단길",
+        "feature": "용산역 뒤편, 이국적이고 세련된 식당가, 세계 요리 맛집 탐방, 와인 바 방문, 용산공원 방문",
+        "adress": "서울특별시 용산구 용리단길",
+        "tag1": "와인바",
+        "tag2": "용산공원",
+        "image_path": "hot_places/younglidangil.jpg"
+    },
+    {
+        "name": "홍대",
+        "feature": "거리 공연과 서브컬처, 젊음의 에너지, 버스킹 관람, 클러빙, 패션 아이템 쇼핑",
+        "adress": "서울특별시 마포구 홍대",
+        "tag1": "버스킹",
+        "tag2": "클러빙",
+        "image_path": "hot_places/hongdae.jpg"
+    },
+    {
+        "name": "여의도",
+        "feature": "한강 공원과 '더현대 서울'의 압도적 존재감, 더현대 쇼핑, 한강 라면 취식, 피크닉",
+        "adress": "서울특별시 영등포구 여의도",
+        "tag1": "피크닉",
+        "tag2": "한강 공원",
+        "image_path": "hot_places/yeauido.jpg"
+    },
+    {
+        "name": "잠실(송리단길)",
+        "feature": "석촌호수와 롯데월드타워 인근 맛집 거리, 호수 산책, 카페 투어, 롯데타워 야경 감상",
+        "adress": "서울특별시 송파구 잠실동",
+        "tag1": "석촌호수",
+        "tag2": "롯데타워",
+        "image_path": "hot_places/songlidangil.jpg"
+    },
+    {
+        "name": "연남동",
+        "feature": "경의선 숲길을 중심으로 형성된 아기자기한 골목, '연트럴파크' 산책, 소품샵 투어, 디저트 카페",
+        "adress": "서울특별시 마포구 연남동",
+        "tag1": "디저트 카페",
+        "tag2": "소품샵",
+        "image_path": "hot_places/yeonnamdong.jpg"
+    },
+    {
+        "name": "망원동",
+        "feature": "시장의 정겨움과 힙한 가게들의 공존, 망원시장 먹거리 투어, 독립 서점 구경",
+        "adress": "서울특별시 마포구 망원동",
+        "tag1": "망원시장",
+        "tag2": "독립 서점",
+        "image_path": "hot_places/mangwondong.jpg"
+    },
+    {
+        "name": "서촌",
+        "feature": "경복궁 서쪽, 낮은 한옥과 예술가적 분위기, 골목 출사, 갤러리 투어, 북살롱 방문",
+        "adress": "서울특별시 종로구 서촌",
+        "tag1": "경복궁",
+        "tag2": "갤러리",
+        "image_path": "hot_places/seochon.jpg"
+    },
+    {
+        "name": "북촌",
+        "feature": "실제 거주 한옥의 고즈넉함과 전통적 풍경, 한옥 마을 산책, 전통 문화 체험, 사진 촬영",
+        "adress": "서울특별시 종로구 북촌",
+        "tag1": "한옥마을",
+        "tag2": "전통문화",
+        "image_path": "hot_places/bukchon.jpg"
+    },
+    {
+        "name": "이태원",
+        "feature": "한국 속의 외국, 글로벌한 다양성이 있는 곳, 이색 외국 음식 탐방, 루프탑 바, 나이트라이프",
+        "adress": "서울특별시 용산구 이태원",
+        "tag1": "이색음식",
+        "tag2": "루프탑바",
+        "image_path": "hot_places/itaewon.jpg"
+    },
+    {
+        "name": "문래동",
+        "feature": "철공소 단지 안의 예술촌과 펍(Pub)들, 철공소 골목 투어, 예술가 작업실 구경, 수제맥주",
+        "adress": "서울특별시 영등포구 문래동",
+        "tag1": "철공소골목",
+        "tag2": "예술창작촌",
+        "image_path": "hot_places/mullaedong.jpg"
+    },
+    {
+        "name": "합정",
+        "feature": "홍대보다 차분한 라이브 공연과 북카페 문화, 인디 공연 관람, 독서 및 작업",
+        "adress": "서울특별시 마포구 합정",
+        "tag1": "인디공연",
+        "tag2": "조용한 카페",
+        "image_path": "hot_places/hapjeong.jpg"
+    },
+    {
+        "name": "신당동",
+        "feature": "떡볶이 타운 뒤로 생겨난 힙한 시장 상권, 중앙시장 맛집 투어, 쌀 창고 개조 카페 방문",
+        "adress": "서울특별시 중구 신당동",
+        "tag1": "떡볶이",
+        "tag2": "시장 맛집",
+        "image_path": "hot_places/sindangdong.webp"
+    },
+    {
+        "name": "인사동",
+        "feature": "한국적 정서, 전통 공예품과 찻집의 중심, 복합문화공간(안녕인사동) 구경, 갤러리 관람",
+        "adress": "서울특별시 종로구 인사동",
+        "tag1": "전통공예",
+        "tag2": "갤러리",
+        "image_path": "hot_places/insadong.jpg"
+    },
+    {
+        "name": "대학로",
+        "feature": "한국 연극과 소극장 문화의 상징, 연극 관람, 마로니에 공원 휴식, 낙산공원 야경",
+        "adress": "서울특별시 종로구 대학로",
+        "tag1": "연극",
+        "tag2": "마로니에공원",
+        "image_path": "hot_places/Daehakro.jpg"
+    },
+    {
+        "name": "광장시장",
+        "feature": "먹거리 활기가 폭발하는 전통시장의 끝판왕, 빈대떡·육회 등 노포 맛집 탐방, 시장 투어",
+        "adress": "서울특별시 종로구 광장시장",
+        "tag1": "전통시장",
+        "tag2": "노포 맛집",
+        "image_path": "hot_places/gwangjangmarket.jpg"
+    },
+    {
+        "name": "동묘",
+        "feature": "구제 옷과 빈티지 물건들의 보물찾기, 구제 의류 쇼핑, 골동품 구경, 노포 투어",
+        "adress": "서울특별시 종로구 동묘",
+        "tag1": "구제옷",
+        "tag2": "빈티지",
+        "image_path": "hot_places/dongmyo.webp"
+    },
+    {
+        "name": "DDP(동대문)",
+        "feature": "패션 중심지와 독특한 미래형 건축미, 전시 관람, 야간 쇼핑, 야경 산책",
+        "adress": "서울특별시 중구 동대문",
+        "tag1": "패션",
+        "tag2": "전시",
+        "image_path": "hot_places/ddp.jpg"
+    },
+    {
+        "name": "반포(세빛섬)",
+        "feature": "한강의 야경과 무지개 분수의 명소, 달빛무지개분수 관람, 한강 '물멍', 요트 체험",
+        "adress": "서울특별시 서초구 반포",
+        "tag1": "한강공원",
+        "tag2": "야경",
+        "image_path": "hot_places/banpo.jpg"
+    },
+    {
+        "name": "경리단길",
+        "feature": "남산 뷰를 배경으로 한 오르막길의 정취, 남산 타워 조망, 수제맥주 즐기기, 독립 매장 구경",
+        "adress": "서울특별시 용산구 경리단길",
+        "tag1": "남산뷰",
+        "tag2": "산책",
+        "image_path": "hot_places/gyeongnidanstreet.jpeg"
+    },
+    {
+        "name": "남산",
+        "feature": "서울의 랜드마크와 시티뷰 명소, 케이블카 이용, 사랑의 자물쇠, 돈가스 거리 식사",
+        "adress": "서울특별시 용산구 남산",
+        "tag1": "랜드마크",
+        "tag2": "시티뷰",
+        "image_path": "hot_places/namsan.jpg"
+    },
+    {
+        "name": "부암동",
+        "feature": "청와대 뒤편, 고요하고 맑은 예술 동네, 창의문 산책, 유명 치킨집 방문, 갤러리 투어",
+        "adress": "서울특별시 종로구 부암동",
+        "tag1": "예술동네",
+        "tag2": "조용한 산책",
+        "image_path": "hot_places/buamdong.jpg"
+    },
+    {
+        "name": "샤로수길",
+        "feature": "서울대 입구의 다양하고 가성비 좋은 골목, 이색 음식점 탐방, 소규모 술집 방문",
+        "adress": "서울특별시 관악구 샤로수길",
+        "tag1": "대학가",
+        "tag2": "가성비 맛집",
+        "image_path": "hot_places/sharosugil.jpg"
+    },
+    {
+        "name": "공릉동",
+        "feature": "'공트럴파크', 경춘선 숲길의 여유로움",
+        "adress": "서울특별시 노원구 공릉로",
+        "tag1": "폐철길 산책",
+        "tag2": "로컬 카페",
+        "image_path": "hot_places/gongneungdong.png"
+    },
+    {
+        "name": "뚝섬/자양",
+        "feature": "성수동과 연결된 한강의 신흥 핫스팟",
+        "adress": "서울특별시 광진구 뚝섬로",
+        "tag1": "한강공원",
+        "tag2": "노을명소",
+        "image_path": "hot_places/ddockseom.jpg"
+    }
+]

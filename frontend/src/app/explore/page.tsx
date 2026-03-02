@@ -6,12 +6,15 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 // --- MOCK DATA ---
 
 // 1. Hot Places (Neighborhoods) - Randomly shown, general appeal
+// ※ 아래 하드코딩 데이터는 API 연동으로 대체됨 (주석으로 보존)
+/*
 const HOT_PLACES = [
     { id: 1, name: "Hongdae", image: "https://images.unsplash.com/photo-1748696009693-a04d400d08de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMGhvbmdkYWUlMjBzdHJlZXQlMjB0cmVuZHl8ZW58MXx8fHwxNzcxOTAwMzg0fDA&ixlib=rb-4.1.0&q=80&w=1080", tags: ["#Youth", "#Busking"] },
     { id: 2, name: "Euljiro", image: "https://images.unsplash.com/photo-1711923236198-4ae03a28e436?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMGV1bGppcm8lMjB2aW50YWdlJTIwYWxsZXl8ZW58MXx8fHwxNzcxOTAwMzg0fDA&ixlib=rb-4.1.0&q=80&w=1080", tags: ["#Hipjiro", "#Vintage"] },
     { id: 3, name: "Seongsu", image: "https://images.unsplash.com/photo-1712651070043-0b8dbb843144?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMHBvcHVwJTIwc3RvcmUlMjB0cmVuZHl8ZW58MXx8fHwxNzcxOTAwMzg0fDA&ixlib=rb-4.1.0&q=80&w=1080", tags: ["#Cafe", "#Popup"] },
     { id: 4, name: "Itaewon", image: "https://images.unsplash.com/photo-1676741556435-709eaa1f872f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMGl0YWV3b24lMjBuaWdodGxpZmV8ZW58MXx8fHwxNzcxOTAwMzg0fDA&ixlib=rb-4.1.0&q=80&w=1080", tags: ["#Nightlife", "#Global"] },
 ];
+*/
 
 // 2. Your Choices (Personalized) - 3 Categories, 3 Items each
 const YOUR_CHOICES = {
@@ -40,7 +43,7 @@ const CONTENTS = [
 ];
 
 import { Sidebar } from "@/components/Sidebar";
-import { fetchCategoryPlaces, fetchCurrentUser, type CategoryPlaceItem, type UserProfile } from "@/services/api";
+import { fetchCategoryPlaces, fetchCurrentUser, fetchHotPlaces, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 import { useEffect, useState } from "react";
 
 type YourChoicesState = {
@@ -52,6 +55,7 @@ type YourChoicesState = {
 type ExploreInitPayload = {
     user: UserProfile;
     choices: YourChoicesState;
+    hotPlaces: HotPlace[];
 };
 
 let exploreInitInFlight: Promise<ExploreInitPayload> | null = null;
@@ -62,10 +66,14 @@ const EXPLORE_DEDUPE_TTL_MS = 2000;
 const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
     const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
-    const data = await fetchCategoryPlaces(userPrefs);
+    const [data, hotPlaces] = await Promise.all([
+        fetchCategoryPlaces(userPrefs),
+        fetchHotPlaces(3),
+    ]);
 
     return {
         user,
+        hotPlaces,
         choices: {
             restaurants: data["음식점"] || [],
             tourist: data["문화시설"] || [],
@@ -102,6 +110,7 @@ export default function ExplorePage() {
         tourist: [],
         activities: [],
     });
+    const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -111,6 +120,7 @@ export default function ExplorePage() {
                 const payload = await getExploreDataOnce();
                 setUserProfile(payload.user);
                 setYourChoices(payload.choices);
+                setHotPlaces(payload.hotPlaces);
             } catch (error) {
                 console.error("Failed to fetch explore data:", error);
             } finally {
@@ -173,9 +183,6 @@ export default function ExplorePage() {
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
-                                                            </div>
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -197,9 +204,6 @@ export default function ExplorePage() {
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
-                                                            </div>
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -221,9 +225,6 @@ export default function ExplorePage() {
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
-                                                                <Star size={8} className="fill-yellow-400 text-yellow-400" /> {item.score}
-                                                            </div>
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -258,20 +259,25 @@ export default function ExplorePage() {
 
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                                <div className="grid grid-cols-2 gap-3 pb-2">
-                                    {HOT_PLACES.map((place) => (
+                                <div className="grid grid-cols-3 gap-3 pb-2 h-full">
+                                    {/* API에서 불러온 핫플레이스 렌더링 */}
+                                    {hotPlaces.map((place) => (
                                         <motion.div
                                             key={place.id}
                                             whileHover={{ scale: 1.02 }}
-                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 aspect-square"
+                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
                                         >
-                                            <img src={place.image} alt={place.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0" />
+                                            <img
+                                                src={place.image_path ? `/api/static/${place.image_path}` : ""}
+                                                alt={place.name}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
+                                            />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
                                             <div className="absolute bottom-3 left-3 text-white">
                                                 <h4 className="font-bold text-sm tracking-wide">{place.name}</h4>
                                                 <div className="flex gap-1 mt-1 flex-wrap">
-                                                    {place.tags.map(tag => (
-                                                        <span key={tag} className="text-[8px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">{tag}</span>
+                                                    {[place.tag1, place.tag2].filter(Boolean).map(tag => (
+                                                        <span key={tag} className="text-[8px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">#{tag}</span>
                                                     ))}
                                                 </div>
                                             </div>

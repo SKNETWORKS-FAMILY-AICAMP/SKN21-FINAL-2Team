@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
 from app.api import auth, users, chat, prefer, common, explore
+from app.api import hot_place as hot_place_api
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation
 from app.retrieval.place import PlaceRetriever
@@ -72,8 +73,10 @@ app.add_middleware(
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# /static 경로로 uploads 디렉토리 서빙
+# /static 경로 유지 (기존 코드 호환)
 app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
+# /api/static 경로 추가 (nginx /api/ 블록을 통해 브라우저에서 접근)
+app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 # Register Routers
 app.include_router(auth.router)
@@ -82,6 +85,7 @@ app.include_router(chat.router)
 app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
+app.include_router(hot_place_api.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)

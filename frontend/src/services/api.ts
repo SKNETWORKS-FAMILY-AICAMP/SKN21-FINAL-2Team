@@ -16,17 +16,13 @@ export interface UserProfile {
     gender?: string | null;
     birthday?: string | null;
 
-    // Survey Prefers
-    plan_prefer_id?: number | null;
-    member_prefer_id?: number | null;
-    transport_prefer_id?: number | null;
-    age_prefer_id?: number | null;
-    vibe_prefer_id?: number | null;
-
-    // Content Prefers
-    movie_prefer_id?: number | null;
-    drama_prefer_id?: number | null;
-    variety_prefer_id?: number | null;
+    // Survey Prefers (선택한 값 문자열 직접 저장)
+    plan_prefer?: string | null;
+    vibe_prefer?: string | null;
+    places_prefer?: string | null;
+    extra_prefer1?: string | null;
+    extra_prefer2?: string | null;
+    extra_prefer3?: string | null;
 
     country_code?: string | null;
     is_join?: boolean | null;
@@ -34,11 +30,8 @@ export interface UserProfile {
 }
 
 export interface PreferItem {
-    id: number;
-    category?: string | null;
-    type?: string | null;
-    value?: string | null;
-    image_path?: string | null;
+    type: string;
+    value: string;
 }
 
 export const getPostLoginPath = (user: UserProfile): string => {
@@ -355,13 +348,33 @@ export const fetchCurrentUser = async (): Promise<UserProfile> => {
 };
 
 export const fetchPrefers = async (preferType?: string): Promise<PreferItem[]> => {
-    const qs = preferType ? `?type=${encodeURIComponent(preferType)}` : "";
+    const qs = preferType ? `?prefer_type=${encodeURIComponent(preferType)}` : "";
     const response = await fetchWithAuth(`${API_URL}/prefers${qs}`);
     return response.json();
 };
 
 export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/users/me`, { method: 'PATCH', body: payload });
+    return response.json();
+};
+
+export const submitSurvey = async (answers: Record<string, string>): Promise<UserProfile> => {
+    const response = await fetchWithAuth(`${API_URL}/prefers`, { method: 'PATCH', body: answers });
+    return response.json();
+};
+
+export interface HotPlace {
+    id: number;
+    name: string;
+    adress?: string | null;
+    feature?: string | null;
+    tag1?: string | null;
+    tag2?: string | null;
+    image_path?: string | null;
+}
+
+export const fetchHotPlaces = async (limit = 3): Promise<HotPlace[]> => {
+    const response = await fetchWithAuth(`${API_URL}/hot-places?limit=${limit}`);
     return response.json();
 };
 

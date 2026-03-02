@@ -99,7 +99,7 @@ def get_random_places():
                 PlaceExploreResponse(
                     contentid=str(pid),
                     title=payload.get("title", "Unknown"),
-                    address=payload.get("address", "Unknown"),
+                    address=payload.get("addr") or payload.get("address") or payload.get("road_address", "주소 없음"),
                     image_url=image_url
                 )
             )
@@ -163,7 +163,7 @@ async def get_category_places(request: CategoryPlacesRequest):
                     CategoryPlaceItem(
                         contentid=str(pid),
                         title=payload.get("title", "Unknown"),
-                        address=payload.get("address", "Unknown"),
+                        address=payload.get("addr") or payload.get("address") or payload.get("road_address", "주소 없음"),
                         image_url=image_url,
                         score=round(score, 4),
                         description=payload.get("description", "")[:200],

@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from app.database.connection import SessionLocal
-from app.models.prefer import Prefer
 from app.models.country import Country
-from app.models.country import Country
+from app.models.hot_place import HotPlace
 
+HOT_PLACE_DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "hot_places.json"
 PREFER_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "prefer"
 
 
@@ -71,137 +71,11 @@ def _iter_prefer_records() -> Iterable[dict[str, str | None]]:
                 "image_path": _pick_image_path(item, json_path),
             }
 
-def _iter_demo_survey_records() -> Iterable[dict[str, str | None]]:
-    """
-    Survey 페이지용 데모 데이터 (Vibe, Craving, Relax)
-    """
-    demo_data = [
-        # 1. 여행 계획 타입
-        {"category": "style", "type": "plan", "value": "Planning (J)", "image_path": "http://localhost:8000/static/plan/plan_yesplan.png"},
-        {"category": "style", "type": "plan", "value": "Spontaneous (P)", "image_path": "http://localhost:8000/static/plan/plan_nonplan.png"},
-
-        # 2. 여행 인원
-        {"category": "style", "type": "member", "value": "With Group", "image_path": "http://localhost:8000/static/member/member_together.png"},
-        {"category": "style", "type": "member", "value": "Solo Trip", "image_path": "http://localhost:8000/static/member/member_alone.png"},
-
-        # 3. 이동 수단
-        {"category": "style", "type": "transport", "value": "Public Transport & Walk", "image_path": "http://localhost:8000/static/transport/transport_walk.png"},
-        {"category": "style", "type": "transport", "value": "Car Rental", "image_path": "http://localhost:8000/static/transport/transport_car.png"},
-
-        # 4. 여행자 연령대
-        {"category": "style", "type": "age", "value": "Adults Only", "image_path": "http://localhost:8000/static/age/adult.png"},
-        {"category": "style", "type": "age", "value": "With Children", "image_path": "http://localhost:8000/static/age/alone.png"},
-
-        # 5. 여행 성향
-        {"category": "style", "type": "vibe", "value": "Adventure", "image_path": "http://localhost:8000/static/vibe/vibe_adventure.png"},
-        {"category": "style", "type": "vibe", "value": "Relaxation", "image_path": "http://localhost:8000/static/vibe/vibe_calm.png"},
-
-        # 6. 영화 선호 (New)
-        {"category": "content", "type": "movie", "value": "Romance", "image_path": "http://localhost:8000/static/movie/romance.png"},
-        {"category": "content", "type": "movie", "value": "Action", "image_path": "http://localhost:8000/static/movie/action.png"},
-
-        # 7. 드라마 선호 (New)
-        {"category": "content", "type": "drama", "value": "K-Drama", "image_path": "http://localhost:8000/static/drama/kdrama.png"},
-        {"category": "content", "type": "drama", "value": "American Series", "image_path": "http://localhost:8000/static/drama/us_series.png"},
-
-        # 8. 예능 선호 (New)
-        {"category": "content", "type": "variety", "value": "Talk Show", "image_path": "http://localhost:8000/static/variety/talk.png"},
-        {"category": "content", "type": "variety", "value": "Reality Show", "image_path": "http://localhost:8000/static/variety/reality.png"},
-    ]
-
-    for item in demo_data:
-        yield item
-
-
-def insert_prefer() -> dict[str, int]:
-    """
-    backend/data/prefer 하위 JSON의 items 데이터를 prefers 테이블에 삽입한다.
-    중복 기준: (type, value)
-    """
-
-    db = SessionLocal()
-    inserted = 0
-    skipped = 0
-
-    try:
-        existing = {
-            (row.type, row.value)
-            for row in db.query(Prefer.type, Prefer.value).all()
-        }
-
-        from itertools import chain
-        for record in chain(_iter_prefer_records(), _iter_demo_survey_records()):
-            key = (record["type"], record["value"])
-            if key in existing:
-                skipped += 1
-                continue
-
-            db.add(
-                Prefer(
-                    category=record["category"],
-                    type=record["type"],
-                    value=record["value"],
-                    image_path=record["image_path"],
-                )
-            )
-            existing.add(key)
-            inserted += 1
-
-        db.commit()
-        return {"inserted": inserted, "skipped": skipped}
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
 
 def insert_country() -> dict[str, int]:
     """
     기본 국가 데이터를 country 테이블에 삽입한다.
-    """
-    countries = [
-        {"code": "kr", "name": "대한민국"},
-        {"code": "us", "name": "미국"},
-        {"code": "jp", "name": "일본"},
-        {"code": "cn", "name": "중국"},
-        {"code": "fr", "name": "프랑스"},
-        {"code": "de", "name": "독일"},
-        {"code": "es", "name": "스페인"},
-        {"code": "it", "name": "이탈리아"},
-        {"code": "pt", "name": "포르투갈"},
-        {"code": "ru", "name": "러시아"},
-        {"code": "other", "name": "기타"}
-    ]
-
-    db = SessionLocal()
-    inserted = 0
-    skipped = 0
-
-    try:
-        existing = {row.code for row in db.query(Country.code).all()}
-
-        for item in countries:
-            if item["code"] in existing:
-                skipped += 1
-                continue
-
-            db.add(Country(code=item["code"], name=item["name"]))
-            existing.add(item["code"])
-            inserted += 1
-
-        db.commit()
-        return {"inserted": inserted, "skipped": skipped}
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
-
-def insert_country() -> dict[str, int]:
-    """
-    기본 국가 데이터를 country 테이블에 삽입한다.
+    중복 기준: code
     """
     countries = [
         {"code": "ko", "name": "한국"},
@@ -229,19 +103,57 @@ def insert_country() -> dict[str, int]:
     db = SessionLocal()
     inserted = 0
     skipped = 0
-
     try:
         existing = {row.code for row in db.query(Country.code).all()}
-
         for item in countries:
             if item["code"] in existing:
                 skipped += 1
                 continue
-
             db.add(Country(code=item["code"], name=item["name"]))
             existing.add(item["code"])
             inserted += 1
+        db.commit()
+        return {"inserted": inserted, "skipped": skipped}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
+
+def insert_hot_place() -> dict[str, int]:
+    """
+    backend/data/hot_places.json 파일에서 핫플레이스 데이터를 읽어
+    hot_places 테이블에 삽입한다.
+    중복 기준: name
+    """
+    if not HOT_PLACE_DATA_PATH.exists():
+        print(f"[WARN] {HOT_PLACE_DATA_PATH} 파일이 없습니다.")
+        return {"inserted": 0, "skipped": 0}
+
+    with HOT_PLACE_DATA_PATH.open("r", encoding="utf-8") as f:
+        places = json.load(f)
+
+    db = SessionLocal()
+    inserted = 0
+    skipped = 0
+    try:
+        existing = {row.name for row in db.query(HotPlace.name).all()}
+        for item in places:
+            name = item.get("name")
+            if not name or name in existing:
+                skipped += 1
+                continue
+            db.add(HotPlace(
+                name=name,
+                adress=item.get("adress"),
+                feature=item.get("feature"),
+                tag1=item.get("tag1"),
+                tag2=item.get("tag2"),
+                image_path=item.get("image_path"),
+            ))
+            existing.add(name)
+            inserted += 1
         db.commit()
         return {"inserted": inserted, "skipped": skipped}
     except Exception:
@@ -252,10 +164,10 @@ def insert_country() -> dict[str, int]:
 
 
 if __name__ == "__main__":
-    # Prefer 데이터 삽입
-    pref_res = insert_prefer()
-    print(f"[INFO] prefers insert done: inserted={pref_res['inserted']}, skipped={pref_res['skipped']}")
-
     # Country 데이터 삽입
     cntry_res = insert_country()
     print(f"[INFO] country insert done: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
+
+    # HotPlace 데이터 삽입
+    hot_res = insert_hot_place()
+    print(f"[INFO] hot_place insert done: inserted={hot_res['inserted']}, skipped={hot_res['skipped']}")

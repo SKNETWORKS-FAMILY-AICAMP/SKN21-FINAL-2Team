@@ -22,13 +22,14 @@ class User(BaseModel):
     # 선호도 조사 및 특이사항
     plan_prefer = Column(String(255), nullable=True)
     vibe_prefer = Column(String(255), nullable=True)
-    time_prefer = Column(String(255), nullable=True)
+    places_prefer = Column(String(255), nullable=True)
     extra_prefer1 = Column(String(255), nullable=True)
     extra_prefer2 = Column(String(255), nullable=True)
     extra_prefer3 = Column(String(255), nullable=True)
 
-    contury_code = Column(String(10), nullable=True, comment="ISO Country Code")
+    country_code = Column(String(10), nullable=True, comment="ISO Country Code")
     is_join = Column(Boolean, default=False)
+    is_prefer = Column(Boolean, default=False)
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
-from app.models.orm import RoleType
+from datetime import datetime, date
+from app.models.enums import RoleType
 
 class ChatMessageBase(BaseModel):
     message: str
@@ -23,16 +23,41 @@ class ChatMessageResponse(ChatMessageBase):
     class Config:
         from_attributes = True
 
+class ChatPlaceBase(BaseModel):
+    place_id: Optional[int] = None
+    name: Optional[str] = None
+    adress: Optional[str] = None
+    image_path: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    boomark_yn: Optional[bool] = False
+
+
+class ChatPlaceResponse(ChatPlaceBase):
+    id: int
+    messages_id: int
+
+    class Config:
+        from_attributes = True
+
+
 class ChatRoomBase(BaseModel):
     title: str
 
+
 class ChatRoomCreate(ChatRoomBase):
     pass
+
 
 class ChatRoomResponse(ChatRoomBase):
     id: int
     user_id: int
     created_at: datetime
+    history: Optional[str] = None
+    adult_num: Optional[int] = None
+    child_num: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     messages: List[ChatMessageResponse] = []
 
     class Config:

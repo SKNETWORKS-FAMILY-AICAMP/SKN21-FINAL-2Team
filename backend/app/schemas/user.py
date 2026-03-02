@@ -1,7 +1,8 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
-from app.models.orm import GenderType
+from app.models.enums import GenderType
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -10,18 +11,14 @@ class UserBase(BaseModel):
     profile_picture: Optional[str] = None
     gender: Optional[GenderType] = None
     birthday: Optional[datetime] = None
-    
-    # Survey Prefers
-    plan_prefer_id: Optional[int] = None
-    member_prefer_id: Optional[int] = None
-    transport_prefer_id: Optional[int] = None
-    age_prefer_id: Optional[int] = None
-    vibe_prefer_id: Optional[int] = None
 
-    # Content Prefers
-    movie_prefer_id: Optional[int] = None
-    drama_prefer_id: Optional[int] = None
-    variety_prefer_id: Optional[int] = None
+    # 선호도 조사 및 특이사항
+    plan_prefer: Optional[str] = None
+    vibe_prefer: Optional[str] = None
+    places_prefer: Optional[str] = None
+    extra_prefer1: Optional[str] = None
+    extra_prefer2: Optional[str] = None
+    extra_prefer3: Optional[str] = None
 
     country_code: Optional[str] = None
     is_join: Optional[bool] = None
@@ -33,16 +30,14 @@ class UserUpdate(BaseModel):
     nickname: Optional[str] = None
     gender: Optional[GenderType] = None
     birthday: Optional[datetime] = None
-    
-    plan_prefer_id: Optional[int] = None
-    member_prefer_id: Optional[int] = None
-    transport_prefer_id: Optional[int] = None
-    age_prefer_id: Optional[int] = None
-    vibe_prefer_id: Optional[int] = None
 
-    movie_prefer_id: Optional[int] = None
-    drama_prefer_id: Optional[int] = None
-    variety_prefer_id: Optional[int] = None
+    # 선호도 조사 및 특이사항
+    plan_prefer: Optional[str] = None
+    vibe_prefer: Optional[str] = None
+    places_prefer: Optional[str] = None
+    extra_prefer1: Optional[str] = None
+    extra_prefer2: Optional[str] = None
+    extra_prefer3: Optional[str] = None
 
     country_code: Optional[str] = None
     is_join: Optional[bool] = None

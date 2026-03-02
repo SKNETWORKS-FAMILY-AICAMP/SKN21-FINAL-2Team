@@ -22,12 +22,12 @@ Enum role_type {
   ai
 }
 
-// 2. 회원 정보
 Table country {
     code varchar [primary key]
     name varchar
 }
 
+// 2. 회원 정보
 Table users {
   id integer [primary key, increment]
   email varchar [unique, not null]
@@ -35,7 +35,7 @@ Table users {
   nickname varchar
   profile_picture varchar
   gender gender_type // 정의한 Enum 사용
-  contury_code varchar
+  country_code varchar
 
   // Google Login
   social_provider varchar
@@ -46,12 +46,13 @@ Table users {
   // 선호도 조사 및 특이사항
   plan_prefer varchar
   vibe_prefer varchar
-  time_prefer varchar
+  places_prefer varchar
   extra_prefer1 varchar
   extra_prefer2 varchar
   extra_prefer3 varchar
 
   is_join bool [not null, default: false]
+  is_prefer bool [not null, default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -63,6 +64,10 @@ Table chat_rooms {
   title varchar
   created_at timestamp [default: `now()`]
   history text
+  adult_num integer
+  child_num integer
+  start_date date
+  end_date date
 }
 
 // 4. 채팅방 & 추천 장소
@@ -74,6 +79,8 @@ Table chat_messages {
   image_path text
   bookmark_yn bool [not null, default: false]
   created_at timestamp [default: `now()` ]
+  longitude float
+  latitude float
 }
 
 Table chat_places {
@@ -83,8 +90,8 @@ Table chat_places {
   name varchar
   adress varchar
   image_path varchar
-  mapx float
-  mapy float
+  longitude float
+  latitude float
   boomark_yn bool [not null, default: false]
 }
 
@@ -112,7 +119,7 @@ Table reservation_list {
 // --- 관계 설정 (Ref) ---
 
 // Users - 국적 연결 (1:N)
-Ref: users.contury_code > country.code
+Ref: users.country_code > country.code
 
 // 채팅방 및 메시지
 Ref: users.id < chat_rooms.user_id

@@ -39,25 +39,12 @@ def _build_user_preferences(user: User) -> str:
 
     lines = []
 
-    # 여행 선호도 (Survey Prefers)
-    if user.plan_prefer and user.plan_prefer.value:
-        lines.append(f"- 📋 여행 계획 스타일: **{user.plan_prefer.value}**")
-    if user.member_prefer and user.member_prefer.value:
-        lines.append(f"- 👫 여행 멤버: **{user.member_prefer.value}**")
-    if user.transport_prefer and user.transport_prefer.value:
-        lines.append(f"- 🚗 선호 교통수단: **{user.transport_prefer.value}**")
-    if user.age_prefer and user.age_prefer.value:
-        lines.append(f"- 🎂 연령대: **{user.age_prefer.value}**")
-    if user.vibe_prefer and user.vibe_prefer.value:
-        lines.append(f"- ✨ 선호 분위기: **{user.vibe_prefer.value}**")
-
-    # 콘텐츠 선호도 (Content Prefers)
-    if user.movie_prefer and user.movie_prefer.value:
-        lines.append(f"- 🎥 좋아하는 영화: **{user.movie_prefer.value}** (촬영지 방문 희망)")
-    if user.drama_prefer and user.drama_prefer.value:
-        lines.append(f"- 📺 좋아하는 드라마: **{user.drama_prefer.value}** (드라마 촬영지 방문 희망)")
-    if user.variety_prefer and user.variety_prefer.value:
-        lines.append(f"- 📺 좋아하는 예능: **{user.variety_prefer.value}** (관련 촬영지 추천)")
+    if user.plan_prefer:
+        lines.append(f"- 📋 여행 일정 스타일: **{user.plan_prefer}**")
+    if user.vibe_prefer:
+        lines.append(f"- ✨ 선호 여행 환경: **{user.vibe_prefer}**")
+    if user.places_prefer:
+        lines.append(f"- � 관심 장소 유형: **{user.places_prefer}**")
 
     return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
 

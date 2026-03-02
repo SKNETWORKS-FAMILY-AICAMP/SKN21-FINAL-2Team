@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchPrefers, PreferItem, updateCurrentUser } from "@/services/api";
+import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
 
 type QuestionType = {
     id: string; // 'plan', 'member' ...
@@ -14,25 +14,20 @@ type QuestionType = {
 };
 
 const QUESTION_METADATA: Record<string, { title: string; description: string }> = {
-    plan: { title: "Travel Style", description: "How do you plan your trips?" },
-    member: { title: "Companions", description: "Who are you traveling with?" },
-    transport: { title: "Transportation", description: "Preferred way to move around?" },
-    age: { title: "Age Group", description: "Who is in your group?" },
-    vibe: { title: "Vibe", description: "What kind of atmosphere do you prefer?" },
-    movie: { title: "Movies", description: "Favorite movie genre?" },
-    drama: { title: "Dramas", description: "Favorite drama genre?" },
-    variety: { title: "Variety Shows", description: "Favorite variety show type?" },
+    plan_prefer: { title: "Travel Schedule", description: "How do you like to plan your trip?" },
+    vibe_prefer: { title: "Travel Vibe", description: "What kind of destination do you prefer?" },
+    places_prefer: { title: "Interests", description: "What are you most excited to explore?" },
 };
 
 // Order of questions
-const QUESTION_ORDER = ["plan", "member", "transport", "age", "vibe", "movie", "drama", "variety"];
+const QUESTION_ORDER = ["plan_prefer", "vibe_prefer", "places_prefer"];
 
 export default function PersonaSurveyPage() {
     const router = useRouter();
     const [questions, setQuestions] = useState<QuestionType[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [direction, setDirection] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, number>>({});
+    const [answers, setAnswers] = useState<Record<string, string>>({})
 
     useEffect(() => {
         fetchPrefers().then((items) => {
@@ -61,25 +56,17 @@ export default function PersonaSurveyPage() {
         }).catch(err => console.error("Failed to fetch prefers:", err));
     }, []);
 
-    const handleSelect = async (optionId: number) => {
-        const currentQ = questions[currentQuestionIndex];
-        const newAnswers = { ...answers, [currentQ.id]: optionId };
+    const handleSelect = async (optionValue: string, optionType: string) => {
+        const newAnswers = { ...answers, [optionType]: optionValue };
         setAnswers(newAnswers);
 
         if (currentQuestionIndex < questions.length - 1) {
             setDirection(1);
             setCurrentQuestionIndex((prev) => prev + 1);
         } else {
-            // Submit all answers
             try {
-                // Map answers to API payload keys (e.g., plan -> plan_prefer_id)
-                const payload: any = { is_prefer: true, is_join: true };
-                Object.entries(newAnswers).forEach(([type, id]) => {
-                    payload[`${type}_prefer_id`] = id;
-                });
-
-                await updateCurrentUser(payload);
-                router.push("/chatbot");
+                await submitSurvey(newAnswers);
+                router.push("/explore");
             } catch (e) {
                 console.error("Failed to submit survey:", e);
                 alert("Failed to save preferences.");
@@ -129,16 +116,12 @@ export default function PersonaSurveyPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                         {currentQuestion.options.map((option) => (
                             <button
-                                key={option.id}
-                                onClick={() => handleSelect(option.id)}
+                                key={option.value}
+                                onClick={() => handleSelect(option.value, questions[currentQuestionIndex].id)}
                                 className="group relative h-[400px] rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-4"
                             >
                                 <div className="absolute inset-0 bg-gray-200">
-                                    <img
-                                        src={option.image_path || ""}
-                                        alt={option.value || ""}
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter grayscale-[10%] group-hover:grayscale-0"
-                                    />
+                                    <div className="w-full h-full bg-gray-300" />
                                 </div>
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
                                 <div className="absolute bottom-0 left-0 w-full p-8 flex items-end justify-between">
