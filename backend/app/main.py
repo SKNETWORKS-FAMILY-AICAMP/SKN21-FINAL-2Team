@@ -4,18 +4,25 @@ import os                                               # 추가
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
 from app.api import auth, users, chat, prefer, common, explore
-from app.retrieval.place import PlaceRetriever
-from app.utils.llm_factory import LLMFactory
-from app.utils.error_handler import AppException, app_exception_handler
-from app.database.connection import Base, get_engine
-
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation
+from app.retrieval.place import PlaceRetriever
+from app.utils.llm_factory import LLMFactory
+from app.utils.error_handler import (
+    AppException,
+    app_exception_handler,
+    validation_exception_handler,
+    internal_exception_handler,
+    http_exception_handler,
+)
+from app.database.connection import Base, get_engine
 
 
 @asynccontextmanager
@@ -40,6 +47,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, internal_exception_handler)
 
 @app.on_event("startup")
 def startup():

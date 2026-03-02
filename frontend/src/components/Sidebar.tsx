@@ -5,10 +5,10 @@ import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchRooms, fetchCurrentUser, ChatRoom, logoutApi, createRoom } from "@/services/api";
+import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
 
-interface UserProfile {
+interface SidebarUserProfile {
     name: string;
     nickname: string;
     profile_picture: string | null;
@@ -48,18 +48,91 @@ const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
     },
 };
 
+type SidebarCacheState = {
+    userProfile: SidebarUserProfile | null;
+    rooms: ChatRoom[];
+    loaded: boolean;
+    inFlight: Promise<void> | null;
+};
+
+const sidebarCache: SidebarCacheState = {
+    userProfile: null,
+    rooms: [],
+    loaded: false,
+    inFlight: null,
+};
+
+const toSidebarUserProfile = (userData: ApiUserProfile): SidebarUserProfile => ({
+    name: userData.name || "User",
+    nickname: userData.nickname || "User",
+    profile_picture: userData.profile_picture || null,
+});
+
+const getSidebarSnapshot = () => ({
+    userProfile: sidebarCache.userProfile,
+    rooms: sidebarCache.rooms,
+});
+
+const fetchAndCacheSidebarData = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const [userData, roomsData] = await Promise.all([fetchCurrentUser(), fetchRooms()]);
+    sidebarCache.userProfile = toSidebarUserProfile(userData);
+    sidebarCache.rooms = roomsData || [];
+    sidebarCache.loaded = true;
+};
+
+const ensureSidebarDataLoaded = async () => {
+    if (sidebarCache.loaded) return;
+
+    if (!sidebarCache.inFlight) {
+        sidebarCache.inFlight = fetchAndCacheSidebarData().finally(() => {
+            sidebarCache.inFlight = null;
+        });
+    }
+
+    await sidebarCache.inFlight;
+};
+
+const refreshSidebarRooms = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const roomsData = await fetchRooms();
+    sidebarCache.rooms = roomsData || [];
+    sidebarCache.loaded = true;
+};
+
+const resetSidebarCache = () => {
+    sidebarCache.userProfile = null;
+    sidebarCache.rooms = [];
+    sidebarCache.loaded = false;
+    sidebarCache.inFlight = null;
+};
+
 export function Sidebar() {
     const router = useRouter();
     const pathname = usePathname();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [rooms, setRooms] = useState<ChatRoom[]>([]);
+    const [userProfile, setUserProfile] = useState<SidebarUserProfile | null>(() => sidebarCache.userProfile);
+    const [rooms, setRooms] = useState<ChatRoom[]>(() => sidebarCache.rooms);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [language, setLanguage] = useState<AppLanguage>("en");
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
 
+    const handleAuthFailure = (error: unknown) => {
+        if (!(error instanceof Error)) return;
+        if (error?.message === "Unauthorized" || error?.message === "Session expired") {
+            clearAuth();
+            window.location.href = "/login";
+        }
+    };
+
     useEffect(() => {
+        let cancelled = false;
+
         const applyLanguage = () => {
             const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
             if (raw === "en" || raw === "ko" || raw === "ja") {
@@ -73,47 +146,37 @@ export function Sidebar() {
         const onLang = () => applyLanguage();
         window.addEventListener("triver:language", onLang);
 
-        const fetchSidebarData = async () => {
+        const hydrateSidebar = async () => {
             try {
-                const token = localStorage.getItem("access_token");
-                if (!token) return;
+                await ensureSidebarDataLoaded();
+                if (cancelled) return;
 
-                // Load user profile and rooms in parallel
-                const userData: any = await fetchCurrentUser();
-                const roomsData = await fetchRooms();
-
-                setUserProfile({
-                    name: userData.name || "User",
-                    nickname: userData.nickname || "User",
-                    profile_picture: userData.profile_picture || null,
-                });
-
-                // Sort rooms to show the latest first if they aren't already
-                setRooms(roomsData || []);
-            } catch (error: any) {
+                const snapshot = getSidebarSnapshot();
+                setUserProfile(snapshot.userProfile);
+                setRooms(snapshot.rooms);
+            } catch (error: unknown) {
                 console.error("Failed to fetch sidebar data", error);
-                // 토큰 만료/무효 시 로그인 페이지로 리다이렉트
-                if (error?.message === "Unauthorized" || error?.message === "Session expired") {
-                    clearAuth();
-                    window.location.href = "/login";
-                }
+                handleAuthFailure(error);
             }
         };
-
-        fetchSidebarData();
+        void hydrateSidebar();
 
         // ChatHome에서 방 생성/제목 변경 시 목록 갱신
         const onRoomsUpdated = async () => {
             try {
-                const roomsData = await fetchRooms();
-                setRooms(roomsData || []);
-            } catch (e) {
-                console.error("Failed to refresh rooms", e);
+                await refreshSidebarRooms();
+                if (cancelled) return;
+                const snapshot = getSidebarSnapshot();
+                setRooms(snapshot.rooms);
+            } catch (error: unknown) {
+                console.error("Failed to refresh rooms", error);
+                handleAuthFailure(error);
             }
         };
         window.addEventListener("triver:rooms-updated", onRoomsUpdated);
 
         return () => {
+            cancelled = true;
             window.removeEventListener("triver:language", onLang);
             window.removeEventListener("triver:rooms-updated", onRoomsUpdated);
         };
@@ -131,6 +194,7 @@ export function Sidebar() {
         await logoutApi();
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
+        resetSidebarCache();
         router.push("/");
     };
 
@@ -206,7 +270,12 @@ export function Sidebar() {
                         onClick={async () => {
                             try {
                                 const newRoom = await createRoom("새로운 여행 계획");
-                                setRooms((prev) => [newRoom, ...prev]);
+                                setRooms((prev) => {
+                                    const next = [newRoom, ...prev];
+                                    sidebarCache.rooms = next;
+                                    sidebarCache.loaded = true;
+                                    return next;
+                                });
                                 router.push(`/chatbot?roomId=${newRoom.id}`);
                             } catch (e) {
                                 console.error("Failed to create room from sidebar", e);

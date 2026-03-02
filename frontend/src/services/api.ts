@@ -92,7 +92,7 @@ const refreshAccessToken = async () => {
     if (!res.ok) {
         const apiError = await parseApiError(res);
         const action = handleApiError(apiError);
-        if (action === 'redirect') return; // 이미 리다이렉트 처리됨
+        if (action === 'redirect') throw new Error('Session expired');
         throw new Error(`Refresh failed: ${apiError.error_code}`);
     }
     const data = await res.json();
@@ -122,7 +122,7 @@ const isTokenExpired = (token: string): boolean => {
 /**
  * access_token 유효성 검증 → 실패 시 refresh → 둘 다 실패 시 에러
  */
-export const verifyAndRefreshToken = async (): Promise<{ valid: boolean }> => {
+export const verifyAndRefreshToken = async (): Promise<{ valid: boolean; refreshed: boolean }> => {
     const token = safeLocalGet('access_token');
     if (!token) {
         clearAuth();
@@ -136,7 +136,7 @@ export const verifyAndRefreshToken = async (): Promise<{ valid: boolean }> => {
                 headers: { 'Authorization': `Bearer ${token}` },
                 credentials: 'include',
             });
-            if (res.ok) return { valid: true };
+            if (res.ok) return { valid: true, refreshed: false };
         } catch {
             // 네트워크 에러 → refresh 시도로 fallthrough
         }
@@ -145,7 +145,7 @@ export const verifyAndRefreshToken = async (): Promise<{ valid: boolean }> => {
     // 2) 만료 또는 검증 실패 → refresh 시도
     try {
         await refreshAccessToken();
-        return { valid: true };
+        return { valid: true, refreshed: true };
     } catch {
         clearAuth();
         throw new Error('Session expired');
@@ -154,7 +154,7 @@ export const verifyAndRefreshToken = async (): Promise<{ valid: boolean }> => {
 
 type FetchOpts = {
     method?: string;
-    body?: any;
+    body?: unknown;
     headers?: HeadersInit;
     cache?: RequestCache;
 };
@@ -270,18 +270,42 @@ export const sendChatMessageStream = async (
         role: 'human',
     };
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    const streamFetch = async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+
+        return fetch(`${API_URL}/chat/rooms/${roomId}/ask/stream`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(body),
+        });
     };
 
-    const response = await fetch(`${API_URL}/chat/rooms/${roomId}/ask/stream`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(body),
-    });
+    let response = await streamFetch();
+    if (!response.ok) {
+        const apiError = await parseApiError(response);
+        const action = handleApiError(apiError);
+
+        if (action === 'retry') {
+            try {
+                await refreshAccessToken();
+                response = await streamFetch();
+            } catch {
+                callbacks.onError?.('Session expired');
+                return;
+            }
+        } else if (action === 'redirect') {
+            callbacks.onError?.('Session expired');
+            return;
+        } else {
+            callbacks.onError?.(apiError.message || response.statusText);
+            return;
+        }
+    }
 
     if (!response.ok) {
         callbacks.onError?.(response.statusText);

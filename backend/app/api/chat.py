@@ -1,6 +1,6 @@
 import re
 import json
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -10,6 +10,7 @@ from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
 from app.schemas.chat import ChatRoomCreate, ChatRoomResponse, ChatMessageCreate, ChatMessageResponse
 from app.utils.security import get_current_user
+from app.utils.error_handler import AppException, ErrorCode
 from app.agents.graph import workflow
 from app.database.checkpointer import get_checkpointer
 
@@ -97,7 +98,7 @@ def create_room(room_in: ChatRoomCreate, current_user: User = Depends(get_curren
 def get_room_history(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
     return room
 
 # 메시지 저장
@@ -106,7 +107,7 @@ def create_message(message_in: ChatMessageCreate, current_user: User = Depends(g
     # 채팅방 소유권 확인
     room = db.query(ChatRoom).filter(ChatRoom.id == message_in.room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
-        raise HTTPException(status_code=404, detail="Room not found or permission denied")
+        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND_OR_DENIED, "Room not found or permission denied", 404)
 
     new_message = ChatMessage(
         room_id=message_in.room_id,
@@ -132,7 +133,7 @@ def update_bookmark(message_id: int, bookmark: bool, current_user: User = Depend
     ).first()
     
     if not message:
-        raise HTTPException(status_code=404, detail="Message not found or permission denied")
+        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Message not found or permission denied", 404)
     
     message.bookmark_yn = bookmark
     
@@ -149,7 +150,7 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     # 채팅방 확인
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
 
     # User Message 저장
     user_message = ChatMessage(
@@ -233,7 +234,7 @@ async def ask_chat_stream(
     # 채팅방 확인
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
+        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
 
     # User Message 저장
     user_message = ChatMessage(

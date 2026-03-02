@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Mic, User, Sparkles, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Mic, MicOff, Square, User, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRoom, fetchRoom, fetchRooms, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken } from "@/services/api";
@@ -11,6 +11,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export function ChatHome() {
+    type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+
     const searchParams = useSearchParams();
     const router = useRouter();
     const roomIdParam = searchParams.get("roomId");
@@ -26,7 +28,145 @@ export function ChatHome() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
+    const [isListening, setIsListening] = useState(false);
+    const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
+
+    const getSpeechRecognitionAPI = () =>
+        (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
+
+    const syncMicPermission = useCallback(async () => {
+        const SpeechRecognitionAPI = getSpeechRecognitionAPI();
+        if (!SpeechRecognitionAPI) {
+            setSttPermission("unsupported");
+            return;
+        }
+
+        if (!navigator.permissions?.query) {
+            setSttPermission((prev) => (prev === "unknown" || prev === "unsupported" ? "prompt" : prev));
+            return;
+        }
+
+        try {
+            const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+            if (status.state === "granted") setSttPermission("granted");
+            else if (status.state === "denied") setSttPermission("denied");
+            else setSttPermission("prompt");
+
+            if (micPermissionStatusRef.current && micPermissionStatusRef.current !== status) {
+                micPermissionStatusRef.current.onchange = null;
+            }
+            status.onchange = () => { void syncMicPermission(); };
+            micPermissionStatusRef.current = status;
+        } catch {
+            setSttPermission((prev) => (prev === "unknown" || prev === "unsupported" ? "prompt" : prev));
+        }
+    }, []);
+
+    // 음성 인식(STT) 토글 핸들러
+    const handleToggleListening = useCallback(async () => {
+        // 이미 녹음 중이면 중지
+        if (isListening && recognitionRef.current) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+            return;
+        }
+
+        // Web Speech API 지원 확인
+        const SpeechRecognitionAPI = getSpeechRecognitionAPI();
+
+        if (!SpeechRecognitionAPI) {
+            setSttPermission("unsupported");
+            alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해주세요.");
+            return;
+        }
+
+        // 녹음 시작 시점의 기존 입력 텍스트를 기준점으로 저장
+        const baseText = inputText;
+
+        // 음성 인식 시작
+        const recognition = new SpeechRecognitionAPI();
+        recognition.lang = "ko-KR";
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 1;
+        recognitionRef.current = recognition;
+
+        let finalTranscript = "";
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            setSttPermission("granted");
+        };
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+            let interim = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interim += transcript;
+                }
+            }
+            // baseText 위에 최종 + 중간 결과를 덮어쓰기 (중복 방지)
+            const separator = baseText && !baseText.endsWith(" ") ? " " : "";
+            setInputText(baseText + separator + finalTranscript + interim);
+        };
+
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+            console.error("Speech recognition error:", event.error);
+            if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+                setSttPermission("denied");
+            }
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+            recognitionRef.current = null;
+            // 최종 결과만 남기도록: 중간 결과 제거하고 baseText + finalTranscript만 유지
+            const separator = baseText && !baseText.endsWith(" ") ? " " : "";
+            setInputText((baseText + separator + finalTranscript).trim());
+        };
+
+        try {
+            recognition.start();
+        } catch (error) {
+            console.error("Speech recognition start failed:", error);
+            setIsListening(false);
+            await syncMicPermission();
+        }
+    }, [isListening, inputText, syncMicPermission]);
+
+    // 컴포넌트 언마운트 시 음성 인식 정리
+    useEffect(() => {
+        syncMicPermission();
+
+        const onFocus = () => { void syncMicPermission(); };
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                void syncMicPermission();
+            }
+        };
+
+        window.addEventListener("focus", onFocus);
+        document.addEventListener("visibilitychange", onVisibilityChange);
+
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+            const cleanupStatus = micPermissionStatusRef.current;
+            if (cleanupStatus) {
+                cleanupStatus.onchange = null;
+            }
+            window.removeEventListener("focus", onFocus);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
+    }, [syncMicPermission]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,7 +183,11 @@ export function ChatHome() {
             try {
                 // 토큰 유효성 검증 (만료 시 자동 refresh 시도)
                 try {
-                    await verifyAndRefreshToken();
+                    const auth = await verifyAndRefreshToken();
+                    if (auth.refreshed) {
+                        window.location.reload();
+                        return;
+                    }
                 } catch {
                     window.location.href = "/login";
                     return;
@@ -212,6 +356,21 @@ export function ChatHome() {
 
     const displayName = userProfile?.nickname || userProfile?.name || "User";
     const displayImage = userProfile?.profile_picture || "";
+    const micButtonClass = isListening
+        ? "text-white bg-red-500 hover:bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+        : sttPermission === "denied"
+            ? "text-red-600 bg-red-50 border border-red-200 hover:bg-red-100"
+            : sttPermission === "unsupported"
+                ? "text-gray-300 bg-gray-100 cursor-not-allowed"
+                : "text-gray-400 hover:text-black hover:bg-gray-100";
+
+    const micButtonTitle = isListening
+        ? "음성 인식 중지"
+        : sttPermission === "denied"
+            ? "마이크 권한 거부됨 - 다시 시도"
+            : sttPermission === "unsupported"
+                ? "브라우저 미지원"
+                : "음성으로 입력";
 
     if (isInitializing) {
         return (
@@ -330,8 +489,22 @@ export function ChatHome() {
                         className="w-full bg-gray-50 border-0 text-gray-900 placeholder-gray-400 text-sm rounded-[28px] px-6 py-4 pr-32 focus:outline-none focus:ring-2 focus:ring-black/5 focus:bg-white resize-none h-[60px] shadow-sm transition-all duration-300"
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        <button className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-full transition-colors">
-                            <Mic size={18} strokeWidth={1.5} />
+                        <button
+                            onClick={handleToggleListening}
+                            className={`p-2 rounded-full transition-all duration-300 relative ${micButtonClass}`}
+                            title={micButtonTitle}
+                            disabled={sttPermission === "unsupported"}
+                        >
+                            {isListening ? (
+                                <>
+                                    <Square size={14} fill="currentColor" strokeWidth={0} />
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                </>
+                            ) : sttPermission === "denied" ? (
+                                <MicOff size={18} strokeWidth={1.5} />
+                            ) : (
+                                <Mic size={18} strokeWidth={1.5} />
+                            )}
                         </button>
                         <button
                             onClick={handleSendMessage}
@@ -349,4 +522,3 @@ export function ChatHome() {
         </div>
     );
 }
-

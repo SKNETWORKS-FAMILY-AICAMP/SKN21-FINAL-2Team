@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Moon, Sun } from "lucide-react";
+import { fetchCurrentUser } from "@/services/api";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -23,7 +24,6 @@ type ProfileSettings = {
 const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
 const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 const THEME_STORAGE_KEY = "triver:theme:v1";
-
 const COUNTRIES = [
   "Korea",
   "Japan",
@@ -192,24 +192,84 @@ const I18N: Record<AppLanguage, Record<string, string>> = {
   },
 };
 
+const isAppLanguage = (value: unknown): value is AppLanguage =>
+  value === "en" || value === "ko" || value === "ja";
+
+const isThemeMode = (value: unknown): value is ThemeMode =>
+  value === "dark" || value === "light";
+
+const getStoredSettings = (): Partial<ProfileSettings> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Partial<ProfileSettings>;
+  } catch {
+    return {};
+  }
+};
+
+const getStoredLanguage = (): AppLanguage => {
+  if (typeof window === "undefined") return "en";
+  const settings = getStoredSettings();
+  if (isAppLanguage(settings.language)) return settings.language;
+  const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  return isAppLanguage(raw) ? raw : "en";
+};
+
+const getStoredTheme = (): ThemeMode => {
+  if (typeof window === "undefined") return "light";
+  const raw = localStorage.getItem(THEME_STORAGE_KEY);
+  return isThemeMode(raw) ? raw : "light";
+};
+
+const getStoredTravelPreferences = (): [string, string, string] => {
+  const defaults: [string, string, string] = ["Relaxation", "Food", "Culture"];
+  const settings = getStoredSettings();
+  const prefs = settings.travelPreferences;
+  if (
+    Array.isArray(prefs)
+    && prefs.length === 3
+    && prefs.every((x) => typeof x === "string")
+  ) {
+    return [prefs[0], prefs[1], prefs[2]];
+  }
+  return defaults;
+};
+
 export default function MyPageSettingsPage() {
   const router = useRouter();
 
   const saveNoticeTimerRef = useRef<number | null>(null);
 
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
-  const [language, setLanguage] = useState<AppLanguage>("en");
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
-  const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
-  const [bio, setBio] = useState<string>("Explorer Lvl.3");
-  const [country, setCountry] = useState<string>("Korea");
-  const [email, setEmail] = useState<string>("user@gmail.com");
-  const [travelNotes, setTravelNotes] = useState<string[]>(["Religion", "Food Allergies"]);
-  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>([
-    "Relaxation",
-    "Food",
-    "Culture",
-  ]);
+  const [language, setLanguage] = useState<AppLanguage>(() => getStoredLanguage());
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredTheme());
+  const [nickname, setNickname] = useState<string>(() => {
+    const s = getStoredSettings();
+    return typeof s.nickname === "string" ? s.nickname : "Traveling_Trivers67";
+  });
+  const [bio, setBio] = useState<string>(() => {
+    const s = getStoredSettings();
+    return typeof s.bio === "string" ? s.bio : "Explorer Lvl.3";
+  });
+  const [country, setCountry] = useState<string>(() => {
+    const s = getStoredSettings();
+    return typeof s.country === "string" ? s.country : "Korea";
+  });
+  const [email, setEmail] = useState<string>(() => {
+    const s = getStoredSettings();
+    return typeof s.email === "string" ? s.email : "user@gmail.com";
+  });
+  const [travelNotes, setTravelNotes] = useState<string[]>(() => {
+    const s = getStoredSettings();
+    return Array.isArray(s.travelNotes)
+      ? s.travelNotes.filter((x): x is string => typeof x === "string")
+      : ["Religion", "Food Allergies"];
+  });
+  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(() => getStoredTravelPreferences());
   const [saveNotice, setSaveNotice] = useState<string>("");
 
   const [deactivateOpen, setDeactivateOpen] = useState<boolean>(false);
@@ -228,41 +288,6 @@ export default function MyPageSettingsPage() {
     // Prevent duplicate selections across the 3 preference slots.
     return travelPreferences.some((v, i) => i !== slotIndex && v === opt);
   };
-
-  useEffect(() => {
-    try {
-      const savedLang = (localStorage.getItem(LANGUAGE_STORAGE_KEY) || "") as AppLanguage;
-      if (savedLang === "en" || savedLang === "ko" || savedLang === "ja") {
-        setLanguage(savedLang);
-      }
-
-      const savedTheme = (localStorage.getItem(THEME_STORAGE_KEY) || "") as ThemeMode;
-      if (savedTheme === "dark" || savedTheme === "light") {
-        setThemeMode(savedTheme);
-      }
-
-      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<ProfileSettings>;
-        if (typeof parsed.nickname === "string") setNickname(parsed.nickname);
-        if (typeof parsed.bio === "string") setBio(parsed.bio);
-        if (typeof parsed.country === "string") setCountry(parsed.country);
-        if (typeof parsed.email === "string") setEmail(parsed.email);
-        if (Array.isArray(parsed.travelNotes)) setTravelNotes(parsed.travelNotes.filter((x) => typeof x === "string"));
-        if (Array.isArray(parsed.travelPreferences) && parsed.travelPreferences.length === 3) {
-          const [a, b, c] = parsed.travelPreferences as any;
-          if (typeof a === "string" && typeof b === "string" && typeof c === "string") {
-            setTravelPreferences([a, b, c]);
-          }
-        }
-        if (parsed.language === "en" || parsed.language === "ko" || parsed.language === "ja") {
-          setLanguage(parsed.language);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   const toggleThemeMode = () => {
     setThemeMode((prev) => {
@@ -287,15 +312,7 @@ export default function MyPageSettingsPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        if (!token) return;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await fetchCurrentUser();
         if (typeof data?.profile_picture === "string") setProfilePictureUrl(data.profile_picture);
         if (typeof data?.email === "string") setEmail(data.email);
       } catch {
@@ -348,19 +365,6 @@ export default function MyPageSettingsPage() {
     const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
     const isPlaceholderEmail = (value: string) => value.trim().toLowerCase() === "user@gmail.com";
 
-    let token: string | null = null;
-    try {
-      token = localStorage.getItem("access_token");
-    } catch {
-      token = null;
-    }
-
-    if (!token) {
-      setDeactivateEmailConfirmed(false);
-      setDeactivateEmailError(t("errConfirmEmail"));
-      return;
-    }
-
     const candidates: string[] = [];
     if (typeof email === "string" && !isPlaceholderEmail(email)) candidates.push(email);
 
@@ -380,11 +384,7 @@ export default function MyPageSettingsPage() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("bad response");
-      const data = await res.json();
+      const data = await fetchCurrentUser();
       if (typeof data?.email === "string" && isValidEmail(data.email) && !isPlaceholderEmail(data.email)) {
         setEmail(data.email);
         setDeactivateEmailConfirmed(true);
@@ -460,7 +460,7 @@ export default function MyPageSettingsPage() {
 
   const onChangePreference = (index: 0 | 1 | 2, value: string) => {
     setTravelPreferences((prev) => {
-      const next: [string, string, string] = [...prev] as any;
+      const next: [string, string, string] = [prev[0], prev[1], prev[2]];
       next[index] = value;
       return next;
     });
