@@ -31,7 +31,11 @@ async def lifespan(app: FastAPI):
         PlaceRetriever.get_instance()
         
         # LLM 및 Tavily 인스턴스 초기화
-        LLMFactory.get_llm()
+        # 노드별 설정(temperature)에 맞춰 자주 쓰는 조합을 미리 워밍업
+        LLMFactory.get_llm(temperature=0.0)  # intent/summarizer
+        LLMFactory.get_llm(temperature=0.3)  # planner/missing
+        LLMFactory.get_llm(temperature=0.5)  # executor
+        LLMFactory.get_llm(temperature=0.7)  # executor
         LLMFactory.get_tavily()
         
         print("[INFO] All models loaded successfully.")
