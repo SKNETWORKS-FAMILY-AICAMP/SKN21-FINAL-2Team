@@ -2,6 +2,7 @@ from app.utils.security import create_access_token
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
 from unittest.mock import patch
+from app.models.enums import RoleType
 
 def get_auth_headers(email="chat@example.com"):
     token = create_access_token(email)
@@ -48,13 +49,13 @@ def test_get_session_messages(client, db):
     db.add(user)
     db.commit()
     
-    session = ChatSession(user_id=user.id, title="Test Session")
+    session = ChatRoom(user_id=user.id, title="Test Session")
     db.add(session)
     db.commit()
     
     # Add messages
-    msg1 = ChatMessage(room_id=session.id, message="Hello", role="human")
-    msg2 = ChatMessage(room_id=session.id, message="Hi there", role="ai")
+    msg1 = ChatMessage(room_id=session.id, message="Hello", role=RoleType.human)
+    msg2 = ChatMessage(room_id=session.id, message="Hi there", role=RoleType.ai)
     db.add_all([msg1, msg2])
     db.commit()
     

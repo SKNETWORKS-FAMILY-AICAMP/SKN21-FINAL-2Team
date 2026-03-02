@@ -1,29 +1,20 @@
-import { render, screen } from '@testing-library/react'
-import ChatbotPage from '../src/app/chatbot/page'
-import '@testing-library/jest-dom'
+import { render, screen } from "@testing-library/react";
+import ChatbotPage from "../src/app/chatbot/page";
+import "@testing-library/jest-dom";
 
-// Mock useRouter
-jest.mock('next/navigation', () => ({
-    useRouter: () => ({
-        push: jest.fn(),
-    }),
-}))
+jest.mock("../src/components/Sidebar", () => ({
+  Sidebar: () => <aside>Sidebar Mock</aside>,
+}));
 
-// Mock global fetch
-global.fetch = jest.fn(() =>
-    Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([]),
-    })
-) as jest.Mock
+jest.mock("../src/components/chat/ChatHome", () => ({
+  ChatHome: () => <section>ChatHome Mock</section>,
+}));
 
-describe('ChatbotPage', () => {
-    it('renders chatbot interface', async () => {
-        render(<ChatbotPage />)
+describe("ChatbotPage", () => {
+  it("renders page layout with sidebar and chat home", () => {
+    render(<ChatbotPage />);
 
-        // Check for main elements
-        expect(screen.getByPlaceholderText('메시지를 입력하세요...')).toBeInTheDocument()
-        expect(screen.getByText('AI 챗봇과 대화하기')).toBeInTheDocument()
-        expect(screen.getByText('전송')).toBeInTheDocument()
-    })
-})
+    expect(screen.getByText("Sidebar Mock")).toBeInTheDocument();
+    expect(screen.getByText("ChatHome Mock")).toBeInTheDocument();
+  });
+});

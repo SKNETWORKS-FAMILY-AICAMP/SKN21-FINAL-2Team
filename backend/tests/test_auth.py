@@ -14,7 +14,7 @@ def test_login_google_success(client):
     }
     
     with patch("app.api.auth.verify_google_auth_code", return_value=mock_auth_result):
-        response = client.post("/api/auth/google", json={"code": "valid_auth_code"})
+        response = client.post("/api/auth/google/callback", json={"code": "valid_auth_code"})
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -24,7 +24,7 @@ def test_login_google_success(client):
 def test_login_google_failure(client):
     # Mock failure
     with patch("app.api.auth.verify_google_auth_code", return_value=None):
-        response = client.post("/api/auth/google", json={"code": "invalid_code"})
+        response = client.post("/api/auth/google/callback", json={"code": "invalid_code"})
         assert response.status_code == 400
 
 def test_refresh_token(client, db):
@@ -35,8 +35,8 @@ def test_refresh_token(client, db):
     db.commit()
     
     # 2. Get a valid refresh token directly from helper (or login first)
-    from app.core.security import create_refresh_token
-    token = create_refresh_token(data={"sub": "test@example.com"})
+    from app.utils.security import create_refresh_token
+    token = create_refresh_token("test@example.com")
     
     # 3. Call refresh endpoint
     response = client.post("/api/auth/refresh", json={"refresh_token": token})

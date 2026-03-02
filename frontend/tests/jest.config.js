@@ -1,5 +1,9 @@
 import path from 'path'
-import nextJest from 'next/jest'
+import { fileURLToPath } from 'url'
+import nextJest from 'next/jest.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const createJestConfig = nextJest({
     dir: path.join(__dirname, '../'),

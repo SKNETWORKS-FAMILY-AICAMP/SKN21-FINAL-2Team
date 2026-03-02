@@ -43,13 +43,61 @@ import { Sidebar } from "@/components/Sidebar";
 import { fetchCategoryPlaces, fetchCurrentUser, type CategoryPlaceItem, type UserProfile } from "@/services/api";
 import { useEffect, useState } from "react";
 
+type YourChoicesState = {
+    restaurants: CategoryPlaceItem[];
+    tourist: CategoryPlaceItem[];
+    activities: CategoryPlaceItem[];
+};
+
+type ExploreInitPayload = {
+    user: UserProfile;
+    choices: YourChoicesState;
+};
+
+let exploreInitInFlight: Promise<ExploreInitPayload> | null = null;
+let latestExplorePayload: ExploreInitPayload | null = null;
+let latestExplorePayloadAt = 0;
+const EXPLORE_DEDUPE_TTL_MS = 2000;
+
+const loadExploreData = async (): Promise<ExploreInitPayload> => {
+    const user = await fetchCurrentUser();
+    const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
+    const data = await fetchCategoryPlaces(userPrefs);
+
+    return {
+        user,
+        choices: {
+            restaurants: data["음식점"] || [],
+            tourist: data["문화시설"] || [],
+            activities: data["축제공연행사"] || [],
+        },
+    };
+};
+
+const getExploreDataOnce = async (): Promise<ExploreInitPayload> => {
+    const now = Date.now();
+    if (latestExplorePayload && now - latestExplorePayloadAt < EXPLORE_DEDUPE_TTL_MS) {
+        return latestExplorePayload;
+    }
+
+    if (!exploreInitInFlight) {
+        exploreInitInFlight = loadExploreData()
+            .then((payload) => {
+                latestExplorePayload = payload;
+                latestExplorePayloadAt = Date.now();
+                return payload;
+            })
+            .finally(() => {
+                exploreInitInFlight = null;
+            });
+    }
+
+    return exploreInitInFlight;
+};
+
 export default function ExplorePage() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [yourChoices, setYourChoices] = useState<{
-        restaurants: CategoryPlaceItem[];
-        tourist: CategoryPlaceItem[];
-        activities: CategoryPlaceItem[];
-    }>({
+    const [yourChoices, setYourChoices] = useState<YourChoicesState>({
         restaurants: [],
         tourist: [],
         activities: [],
@@ -60,21 +108,9 @@ export default function ExplorePage() {
         const initExplore = async () => {
             setIsLoading(true);
             try {
-                // 1. 사용자 정보 가져오기
-                const user = await fetchCurrentUser();
-                setUserProfile(user);
-
-                // 2. 사용자 취향 기반 추천 장소 가져오기
-                // (일단 이름이나 기본적인 취향 텍스트가 없으면 "추천"으로 호출)
-                const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
-                const data = await fetchCategoryPlaces(userPrefs);
-
-                // 3. UI 카테고리에 맞게 매핑
-                setYourChoices({
-                    restaurants: data["음식점"] || [],
-                    tourist: data["문화시설"] || [],
-                    activities: data["축제공연행사"] || [],
-                });
+                const payload = await getExploreDataOnce();
+                setUserProfile(payload.user);
+                setYourChoices(payload.choices);
             } catch (error) {
                 console.error("Failed to fetch explore data:", error);
             } finally {

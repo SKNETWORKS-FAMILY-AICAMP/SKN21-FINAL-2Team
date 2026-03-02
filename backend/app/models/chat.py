@@ -26,7 +26,8 @@ class ChatMessage(BaseModel):
     role = Column(Enum(RoleType), default=RoleType.human)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    image_path = Column(LONGTEXT, nullable=True)
+    # SQLite 테스트 환경에서도 테이블 생성이 가능하도록 기본은 Text, MySQL에서는 LONGTEXT 사용
+    image_path = Column(Text().with_variant(LONGTEXT(), "mysql"), nullable=True)
     bookmark_yn = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 

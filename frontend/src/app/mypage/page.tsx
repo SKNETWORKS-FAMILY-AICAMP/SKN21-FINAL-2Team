@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { fetchCurrentUser } from "@/services/api";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -144,11 +145,19 @@ function loadJourneyChatTranscript(tripId: string): ChatTranscriptMessage[] | nu
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
     const normalized = parsed
-      .map((m: any) => ({ role: m?.role, text: m?.text }))
-      .filter(
-        (m: any): m is ChatTranscriptMessage =>
-          (m.role === "user" || m.role === "assistant") && typeof m.text === "string" && m.text.trim().length > 0,
-      );
+      .map((m): ChatTranscriptMessage | null => {
+        if (!m || typeof m !== "object") return null;
+        const item = m as { role?: unknown; text?: unknown };
+        if (
+          (item.role === "user" || item.role === "assistant")
+          && typeof item.text === "string"
+          && item.text.trim().length > 0
+        ) {
+          return { role: item.role, text: item.text };
+        }
+        return null;
+      })
+      .filter((m): m is ChatTranscriptMessage => m !== null);
     return normalized.length ? normalized : null;
   } catch {
     return null;
@@ -280,15 +289,6 @@ function JourneyDetailModal({
   title: string;
   menuLabel: string;
 }) {
-  const [phase, setPhase] = useState<"loading" | "ready">("loading");
-
-  useEffect(() => {
-    if (!open || !trip) return;
-    setPhase("loading");
-    const timeoutId = window.setTimeout(() => setPhase("ready"), 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [open, trip?.id]);
-
   const transcript = useMemo(() => {
     if (!trip) return [] as ChatTranscriptMessage[];
     const stored = loadJourneyChatTranscript(trip.id);
@@ -329,54 +329,35 @@ function JourneyDetailModal({
 
             <div className="px-6 pb-4">
               <div className="relative rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
-                <AnimatePresence mode="wait">
-                  {phase === "loading" ? (
-                    <motion.div
-                      key="loading"
-                      className="min-h-[220px]"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="absolute left-4 bottom-4">
-                        <LoadingIndicator />
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="messages"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-2"
-                    >
-                      {transcript.map((m, idx) => {
-                        const isUser = m.role === "user";
-                        return (
-                          <motion.div
-                            key={`${m.role}-${idx}-${m.text.slice(0, 12)}`}
-                            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.25, delay: idx * 0.08 }}
-                            className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                          >
-                            <div
-                              className={
-                                isUser
-                                  ? "max-w-[85%] rounded-2xl rounded-br-md bg-black text-white px-4 py-3 text-xs leading-relaxed shadow-sm"
-                                  : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 text-gray-900 px-4 py-3 text-xs leading-relaxed shadow-sm"
-                              }
-                            >
-                              <div className="whitespace-pre-wrap">{m.text}</div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-2"
+                >
+                  {transcript.map((m, idx) => {
+                    const isUser = m.role === "user";
+                    return (
+                      <motion.div
+                        key={`${m.role}-${idx}-${m.text.slice(0, 12)}`}
+                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.25, delay: idx * 0.08 }}
+                        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={
+                            isUser
+                              ? "max-w-[85%] rounded-2xl rounded-br-md bg-black text-white px-4 py-3 text-xs leading-relaxed shadow-sm"
+                              : "max-w-[85%] rounded-2xl rounded-bl-md bg-gray-100 text-gray-900 px-4 py-3 text-xs leading-relaxed shadow-sm"
+                          }
+                        >
+                          <div className="whitespace-pre-wrap">{m.text}</div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
               </div>
             </div>
 
@@ -424,15 +405,14 @@ function ReservationDetailModal({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open || !reservation) return;
-    const initial = photoUrl || reservation.reservationImageUrl || null;
-    setDraftPhotoUrl(typeof initial === "string" && initial.trim().length ? initial : null);
-  }, [open, reservation, photoUrl]);
+  const initialPhotoUrl = (typeof photoUrl === "string" && photoUrl.trim().length
+    ? photoUrl
+    : (typeof reservation?.reservationImageUrl === "string" && reservation.reservationImageUrl.trim().length
+      ? reservation.reservationImageUrl
+      : null));
 
   const categoryLabel = reservation ? getReservationCategoryLabel(reservation.category) : "Reservation";
-  const effectivePhotoUrl = draftPhotoUrl || undefined;
+  const effectivePhotoUrl = (draftPhotoUrl ?? initialPhotoUrl) || undefined;
 
   return (
     <AnimatePresence>
@@ -564,10 +544,10 @@ function ReservationDetailModal({
             </div>
 
             <div className="px-6 pb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  onSavePhoto(draftPhotoUrl);
+                <button
+                  type="button"
+                  onClick={() => {
+                  onSavePhoto(draftPhotoUrl ?? initialPhotoUrl);
                   onClose();
                 }}
                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
@@ -617,7 +597,7 @@ export default function MyPage() {
   const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
 
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
   const CALENDAR_LINKED_STORAGE_KEY = "triver:gcal-linked:v1";
 
   const t = useMemo(() => {
@@ -647,14 +627,21 @@ export default function MyPage() {
       try {
         const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
         if (!raw) return;
-        const parsed = JSON.parse(raw) as any;
+        const parsed = JSON.parse(raw) as unknown;
+        if (!parsed || typeof parsed !== "object") return;
+        const settings = parsed as {
+          nickname?: unknown;
+          bio?: unknown;
+          travelPreferences?: unknown;
+          preferences?: unknown;
+        };
 
-        const nextNickname = typeof parsed?.nickname === "string" ? parsed.nickname : undefined;
-        const nextBio = typeof parsed?.bio === "string" ? parsed.bio : undefined;
-        const nextPrefs = Array.isArray(parsed?.travelPreferences)
-          ? (parsed.travelPreferences.filter((x: unknown) => typeof x === "string") as string[])
-          : Array.isArray(parsed?.preferences)
-            ? (parsed.preferences.filter((x: unknown) => typeof x === "string") as string[])
+        const nextNickname = typeof settings.nickname === "string" ? settings.nickname : undefined;
+        const nextBio = typeof settings.bio === "string" ? settings.bio : undefined;
+        const nextPrefs = Array.isArray(settings.travelPreferences)
+          ? (settings.travelPreferences.filter((x: unknown) => typeof x === "string") as string[])
+          : Array.isArray(settings.preferences)
+            ? (settings.preferences.filter((x: unknown) => typeof x === "string") as string[])
             : undefined;
 
         setUserProfile((prev) => ({
@@ -676,23 +663,12 @@ export default function MyPage() {
 
     const fetchUserProfile = async () => {
       try {
-        const token = localStorage.getItem("access_token");
-        if (!token) return;
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/users/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUserProfile((prev) => ({
-            ...prev,
-            nickname: prev.nickname || data.nickname || data.name || "User",
-            profile_picture: data.profile_picture || prev.profile_picture || "",
-          }));
-        }
+        const data = await fetchCurrentUser();
+        setUserProfile((prev) => ({
+          ...prev,
+          nickname: prev.nickname || data.nickname || data.name || "User",
+          profile_picture: data.profile_picture || prev.profile_picture || "",
+        }));
       } catch (error) {
         console.error("Failed to fetch user profile", error);
       }
@@ -721,7 +697,7 @@ export default function MyPage() {
     onSuccess: async (codeResponse) => {
       try {
         setCalendarLinkNotice("Linking Google Calendar...");
-        const res = await fetch(`${API_BASE}/api/auth/google/callback`, {
+        const res = await fetch(`${API_BASE}/auth/google/callback`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -761,9 +737,10 @@ export default function MyPage() {
     // Keep Settings page and MyPage in sync for the prototype
     try {
       const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as any) : {};
+      const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+      const safeParsed = parsed && typeof parsed === "object" ? parsed : {};
       const next = {
-        ...parsed,
+        ...safeParsed,
         nickname,
         bio,
         // Settings page expects a fixed-length tuple, but we keep it flexible here.
@@ -1101,6 +1078,7 @@ export default function MyPage() {
       />
 
       <ReservationDetailModal
+        key={`${activeReservation?.id ?? "none"}-${activeReservation ? "open" : "closed"}`}
         open={!!activeReservation}
         reservation={activeReservation}
         photoUrl={activeReservation ? reservationPhotoById[activeReservation.id] : undefined}
@@ -1187,4 +1165,3 @@ export default function MyPage() {
     </div>
   );
 }
-

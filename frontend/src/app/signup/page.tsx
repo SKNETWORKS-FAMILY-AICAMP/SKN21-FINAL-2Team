@@ -147,7 +147,7 @@ export default function SignUpPage() {
 
           <div className="mt-6 text-[11px] text-gray-400">
             Already have an account?{" "}
-            <Button variant="link" onClick={handleLoginClick} className="font-bold text-black p-0 h-auto text-[11px]">Log in</Button>
+            <Button variant="ghost" onClick={handleLoginClick} className="font-bold text-black p-0 h-auto text-[11px]">Log in</Button>
           </div>
 
           <div className="mt-8 pt-8 border-t border-gray-100">
