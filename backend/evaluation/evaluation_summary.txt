@@ -42,3 +42,47 @@ faithfulness: 0.0970
 answer_relevancy: 0.6257
 context_precision: 0.3167
 context_recall: 0.1875
+
+------------------
+Evaluation Time: 2026-03-03 13:49:28
+mode: e2e
+limit: 1
+sample_count: 1
+--- Average Scores ---
+faithfulness: 0.0000
+answer_relevancy: 0.7039
+context_precision: 0.0000
+context_recall: 0.6667
+
+------------------
+Evaluation Time: 2026-03-03 13:55:33
+mode: e2e
+limit: 3
+sample_count: 3
+--- Average Scores ---
+faithfulness: 0.0000
+answer_relevancy: 0.5676
+context_precision: 0.0000
+context_recall: 0.4444
+
+------------------
+Evaluation Time: 2026-03-03 14:48:28
+mode: e2e
+limit: all
+sample_count: 20
+--- Average Scores ---
+faithfulness: 0.1064
+answer_relevancy: 0.5928
+context_precision: 0.1417
+context_recall: 0.1958
+
+------------------
+Evaluation Time: 2026-03-03 15:18:45
+mode: e2e
+limit: all
+sample_count: 20
+--- Average Scores ---
+faithfulness: 0.2451
+answer_relevancy: 0.5912
+context_precision: 0.2667
+context_recall: 0.2633

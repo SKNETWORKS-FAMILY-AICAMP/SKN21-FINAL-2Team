@@ -7,27 +7,27 @@ import { useRouter } from "next/navigation";
 import { fetchCountries, updateCurrentUser } from "@/services/api";
 
 export default function ProfilePage() {
+  type GenderType = "male" | "female" | "other";
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState("");
 
   // 사용자 정보 State
-  const [userInfo, setUserInfo] = useState({
-    name: "",
-    email: "",
-    picture: "",
+  const [userInfo] = useState(() => {
+    if (typeof window === "undefined") {
+      return { name: "", email: "", picture: "" };
+    }
+    return {
+      name: localStorage.getItem("user_name") || "",
+      email: localStorage.getItem("user_email") || "",
+      picture: localStorage.getItem("profile_picture") || "",
+    };
   });
   const [countries, setCountries] = useState<{ code: string, name: string }[]>([]);
   const [countryCode, setCountryCode] = useState("");
 
   useEffect(() => {
-    // localStorage에서 정보 로드
-    const name = localStorage.getItem("user_name") || "";
-    const email = localStorage.getItem("user_email") || "";
-    const picture = localStorage.getItem("profile_picture") || "";
-
-    setUserInfo({ name, email, picture });
     fetchCountries().then(setCountries).catch(console.error);
   }, []);
 
@@ -42,9 +42,10 @@ export default function ProfilePage() {
         return;
       }
 
+      const genderValue: GenderType = gender.toLowerCase() as GenderType;
       await updateCurrentUser({
         nickname,
-        gender: gender.toLowerCase() as any,
+        gender: genderValue,
         country_code: countryCode,
       });
 

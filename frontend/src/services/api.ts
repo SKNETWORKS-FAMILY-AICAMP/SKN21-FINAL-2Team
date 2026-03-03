@@ -57,11 +57,22 @@ export interface ChatMessage {
     room_id: number;
     message: string;
     role: RoleType;
-    latitude?: number | null;
-    longitude?: number | null;
+    latitude?: number;
+    longitude?: number;
     image_path?: string | null;
-    bookmark_yn?: boolean | null;
     created_at: string;
+    places?: ChatPlaceItem[];
+}
+
+export interface ChatPlaceItem {
+    id: number;
+    place_id?: number;
+    name?: string | null;
+    adress?: string | null;
+    image_path?: string | null;
+    longitude?: number;
+    latitude?: number;
+    bookmark_yn?: boolean | null;
 }
 
 export interface ChatRoom {
@@ -69,8 +80,61 @@ export interface ChatRoom {
     user_id: number;
     title: string;
     created_at: string;
+    bookmark_yn?: boolean | null;
     messages?: ChatMessage[];
 }
+
+export interface BookmarkedRoomItem {
+    id: number;
+    user_id: number;
+    title: string;
+    created_at: string;
+    bookmark_yn: boolean;
+    latest_message_preview?: string | null;
+}
+
+export interface BookmarkedPlaceItem {
+    id: number;
+    place_id?: number;
+    name?: string | null;
+    adress?: string | null;
+    image_path?: string | null;
+    longitude?: number;
+    latitude?: number;
+    bookmark_yn?: boolean | null;
+    messages_id: number;
+    room_id: number;
+    room_title: string;
+}
+
+export type AutoStartChatMode = "trip_context" | "selected_places" | "combined" | "greeting";
+
+export interface AutoStartTripContextPayload {
+    travel_duration: string;
+    adult_count: number;
+    child_count: number;
+}
+
+export interface AutoStartPlaceSeedPayload {
+    name?: string | null;
+    adress?: string | null;
+    place_id?: number;
+}
+
+export interface AutoStartChatRoomRequestPayload {
+    mode: AutoStartChatMode;
+    trip_context?: AutoStartTripContextPayload;
+    selected_places?: AutoStartPlaceSeedPayload[];
+    save_user_message?: boolean;
+}
+
+type StreamCallbacks = {
+    onToken: (token: string) => void;
+    onStep: (step: string, status: string) => void;
+    onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void;
+    onRoomTitle?: (roomTitle: string) => void;
+    onError?: (error: string) => void;
+};
 
 const refreshAccessToken = async () => {
     const refresh_token = safeLocalGet('refresh_token');
@@ -185,6 +249,44 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     return res;
 };
 
+const parseLocationToCoords = (location?: string | null): { latitude: number; longitude: number } => {
+    if (!location) return { latitude: 0, longitude: 0 };
+    const parts = location.split(',');
+    if (parts.length < 2) return { latitude: 0, longitude: 0 };
+
+    const parsedLat = parseFloat(parts[0].trim());
+    const parsedLng = parseFloat(parts[1].trim());
+    return {
+        latitude: Number.isFinite(parsedLat) ? parsedLat : 0,
+        longitude: Number.isFinite(parsedLng) ? parsedLng : 0,
+    };
+};
+
+const buildChatRequestBody = ({
+    roomId,
+    message,
+    image,
+    location,
+    saveUserMessage,
+}: {
+    roomId: number;
+    message: string;
+    image?: string | null;
+    location?: string | null;
+    saveUserMessage?: boolean;
+}) => {
+    const { latitude, longitude } = parseLocationToCoords(location);
+    return {
+        room_id: roomId,
+        message,
+        image_path: image,
+        latitude,
+        longitude,
+        role: 'human' as const,
+        ...(typeof saveUserMessage === "boolean" ? { save_user_message: saveUserMessage } : {}),
+    };
+};
+
 export const createRoom = async (title: string): Promise<ChatRoom> => {
     const response = await fetchWithAuth(`${API_URL}/chat/rooms`, { method: 'POST', body: { title } });
     return response.json();
@@ -200,31 +302,30 @@ export const fetchRoom = async (roomId: number): Promise<ChatRoom> => {
     return response.json();
 };
 
+export const updateRoomBookmark = async (roomId: number, bookmark: boolean): Promise<ChatRoom> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/bookmark?bookmark=${bookmark}`, {
+        method: 'PATCH'
+    });
+    return response.json();
+};
+
+export const fetchBookmarkedRooms = async (): Promise<BookmarkedRoomItem[]> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/bookmarks/rooms`);
+    return response.json();
+};
+
+export const fetchBookmarkedPlaces = async (): Promise<BookmarkedPlaceItem[]> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/bookmarks/places`);
+    return response.json();
+};
+
 export const sendChatMessage = async (
     roomId: number,
     message: string,
     image?: string | null,
     location?: string | null
 ): Promise<ChatMessage> => {
-    let latitude = null;
-    let longitude = null;
-
-    if (location) {
-        const parts = location.split(',');
-        if (parts.length >= 2) {
-            latitude = parseFloat(parts[0].trim());
-            longitude = parseFloat(parts[1].trim());
-        }
-    }
-
-    const body = {
-        room_id: roomId,
-        message,
-        image_path: image,
-        latitude,
-        longitude,
-        role: 'human'
-    };
+    const body = buildChatRequestBody({ roomId, message, image, location });
 
     const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/ask`, { method: 'POST', body });
     return response.json();
@@ -233,35 +334,20 @@ export const sendChatMessage = async (
 export const sendChatMessageStream = async (
     roomId: number,
     message: string,
-    callbacks: {
-        onToken: (token: string) => void;
-        onStep: (step: string, status: string) => void;
-        onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string) => void;
-        onRoomTitle?: (roomTitle: string) => void;
-        onError?: (error: string) => void;
-    },
+    callbacks: StreamCallbacks,
     image?: string | null,
-    location?: string | null
-): Promise<void> => {
-    let latitude = null;
-    let longitude = null;
-
-    if (location) {
-        const parts = location.split(',');
-        if (parts.length >= 2) {
-            latitude = parseFloat(parts[0].trim());
-            longitude = parseFloat(parts[1].trim());
-        }
+    location?: string | null,
+    options?: {
+        saveUserMessage?: boolean;
     }
-
-    const body = {
-        room_id: roomId,
+): Promise<void> => {
+    const body = buildChatRequestBody({
+        roomId,
         message,
-        image_path: image,
-        latitude,
-        longitude,
-        role: 'human',
-    };
+        image,
+        location,
+        saveUserMessage: options?.saveUserMessage ?? true,
+    });
 
     const streamFetch = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -277,7 +363,13 @@ export const sendChatMessageStream = async (
             body: JSON.stringify(body),
         });
     };
+    return streamSseRequest(streamFetch, callbacks);
+};
 
+const streamSseRequest = async (
+    streamFetch: () => Promise<Response>,
+    callbacks: StreamCallbacks
+): Promise<void> => {
     let response = await streamFetch();
     if (!response.ok) {
         const apiError = await parseApiError(response);
@@ -310,6 +402,40 @@ export const sendChatMessageStream = async (
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let receivedDone = false;
+    let lastFullMessage = '';
+    let lastMessageId = 0;
+    let lastCreatedAt = '';
+    let lastRoomTitle: string | undefined;
+    let lastPlaces: ChatPlaceItem[] | undefined;
+    const handleEvent = (rawEvent: string) => {
+        const lines = rawEvent
+            .split('\n')
+            .filter((line) => line.startsWith('data: '))
+            .map((line) => line.slice(6));
+        if (lines.length === 0) return;
+        const payload = lines.join('\n');
+        try {
+            const data = JSON.parse(payload);
+            if (data.token) {
+                callbacks.onToken(data.token);
+            } else if (data.step) {
+                callbacks.onStep(data.step, data.status);
+            } else if (data.room_title && !data.done) {
+                callbacks.onRoomTitle?.(data.room_title);
+            } else if (data.done) {
+                receivedDone = true;
+                lastFullMessage = data.full_message || '';
+                lastMessageId = Number.isFinite(Number(data.message_id)) ? Number(data.message_id) : 0;
+                lastCreatedAt = data.created_at || '';
+                lastRoomTitle = data.room_title;
+                lastPlaces = data.places;
+                callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+            }
+        } catch {
+            // JSON 파싱 실패 무시
+        }
+    };
 
     while (true) {
         const { done, value } = await reader.read();
@@ -317,29 +443,50 @@ export const sendChatMessageStream = async (
 
         buffer += decoder.decode(value, { stream: true });
 
-        // SSE 라인 파싱
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        // SSE 이벤트 단위 파싱 (event delimiter: \n\n)
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
 
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            try {
-                const data = JSON.parse(line.slice(6));
-                if (data.token) {
-                    callbacks.onToken(data.token);
-                } else if (data.step) {
-                    callbacks.onStep(data.step, data.status);
-                } else if (data.room_title && !data.done) {
-                    // Intent 완료 직후 즉시 전송되는 제목 업데이트
-                    callbacks.onRoomTitle?.(data.room_title);
-                } else if (data.done) {
-                    callbacks.onDone(data.full_message || '', data.message_id, data.created_at, data.room_title);
-                }
-            } catch {
-                // JSON 파싱 실패 무시
-            }
+        for (const rawEvent of events) {
+            handleEvent(rawEvent);
         }
     }
+
+    if (buffer.trim()) {
+        handleEvent(buffer);
+    }
+
+    // 네트워크 경계로 done 이벤트가 누락/파싱 실패한 경우를 대비한 최종 보정
+    if (!receivedDone && (lastFullMessage || lastMessageId > 0)) {
+        callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+    }
+};
+
+export const sendAutoStartChatRoomStream = async (
+    roomId: number,
+    payload: AutoStartChatRoomRequestPayload,
+    callbacks: StreamCallbacks
+): Promise<void> => {
+    const body: AutoStartChatRoomRequestPayload = {
+        ...payload,
+        save_user_message: payload.save_user_message ?? false,
+    };
+
+    const streamFetch = async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+        return fetch(`${API_URL}/chat/rooms/${roomId}/autostart/stream`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(body),
+        });
+    };
+
+    return streamSseRequest(streamFetch, callbacks);
 };
 
 export const fetchCurrentUser = async (): Promise<UserProfile> => {
@@ -415,4 +562,11 @@ export const logoutApi = async () => {
     } catch (e) {
         console.error("Logout API failed:", e);
     }
+};
+
+export const updatePlaceBookmark = async (placeId: number, bookmark: boolean): Promise<ChatPlaceItem> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/places/${placeId}/bookmark?bookmark=${bookmark}`, {
+        method: 'PATCH'
+    });
+    return response.json();
 };

@@ -35,3 +35,4 @@ class TravelState(TypedDict, total=False):
     # final
     missing_slots: List[str]                # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)
     answer: str
+    selected_ids: List[str]                 # LLM이 최종 답변에서 선택한 장소들의 contentid 목록

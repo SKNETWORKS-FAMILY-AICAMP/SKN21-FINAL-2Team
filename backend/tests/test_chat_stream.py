@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.database.connection import get_db, Base
 from app.models.user import User
-from app.models.chat import ChatRoom, ChatMessage
+from app.models.chat import ChatRoom, ChatMessage, ChatPlace
 from app.utils.security import create_access_token
 
 # ---------- fixtures ----------
@@ -81,7 +81,7 @@ async def _mock_astream_events(*args, **kwargs):
 
     # retriever 노드
     yield {"event": "on_chain_start", "name": "retriever", "data": {}}
-    yield {"event": "on_chain_end", "name": "retriever", "data": {}}
+    yield {"event": "on_chain_end", "name": "retriever", "data": {"output": {"candidates": [{"payload": {"contentid": "123", "title": "Test Place", "address": "Test Address"}}]}}}
 
     # executor 노드
     yield {"event": "on_chain_start", "name": "executor", "data": {}}
@@ -92,7 +92,7 @@ async def _mock_astream_events(*args, **kwargs):
         chunk.content = token_text
         yield {"event": "on_chat_model_stream", "name": "ChatOpenAI", "data": {"chunk": chunk}}
 
-    yield {"event": "on_chain_end", "name": "executor", "data": {}}
+    yield {"event": "on_chain_end", "name": "executor", "data": {"output": {"answer": "추천 답변입니다.", "selected_ids": ["123"]}}}
 
 
 def _get_mock_graph_app():
@@ -248,4 +248,364 @@ async def test_ai_message_saved_to_db(user_and_room):
     ).all()
 
     assert len(ai_messages) == 1
-    assert "안녕하세요" in ai_messages[0].message
+    assert "추천 답변입니다" in ai_messages[0].message
+
+
+@pytest.mark.asyncio
+async def test_stream_skip_user_message_save(user_and_room):
+    """save_user_message=False면 human 메시지를 DB에 저장하지 않는다."""
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "자동 시작", "role": "human", "save_user_message": False},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+
+    human_messages = db.query(ChatMessage).filter(
+        ChatMessage.room_id == room.id,
+        ChatMessage.role == "human",
+    ).all()
+    ai_messages = db.query(ChatMessage).filter(
+        ChatMessage.room_id == room.id,
+        ChatMessage.role == "ai",
+    ).all()
+
+    assert len(human_messages) == 0
+    assert len(ai_messages) == 1
+
+
+@pytest.mark.asyncio
+async def test_chat_place_saved_with_message(user_and_room):
+    """스트리밍 완료 후 ChatPlace가 저장되었는지 확인"""
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "장소 저장 테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            
+            last_line = response.text.strip().split("\n\n")[-1]
+            data = json.loads(last_line[6:])
+            assert "places" in data
+            assert len(data["places"]) == 1
+            assert data["places"][0]["name"] == "Test Place"
+            assert data["places"][0]["longitude"] == 0.0
+            assert data["places"][0]["latitude"] == 0.0
+
+    # DB 확인
+    from app.models.chat import ChatPlace
+    places = db.query(ChatPlace).join(ChatMessage).filter(ChatMessage.room_id == room.id).all()
+    assert len(places) == 1
+    assert places[0].name == "Test Place"
+
+
+@pytest.mark.asyncio
+async def test_update_place_bookmark(user_and_room):
+    """ChatPlace 북마크 PATCH API 동작 확인"""
+    user, room, token, db = user_and_room
+    
+    # 더미 메시지 및 장소 생성
+    msg = ChatMessage(room_id=room.id, message="test", role="ai")
+    db.add(msg)
+    db.commit()
+    
+    place = ChatPlace(messages_id=msg.id, name="Test Place", bookmark_yn=False)
+    db.add(place)
+    db.commit()
+    db.refresh(place)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 북마크 True 설정
+        response = await client.patch(
+            f"/api/chat/places/{place.id}/bookmark?bookmark=true",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["bookmark_yn"] is True
+
+        # DB 확인
+        db.refresh(place)
+        assert place.bookmark_yn is True
+
+
+@pytest.mark.asyncio
+async def test_update_room_bookmark(user_and_room):
+    """ChatRoom 북마크 PATCH API 동작 확인"""
+    user, room, token, db = user_and_room
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.patch(
+            f"/api/chat/rooms/{room.id}/bookmark?bookmark=true",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["bookmark_yn"] is True
+
+        db.refresh(room)
+        assert room.bookmark_yn is True
+
+
+@pytest.mark.asyncio
+async def test_update_room_bookmark_permission_denied(user_and_room):
+    """다른 사용자 방 북마크 변경 시 404 처리"""
+    user, room, token, db = user_and_room
+    other = User(email="other@test.com", name="Other")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_token = create_access_token(other.email)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.patch(
+            f"/api/chat/rooms/{room.id}/bookmark?bookmark=true",
+            headers={"Authorization": f"Bearer {other_token}"},
+        )
+        assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_bookmarked_rooms_returns_latest_preview(user_and_room):
+    """북마크된 방 목록과 최신 메시지 미리보기 반환 확인"""
+    user, room, token, db = user_and_room
+    room.bookmark_yn = True
+    db.add(room)
+
+    msg1 = ChatMessage(room_id=room.id, message="첫 메시지", role="human")
+    msg2 = ChatMessage(room_id=room.id, message="최신 메시지", role="ai")
+    room2 = ChatRoom(user_id=user.id, title="Not Bookmarked")
+    db.add_all([msg1, msg2, room2])
+    db.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/chat/bookmarks/rooms",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["id"] == room.id
+        assert body[0]["latest_message_preview"] == "최신 메시지"
+
+
+@pytest.mark.asyncio
+async def test_get_bookmarked_places_only_user_scope(user_and_room):
+    """북마크 장소 목록이 사용자 소유 방으로 제한되는지 확인"""
+    user, room, token, db = user_and_room
+
+    user_msg = ChatMessage(room_id=room.id, message="user msg", role="ai")
+    db.add(user_msg)
+    db.commit()
+    db.refresh(user_msg)
+    user_place = ChatPlace(messages_id=user_msg.id, name="User Place", bookmark_yn=True)
+    db.add(user_place)
+
+    other = User(email="other2@test.com", name="Other2")
+    db.add(other)
+    db.commit()
+    db.refresh(other)
+    other_room = ChatRoom(user_id=other.id, title="Other Room")
+    db.add(other_room)
+    db.commit()
+    db.refresh(other_room)
+    other_msg = ChatMessage(room_id=other_room.id, message="other msg", role="ai")
+    db.add(other_msg)
+    db.commit()
+    db.refresh(other_msg)
+    other_place = ChatPlace(messages_id=other_msg.id, name="Other Place", bookmark_yn=True)
+    db.add(other_place)
+    db.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/chat/bookmarks/places",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["name"] == "User Place"
+        assert body[0]["room_id"] == room.id
+        assert body[0]["room_title"] == room.title
+
+
+@pytest.mark.asyncio
+async def test_bookmarked_places_numeric_empty_values_are_zero(user_and_room):
+    """bookmarks/places 숫자 결측값은 0으로 정규화되어야 한다."""
+    user, room, token, db = user_and_room
+
+    msg = ChatMessage(room_id=room.id, message="msg", role="ai")
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    place = ChatPlace(
+        messages_id=msg.id,
+        place_id=None,
+        name="No Numeric",
+        longitude=None,
+        latitude=None,
+        bookmark_yn=True,
+    )
+    db.add(place)
+    db.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/chat/bookmarks/places",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["place_id"] == 0
+        assert body[0]["longitude"] == 0.0
+        assert body[0]["latitude"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_message_bookmark_route_removed(user_and_room):
+    """메시지 북마크 PATCH 라우트 제거 확인"""
+    user, room, token, db = user_and_room
+    msg = ChatMessage(room_id=room.id, message="test", role="ai")
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.patch(
+            f"/api/chat/messages/{msg.id}/bookmark?bookmark=true",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_autostart_stream_trip_context_success(user_and_room):
+    """autostart/stream(trip_context) 정상 동작"""
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/autostart/stream",
+                json={
+                    "mode": "trip_context",
+                    "trip_context": {
+                        "travel_duration": "2026-03-10 ~ 2026-03-12",
+                        "adult_count": 2,
+                        "child_count": 1,
+                    },
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+            assert response.headers["content-type"].startswith("text/event-stream")
+            lines = response.text.strip().split("\n\n")
+            last_data = json.loads(lines[-1][6:])
+            assert last_data.get("done") is True
+
+
+@pytest.mark.asyncio
+async def test_autostart_stream_selected_places_place_id_zero_becomes_unknown(user_and_room):
+    """selected_places에서 place_id=0이면 unknown 텍스트로 프롬프트 생성"""
+    user, room, token, db = user_and_room
+    captured = {"user_input": ""}
+
+    async def _mock_astream_events_capture(inputs, *args, **kwargs):
+        captured["user_input"] = inputs.get("user_input", "")
+        async for event in _mock_astream_events(*args, **kwargs):
+            yield event
+
+    mock_app = AsyncMock()
+    mock_app.astream_events = _mock_astream_events_capture
+    mock_app.nodes = {"intent": None, "planner": None, "retriever": None, "executor": None, "executor_missing": None}
+
+    with patch("app.api.chat.get_graph_app", return_value=mock_app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/autostart/stream",
+                json={
+                    "mode": "selected_places",
+                    "selected_places": [
+                        {"name": "테스트 장소", "adress": "서울", "place_id": 0}
+                    ],
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+
+    assert "ID: unknown" in captured["user_input"]
+
+
+@pytest.mark.asyncio
+async def test_autostart_stream_validation_errors(user_and_room):
+    """mode별 필수 payload 누락 시 400"""
+    user, room, token, db = user_and_room
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response_trip = await client.post(
+            f"/api/chat/rooms/{room.id}/autostart/stream",
+            json={"mode": "trip_context"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response_trip.status_code == 400
+
+        response_places = await client.post(
+            f"/api/chat/rooms/{room.id}/autostart/stream",
+            json={"mode": "selected_places", "selected_places": []},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response_places.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_autostart_stream_default_skip_user_message_save(user_and_room):
+    """autostart 기본값(save_user_message=False)일 때 human 메시지 미저장"""
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/autostart/stream",
+                json={
+                    "mode": "trip_context",
+                    "trip_context": {
+                        "travel_duration": "2026-03-10 ~ 2026-03-12",
+                        "adult_count": 1,
+                        "child_count": 0,
+                    },
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+
+    human_messages = db.query(ChatMessage).filter(
+        ChatMessage.room_id == room.id,
+        ChatMessage.role == "human",
+    ).all()
+    ai_messages = db.query(ChatMessage).filter(
+        ChatMessage.room_id == room.id,
+        ChatMessage.role == "ai",
+    ).all()
+    assert len(human_messages) == 0
+    assert len(ai_messages) == 1

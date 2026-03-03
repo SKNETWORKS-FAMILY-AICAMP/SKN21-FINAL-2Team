@@ -45,7 +45,7 @@ class PlannerItineraryItem(BaseModel):
     time_slot: str = Field(description="morning | afternoon | evening")
     activity: str = Field(description="활동 설명")
     search_query: str = Field(description="장소 검색용 키워드")
-    category: str = Field(description="관광지 | 음식점 | 카페 | 숙소 | 체험 | 쇼핑 | 기타")
+    category: str = Field(description="관광지 | 문화시설 | 축제공연행사 | 레포츠 | 숙박 | 음식점")
 
 
 class PlannerOutput(BaseModel):

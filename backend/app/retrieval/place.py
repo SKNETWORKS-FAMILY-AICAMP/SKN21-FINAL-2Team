@@ -16,6 +16,24 @@ from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
 
 
+def _normalize_place_id(value):
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if text.isdigit():
+        return int(text)
+    return text
+
+
+def _extract_place_id(point, source_collection: str):
+    payload = point.payload or {}
+    if source_collection == PHOTOS_COLLECTION:
+        return _normalize_place_id(payload.get("contentid") or payload.get("place_id"))
+    return _normalize_place_id(point.id)
+
+
 class PlaceRetriever:
     _instance = None
     CATEGORY_NORMALIZATION_MAP = {
@@ -54,22 +72,6 @@ class PlaceRetriever:
             return None
         normalized = self.CATEGORY_NORMALIZATION_MAP.get(str(category).strip())
         return normalized
-
-    def _normalize_place_id(self, value):
-        if value is None:
-            return None
-        if isinstance(value, int):
-            return value
-        text = str(value).strip()
-        if text.isdigit():
-            return int(text)
-        return text
-
-    def _extract_place_id(self, point, source_collection: str):
-        payload = point.payload or {}
-        if source_collection == PHOTOS_COLLECTION:
-            return self._normalize_place_id(payload.get("contentid") or payload.get("place_id"))
-        return self._normalize_place_id(point.id)
 
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
@@ -191,7 +193,7 @@ class PlaceRetriever:
 
         def collect_hits(hits, weight, match_type, source_collection):
             for rank, h in enumerate(hits, start=1):
-                pid = self._extract_place_id(h, source_collection)
+                pid = _extract_place_id(h, source_collection)
                 if pid is None:
                     continue
 
@@ -392,6 +394,14 @@ async def retrieval_place(message_in: ChatMessageCreate):
         
         formatted_results = []
         search_ids = []
+        photo_url_map = {}
+        if search_results:
+            photo_url_map = await _fetch_photo_urls_by_contentids(
+                retriever=retriever,
+                content_ids=[res.get("id") for res in search_results],
+                per_place=3,
+            )
+
         if search_results:            
             formatted_results.append(f"### 🔎 Search Results (Hybrid Fusion)")
             for i, res in enumerate(search_results):
@@ -407,15 +417,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
                 desc = payload.get('description', '')
                 addr = payload.get('address', '')
                 emo_desc = payload.get('emotional_description', '')
-                
-                # PHOTOS_COLLECTION에서 place_id가 일치하는 사진들을 가져옴
-                photos_response, _ = retriever.client.scroll(
-                    collection_name=PHOTOS_COLLECTION,
-                    scroll_filter=Filter(must=[FieldCondition(key="contentid", match=MatchValue(value=str(rid)))]),
-                    limit=5,
-                    with_payload=True
-                )
-                photo_urls = [p.payload.get("image_url") for p in photos_response if p.payload.get("image_url")]
+                photo_urls = photo_url_map.get(str(rid), [])
 
                 print(f"[DEBUG] retrieval_place result[{i}] id={rid} title='{title}' matches={matches}")
                 match_str = ", ".join(matches)
@@ -476,3 +478,56 @@ async def retrieval_place(message_in: ChatMessageCreate):
         all_results.extend(nearby_places)
         
     return context_str, all_results
+
+
+async def _fetch_photo_urls_by_contentids(
+    retriever: PlaceRetriever,
+    content_ids: list,
+    per_place: int = 3,
+    scroll_limit: int = 200,
+) -> dict[str, list[str]]:
+    wanted_ids = {str(cid) for cid in content_ids if cid is not None}
+    if not wanted_ids:
+        return {}
+
+    should_conditions = [
+        FieldCondition(key="contentid", match=MatchValue(value=cid))
+        for cid in wanted_ids
+    ]
+    scroll_filter = Filter(should=should_conditions)
+
+    photo_map = {cid: [] for cid in wanted_ids}
+    offset = None
+
+    while True:
+        points, offset = await asyncio.to_thread(
+            retriever.client.scroll,
+            collection_name=PHOTOS_COLLECTION,
+            scroll_filter=scroll_filter,
+            limit=scroll_limit,
+            with_payload=True,
+            with_vectors=False,
+            offset=offset,
+        )
+
+        for point in points:
+            payload = point.payload or {}
+            cid = str(payload.get("contentid", "")).strip()
+            if not cid or cid not in wanted_ids:
+                continue
+
+            url = payload.get("image_url") or payload.get("image")
+            if not url:
+                continue
+
+            current_urls = photo_map[cid]
+            if url not in current_urls and len(current_urls) < per_place:
+                current_urls.append(url)
+
+        if offset is None:
+            break
+
+        if all(len(photo_map[cid]) >= per_place for cid in wanted_ids):
+            break
+
+    return photo_map

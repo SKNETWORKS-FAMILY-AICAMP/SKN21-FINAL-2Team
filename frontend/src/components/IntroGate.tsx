@@ -10,13 +10,14 @@ type IntroGateProps = {
 };
 
 export default function IntroGate({ children }: IntroGateProps) {
-  const [show, setShow] = useState(true);
+  const [show, setShow] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !localStorage.getItem(STORAGE_KEY);
+  });
   const initialOverflow = useRef<string | null>(null);
 
   useEffect(() => {
-    const played = localStorage.getItem(STORAGE_KEY);
-    if (played) {
-      setShow(false);
+    if (!show) {
       return;
     }
     initialOverflow.current = document.body.style.overflow || "";
@@ -27,7 +28,7 @@ export default function IntroGate({ children }: IntroGateProps) {
         document.body.style.overflow = initialOverflow.current;
       }
     };
-  }, []);
+  }, [show]);
 
   const handleDone = () => {
     localStorage.setItem(STORAGE_KEY, "1");

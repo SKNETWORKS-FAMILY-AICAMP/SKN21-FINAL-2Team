@@ -3,7 +3,7 @@
 import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare } from "lucide-react";
 import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
@@ -115,6 +115,7 @@ const resetSidebarCache = () => {
 export function Sidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [userProfile, setUserProfile] = useState<SidebarUserProfile | null>(() => sidebarCache.userProfile);
     const [rooms, setRooms] = useState<ChatRoom[]>(() => sidebarCache.rooms);
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -124,6 +125,9 @@ export function Sidebar() {
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
+    const activeRoomIdParam = searchParams.get("roomId");
+    const parsedActiveRoomId = activeRoomIdParam ? Number(activeRoomIdParam) : NaN;
+    const activeRoomId = Number.isFinite(parsedActiveRoomId) ? parsedActiveRoomId : null;
 
     const handleAuthFailure = (error: unknown) => {
         if (!(error instanceof Error)) return;
@@ -205,12 +209,16 @@ export function Sidebar() {
                 sidebarCache.loaded = true;
                 return next;
             });
-            if (context.travelDuration || context.groupSize) {
+            if ((context.travelDuration || "").trim()) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
                     JSON.stringify(context)
                 );
+            } else {
+                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
+            setShowTripModal(false);
+            setIsTripLoading(false);
             // router.push 이후 페이지가 전환되면 컴포넌트가 unmount되므로
             // setShowTripModal(false)를 수동초출할 필요 없음
             router.push(`/chatbot?roomId=${newRoom.id}`);
@@ -322,19 +330,30 @@ export function Sidebar() {
                 {!actuallyCollapsed ? (
                     <div className="pt-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                         <nav className="space-y-0.5">
-                            {rooms.map((room) => (
-                                <button
-                                    key={room.id}
-                                    onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 truncate",
-                                        "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-                                    )}
-                                >
-                                    <MessageSquare size={14} className="flex-shrink-0 opacity-50" />
-                                    <span className="truncate">{room.title}</span>
-                                </button>
-                            ))}
+                            {rooms.map((room) => {
+                                const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
+                                return (
+                                    <button
+                                        key={room.id}
+                                        onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
+                                        className={cn(
+                                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 truncate",
+                                            isActiveRoom
+                                                ? "bg-gray-100 text-black"
+                                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                        )}
+                                    >
+                                        <MessageSquare
+                                            size={14}
+                                            className={cn(
+                                                "flex-shrink-0",
+                                                isActiveRoom ? "text-black opacity-100" : "opacity-50"
+                                            )}
+                                        />
+                                        <span className="truncate">{room.title}</span>
+                                    </button>
+                                );
+                            })}
                         </nav>
                     </div>
                 ) : (

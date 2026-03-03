@@ -1,14 +1,56 @@
 from typing import Dict, Any, List
-from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage, HumanMessage
 from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
-from app.utils.llm_factory import LLMFactory
 from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
 import asyncio
-import os
+import random
+import time
+
+
+def _candidate_category(candidate: Dict[str, Any]) -> str:
+    payload = candidate.get("payload", {})
+    # 분산 기준 카테고리 우선순위
+    return (
+        str(payload.get("cat3") or "").strip()
+        or str(payload.get("cat2") or "").strip()
+        or str(payload.get("cat1") or "").strip()
+        or "unknown"
+    )
+
+
+def _candidate_score(candidate: Dict[str, Any]) -> float:
+    try:
+        return max(float(candidate.get("score", 0.0)), 1e-6)
+    except Exception:
+        return 1e-6
+
+
+def _pick_diverse_candidates(candidates: List[Dict[str, Any]], final_k: int = 5, top_pool: int = 12) -> List[Dict[str, Any]]:
+    """
+    상위 후보 풀에서 점수 가중 랜덤 샘플링 + 카테고리 분산을 적용해
+    매 요청마다 장소 구성이 고정되지 않도록 한다.
+    """
+    if len(candidates) <= final_k:
+        return candidates
+
+    pool = list(candidates[:min(len(candidates), top_pool)])
+    selected: List[Dict[str, Any]] = []
+    used_categories = set()
+    rng = random.Random(time.time_ns())
+
+    while pool and len(selected) < final_k:
+        unseen_pool = [c for c in pool if _candidate_category(c) not in used_categories]
+        source = unseen_pool if unseen_pool else pool
+        weights = [_candidate_score(c) for c in source]
+        picked = rng.choices(source, weights=weights, k=1)[0]
+
+        selected.append(picked)
+        used_categories.add(_candidate_category(picked))
+        pool.remove(picked)
+
+    return selected
 
 async def _search_for_trip_planning(state: TravelState, emotional_text: str = None) -> List[Dict[str, Any]]:
     """
@@ -149,4 +191,5 @@ async def retriever_node(state: TravelState):
             unique_candidates.append(c)
             seen_ids.add(pid)
 
-    return {"candidates": unique_candidates[:5]}
+    diversified_candidates = _pick_diverse_candidates(unique_candidates, final_k=5, top_pool=12)
+    return {"candidates": diversified_candidates}

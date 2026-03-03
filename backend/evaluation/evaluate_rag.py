@@ -177,6 +177,14 @@ def generate_test_data_from_llm_results(
             "{district}에서 {content_type} 2곳만 추천해줘. {transport}, {budget}.",
         ],
     }
+    type_focus = {
+        "관광지": "볼거리와 동선",
+        "문화시설": "전시/관람 포인트",
+        "축제공연행사": "행사 성격과 방문 타이밍",
+        "레포츠": "활동 강도와 준비사항",
+        "숙박": "접근성과 숙소 편의",
+        "음식점": "대표 메뉴와 분위기",
+    }
 
     for file_path in files:
         with file_path.open("r", encoding="utf-8") as f:
@@ -219,9 +227,14 @@ def generate_test_data_from_llm_results(
                 )
 
                 gt_core = llm_text.replace("\n", " ").strip()
-                if len(gt_core) > 220:
-                    gt_core = gt_core[:220].rstrip() + "..."
-                ground_truth = f"{title} ({addr}) - {gt_core}"
+                focus = type_focus.get(content_type, "핵심 특징")
+                # 추천형 태스크에 맞춘 reference로 변환
+                ground_truth = (
+                    f"{district} {content_type} 추천 답변. "
+                    f"{title}을 포함해 유사한 장소 2~3곳을 제안하고, "
+                    f"{focus} 기준 추천 이유와 짧은 방문 팁을 제공. "
+                    f"대표 근거: {title}({addr}). {gt_core}"
+                )
 
                 records.append(
                     {
@@ -624,6 +637,7 @@ async def run_all_evaluations(limit: Optional[int] = None):
 
 async def run_evaluation(limit: Optional[int] = None, mode: str = "e2e"):
     from ragas import evaluate
+    from ragas.run_config import RunConfig
     from ragas.metrics import (
         faithfulness,
         answer_relevancy,
@@ -733,9 +747,14 @@ async def run_evaluation(limit: Optional[int] = None, mode: str = "e2e"):
     metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
     
     try:
+        # 장시간 정체를 피하기 위해 RAGAS 실행 타임아웃/재시도 상한을 명시
+        run_config = RunConfig(timeout=90, max_retries=2, max_wait=10, max_workers=1)
         result = evaluate(
             dataset,
             metrics=metrics,
+            run_config=run_config,
+            raise_exceptions=False,
+            batch_size=1,
         )
         
         # 4. 결과 출력 및 저장

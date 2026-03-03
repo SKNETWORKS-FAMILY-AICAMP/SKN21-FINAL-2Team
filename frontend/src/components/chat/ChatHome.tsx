@@ -1,18 +1,27 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Square, User, Sparkles, Loader2 } from "lucide-react";
-import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { createRoom, fetchRoom, fetchRooms, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken } from "@/services/api";
+import { Send, Mic, MicOff, Square, User, Sparkles, Loader2, Bookmark } from "lucide-react";
+import { motion } from "framer-motion";
+import { createRoom, fetchRoom, fetchRooms, sendAutoStartChatRoomStream, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken, updatePlaceBookmark, updateRoomBookmark } from "@/services/api";
 import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import remarkGfm from 'remark-gfm';
 
+const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
+
 export function ChatHome() {
     type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+    type SelectedPlaceSeed = {
+        id?: number;
+        place_id?: number | null;
+        name?: string | null;
+        adress?: string | null;
+        image_path?: string | null;
+        room_id?: number;
+    };
 
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -33,10 +42,12 @@ export function ChatHome() {
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
     const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
+    const [roomTripContext, setRoomTripContext] = useState<TripContext | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
     const isSendingRef = useRef(false);
+    const autoStartedRoomsRef = useRef<Set<number>>(new Set());
 
     const getSpeechRecognitionAPI = () =>
         (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
@@ -201,7 +212,7 @@ export function ChatHome() {
                 try {
                     const data = await fetchCurrentUser();
                     setUserProfile(data);
-                } catch (err) {
+                } catch {
                     window.location.href = "/login";
                     return;
                 }
@@ -266,12 +277,16 @@ export function ChatHome() {
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
-            if (context.travelDuration || context.groupSize) {
+            if ((context.travelDuration || "").trim()) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
                     JSON.stringify(context)
                 );
+            } else {
+                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
+            setShowTripModal(false);
+            setIsTripLoading(false);
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
             router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
@@ -283,33 +298,46 @@ export function ChatHome() {
         }
     };
 
-    const handleSendMessage = async () => {
-        if (isSendingRef.current) return;
-        if (!inputText.trim() || !currentRoomId) return;
+    const updateRoomTitle = useCallback((roomId: number, roomTitle: string) => {
+        setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, title: roomTitle } : r)));
+        window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+    }, []);
 
-        const userText = inputText;
-        setInputText("");
+    const streamMessageToRoom = useCallback(async ({
+        roomId,
+        message,
+        saveUserMessage,
+        optimisticUserText,
+    }: {
+        roomId: number;
+        message: string;
+        saveUserMessage: boolean;
+        optimisticUserText?: string;
+    }) => {
+        if (isSendingRef.current) return;
+        isSendingRef.current = true;
+
+        if (optimisticUserText) {
+            const optimisticUserMsg: ChatMessage = {
+                id: Date.now(),
+                room_id: roomId,
+                message: optimisticUserText,
+                role: "human",
+                created_at: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, optimisticUserMsg]);
+        }
+
         setIsTyping(true);
         setIsStreaming(true);
         setShowPipeline(true);
         setPipelineSteps(createInitialPipelineSteps());
 
-        // Optimistically add user message
-        const optimisticUserMsg: ChatMessage = {
-            id: Date.now(),
-            room_id: currentRoomId,
-            message: userText,
-            role: "human",
-            created_at: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, optimisticUserMsg]);
-
-        // AI 메시지를 빈 상태로 미리 추가 (토큰이 올 때마다 업데이트)
         const streamingId = Date.now() + 1;
         setStreamingMsgId(streamingId);
         const placeholderAiMsg: ChatMessage = {
             id: streamingId,
-            room_id: currentRoomId,
+            room_id: roomId,
             message: "",
             role: "ai",
             created_at: new Date().toISOString(),
@@ -317,45 +345,70 @@ export function ChatHome() {
         setMessages((prev) => [...prev, placeholderAiMsg]);
 
         try {
-            await sendChatMessageStream(currentRoomId, userText, {
+            await sendChatMessageStream(roomId, message, {
                 onToken: (token) => {
-                    // 첫 토큰 수신 시 파이프라인 숨김
                     setShowPipeline(false);
-                    setMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === streamingId
-                                ? { ...m, message: m.message + token }
-                                : m
-                        )
-                    );
+                    setMessages((prev) => {
+                        let found = false;
+                        const next = prev.map((m) => {
+                            if (m.id !== streamingId) return m;
+                            found = true;
+                            return { ...m, message: (m.message || "") + token };
+                        });
+
+                        if (!found) {
+                            next.push({
+                                id: streamingId,
+                                room_id: roomId,
+                                message: token,
+                                role: "ai",
+                                created_at: new Date().toISOString(),
+                            });
+                        }
+                        return next;
+                    });
                 },
                 onStep: (step, status) => {
-                    // executor의 done은 무시 → 첫 토큰 도착까지 "답변 생성 중" 유지
                     if ((step === "executor" || step === "executor_missing") && status === "done") return;
-                    // 백엔드 "start" → 프론트 "running" 매핑
                     const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
                     setPipelineSteps((prev) => ({
                         ...prev,
                         [step]: mappedStatus,
                     }));
                 },
-                onDone: (_fullMessage, messageId, createdAt) => {
-                    // 서버에서 확정된 ID와 타임스탬프로 교체
-                    setMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === streamingId
-                                ? { ...m, id: messageId, created_at: createdAt || m.created_at }
-                                : m
-                        )
-                    );
+                onDone: (fullMessage, messageId, createdAt, _roomTitle, places) => {
+                    setShowPipeline(false);
+                    const finalMessage = (fullMessage || "").trim() || "추천 결과를 준비했어요.";
+                    setMessages((prev) => {
+                        let found = false;
+                        const next = prev.map((m) => {
+                            if (m.id !== streamingId) return m;
+                            found = true;
+                            return {
+                                ...m,
+                                id: messageId,
+                                message: finalMessage,
+                                created_at: createdAt || m.created_at,
+                                places: places,
+                            };
+                        });
+
+                        if (!found) {
+                            next.push({
+                                id: messageId,
+                                room_id: roomId,
+                                message: finalMessage,
+                                role: "ai",
+                                created_at: createdAt || new Date().toISOString(),
+                                places: places,
+                            });
+                        }
+                        return next;
+                    });
                     setStreamingMsgId(null);
                 },
                 onRoomTitle: (roomTitle) => {
-                    // Intent 완료 직후 즉시 제목 업데이트 (파이프라인 완료 전)
-                    setRooms(prev => prev.map(r =>
-                        r.id === currentRoomId ? { ...r, title: roomTitle } : r
-                    ));
-                    window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+                    updateRoomTitle(roomId, roomTitle);
                 },
                 onError: (err) => {
                     console.error("Stream error", err);
@@ -367,14 +420,271 @@ export function ChatHome() {
                         )
                     );
                 },
-            });
+            }, null, null, { saveUserMessage });
         } catch (error) {
-            console.error("Failed to send message", error);
+            console.error("Failed to send streamed message", error);
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
             isSendingRef.current = false;
         }
+    }, [updateRoomTitle]);
+
+    const runAutoStarterStream = useCallback(async ({
+        roomId,
+        payload,
+    }: {
+        roomId: number;
+        payload: {
+            mode: "trip_context" | "selected_places" | "combined" | "greeting";
+            trip_context?: { travel_duration: string; adult_count: number; child_count: number };
+            selected_places?: { name?: string | null; adress?: string | null; place_id?: number }[];
+            save_user_message?: boolean;
+        };
+    }) => {
+        if (isSendingRef.current) return;
+        isSendingRef.current = true;
+        setIsTyping(true);
+        setIsStreaming(true);
+        setShowPipeline(true);
+        setPipelineSteps(createInitialPipelineSteps());
+
+        const streamingId = Date.now() + 1;
+        setStreamingMsgId(streamingId);
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: streamingId,
+                room_id: roomId,
+                message: "",
+                role: "ai",
+                created_at: new Date().toISOString(),
+            },
+        ]);
+
+        try {
+            await sendAutoStartChatRoomStream(roomId, payload, {
+                onToken: (token) => {
+                    setShowPipeline(false);
+                    setMessages((prev) => {
+                        let found = false;
+                        const next = prev.map((m) => {
+                            if (m.id !== streamingId) return m;
+                            found = true;
+                            return { ...m, message: (m.message || "") + token };
+                        });
+                        if (!found) {
+                            next.push({
+                                id: streamingId,
+                                room_id: roomId,
+                                message: token,
+                                role: "ai",
+                                created_at: new Date().toISOString(),
+                            });
+                        }
+                        return next;
+                    });
+                },
+                onStep: (step, status) => {
+                    if ((step === "executor" || step === "executor_missing") && status === "done") return;
+                    const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
+                    setPipelineSteps((prev) => ({ ...prev, [step]: mappedStatus }));
+                },
+                onDone: (fullMessage, messageId, createdAt, _roomTitle, places) => {
+                    setShowPipeline(false);
+                    const finalMessage = (fullMessage || "").trim() || "추천 결과를 준비했어요.";
+                    setMessages((prev) => {
+                        let found = false;
+                        const next = prev.map((m) => {
+                            if (m.id !== streamingId) return m;
+                            found = true;
+                            return {
+                                ...m,
+                                id: messageId,
+                                message: finalMessage,
+                                created_at: createdAt || m.created_at,
+                                places: places,
+                            };
+                        });
+                        if (!found) {
+                            next.push({
+                                id: messageId,
+                                room_id: roomId,
+                                message: finalMessage,
+                                role: "ai",
+                                created_at: createdAt || new Date().toISOString(),
+                                places: places,
+                            });
+                        }
+                        return next;
+                    });
+                    setStreamingMsgId(null);
+                },
+                onRoomTitle: (roomTitle) => updateRoomTitle(roomId, roomTitle),
+                onError: (err) => {
+                    console.error("Auto start stream error", err);
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === streamingId ? { ...m, message: "죄송합니다. 오류가 발생했습니다." } : m
+                        )
+                    );
+                },
+            });
+        } catch (error) {
+            console.error("Failed to run auto start stream", error);
+        } finally {
+            setIsTyping(false);
+            setIsStreaming(false);
+            isSendingRef.current = false;
+        }
+    }, [updateRoomTitle]);
+
+    useEffect(() => {
+        if (!currentRoomId) {
+            setRoomTripContext(null);
+            return;
+        }
+
+        const raw = localStorage.getItem(`triver:trip-context:${currentRoomId}`);
+        if (!raw) {
+            setRoomTripContext(null);
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as TripContext;
+            setRoomTripContext(parsed);
+        } catch {
+            setRoomTripContext(null);
+        }
+    }, [currentRoomId]);
+
+    useEffect(() => {
+        if (!currentRoomId || isInitializing || isStreaming) return;
+        if (messages.length > 0) return;
+        if (autoStartedRoomsRef.current.has(currentRoomId)) return;
+
+        const contextKey = `triver:trip-context:${currentRoomId}`;
+        const selectedKey = `triver:selected-places:${currentRoomId}`;
+        const greetingKey = `triver:auto-start-greeting:${currentRoomId}`;
+        const startedKey = `triver:auto-start-started:${currentRoomId}`;
+        const legacyTripStartedKey = `triver:trip-context-started:${currentRoomId}`;
+        const legacySelectedStartedKey = `triver:selected-places-started:${currentRoomId}`;
+
+        if (
+            localStorage.getItem(startedKey) === "1" ||
+            localStorage.getItem(legacyTripStartedKey) === "1" ||
+            localStorage.getItem(legacySelectedStartedKey) === "1"
+        ) {
+            localStorage.setItem(startedKey, "1");
+            return;
+        }
+
+        const contextRaw = localStorage.getItem(contextKey);
+        const selectedRaw = localStorage.getItem(selectedKey);
+        const shouldGreeting = localStorage.getItem(greetingKey) === "1";
+
+        let context: TripContext | null = null;
+        if (contextRaw) {
+            try {
+                context = JSON.parse(contextRaw) as TripContext;
+            } catch (error) {
+                console.error("Invalid trip context payload", error);
+            }
+        }
+
+        let selectedPlaces: SelectedPlaceSeed[] = [];
+        if (selectedRaw) {
+            try {
+                const parsed = JSON.parse(selectedRaw) as SelectedPlaceSeed[];
+                if (Array.isArray(parsed)) selectedPlaces = parsed;
+            } catch (error) {
+                console.error("Invalid selected places payload", error);
+            }
+        }
+
+        const hasContext = !!context;
+        const hasSelectedPlaces = selectedPlaces.length > 0;
+        if (!hasContext && !hasSelectedPlaces && !shouldGreeting) return;
+
+        autoStartedRoomsRef.current.add(currentRoomId);
+        localStorage.setItem(startedKey, "1");
+
+        if (hasContext && hasSelectedPlaces) {
+            void runAutoStarterStream({
+                roomId: currentRoomId,
+                payload: {
+                    mode: "combined",
+                    trip_context: {
+                        travel_duration: context?.travelDuration || "",
+                        adult_count: context?.adultCount ?? 0,
+                        child_count: context?.childCount ?? 0,
+                    },
+                    selected_places: selectedPlaces.map((p) => ({
+                        name: p.name,
+                        adress: p.adress,
+                        place_id: p.place_id ?? 0,
+                    })),
+                    save_user_message: false,
+                },
+            });
+            return;
+        }
+
+        if (hasSelectedPlaces) {
+            void runAutoStarterStream({
+                roomId: currentRoomId,
+                payload: {
+                    mode: "selected_places",
+                    selected_places: selectedPlaces.map((p) => ({
+                        name: p.name,
+                        adress: p.adress,
+                        place_id: p.place_id ?? 0,
+                    })),
+                    save_user_message: false,
+                },
+            });
+            return;
+        }
+
+        if (hasContext) {
+            void runAutoStarterStream({
+                roomId: currentRoomId,
+                payload: {
+                    mode: "trip_context",
+                    trip_context: {
+                        travel_duration: context?.travelDuration || "",
+                        adult_count: context?.adultCount ?? 0,
+                        child_count: context?.childCount ?? 0,
+                    },
+                    save_user_message: false,
+                },
+            });
+            return;
+        }
+
+        if (shouldGreeting) {
+            void runAutoStarterStream({
+                roomId: currentRoomId,
+                payload: {
+                    mode: "greeting",
+                    save_user_message: false,
+                },
+            });
+        }
+    }, [currentRoomId, isInitializing, isStreaming, messages, runAutoStarterStream]);
+
+    const handleSendMessage = async () => {
+        if (!inputText.trim() || !currentRoomId) return;
+
+        const userText = inputText;
+        setInputText("");
+        await streamMessageToRoom({
+            roomId: currentRoomId,
+            message: userText,
+            saveUserMessage: true,
+            optimisticUserText: userText,
+        });
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -388,6 +698,40 @@ export function ChatHome() {
 
     const displayName = userProfile?.nickname || userProfile?.name || "User";
     const displayImage = userProfile?.profile_picture || "";
+    const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null;
+
+    const handleToggleRoomBookmark = async () => {
+        if (!currentRoomId || !currentRoom) return;
+        try {
+            const updatedRoom = await updateRoomBookmark(currentRoomId, !currentRoom.bookmark_yn);
+            setRooms((prev) => prev.map((room) => (
+                room.id === currentRoomId
+                    ? { ...room, bookmark_yn: updatedRoom.bookmark_yn }
+                    : room
+            )));
+            window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+        } catch (error) {
+            console.error("Failed to toggle room bookmark", error);
+        }
+    };
+
+    const handleTogglePlaceBookmark = async (messageId: number, placeId: number, currentStatus: boolean) => {
+        try {
+            const updatedPlace = await updatePlaceBookmark(placeId, !currentStatus);
+            setMessages(prev => prev.map(m => {
+                if (m.id === messageId && m.places) {
+                    return {
+                        ...m,
+                        places: m.places.map(p => p.id === placeId ? { ...p, bookmark_yn: updatedPlace.bookmark_yn } : p)
+                    };
+                }
+                return m;
+            }));
+        } catch (error) {
+            console.error("Failed to toggle bookmark", error);
+        }
+    };
+
     const micButtonClass = isListening
         ? "text-white bg-red-500 hover:bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.5)]"
         : sttPermission === "denied"
@@ -416,9 +760,26 @@ export function ChatHome() {
         <div className="flex flex-col h-full bg-white relative">
             <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
                 <div>
-                    <h2 className="text-xl font-serif font-medium text-gray-900 flex items-center gap-2">
-                        {currentRoomId && rooms.find(r => r.id === currentRoomId)?.title || "New Trip Planning"} <Sparkles size={14} className="text-gray-400" />
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        {currentRoom?.title || "New Trip Planning"}
+                        <button
+                            type="button"
+                            onClick={handleToggleRoomBookmark}
+                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
+                                currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
+                            }`}
+                            title="채팅방 북마크 토글"
+                            disabled={!currentRoomId}
+                        >
+                            <Bookmark size={14} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                        </button>
+                        <Sparkles size={14} className="text-gray-400" />
                     </h2>
+                    {roomTripContext && (
+                        <p className="mt-1 text-xs text-gray-500 font-medium">
+                            {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
+                        </p>
+                    )}
                 </div>
                 <div className="flex -space-x-2">
                     <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>
@@ -477,9 +838,46 @@ export function ChatHome() {
                                     if (msg.role === "ai") {
                                         return (
                                             <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        a: (props) => (
+                                                            <a
+                                                                {...props}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                            />
+                                                        ),
+                                                    }}
+                                                >
                                                     {msg.message}
                                                 </ReactMarkdown>
+
+                                                {msg.places && msg.places.length > 0 && (
+                                                    <div className="not-prose mt-4 grid grid-cols-1 gap-3">
+                                                        {msg.places.map((place) => (
+                                                            <div key={place.id} className="flex gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100 relative group/card">
+                                                                <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
+                                                                    <img
+                                                                        src={place.image_path || DEFAULT_PLACEHOLDER}
+                                                                        alt={place.name || "Place image"}
+                                                                        className="absolute inset-0 m-0 w-full h-full object-cover object-center"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex flex-col justify-center min-w-0 flex-1">
+                                                                    <h4 className="text-sm font-bold text-gray-900 truncate">{place.name}</h4>
+                                                                    <p className="text-[11px] text-gray-500 truncate">{place.adress}</p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn)}
+                                                                    className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"}`}
+                                                                >
+                                                                    <Bookmark size={14} fill={place.bookmark_yn ? "currentColor" : "none"} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Search, CalendarPlus, X } from "lucide-react";
+import { MapPin, Search, CalendarPlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
@@ -42,8 +42,6 @@ export function Destinations() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
-    const [selectedPlace, setSelectedPlace] = useState<Destination | null>(null);
-
     // // 주의: 실제 로그인 상태는 Context API나 전역 상태 관리(Zustand 등) 혹은 쿠키에서 가져와야 하지만, 
     // 임시로 localStorage를 확인하는 방식을 사용합니다. (구글 로그인 구현 방식에 맞게 나중에 수정 필요)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -81,13 +79,14 @@ export function Destinations() {
             if (pendingPlace) {
                 localStorage.setItem("selectedForChat", JSON.stringify(pendingPlace));
             }
-            if (context.travelDuration || context.groupSize) {
+            if ((context.travelDuration || "").trim()) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
                     JSON.stringify(context)
                 );
+            } else {
+                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
-            setSelectedPlace(null);
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch (e) {
             console.error("Failed to create room from Destinations", e);
@@ -102,7 +101,7 @@ export function Destinations() {
     };
 
     // 배열을 랜덤하게 섞어주는 함수 (Fisher-Yates Shuffle)
-    const shuffleArray = (array: any[]) => {
+    const shuffleArray = <T,>(array: T[]): T[] => {
         const newArr = [...array];
         for (let i = newArr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -119,13 +118,19 @@ export function Destinations() {
                 try {
                     const res = await fetch("/api/hot-places?limit=3");
                     if (!res.ok) throw new Error("Hot Places fetch 실패");
-                    const raw = await res.json();
+                    type HotPlaceApiItem = {
+                        id: number;
+                        name: string;
+                        adress?: string | null;
+                        image_path?: string | null;
+                    };
+                    const raw: HotPlaceApiItem[] = await res.json();
                     // 주의: hot_place API는 adress(오타), image_path(상대경로)를 사용하므로 변환
-                    const mapped: Destination[] = raw.map((p: any) => ({
+                    const mapped: Destination[] = raw.map((p) => ({
                         id: p.id,
                         name: p.name,
-                        address: p.adress,                        // adress → address 로 통일
-                        image: `/api/static/${p.image_path}`,    // 상대경로 → 전체 URL 로 변환
+                        address: p.adress || "",
+                        image: p.image_path ? `/api/static/${p.image_path}` : "",
                     }));
                     setDisplayItems(mapped);
                 } catch (error) {
@@ -141,13 +146,19 @@ export function Destinations() {
                 try {
                     const res = await fetch("/api/attractions?limit=3");
                     if (!res.ok) throw new Error("Attractions fetch 실패");
-                    const raw = await res.json();
+                    type CategoryApiItem = {
+                        contentid: string;
+                        name: string;
+                        address?: string | null;
+                        image?: string | null;
+                    };
+                    const raw: CategoryApiItem[] = await res.json();
                     // 주의: attractions API는 contentid(string), address, image(외부URL) 사용
-                    const mapped: Destination[] = raw.map((p: any) => ({
+                    const mapped: Destination[] = raw.map((p) => ({
                         id: p.contentid,
                         name: p.name,
-                        address: p.address,   // 필드명 동일
-                        image: p.image,       // 이미 완전한 URL
+                        address: p.address || "",
+                        image: p.image || "",
                     }));
                     setDisplayItems(mapped);
                 } catch (error) {
@@ -164,13 +175,19 @@ export function Destinations() {
                 try {
                     const res = await fetch("/api/restaurants?limit=3");
                     if (!res.ok) throw new Error("Restaurants fetch 실패");
-                    const raw = await res.json();
+                    type CategoryApiItem = {
+                        contentid: string;
+                        name: string;
+                        address?: string | null;
+                        image?: string | null;
+                    };
+                    const raw: CategoryApiItem[] = await res.json();
                     // restaurants API도 attractions과 동일한 필드 구조
-                    const mapped: Destination[] = raw.map((p: any) => ({
+                    const mapped: Destination[] = raw.map((p) => ({
                         id: p.contentid,
                         name: p.name,
-                        address: p.address,
-                        image: p.image,
+                        address: p.address || "",
+                        image: p.image || "",
                     }));
                     setDisplayItems(mapped);
                 } catch (error) {
@@ -316,4 +333,3 @@ export function Destinations() {
         </>
     );
 }
-

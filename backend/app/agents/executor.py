@@ -2,6 +2,9 @@ import urllib.parse
 import os
 import base64
 import mimetypes
+import concurrent.futures
+import time
+import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -10,6 +13,47 @@ from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
 from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
 from app.utils.llm_factory import LLMFactory
+
+
+def _normalize_text(value: str) -> str:
+    return re.sub(r"\s+", "", (value or "")).lower()
+
+
+def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str, Any]]) -> List[str]:
+    if not answer_text or not candidates:
+        return []
+
+    inferred_ids: List[str] = []
+
+    # 1) Markdown 링크 텍스트 우선 매칭: [장소명](...)
+    link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
+    for raw_name in link_names:
+        name_key = _normalize_text(raw_name)
+        for c in candidates:
+            payload = c.get("payload", {}) or {}
+            candidate_name = payload.get("title") or payload.get("name") or ""
+            if not candidate_name:
+                continue
+            candidate_key = _normalize_text(candidate_name)
+            if name_key and (name_key in candidate_key or candidate_key in name_key):
+                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                if cid and cid not in inferred_ids:
+                    inferred_ids.append(cid)
+                break
+
+    # 2) 링크가 없으면 본문 장소명 포함 여부로 매칭
+    if not inferred_ids:
+        answer_key = _normalize_text(answer_text)
+        for c in candidates:
+            payload = c.get("payload", {}) or {}
+            candidate_name = payload.get("title") or payload.get("name") or ""
+            candidate_key = _normalize_text(candidate_name)
+            if candidate_key and candidate_key in answer_key:
+                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                if cid and cid not in inferred_ids:
+                    inferred_ids.append(cid)
+
+    return inferred_ids
 
 def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
     """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
@@ -26,14 +70,17 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         lng = float(payload.get("mapx", "0"))
 
         # 네이버 지도 링크 생성
-        query = payload.get("title")
+        title = payload.get("title") or payload.get("name") or "Unknown"
+        address = payload.get("address") or payload.get("addr") or payload.get("road_address") or "Unknown"
+        contentid = payload.get("contentid") or c.get("id") or "Unknown"
         
-        if query:
-            encoded = urllib.parse.quote(query)
+        if title:
+            encoded = urllib.parse.quote(title)
             payload['map_url'] = f"https://map.naver.com/v5/search/{encoded}?c=15.00,{lng},{lat},0,dh"
 
-        line = f"{i}. **{**payload}**"
+        map_url = payload.get("map_url", "Unknown")
 
+        line = f"{i}. 명칭: {title} / 주소: {address} / 지도링크: {map_url} / (ID: {contentid})"
         lines.append(line)
 
     return "\n".join(lines)
@@ -68,7 +115,7 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
 
     return "\n".join(lines)
 
-def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> str:
+def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeout_sec: float = 3.0) -> str:
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = ""
     print("[Executor] No candidates — trying Tavily fallback")
@@ -82,7 +129,10 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> st
             location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
             if location:
                 search_query = f"{location} 여행 {query}"
-        web_results = tavily.invoke(search_query)
+        # Tavily 응답 지연 시 executor 전체 대기를 막기 위해 타임아웃 적용
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(tavily.invoke, search_query)
+            web_results = future.result(timeout=timeout_sec)
         if web_results:
             web_lines = ["## 웹 검색 결과 (참고 정보)"]
             for r in web_results:
@@ -92,6 +142,8 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None) -> st
                     web_lines.append(f"- {str(r)[:200]}")
             web_context = "\n".join(web_lines)
             print(f"[Executor] Tavily fallback results: {len(web_results)}")
+    except concurrent.futures.TimeoutError:
+        print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
     except Exception as e:
         print(f"[Executor] Tavily fallback failed: {e}")
 
@@ -142,6 +194,7 @@ async def executor_node(state: TravelState):
     - 최종 답변 생성
     """
     print("--- Executor Agent ---")
+    t0 = time.perf_counter()
 
     candidates = state.get("candidates", [])
     user_input = state.get("user_input", "")
@@ -152,15 +205,18 @@ async def executor_node(state: TravelState):
     image_path = state.get("image_path") # 이미지 경로 가져오기
 
     # 컨텍스트 구성
+    t_ctx0 = time.perf_counter()
     place_context = _build_place_context(candidates)
-    print(f"[Executor] Place context: {place_context}")
+    # print(f"[Executor] Place context: {place_context}")
     itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
+    t_ctx1 = time.perf_counter()
 
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = None
     if len(candidates) == 0:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
+    t_web1 = time.perf_counter()
 
     # 슬롯 정보 텍스트
     slots_info = ""
@@ -221,15 +277,40 @@ async def executor_node(state: TravelState):
     })
 
     # astream을 사용하여 토큰 단위 스트리밍 (astream_events가 자동 캡처)
+    t_llm0 = time.perf_counter()
     full_content = ""
     async for chunk in llm.astream(prompt_value):
         if chunk.content:
             full_content += chunk.content
+    t_llm1 = time.perf_counter()
 
-    answer = full_content
-    print(f"[Executor] Answer generated (length={len(answer)})")
+    # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
+    selected_ids = []
+    
+    tag_match = re.search(r"\[\s*ids?\s*:\s*([^\]]+)\]", full_content, flags=re.IGNORECASE)
+    if tag_match:
+        ids_str = tag_match.group(1)
+        # 쉼표로 구분된 ID들 추출
+        selected_ids = [s.strip() for s in ids_str.split(',') if s.strip()]
+        # 답변에서 태그 제거
+        cleaned_answer = re.sub(r"\[\s*ids?\s*:\s*.*?\]", "", full_content, flags=re.IGNORECASE).strip()
+    else:
+        cleaned_answer = full_content.strip()
 
-    return {"messages": AIMessage(content=answer), "answer": answer}
+    if not selected_ids:
+        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidates)
+
+    print(f"[Executor] Selected IDs: {selected_ids}")
+    print(f"[Executor] Answer length: {len(cleaned_answer)}")
+    print(
+        "[Executor][Timing] "
+        f"context_build={t_ctx1 - t_ctx0:.3f}s, "
+        f"fallback={t_web1 - t_ctx1:.3f}s, "
+        f"llm={t_llm1 - t_llm0:.3f}s, "
+        f"total={t_llm1 - t0:.3f}s"
+    )
+
+    return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
 
 
 async def executor_missing_node(state: TravelState):
@@ -253,16 +334,28 @@ async def executor_missing_node(state: TravelState):
     ])
 
     llm = LLMFactory.get_llm(temperature=0.3)
-    response = await llm.ainvoke(prompt.invoke({
+    prompt_value = prompt.invoke({
         "messages": state.get("messages")[-10:],
         "user_input": state.get("user_input"),
         "slots_info": state.get("slots"),
         "prefs_info": state.get("prefs_info"),
         "missing_info": missing_context,
-    }))
+    })
 
-    answer = response.content
+    # executor_missing도 토큰 스트리밍 이벤트가 발생하도록 astream 사용
+    full_content = ""
+    async for chunk in llm.astream(prompt_value):
+        if hasattr(chunk, "content") and chunk.content:
+            if isinstance(chunk.content, str):
+                full_content += chunk.content
+            elif isinstance(chunk.content, list):
+                for part in chunk.content:
+                    if isinstance(part, dict) and part.get("text"):
+                        full_content += str(part["text"])
+                    elif isinstance(part, str):
+                        full_content += part
+
+    answer = full_content.strip()
     print(f"[Executor] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}
-
