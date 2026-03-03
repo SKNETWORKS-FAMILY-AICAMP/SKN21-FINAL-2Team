@@ -31,6 +31,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "Start Planning",
     scheduledJourney: "Scheduled Journey",
     reservation: "Reservation",
+    noScheduledJourneys: "No scheduled journeys yet.",
+    noReservations: "No reservations yet.",
     open: "Open",
     tripHint: "Tap to view related chat summary (mock).",
     dnaTitle: "Triver's Travel DNA",
@@ -56,6 +58,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "계획 시작",
     scheduledJourney: "예정된 여정",
     reservation: "예약",
+    noScheduledJourneys: "예정된 여정이 없습니다.",
+    noReservations: "예약이 없습니다.",
     open: "열기",
     tripHint: "관련 채팅 요약 보기 (데모).",
     dnaTitle: "트리버의 여행 DNA",
@@ -81,6 +85,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "プラン開始",
     scheduledJourney: "予定された旅程",
     reservation: "予約",
+    noScheduledJourneys: "予定された旅程はありません。",
+    noReservations: "予約はありません。",
     open: "開く",
     tripHint: "関連チャット要約を見る（mock）。",
     dnaTitle: "トリバーの旅行DNA",
@@ -1030,22 +1036,26 @@ export default function MyPage() {
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("scheduledJourney")}</h3>
                   </div>
                   <div className="space-y-2.5 flex-1">
-                    {trips.map((trip) => (
-                      <button
-                        key={trip.id}
-                        type="button"
-                        onClick={() => setActiveTrip(trip)}
-                        className="w-full text-left p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-gray-900 leading-tight">{trip.title}</span>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{t("open")}</span>
-                        </div>
-                        <p className="mt-1 text-[10px] text-gray-500">
-                          {t("tripHint")}
-                        </p>
-                      </button>
-                    ))}
+                    {trips.length ? (
+                      trips.map((trip) => (
+                        <button
+                          key={trip.id}
+                          type="button"
+                          onClick={() => setActiveTrip(trip)}
+                          className="w-full text-left p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-gray-900 leading-tight">{trip.title}</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{t("open")}</span>
+                          </div>
+                          <p className="mt-1 text-[10px] text-gray-500">{t("tripHint")}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="h-full min-h-[120px] flex items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-[10px] text-gray-400 font-medium">
+                        {t("noScheduledJourneys")}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
 
@@ -1071,41 +1081,47 @@ export default function MyPage() {
                     </div>
                   )}
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
-                    {reservations.map((res) => (
-                      <div
-                        key={res.id}
-                        className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-between gap-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setActiveReservation(res)}
-                          className="flex-1 min-w-0 cursor-pointer flex items-center justify-between text-left"
+                    {reservations.length ? (
+                      reservations.map((res) => (
+                        <div
+                          key={res.id}
+                          className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-between gap-2"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
-                              <ReservationLogo category={res.category} />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="text-[11px] font-bold text-gray-900 leading-tight truncate">{res.title}</h4>
-                              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                                <span className="text-[9px] text-gray-400 font-medium uppercase truncate">{res.subtitle}</span>
-                                <span className="text-[9px] text-gray-300">•</span>
-                                <span className="text-[9px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveReservation(res)}
+                            className="flex-1 min-w-0 cursor-pointer flex items-center justify-between text-left"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
+                                <ReservationLogo category={res.category} />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-[11px] font-bold text-gray-900 leading-tight truncate">{res.title}</h4>
+                                <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                                  <span className="text-[9px] text-gray-400 font-medium uppercase truncate">{res.subtitle}</span>
+                                  <span className="text-[9px] text-gray-300">•</span>
+                                  <span className="text-[9px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <CheckCircle2 size={14} className="text-black flex-none" />
-                        </button>
+                            <CheckCircle2 size={14} className="text-black flex-none" />
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => requestDeleteReservation(res)}
-                          className="flex-none text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
-                        >
-                          Delete
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => requestDeleteReservation(res)}
+                            className="flex-none text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="h-full min-h-[120px] flex items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-[10px] text-gray-400 font-medium">
+                        {t("noReservations")}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </motion.div>
               </div>
