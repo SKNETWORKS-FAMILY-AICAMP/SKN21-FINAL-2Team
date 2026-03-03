@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Moon, Sun } from "lucide-react";
-import { fetchCurrentUser, updateCurrentUser } from "@/services/api";
+import { fetchCountries, fetchCurrentUser, updateCurrentUser, type Country } from "@/services/api";
 import { useGoogleLogin } from "@react-oauth/google";
 
 type AppLanguage = "en" | "ko" | "ja";
@@ -15,7 +15,7 @@ type ThemeMode = "light" | "dark";
 type ProfileSettings = {
   nickname: string;
   bio: string;
-  country: string;
+  countryCode: string;
   email: string;
   language: AppLanguage;
   travelNotes: string[];
@@ -25,52 +25,11 @@ type ProfileSettings = {
 const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
 const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 const THEME_STORAGE_KEY = "triver:theme:v1";
-const COUNTRIES = [
-  "Korea",
-  "Japan",
-  "United States",
-  "Canada",
-  "United Kingdom",
-  "France",
-  "Germany",
-  "Italy",
-  "Spain",
-  "Portugal",
-  "Netherlands",
-  "Belgium",
-  "Switzerland",
-  "Austria",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "Ireland",
-  "Poland",
-  "Czech Republic",
-  "Hungary",
-  "Greece",
-  "Turkey",
-  "Russia",
-  "China",
-  "Taiwan",
-  "Hong Kong",
-  "Singapore",
-  "Thailand",
-  "Vietnam",
-  "Philippines",
-  "Indonesia",
-  "Malaysia",
-  "India",
-  "Australia",
-  "New Zealand",
-  "Mexico",
-  "Brazil",
-  "Argentina",
-  "Chile",
-  "South Africa",
-  "Egypt",
-  "United Arab Emirates",
-  "Saudi Arabia",
+
+const FALLBACK_COUNTRIES: Country[] = [
+  { code: "KR", name: "Korea" },
+  { code: "JP", name: "Japan" },
+  { code: "US", name: "United States" },
 ];
 
 const TRAVEL_NOTES = ["Religion", "Vegan", "Food Allergies", "Halal", "Gluten Free", "Culture"];
@@ -220,6 +179,19 @@ const getStoredLanguage = (): AppLanguage => {
   return isAppLanguage(raw) ? raw : "en";
 };
 
+const getCountryDisplayName = (code: string, fallbackName: string, language: AppLanguage) => {
+  const normalized = (code || "").trim().toUpperCase();
+  if (!normalized) return fallbackName;
+
+  try {
+    const dn = new Intl.DisplayNames([language], { type: "region" });
+    const label = dn.of(normalized);
+    return (label && label.trim().length ? label : fallbackName) || fallbackName;
+  } catch {
+    return fallbackName;
+  }
+};
+
 const getStoredTheme = (): ThemeMode => {
   if (typeof window === "undefined") return "light";
   const raw = localStorage.getItem(THEME_STORAGE_KEY);
@@ -256,9 +228,12 @@ export default function MyPageSettingsPage() {
     const s = getStoredSettings();
     return typeof s.bio === "string" ? s.bio : "Explorer Lvl.3";
   });
-  const [country, setCountry] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.country === "string" ? s.country : "Korea";
+  const [countryCode, setCountryCode] = useState<string>(() => {
+    const s = getStoredSettings() as Partial<ProfileSettings> & { country?: unknown };
+    if (typeof s.countryCode === "string" && s.countryCode.trim().length > 0) return s.countryCode;
+    // Backward compat for older local storage payloads
+    if (typeof s.country === "string" && s.country.trim().length === 2) return s.country.toUpperCase();
+    return "KR";
   });
   const [email, setEmail] = useState<string>(() => {
     const s = getStoredSettings();
@@ -272,6 +247,8 @@ export default function MyPageSettingsPage() {
   });
   const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(() => getStoredTravelPreferences());
   const [saveNotice, setSaveNotice] = useState<string>("");
+
+  const [countries, setCountries] = useState<Country[]>([]);
 
   const [deactivateOpen, setDeactivateOpen] = useState<boolean>(false);
   const [deactivateEmailConfirmed, setDeactivateEmailConfirmed] = useState<boolean>(false);
@@ -322,6 +299,9 @@ export default function MyPageSettingsPage() {
         const data = await fetchCurrentUser();
         if (typeof data?.profile_picture === "string") setProfilePictureUrl(data.profile_picture);
         if (typeof data?.email === "string") setEmail(data.email);
+        if (typeof data?.country_code === "string" && data.country_code.trim().length > 0) {
+          setCountryCode(data.country_code);
+        }
 
         // Hydrate Travel Preference from DB when available (no backend change required).
         const fromDb = [data?.extra_prefer1, data?.extra_prefer2, data?.extra_prefer3].filter(
@@ -337,6 +317,25 @@ export default function MyPageSettingsPage() {
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCountries = async () => {
+      try {
+        const list = await fetchCountries();
+        if (cancelled) return;
+        setCountries(Array.isArray(list) && list.length ? list : FALLBACK_COUNTRIES);
+      } catch {
+        if (cancelled) return;
+        setCountries(FALLBACK_COUNTRIES);
+      }
+    };
+
+    void loadCountries();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toggleNote = (note: string) => {
     setTravelNotes((prev) => (prev.includes(note) ? prev.filter((x) => x !== note) : [...prev, note]));
   };
@@ -345,7 +344,7 @@ export default function MyPageSettingsPage() {
     const payload: ProfileSettings = {
       nickname,
       bio,
-      country,
+      countryCode,
       email,
       language,
       travelNotes,
@@ -361,6 +360,7 @@ export default function MyPageSettingsPage() {
     (async () => {
       try {
         await updateCurrentUser({
+          country_code: countryCode,
           extra_prefer1: travelPreferences[0],
           extra_prefer2: travelPreferences[1],
           extra_prefer3: travelPreferences[2],
@@ -611,13 +611,13 @@ export default function MyPageSettingsPage() {
                   <div>
                     <div className="text-xs font-bold text-gray-900 mb-2">{t("country")}</div>
                     <select
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
                       className="w-full h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-900"
                     >
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                      {(countries.length ? countries : FALLBACK_COUNTRIES).map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {getCountryDisplayName(c.code, c.name, language)}
                         </option>
                       ))}
                     </select>
