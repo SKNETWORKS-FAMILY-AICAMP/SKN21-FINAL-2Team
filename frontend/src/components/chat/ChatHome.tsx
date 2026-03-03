@@ -8,6 +8,7 @@ import { createRoom, fetchRoom, fetchRooms, sendChatMessageStream, UserProfile, 
 import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
+import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import remarkGfm from 'remark-gfm';
 
 export function ChatHome() {
@@ -29,6 +30,7 @@ export function ChatHome() {
     const [isInitializing, setIsInitializing] = useState(true);
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
     const [isListening, setIsListening] = useState(false);
+    const [showTripModal, setShowTripModal] = useState(false);
     const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -219,8 +221,8 @@ export function ChatHome() {
                     // Update URL without refreshing the page
                     router.replace(`/chatbot?roomId=${latestRoomId}`);
                 } else {
-                    // Create a new room if none exist
-                    handleCreateNewRoom();
+                    // 방이 없을 때(첫 방문) → 여행 컨텍스트 모달을 먼저 표시
+                    setShowTripModal(true);
                 }
             } catch (error) {
                 console.error("Failed to initialize chat", error);
@@ -247,12 +249,32 @@ export function ChatHome() {
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
-            // Sidebar에 방 목록 변경 알림
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
-            // URL 업데이트
             router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
             console.error("Failed to create a new room", error);
+        }
+    };
+
+    // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 시)
+    const handleCreateRoomWithContext = async (context: TripContext) => {
+        setShowTripModal(false);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(newRoom.id);
+            setMessages([]);
+            // 주의: 컨텍스트를 방 ID 키로 localStorage에 저장 → 첫 메시지 전송 시 AI에 전달
+            if (context.travelDuration || context.groupSize) {
+                localStorage.setItem(
+                    `triver:trip-context:${newRoom.id}`,
+                    JSON.stringify(context)
+                );
+            }
+            window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+            router.replace(`/chatbot?roomId=${newRoom.id}`);
+        } catch (error) {
+            console.error("Failed to create a new room with context", error);
         }
     };
 
@@ -262,7 +284,21 @@ export function ChatHome() {
 
         isSendingRef.current = true;
 
-        const userText = inputText;
+        // 첫 번째 메시지일 때 저장된 여행 컨텍스트를 AI 메시지 앞에 부착
+        let userText = inputText;
+        if (messages.length === 0) {
+            const ctxRaw = localStorage.getItem(`triver:trip-context:${currentRoomId}`);
+            if (ctxRaw) {
+                try {
+                    const ctx = JSON.parse(ctxRaw) as TripContext;
+                    if (ctx.travelDuration || ctx.groupSize) {
+                        userText = `[여행 정보 - 기간: ${ctx.travelDuration || "미정"}, 인원: ${ctx.groupSize || "미정"}]\n\n${inputText}`;
+                    }
+                } catch { /* 컨텍스트 파싱 실패 시 무시 */ }
+                // 주의: 사용한 컨텍스트는 삭제해서 다음 메시지에 중복 적용되지 않도록
+                localStorage.removeItem(`triver:trip-context:${currentRoomId}`);
+            }
+        }
         setInputText("");
         setIsTyping(true);
         setIsStreaming(true);
@@ -526,6 +562,17 @@ export function ChatHome() {
                     Triver AI can make mistakes. Consider checking important information.
                 </p>
             </div>
+
+            {/* 주의: TripContextModal은 fixed 포지션으로 화면 전체를 덮습니다 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleCreateRoomWithContext}
+                onClose={() => {
+                    setShowTripModal(false);
+                    // 건너뛰기 없이 그냥 닫으면 기본 방 생성으로 폴백
+                    handleCreateNewRoom();
+                }}
+            />
         </div>
     );
 }
