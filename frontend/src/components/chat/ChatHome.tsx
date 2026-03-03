@@ -33,6 +33,7 @@ export function ChatHome() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
+    const isSendingRef = useRef(false);
 
     const getSpeechRecognitionAPI = () =>
         (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
@@ -256,7 +257,10 @@ export function ChatHome() {
     };
 
     const handleSendMessage = async () => {
+        if (isSendingRef.current) return;
         if (!inputText.trim() || !currentRoomId) return;
+
+        isSendingRef.current = true;
 
         const userText = inputText;
         setInputText("");
@@ -344,10 +348,13 @@ export function ChatHome() {
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
+            isSendingRef.current = false;
         }
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
+        const nativeEvent = e.nativeEvent as unknown as { isComposing?: boolean; keyCode?: number };
+        if (nativeEvent.isComposing || nativeEvent.keyCode === 229) return;
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
