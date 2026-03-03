@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { ChatHome } from "../src/components/chat/ChatHome";
+import { ReactNode } from "react";
 
 const mockReplace = jest.fn();
 const mockRecognitionStart = jest.fn();
@@ -14,7 +15,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("react-markdown", () => ({
   __esModule: true,
-  default: ({ children }: { children: any }) => <>{children}</>,
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 jest.mock("remark-gfm", () => ({
@@ -50,6 +51,7 @@ jest.mock("../src/services/api", () => ({
   })),
   fetchRooms: jest.fn(async () => []),
   sendChatMessageStream: jest.fn(async () => undefined),
+  sendAutoStartChatRoomStream: jest.fn(async () => undefined),
   fetchCurrentUser: jest.fn(async () => ({
     id: 1,
     email: "test@example.com",
@@ -63,8 +65,8 @@ class MockSpeechRecognition {
   continuous = false;
   interimResults = false;
   maxAlternatives = 1;
-  onresult: ((event: any) => void) | null = null;
-  onerror: ((event: any) => void) | null = null;
+  onresult: ((event: unknown) => void) | null = null;
+  onerror: ((event: unknown) => void) | null = null;
   onend: (() => void) | null = null;
   onstart: (() => void) | null = null;
 
@@ -80,6 +82,11 @@ class MockSpeechRecognition {
 }
 
 describe("ChatHome STT permission behavior", () => {
+  type MockPermissionStatus = {
+    state: "granted" | "denied" | "prompt";
+    onchange: (() => void) | null;
+  };
+
   const waitUntilChatReady = async () => {
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Ask Triver regarding your next destination...")).toBeInTheDocument();
@@ -109,7 +116,7 @@ describe("ChatHome STT permission behavior", () => {
   });
 
   it("applies denied design when microphone permission is denied", async () => {
-    const permissionStatus: any = { state: "denied", onchange: null };
+    const permissionStatus: MockPermissionStatus = { state: "denied", onchange: null };
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
       value: { query: jest.fn(async () => permissionStatus) },
@@ -124,7 +131,7 @@ describe("ChatHome STT permission behavior", () => {
   });
 
   it("applies default design when microphone permission is granted", async () => {
-    const permissionStatus: any = { state: "granted", onchange: null };
+    const permissionStatus: MockPermissionStatus = { state: "granted", onchange: null };
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
       value: { query: jest.fn(async () => permissionStatus) },
@@ -139,7 +146,7 @@ describe("ChatHome STT permission behavior", () => {
   });
 
   it("updates button state when permission change event occurs", async () => {
-    const permissionStatus: any = { state: "granted", onchange: null };
+    const permissionStatus: MockPermissionStatus = { state: "granted", onchange: null };
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
       value: { query: jest.fn(async () => permissionStatus) },
@@ -165,7 +172,7 @@ describe("ChatHome STT permission behavior", () => {
   });
 
   it("retries recognition start when denied button is clicked", async () => {
-    const permissionStatus: any = { state: "denied", onchange: null };
+    const permissionStatus: MockPermissionStatus = { state: "denied", onchange: null };
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
       value: { query: jest.fn(async () => permissionStatus) },

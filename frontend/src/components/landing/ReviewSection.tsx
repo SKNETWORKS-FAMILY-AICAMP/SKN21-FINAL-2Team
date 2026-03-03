@@ -49,7 +49,7 @@ export function ReviewSection() {
                                     <Star key={i} size={14} fill="currentColor" strokeWidth={0} />
                                 ))}
                             </div>
-                            <p className="text-gray-600 text-sm leading-relaxed mb-8 font-light italic">"{review.text}"</p>
+                            <p className="text-gray-600 text-sm leading-relaxed mb-8 font-light italic">&quot;{review.text}&quot;</p>
                             <div className="flex items-center gap-4 mt-auto">
                                 <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-50">
                                     <img src={review.image} alt={review.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />

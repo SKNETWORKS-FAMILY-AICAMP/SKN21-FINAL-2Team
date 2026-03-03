@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Settings, User, Heart, Shield } from "lucide-react";
 import {
     Dialog,
@@ -33,13 +33,14 @@ export function SettingsModal({
     const [preferences, setPreferences] = useState<string[]>(initialPreferences);
     const [open, setOpen] = useState(false);
 
-    useEffect(() => {
-        if (open) {
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (nextOpen) {
             setNickname(initialNickname);
             setBio(initialBio);
             setPreferences(initialPreferences);
         }
-    }, [open, initialNickname, initialBio, initialPreferences]);
+        setOpen(nextOpen);
+    };
 
     const togglePreference = (pref: string) => {
         if (preferences.includes(pref)) {
@@ -55,7 +56,7 @@ export function SettingsModal({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <button className="px-3 py-1.5 bg-white border border-gray-200 hover:border-gray-400 text-gray-600 rounded-lg text-[11px] font-bold transition-all flex items-center gap-2 uppercase tracking-wider">
                     <Settings size={12} /> Settings

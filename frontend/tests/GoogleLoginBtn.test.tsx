@@ -27,7 +27,7 @@ describe("GoogleLoginBtn", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockLogin.mockClear();
-    // @ts-ignore
+    // @ts-expect-error - 테스트에서 fetch를 목킹하기 위해 대입
     global.fetch = jest.fn((url: string) => {
       if (url.includes("/api/auth/google/callback")) {
         return Promise.resolve({

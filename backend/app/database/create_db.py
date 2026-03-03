@@ -68,6 +68,7 @@ Table chat_rooms {
   child_num integer
   start_date date
   end_date date
+  bookmark_yn bool [not null, default: false]
 }
 
 // 4. 채팅방 & 추천 장소
@@ -77,7 +78,6 @@ Table chat_messages {
   message text
   role role_type [default: 'human'] // 정의한 Enum 사용
   image_path text
-  bookmark_yn bool [not null, default: false]
   created_at timestamp [default: `now()` ]
   longitude float
   latitude float

@@ -19,6 +19,7 @@ class ChatRoom(BaseModel):
     child_num = Column(Integer, nullable=True)
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
+    bookmark_yn = Column(Boolean, default=False, nullable=False)
 
     
 class ChatMessage(BaseModel):
@@ -30,7 +31,6 @@ class ChatMessage(BaseModel):
     role = Column(Enum(RoleType), default=RoleType.human)
     # SQLite 테스트 환경에서도 테이블 생성이 가능하도록 기본은 Text, MySQL에서는 LONGTEXT 사용
     image_path = Column(Text().with_variant(LONGTEXT(), "mysql"), nullable=True)
-    bookmark_yn = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     longitude = Column(Float, nullable=True)
     latitude = Column(Float, nullable=True)
@@ -52,4 +52,3 @@ class ChatPlace(BaseModel):
     bookmark_yn = Column(Boolean, default=False)
 
     message = relationship("ChatMessage", back_populates="places")
-

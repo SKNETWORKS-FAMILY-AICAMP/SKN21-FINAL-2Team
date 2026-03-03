@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { fetchCurrentUser } from "@/services/api";
+import { fetchCurrentUser, fetchRoom, fetchRooms } from "@/services/api";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -31,6 +31,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "Start Planning",
     scheduledJourney: "Scheduled Journey",
     reservation: "Reservation",
+    noScheduledJourneys: "No scheduled journeys yet.",
+    noReservations: "No reservations yet.",
     open: "Open",
     tripHint: "Tap to view related chat summary (mock).",
     dnaTitle: "Triver's Travel DNA",
@@ -56,6 +58,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "계획 시작",
     scheduledJourney: "예정된 여정",
     reservation: "예약",
+    noScheduledJourneys: "예정된 여정이 없습니다.",
+    noReservations: "예약이 없습니다.",
     open: "열기",
     tripHint: "관련 채팅 요약 보기 (데모).",
     dnaTitle: "트리버의 여행 DNA",
@@ -81,6 +85,8 @@ const MYPAGE_I18N: Record<AppLanguage, Record<string, string>> = {
     startPlanning: "プラン開始",
     scheduledJourney: "予定された旅程",
     reservation: "予約",
+    noScheduledJourneys: "予定された旅程はありません。",
+    noReservations: "予約はありません。",
     open: "開く",
     tripHint: "関連チャット要約を見る（mock）。",
     dnaTitle: "トリバーの旅行DNA",
@@ -594,6 +600,11 @@ export default function MyPage() {
     profile_picture: "",
   });
 
+  const [todayRecommendation, setTodayRecommendation] = useState({
+    title: "Seongsu-dong K-Beauty Tour",
+    description: "Continuing from session #8821. Focusing on flagship stores and hidden cafes.",
+  });
+
   const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
 
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
@@ -610,6 +621,8 @@ export default function MyPage() {
   const [reservationPhotoById, setReservationPhotoById] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    let cancelled = false;
+
     const applyLanguage = () => {
       const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (raw === "en" || raw === "ko" || raw === "ja") {
@@ -664,17 +677,69 @@ export default function MyPage() {
     const fetchUserProfile = async () => {
       try {
         const data = await fetchCurrentUser();
+
+        let hasLocalTravelPreferences = false;
+        try {
+          const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as unknown;
+            if (parsed && typeof parsed === "object") {
+              const candidate = (parsed as { travelPreferences?: unknown }).travelPreferences;
+              hasLocalTravelPreferences =
+                Array.isArray(candidate)
+                && candidate.length === 3
+                && candidate.every((x) => typeof x === "string" && x.trim().length > 0);
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        const dbPrefs = [data.extra_prefer1, data.extra_prefer2, data.extra_prefer3].filter(
+          (x): x is string => typeof x === "string" && x.trim().length > 0,
+        );
+
         setUserProfile((prev) => ({
           ...prev,
           nickname: prev.nickname || data.nickname || data.name || "User",
           profile_picture: data.profile_picture || prev.profile_picture || "",
+          preferences: hasLocalTravelPreferences ? prev.preferences : (dbPrefs.length ? dbPrefs.slice(0, 3) : prev.preferences),
         }));
       } catch (error) {
         console.error("Failed to fetch user profile", error);
       }
     };
 
+    const fetchTodayRecommendation = async () => {
+      try {
+        const rooms = await fetchRooms();
+        if (cancelled) return;
+
+        const latestRoom = Array.isArray(rooms) ? rooms[0] : undefined;
+        if (!latestRoom?.id) return;
+
+        const roomDetail = await fetchRoom(latestRoom.id);
+        if (cancelled) return;
+
+        const messages = Array.isArray(roomDetail?.messages) ? roomDetail.messages : [];
+        const lastAi = [...messages]
+          .reverse()
+          .find((m) => m?.role === "ai" && typeof m.message === "string" && m.message.trim().length > 0);
+
+        const clean = lastAi?.message ? lastAi.message.replace(/\s+/g, " ").trim() : "";
+
+        setTodayRecommendation((prev) => ({
+          title: (roomDetail?.title || "").trim() || prev.title,
+          description: clean || prev.description,
+        }));
+      } catch (error) {
+        // Keep the existing placeholder when chat API is unavailable (e.g., not logged in yet).
+        console.warn("Failed to fetch today's recommendation", error);
+      }
+    };
+
     fetchUserProfile();
+    fetchTodayRecommendation();
 
     try {
       const linked = localStorage.getItem(CALENDAR_LINKED_STORAGE_KEY);
@@ -686,6 +751,7 @@ export default function MyPage() {
     }
 
     return () => {
+      cancelled = true;
       window.removeEventListener("triver:language", onLang);
       window.removeEventListener("triver:profile-settings", onProfileSettings);
     };
@@ -875,12 +941,14 @@ export default function MyPage() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
-      <div className="flex-none h-full">
-        <Sidebar />
+    <div className="flex w-full min-h-screen bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row flex-col lg:overflow-hidden">
+      <div className="flex-none lg:h-full max-w-full">
+        <div className="h-full">
+          <Sidebar />
+        </div>
       </div>
-      <main className="flex-1 h-full min-w-0 bg-white rounded-lg overflow-y-auto">
-        <div className="p-6">
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto">
+        <div className="p-4 sm:p-6">
           <header className="mb-6 flex items-end justify-between border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
@@ -895,8 +963,9 @@ export default function MyPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
-                <div className="flex items-center gap-4 mb-5">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
+                <div className="flex flex-col gap-3 mb-5">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                     {userProfile.profile_picture ? (
                       <img
                         src={userProfile.profile_picture}
@@ -906,18 +975,23 @@ export default function MyPage() {
                     ) : (
                       <span className="font-medium text-xs">{t("noImage")}</span>
                     )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base text-gray-900 truncate">{userProfile.nickname}</h3>
+                      <p className="text-[10px] text-gray-500 font-medium mt-1 truncate">{userProfile.bio}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-base text-gray-900">{userProfile.nickname}</h3>
-                    <p className="text-[10px] text-gray-500 font-medium mt-1">{userProfile.bio}</p>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/mypage/settings")}
+                      className="whitespace-nowrap bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+                    >
+                      {t("settings")}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push("/mypage/settings")}
-                    className="whitespace-nowrap mt-2 bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
-                  >
-                    {t("settings")}
-                  </button>
                 </div>
               </motion.div>
 
@@ -959,9 +1033,9 @@ export default function MyPage() {
                     <div className="flex items-center gap-2 text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mb-3">
                       <Sparkles size={10} className="text-white" /> {t("todayRec")}
                     </div>
-                    <h2 className="text-xl font-serif italic font-light mb-2 tracking-wide">Seongsu-dong K-Beauty Tour</h2>
+                    <h2 className="text-xl font-serif italic font-light mb-2 tracking-wide">{todayRecommendation.title}</h2>
                     <p className="text-white/60 text-xs font-light max-w-md leading-relaxed">
-                      Continuing from session #8821. Focusing on flagship stores and hidden cafes.
+                      {todayRecommendation.description}
                     </p>
                   </div>
                   <button
@@ -985,22 +1059,26 @@ export default function MyPage() {
                     <h3 className="font-bold text-xs text-gray-900 uppercase tracking-widest">{t("scheduledJourney")}</h3>
                   </div>
                   <div className="space-y-2.5 flex-1">
-                    {trips.map((trip) => (
-                      <button
-                        key={trip.id}
-                        type="button"
-                        onClick={() => setActiveTrip(trip)}
-                        className="w-full text-left p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-gray-900 leading-tight">{trip.title}</span>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{t("open")}</span>
-                        </div>
-                        <p className="mt-1 text-[10px] text-gray-500">
-                          {t("tripHint")}
-                        </p>
-                      </button>
-                    ))}
+                    {trips.length ? (
+                      trips.map((trip) => (
+                        <button
+                          key={trip.id}
+                          type="button"
+                          onClick={() => setActiveTrip(trip)}
+                          className="w-full text-left p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-gray-900 leading-tight">{trip.title}</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{t("open")}</span>
+                          </div>
+                          <p className="mt-1 text-[10px] text-gray-500">{t("tripHint")}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="h-full min-h-[120px] flex items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-[10px] text-gray-400 font-medium">
+                        {t("noScheduledJourneys")}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
 
@@ -1026,41 +1104,47 @@ export default function MyPage() {
                     </div>
                   )}
                   <div className="space-y-2.5 flex-1 max-h-[210px] overflow-y-auto pr-1">
-                    {reservations.map((res) => (
-                      <div
-                        key={res.id}
-                        className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-between gap-2"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setActiveReservation(res)}
-                          className="flex-1 min-w-0 cursor-pointer flex items-center justify-between text-left"
+                    {reservations.length ? (
+                      reservations.map((res) => (
+                        <div
+                          key={res.id}
+                          className="w-full group p-2.5 rounded-lg border border-gray-100 hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-between gap-2"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
-                              <ReservationLogo category={res.category} />
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className="text-[11px] font-bold text-gray-900 leading-tight truncate">{res.title}</h4>
-                              <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                                <span className="text-[9px] text-gray-400 font-medium uppercase truncate">{res.subtitle}</span>
-                                <span className="text-[9px] text-gray-300">•</span>
-                                <span className="text-[9px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveReservation(res)}
+                            className="flex-1 min-w-0 cursor-pointer flex items-center justify-between text-left"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:text-black transition-colors border border-gray-200">
+                                <ReservationLogo category={res.category} />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-[11px] font-bold text-gray-900 leading-tight truncate">{res.title}</h4>
+                                <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                                  <span className="text-[9px] text-gray-400 font-medium uppercase truncate">{res.subtitle}</span>
+                                  <span className="text-[9px] text-gray-300">•</span>
+                                  <span className="text-[9px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <CheckCircle2 size={14} className="text-black flex-none" />
-                        </button>
+                            <CheckCircle2 size={14} className="text-black flex-none" />
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => requestDeleteReservation(res)}
-                          className="flex-none text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
-                        >
-                          Delete
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => requestDeleteReservation(res)}
+                            className="flex-none text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="h-full min-h-[120px] flex items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-[10px] text-gray-400 font-medium">
+                        {t("noReservations")}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </motion.div>
               </div>
