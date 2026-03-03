@@ -66,17 +66,12 @@ export function Destinations() {
         if (e) e.stopPropagation();
 
         if (!isLoggedIn) {
-            // 로그인이 안 되어 있다면 먼저 알람을 띄운 후 로그인 페이지로 보냅니다.
-            alert("로그인이 필요한 서비스입니다! 로그인 페이지로 이동합니다.");
-            router.push("/login"); // 실제 존재하는 로그인 페이지 경로로 수정하세요
+            // 로그인이 안 되어 있다면 바로 로그인 페이지로 이동합니다.
+            router.push("/login");
         } else {
-            // 나중에 explore 페이지 혹은 다른 곳에서 이 데이터를 꺼낼 수 있습니다.
+            // 선택한 장소 정보를 localStorage에 저장 후 챗봇 페이지로 이동합니다.
             localStorage.setItem("selectedForChat", JSON.stringify(place));
-
-            // Explore(또는 새로운 진입점)으로 이동
-            router.push("/explore");
-
-            // 모달 상태 초기화 (현재는 모달을 꺼두었으므로 사실상 영향 없음)
+            router.push("/chatbot");
             setSelectedPlace(null);
         }
     };
@@ -155,9 +150,6 @@ export function Destinations() {
                         >
                             {displayItems.map((place) => (
                                 <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                    {/* 현재 모달은 미완성이므로 클릭 이벤트를 꺼둡니다.
-                                        onClick={() => setSelectedPlace(place)} // 이미지 영역 클릭 시 해당 장소 데이터를 상태에 저장합니다. 
-                                    */}
                                     <div
                                         className="relative aspect-[4/3] overflow-hidden"
                                     >
@@ -192,63 +184,7 @@ export function Destinations() {
                 </div>
             </div>
 
-            {/* ====== 모달 (Modal) 영역 미완성이라 임시비활성화 ====== 
-            <AnimatePresence>
-                {selectedPlace && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setSelectedPlace(null)} 
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            onClick={(e) => e.stopPropagation()} 
-                            className="relative w-full max-w-2xl overflow-hidden bg-white shadow-2xl rounded-2xl"
-                        >
-                            <button
-                                onClick={() => setSelectedPlace(null)}
-                                className="absolute z-10 p-2 bg-white rounded-full top-4 right-4 text-gray-500 hover:text-black hover:bg-gray-100 transition-colors shadow-md"
-                            >
-                                <X size={20} />
-                            </button>
 
-                            <div className="relative w-full h-64 sm:h-80">
-                                <img src={selectedPlace.image} alt={selectedPlace.title} className="object-cover w-full h-full" />
-                            </div>
-
-                            <div className="p-8">
-                                <div className="flex items-start mb-4">
-                                    <div>
-                                        <h3 className="text-3xl font-bold text-gray-900 mb-2">{selectedPlace.title}</h3>
-                                        <div className="flex items-center gap-2 text-gray-500 font-mono">
-                                            <MapPin size={16} />
-                                            <span>{selectedPlace.addr}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <p className="text-gray-600 leading-relaxed mb-8">
-                                    여기에 DB에서 받아온 상세 설명 문구가 들어갈 자리입니다. 현재는 임시 텍스트를 보여주고 있습니다. 이 장소는 매력적인 분위기와 훌륭한 리뷰를 자랑하는 곳입니다. 방문하셔서 특별한 추억을 만들어보세요.
-                                </p>
-
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={() => handlePlanTripClick(selectedPlace)}
-                                        className="flex-1 bg-black text-white px-6 py-3.5 rounded-xl font-semibold text-lg hover:bg-gray-800 transition-colors shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <CalendarPlus size={20} /> Plan Trip
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            */}
         </section>
     );
 }
