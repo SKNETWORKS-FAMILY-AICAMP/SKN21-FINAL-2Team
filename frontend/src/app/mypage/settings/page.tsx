@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Moon, Sun } from "lucide-react";
-import { fetchCurrentUser } from "@/services/api";
+import { fetchCountries, fetchCurrentUser, updateCurrentUser, type Country } from "@/services/api";
+import { useGoogleLogin } from "@react-oauth/google";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -14,7 +15,7 @@ type ThemeMode = "light" | "dark";
 type ProfileSettings = {
   nickname: string;
   bio: string;
-  country: string;
+  countryCode: string;
   email: string;
   language: AppLanguage;
   travelNotes: string[];
@@ -24,52 +25,11 @@ type ProfileSettings = {
 const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
 const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 const THEME_STORAGE_KEY = "triver:theme:v1";
-const COUNTRIES = [
-  "Korea",
-  "Japan",
-  "United States",
-  "Canada",
-  "United Kingdom",
-  "France",
-  "Germany",
-  "Italy",
-  "Spain",
-  "Portugal",
-  "Netherlands",
-  "Belgium",
-  "Switzerland",
-  "Austria",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "Ireland",
-  "Poland",
-  "Czech Republic",
-  "Hungary",
-  "Greece",
-  "Turkey",
-  "Russia",
-  "China",
-  "Taiwan",
-  "Hong Kong",
-  "Singapore",
-  "Thailand",
-  "Vietnam",
-  "Philippines",
-  "Indonesia",
-  "Malaysia",
-  "India",
-  "Australia",
-  "New Zealand",
-  "Mexico",
-  "Brazil",
-  "Argentina",
-  "Chile",
-  "South Africa",
-  "Egypt",
-  "United Arab Emirates",
-  "Saudi Arabia",
+
+const FALLBACK_COUNTRIES: Country[] = [
+  { code: "KR", name: "Korea" },
+  { code: "JP", name: "Japan" },
+  { code: "US", name: "United States" },
 ];
 
 const TRAVEL_NOTES = ["Religion", "Vegan", "Food Allergies", "Halal", "Gluten Free", "Culture"];
@@ -90,7 +50,7 @@ const formatTravelStyleOptionLabel = (opt: string) => {
 };
 
 // TODO: Google 계정 확인(재인증) UI/연동 붙일 때 true로 전환
-const ENABLE_GOOGLE_CONFIRM = false;
+const ENABLE_GOOGLE_CONFIRM = true;
 
 const I18N: Record<AppLanguage, Record<string, string>> = {
   en: {
@@ -219,6 +179,30 @@ const getStoredLanguage = (): AppLanguage => {
   return isAppLanguage(raw) ? raw : "en";
 };
 
+const normalizeCountryCode = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  // Backward-compat: 잘못된 한국 코드(ko=언어코드)를 ISO 3166-1(kr)로 정규화
+  if (lower === "ko") return "KR";
+  return trimmed.toUpperCase();
+};
+
+const getCountryDisplayName = (code: string, fallbackName: string, language: AppLanguage, mounted: boolean) => {
+  if (!mounted) return fallbackName;
+  const normalized = (code || "").trim().toUpperCase();
+  if (!normalized) return fallbackName;
+
+  try {
+    const dn = new Intl.DisplayNames([language], { type: "region" });
+    const label = dn.of(normalized);
+    return (label && label.trim().length ? label : fallbackName) || fallbackName;
+  } catch {
+    return fallbackName;
+  }
+};
+
 const getStoredTheme = (): ThemeMode => {
   if (typeof window === "undefined") return "light";
   const raw = localStorage.getItem(THEME_STORAGE_KEY);
@@ -244,33 +228,19 @@ export default function MyPageSettingsPage() {
 
   const saveNoticeTimerRef = useRef<number | null>(null);
 
+  const [mounted, setMounted] = useState<boolean>(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
-  const [language, setLanguage] = useState<AppLanguage>(() => getStoredLanguage());
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredTheme());
-  const [nickname, setNickname] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.nickname === "string" ? s.nickname : "Traveling_Trivers67";
-  });
-  const [bio, setBio] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.bio === "string" ? s.bio : "Explorer Lvl.3";
-  });
-  const [country, setCountry] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.country === "string" ? s.country : "Korea";
-  });
-  const [email, setEmail] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.email === "string" ? s.email : "user@gmail.com";
-  });
-  const [travelNotes, setTravelNotes] = useState<string[]>(() => {
-    const s = getStoredSettings();
-    return Array.isArray(s.travelNotes)
-      ? s.travelNotes.filter((x): x is string => typeof x === "string")
-      : ["Religion", "Food Allergies"];
-  });
-  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(() => getStoredTravelPreferences());
+  const [language, setLanguage] = useState<AppLanguage>("en");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
+  const [bio, setBio] = useState<string>("Explorer Lvl.3");
+  const [countryCode, setCountryCode] = useState<string>("KR");
+  const [email, setEmail] = useState<string>("user@gmail.com");
+  const [travelNotes, setTravelNotes] = useState<string[]>(["Religion", "Food Allergies"]);
+  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(["Relaxation", "Food", "Culture"]);
   const [saveNotice, setSaveNotice] = useState<string>("");
+
+  const [countries, setCountries] = useState<Country[]>([]);
 
   const [deactivateOpen, setDeactivateOpen] = useState<boolean>(false);
   const [deactivateEmailConfirmed, setDeactivateEmailConfirmed] = useState<boolean>(false);
@@ -278,6 +248,12 @@ export default function MyPageSettingsPage() {
   const [deactivateShowFinalConfirm, setDeactivateShowFinalConfirm] = useState<boolean>(false);
   const [deactivateEmailError, setDeactivateEmailError] = useState<string>("");
   const [deactivateAgreementError, setDeactivateAgreementError] = useState<string>("");
+  const [googleConfirmBusy, setGoogleConfirmBusy] = useState<boolean>(false);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const GOOGLE_CALLBACK_URL = API_BASE.endsWith("/api")
+    ? `${API_BASE}/auth/google/callback`
+    : `${API_BASE}/api/auth/google/callback`;
 
   const t = useMemo(() => {
     const dict = I18N[language] ?? I18N.en;
@@ -302,6 +278,66 @@ export default function MyPageSettingsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
+
+    // Avoid hydration mismatch: localStorage는 마운트 이후에만 읽어서 state를 갱신
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === "object") {
+          const s = parsed as {
+            nickname?: unknown;
+            bio?: unknown;
+            email?: unknown;
+            travelNotes?: unknown;
+            travelPreferences?: unknown;
+            preferences?: unknown;
+            countryCode?: unknown;
+            country?: unknown;
+            language?: unknown;
+          };
+
+          if (typeof s.nickname === "string" && s.nickname.trim()) setNickname(s.nickname);
+          if (typeof s.bio === "string" && s.bio.trim()) setBio(s.bio);
+          if (typeof s.email === "string" && s.email.trim()) setEmail(s.email);
+
+          const nextCode = normalizeCountryCode(s.countryCode) || normalizeCountryCode(s.country);
+          if (nextCode) setCountryCode(nextCode);
+
+          if (Array.isArray(s.travelNotes)) {
+            const notes = s.travelNotes.filter((x): x is string => typeof x === "string");
+            if (notes.length) setTravelNotes(notes);
+          }
+
+          const prefsCandidate =
+            Array.isArray(s.travelPreferences) ? s.travelPreferences : Array.isArray(s.preferences) ? s.preferences : null;
+          if (prefsCandidate) {
+            const prefs = prefsCandidate.filter((x): x is string => typeof x === "string");
+            if (prefs.length >= 3) setTravelPreferences([prefs[0], prefs[1], prefs[2]]);
+          }
+
+          if (isAppLanguage(s.language)) setLanguage(s.language);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (isAppLanguage(rawLang)) setLanguage(rawLang);
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (isThemeMode(rawTheme)) setThemeMode(rawTheme);
+    } catch {
+      // ignore
+    }
+
     return () => {
       if (saveNoticeTimerRef.current) {
         window.clearTimeout(saveNoticeTimerRef.current);
@@ -315,6 +351,21 @@ export default function MyPageSettingsPage() {
         const data = await fetchCurrentUser();
         if (typeof data?.profile_picture === "string") setProfilePictureUrl(data.profile_picture);
         if (typeof data?.email === "string") setEmail(data.email);
+        if (typeof data?.nickname === "string" && data.nickname.trim().length > 0) {
+          setNickname(data.nickname);
+        }
+        if (typeof data?.country_code === "string" && data.country_code.trim().length > 0) {
+          const next = normalizeCountryCode(data.country_code);
+          if (next) setCountryCode(next);
+        }
+
+        // Hydrate Travel Preference from DB when available (no backend change required).
+        const fromDb = [data?.extra_prefer1, data?.extra_prefer2, data?.extra_prefer3].filter(
+          (x): x is string => typeof x === "string" && x.trim().length > 0,
+        );
+        if (fromDb.length === 3) {
+          setTravelPreferences([fromDb[0], fromDb[1], fromDb[2]]);
+        }
       } catch {
         // ignore
       }
@@ -322,15 +373,46 @@ export default function MyPageSettingsPage() {
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCountries = async () => {
+      try {
+        const list = await fetchCountries();
+        if (cancelled) return;
+        if (Array.isArray(list) && list.length) {
+          const byCode = new Map<string, Country>();
+          for (const c of list) {
+            const normalized = normalizeCountryCode(c?.code);
+            if (!normalized) continue;
+            byCode.set(normalized, { ...c, code: normalized });
+          }
+          const normalizedList = Array.from(byCode.values());
+          setCountries(normalizedList.length ? normalizedList : FALLBACK_COUNTRIES);
+        } else {
+          setCountries(FALLBACK_COUNTRIES);
+        }
+      } catch {
+        if (cancelled) return;
+        setCountries(FALLBACK_COUNTRIES);
+      }
+    };
+
+    void loadCountries();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toggleNote = (note: string) => {
     setTravelNotes((prev) => (prev.includes(note) ? prev.filter((x) => x !== note) : [...prev, note]));
   };
 
   const handleSave = () => {
+    const normalizedCountryCode = normalizeCountryCode(countryCode) || "KR";
     const payload: ProfileSettings = {
       nickname,
       bio,
-      country,
+      countryCode: normalizedCountryCode,
       email,
       language,
       travelNotes,
@@ -340,6 +422,22 @@ export default function MyPageSettingsPage() {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     window.dispatchEvent(new Event("triver:language"));
     window.dispatchEvent(new Event("triver:profile-settings"));
+
+    // Persist Travel Preference to DB (maps to existing user columns extra_prefer1~3).
+    // Travel Notes는 현재 백엔드 스키마에 대응 컬럼이 없어 저장하지 않습니다.
+    (async () => {
+      try {
+        await updateCurrentUser({
+          nickname,
+          country_code: normalizedCountryCode,
+          extra_prefer1: travelPreferences[0],
+          extra_prefer2: travelPreferences[1],
+          extra_prefer3: travelPreferences[2],
+        });
+      } catch {
+        // ignore: keep local saved settings even when API is unavailable
+      }
+    })();
 
     setSaveNotice(t("savedNotice"));
     if (saveNoticeTimerRef.current) {
@@ -359,44 +457,61 @@ export default function MyPageSettingsPage() {
     setDeactivateAgreementError("");
   };
 
-  const confirmWithGoogle = async () => {
-    setDeactivateEmailError("");
-
-    const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
-    const isPlaceholderEmail = (value: string) => value.trim().toLowerCase() === "user@gmail.com";
-
-    const candidates: string[] = [];
-    if (typeof email === "string" && !isPlaceholderEmail(email)) candidates.push(email);
-
-    try {
-      const fromLocal = localStorage.getItem("user_email");
-      if (fromLocal) candidates.push(fromLocal);
-    } catch {
-      // ignore
-    }
-
-    const best = candidates.find((c) => typeof c === "string" && isValidEmail(c) && !isPlaceholderEmail(c));
-    if (best) {
-      setEmail(best);
-      setDeactivateEmailConfirmed(true);
+  const triggerGoogleConfirm = useGoogleLogin({
+    flow: "auth-code",
+    scope: "openid email profile",
+    onSuccess: async (codeResponse) => {
+      setGoogleConfirmBusy(true);
       setDeactivateEmailError("");
-      return;
-    }
 
-    try {
-      const data = await fetchCurrentUser();
-      if (typeof data?.email === "string" && isValidEmail(data.email) && !isPlaceholderEmail(data.email)) {
-        setEmail(data.email);
+      try {
+        const res = await fetch(GOOGLE_CALLBACK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const { access_token, refresh_token, profile_picture, name, email: nextEmail } = data || {};
+
+        if (typeof window !== "undefined") {
+          if (access_token) localStorage.setItem("access_token", access_token);
+          if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
+          if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
+          if (name) localStorage.setItem("user_name", name);
+          if (nextEmail) localStorage.setItem("user_email", nextEmail);
+        }
+
+        if (typeof nextEmail === "string" && nextEmail.trim()) {
+          setEmail(nextEmail);
+        }
+
         setDeactivateEmailConfirmed(true);
         setDeactivateEmailError("");
-        return;
+      } catch (e) {
+        console.error("Google confirm failed:", e);
+        setDeactivateEmailConfirmed(false);
+        setDeactivateEmailError("Google confirmation failed");
+      } finally {
+        setGoogleConfirmBusy(false);
       }
-    } catch {
-      // ignore
-    }
+    },
+    onError: () => {
+      setDeactivateEmailConfirmed(false);
+      setDeactivateEmailError("Google confirmation canceled");
+    },
+  });
 
-    setDeactivateEmailConfirmed(false);
-    setDeactivateEmailError(t("errConfirmEmail"));
+  const confirmWithGoogle = () => {
+    if (googleConfirmBusy) return;
+    setDeactivateEmailError("");
+    triggerGoogleConfirm();
   };
 
   const requestDeactivate = () => {
@@ -565,13 +680,13 @@ export default function MyPageSettingsPage() {
                   <div>
                     <div className="text-xs font-bold text-gray-900 mb-2">{t("country")}</div>
                     <select
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
                       className="w-full h-10 px-3 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-900"
                     >
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                      {(countries.length ? countries : FALLBACK_COUNTRIES).map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {getCountryDisplayName(c.code, c.name, language, mounted)}
                         </option>
                       ))}
                     </select>
@@ -750,10 +865,10 @@ export default function MyPageSettingsPage() {
                 <div className="mb-6">
                   <button
                     type="button"
-                    disabled={!ENABLE_GOOGLE_CONFIRM}
+                    disabled={!ENABLE_GOOGLE_CONFIRM || googleConfirmBusy}
                     onClick={ENABLE_GOOGLE_CONFIRM ? confirmWithGoogle : undefined}
                     className={
-                      ENABLE_GOOGLE_CONFIRM
+                      ENABLE_GOOGLE_CONFIRM && !googleConfirmBusy
                         ? "bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                         : "bg-gray-200 text-gray-500 px-6 py-3 rounded-lg text-sm font-semibold cursor-not-allowed"
                     }

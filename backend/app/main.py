@@ -82,6 +82,11 @@ app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 # /api/static 경로 추가 (nginx /api/ 블록을 통해 브라우저에서 접근)
 app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
+from app.api import (
+    auth, users, chat, prefer, common, explore,
+    attractions, restaurants, hot_place as hot_place_api
+)
+
 # Register Routers
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -89,6 +94,8 @@ app.include_router(chat.router)
 app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
+app.include_router(attractions.router)
+app.include_router(restaurants.router)
 app.include_router(hot_place_api.router)
 
 logger = logging.getLogger("api_logger")
