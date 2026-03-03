@@ -10,41 +10,32 @@ import { createRoom } from "@/services/api";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
-    { id: "historical", label: "Historical" },
-    { id: "nature", label: "Nature" },
-    { id: "activity", label: "Activity" },
+    { id: "tourist-spot", label: "Tourist Spot" },
+    { id: "foods", label: "Foods" },
 ];
 
-// ✅ API 응답과 동일한 필드명을 사용하는 더미 데이터 (hot-places 제외 - 실제 API 연결)
-// 주의: hot-places는 아래 useEffect에서 /api/hot-places 로 실시간 호출합니다.
+// ✅ tourist-spot, foods 탭의 임시 더미 데이터 (통합 필드명 사용)
+// 주의: 나중에 각 탭에 API가 연결되면 이 데이터는 삭제합니다.
 const staticDestinations: Record<string, Destination[]> = {
-    historical: [
-        { id: 4, name: "Gwanghwamun Gate", image_path: "https://images.unsplash.com/photo-1591203265333-2248cd9470c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxHd2FuZ2h3YW11biUyMGdhdGUlMjBTZW91bCUyMGhpc3RvcmljYWx8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Sajik-ro, Jongno-gu" },
-        { id: 5, name: "Bukchon Hanok Village", image_path: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5vayUyMHZpbGxhZ2UlMjByb29mdG9wcyUyMHRyYWRpdGlvbmFsfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Gahoe-dong, Jongno-gu" },
-        { id: 6, name: "Changdeokgung Secret Garden", image_path: "https://images.unsplash.com/photo-1665688523044-32afbd7a9d28?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxDaGFuZ2Rlb2tndW5nJTIwUGFsYWNlJTIwU2VjcmV0JTIwR2FyZGVufGVufDF8fHx8MTc3MTQ4MTkwOHww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Yulgok-ro, Jongno-gu" },
+    "tourist-spot": [
+        { id: 101, name: "Gyeongbokgung Palace", image: "https://images.unsplash.com/photo-1604640213-0251ead81922?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Sajik-ro, Jongno-gu" },
+        { id: 102, name: "N Seoul Tower", image: "https://images.unsplash.com/photo-1614935151651-0bea6508db6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Namsan-gongwon-gil, Yongsan-gu" },
+        { id: 103, name: "Bukchon Hanok Village", image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Gahoe-dong, Jongno-gu" },
     ],
-    nature: [
-        { id: 7, name: "Hangang Park Picnic", image_path: "https://images.unsplash.com/photo-1720250050813-78406c8d1350?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5nYW5nJTIwcml2ZXIlMjBwaWNuaWMlMjBzdW5zZXR8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Yeouido-dong, Yeongdeungpo-gu" },
-        { id: 8, name: "Namsan Seoul Tower", image_path: "https://images.unsplash.com/photo-1760788935785-2f50c6092980?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYW1zYW4lMjBTZW91bCUyMFRvd2VyJTIwc2NlbmljJTIwdmlld3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Namsan-gongwon-gil, Yongsan-gu" },
-        { id: 9, name: "Seoul Forest", image_path: "https://images.unsplash.com/photo-1707298409328-55d0c5fa9370?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxTZW91bCUyMEZvcmVzdCUyMFBhcmslMjBkZWVyJTIwdHJlZXN8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Seongsu-dong, Seongdong-gu" },
-    ],
-    activity: [
-        { id: 10, name: "Lotte World Adventure", image_path: "https://images.unsplash.com/photo-1674606067725-b6ab1e340753?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxMb3R0ZSUyMFdvcmxkJTIwVG93ZXIlMjBTZW91bCUyMHRoZW1lJTIwcGFya3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Jamsil-dong, Songpa-gu" },
-        { id: 11, name: "COEX Aquarium", image_path: "https://images.unsplash.com/photo-1677607219759-5ee7279f2774?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxBcXVhcml1bSUyMHR1bm5lbCUyMGZpc2glMjBibHVlfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Samseong-dong, Gangnam-gu" },
-        { id: 12, name: "Hongdae Nightlife", image_path: "https://images.unsplash.com/photo-1676741556435-709eaa1f872f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOZW9uJTIwc2lnbiUyMG5pZ2h0JTIwc3RyZWV0JTIwU2VvdWwlMjBsaXZlbHl8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Hongdae, Mapo-gu" },
+    foods: [
+        { id: 201, name: "Gwangjang Market", image: "https://images.unsplash.com/photo-1583394293214-cce78e594a77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jongno-gu, Seoul" },
+        { id: 202, name: "Myeongdong Street Food", image: "https://images.unsplash.com/photo-1548943487-a2e4e43b4853?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Myeongdong, Jung-gu" },
+        { id: 203, name: "Tongin Market", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jahamun-ro, Jongno-gu" },
     ],
 };
 
-// ✅ 백엔드 API 응답 구조와 동일한 타입 설계도
-// hot_place.py의 응답: { id, name, adress, image_path, feature, tag1, tag2 }
+// ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
+// fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
 export interface Destination {
-    id: number;
-    name: string;
-    image_path: string;
-    adress: string;
-    feature?: string;  // 선택 속성 (화면에 표시하지 않아도 됨)
-    tag1?: string;
-    tag2?: string;
+    id: number | string;   // hot_place: id(number) | attractions·restaurants: contentid(string)
+    name: string;          // 세 API 모두 동일
+    image: string;         // hot_place: /api/static/ + image_path | 나머지: image URL 그대로
+    address: string;       // hot_place: adress(오타) | 나머지: address 로 통일
 }
 
 export function Destinations() {
@@ -120,34 +111,75 @@ export function Destinations() {
         return newArr;
     };
 
-    // ✅ 탭이 바뀔 때마다 실행: hot-places는 실제 API, 나머지는 더미 데이터 사용
+    // ✅ 탭이 바뀔 때마다 실행: 각 탭의 API 호출 후 통합 Destination 타입으로 매핑
     useEffect(() => {
         if (activeTab === "hot-places") {
-            // 🌐 백엔드 /api/hot-places 에 GET 요청 (인증 불필요)
-            const fetchHotPlaces = async () => {
+            // 🌐 /api/hot-places → { id, name, adress, image_path } 반환
+            const fetch_ = async () => {
                 try {
-                    const response = await fetch("/api/hot-places?limit=3");
-
-                    if (!response.ok) {
-                        throw new Error("Hot Places 데이터를 불러오는데 실패했습니다.");
-                    }
-
-                    // 백엔드에서 받은 JSON 데이터를 Destination[] 타입으로 바로 사용합니다.
-                    const data: Destination[] = await response.json();
-                    setDisplayItems(data);
+                    const res = await fetch("/api/hot-places?limit=3");
+                    if (!res.ok) throw new Error("Hot Places fetch 실패");
+                    const raw = await res.json();
+                    // 주의: hot_place API는 adress(오타), image_path(상대경로)를 사용하므로 변환
+                    const mapped: Destination[] = raw.map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        address: p.adress,                        // adress → address 로 통일
+                        image: `/api/static/${p.image_path}`,    // 상대경로 → 전체 URL 로 변환
+                    }));
+                    setDisplayItems(mapped);
                 } catch (error) {
-                    console.error("API 호출 에러:", error);
-                    // 주의: 에러 발생 시(예: 서버 다운) 빈 배열로 유지됩니다.
+                    console.error("[hot-places] API 호출 에러:", error);
                     setDisplayItems([]);
                 }
             };
-            fetchHotPlaces();
-        } else {
-            // hot-places 이외 탭은 더미 데이터를 랜덤 섞어 표시합니다.
-            const items = staticDestinations[activeTab as keyof typeof staticDestinations];
-            if (items) {
-                setDisplayItems(shuffleArray(items));
-            }
+            fetch_();
+
+        } else if (activeTab === "tourist-spot") {
+            // 🌐 /api/attractions → { contentid, name, address, image } 반환
+            const fetch_ = async () => {
+                try {
+                    const res = await fetch("/api/attractions?limit=3");
+                    if (!res.ok) throw new Error("Attractions fetch 실패");
+                    const raw = await res.json();
+                    // 주의: attractions API는 contentid(string), address, image(외부URL) 사용
+                    const mapped: Destination[] = raw.map((p: any) => ({
+                        id: p.contentid,
+                        name: p.name,
+                        address: p.address,   // 필드명 동일
+                        image: p.image,       // 이미 완전한 URL
+                    }));
+                    setDisplayItems(mapped);
+                } catch (error) {
+                    console.error("[tourist-spot] API 호출 에러:", error);
+                    // 주의: API 에러 시 더미 데이터로 폴백
+                    setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));
+                }
+            };
+            fetch_();
+
+        } else if (activeTab === "foods") {
+            // 🌐 /api/restaurants → { contentid, name, address, image } 반환
+            const fetch_ = async () => {
+                try {
+                    const res = await fetch("/api/restaurants?limit=3");
+                    if (!res.ok) throw new Error("Restaurants fetch 실패");
+                    const raw = await res.json();
+                    // restaurants API도 attractions과 동일한 필드 구조
+                    const mapped: Destination[] = raw.map((p: any) => ({
+                        id: p.contentid,
+                        name: p.name,
+                        address: p.address,
+                        image: p.image,
+                    }));
+                    setDisplayItems(mapped);
+                } catch (error) {
+                    console.error("[foods] API 호출 에러:", error);
+                    // 주의: API 에러 시 더미 데이터로 폴백
+                    setDisplayItems(shuffleArray(staticDestinations["foods"]));
+                }
+            };
+            fetch_();
         }
     }, [activeTab]);
 
@@ -185,17 +217,69 @@ export function Destinations() {
                             >
                                 {displayItems.map((place) => (
                                     <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                        <div className="relative aspect-[4/3] overflow-hidden">
-                                            <img
-                                                src={place.image_path.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
-                                                alt={place.name}
-                                                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                                            />
+                                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                                            {/* 주의: image가 빈 문자열("")이면 브라우저 에러 발생 → 있을 때만 img 렌더링 */}
+                                            {place.image ? (
+                                                <img
+                                                    src={place.image}
+                                                    alt={place.name}
+                                                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                                                />
+                                            ) : (
+                                                // 이미지 없을 때: 탭별 픽토그램 placeholder
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+                                                    {activeTab === "tourist-spot" ? (
+                                                        // 🗼 남산타워 픽토그램
+                                                        <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            {/* 안테나 */}
+                                                            <rect x="38" y="0" width="4" height="18" rx="2" fill="#CBD5E1" />
+                                                            {/* 전망대 디스크 */}
+                                                            <ellipse cx="40" cy="26" rx="18" ry="7" fill="#94A3B8" />
+                                                            <rect x="36" y="18" width="8" height="10" fill="#94A3B8" />
+                                                            {/* 타워 몸통 (위) */}
+                                                            <polygon points="36,28 44,28 48,60 32,60" fill="#CBD5E1" />
+                                                            {/* 타워 받침 */}
+                                                            <rect x="28" y="60" width="24" height="8" rx="2" fill="#94A3B8" />
+                                                            {/* 다리 왼쪽 */}
+                                                            <polygon points="28,68 34,68 30,92 24,92" fill="#CBD5E1" />
+                                                            {/* 다리 오른쪽 */}
+                                                            <polygon points="46,68 52,68 56,92 50,92" fill="#CBD5E1" />
+                                                            {/* 받침대 */}
+                                                            <rect x="20" y="92" width="40" height="5" rx="2.5" fill="#94A3B8" />
+                                                        </svg>
+                                                    ) : activeTab === "foods" ? (
+                                                        // 🍲 비빔밥 픽토그램
+                                                        <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            {/* 그릇 테두리 */}
+                                                            <ellipse cx="50" cy="38" rx="42" ry="12" fill="#94A3B8" />
+                                                            {/* 그릇 몸통 */}
+                                                            <path d="M8 38 Q8 78 50 78 Q92 78 92 38 Z" fill="#CBD5E1" />
+                                                            {/* 밥 (흰색) */}
+                                                            <ellipse cx="50" cy="36" rx="36" ry="9" fill="#F8FAFC" />
+                                                            {/* 나물 - 초록 */}
+                                                            <ellipse cx="34" cy="32" rx="10" ry="5" fill="#86EFAC" transform="rotate(-20 34 32)" />
+                                                            {/* 당근 - 주황 */}
+                                                            <ellipse cx="62" cy="31" rx="10" ry="5" fill="#FCA5A5" transform="rotate(15 62 31)" />
+                                                            {/* 고추장 - 빨강 */}
+                                                            <ellipse cx="50" cy="30" rx="8" ry="5" fill="#F87171" />
+                                                            {/* 계란 노른자 */}
+                                                            <circle cx="50" cy="29" r="5" fill="#FDE68A" />
+                                                            {/* 그릇 하단 굽 */}
+                                                            <ellipse cx="50" cy="78" rx="20" ry="5" fill="#94A3B8" />
+                                                            <rect x="30" y="78" width="40" height="6" rx="3" fill="#94A3B8" />
+                                                        </svg>
+                                                    ) : (
+                                                        // 기본 (혹시 다른 탭 추가 시)
+                                                        <MapPin size={40} className="text-gray-300" />
+                                                    )}
+                                                    <span className="text-xs font-medium text-gray-400">No Image</span>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="p-6 flex flex-col flex-grow">
                                             <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
                                             <div className="flex items-center gap-4 text-gray-500 text-sm mb-6 font-mono">
-                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.adress}</span></div>
+                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.address}</span></div>
                                             </div>
                                             <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
                                                 <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100">
