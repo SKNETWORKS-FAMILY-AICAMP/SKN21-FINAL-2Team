@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.database.connection import get_db
 from app.models.hot_place import HotPlace
-from app.utils.security import get_current_user
-from app.models.user import User
+
 
 router = APIRouter(prefix="/api/hot-places", tags=["hot-place"])
 
@@ -15,7 +14,6 @@ router = APIRouter(prefix="/api/hot-places", tags=["hot-place"])
 def get_hot_places(
     limit: int = 3,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """
     hot_places 테이블에서 랜덤으로 limit개(기본 3개) 반환한다.

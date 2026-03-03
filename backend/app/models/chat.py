@@ -49,7 +49,7 @@ class ChatPlace(BaseModel):
     image_path = Column(String(255), nullable=True)
     longitude = Column(Float, nullable=True)
     latitude = Column(Float, nullable=True)
-    boomark_yn = Column(Boolean, default=False)
+    bookmark_yn = Column(Boolean, default=False)
 
     message = relationship("ChatMessage", back_populates="places")
 

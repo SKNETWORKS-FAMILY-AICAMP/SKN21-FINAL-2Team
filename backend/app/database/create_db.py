@@ -92,7 +92,7 @@ Table chat_places {
   image_path varchar
   longitude float
   latitude float
-  boomark_yn bool [not null, default: false]
+  bookmark_yn bool [not null, default: false]
 }
 
 // 5. 핫플레이스 DB
