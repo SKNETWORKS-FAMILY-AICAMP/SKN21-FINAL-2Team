@@ -875,12 +875,14 @@ export default function MyPage() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
-      <div className="flex-none h-full">
-        <Sidebar />
+    <div className="flex w-full min-h-screen bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row flex-col lg:overflow-hidden">
+      <div className="flex-none lg:h-full max-w-full overflow-x-auto">
+        <div className="inline-block align-top">
+          <Sidebar />
+        </div>
       </div>
-      <main className="flex-1 h-full min-w-0 bg-white rounded-lg overflow-y-auto">
-        <div className="p-6">
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto">
+        <div className="p-4 sm:p-6">
           <header className="mb-6 flex items-end justify-between border-b border-gray-100 pb-4">
             <div>
               <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
