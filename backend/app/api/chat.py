@@ -1,5 +1,6 @@
 import re
 import json
+import asyncio
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -18,14 +19,20 @@ from langchain_core.messages import HumanMessage
 
 _graph_app = None
 _checkpointer = None
+_graph_app_lock = asyncio.Lock()
 
 async def get_graph_app():
     global _graph_app, _checkpointer
-    if _graph_app is None:
-        print('init graph app')
-        _checkpointer = await get_checkpointer()
-        _graph_app = workflow().compile(checkpointer=_checkpointer)
-        print('compile graph app (with AsyncMySaver checkpointer)')
+    if _graph_app is not None:
+        return _graph_app
+
+    # 다중 요청 시 checkpointer/setup 중복 실행 방지
+    async with _graph_app_lock:
+        if _graph_app is None:
+            print('init graph app')
+            _checkpointer = await get_checkpointer()
+            _graph_app = workflow().compile(checkpointer=_checkpointer)
+            print('compile graph app (with AsyncMySaver checkpointer)')
     return _graph_app
 
 
