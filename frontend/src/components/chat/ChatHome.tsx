@@ -31,6 +31,7 @@ export function ChatHome() {
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
     const [isListening, setIsListening] = useState(false);
     const [showTripModal, setShowTripModal] = useState(false);
+    const [isTripLoading, setIsTripLoading] = useState(false);
     const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -257,13 +258,13 @@ export function ChatHome() {
 
     // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 시)
     const handleCreateRoomWithContext = async (context: TripContext) => {
-        setShowTripModal(false);
+        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → router.replace 시 자연 unmount
+        setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
-            // 주의: 컨텍스트를 방 ID 키로 localStorage에 저장 → 첫 메시지 전송 시 AI에 전달
             if (context.travelDuration || context.groupSize) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
@@ -274,6 +275,10 @@ export function ChatHome() {
             router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
             console.error("Failed to create a new room with context", error);
+            setIsTripLoading(false);
+            setShowTripModal(false);
+            // 에러 시 컨텍스트 없이 기본 방 생성
+            handleCreateNewRoom();
         }
     };
 
@@ -560,10 +565,13 @@ export function ChatHome() {
             <TripContextModal
                 isOpen={showTripModal}
                 onConfirm={handleCreateRoomWithContext}
+                loading={isTripLoading}
                 onClose={() => {
-                    setShowTripModal(false);
-                    // 건너뛰기 없이 그냥 닫으면 기본 방 생성으로 폴백
-                    handleCreateNewRoom();
+                    if (!isTripLoading) {
+                        setShowTripModal(false);
+                        // 건너뛰기 없이 그냥 닫으면 컨텍스트 없이 기본 방 생성으로 폴백
+                        handleCreateNewRoom();
+                    }
                 }}
             />
         </div>
