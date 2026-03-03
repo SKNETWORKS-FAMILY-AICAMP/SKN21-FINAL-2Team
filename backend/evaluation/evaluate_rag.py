@@ -4,11 +4,13 @@ import json
 import argparse
 import random
 import sys
+import re
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+EVAL_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -23,9 +25,96 @@ os.environ["QDRANT_PORT"] = os.getenv("QDRANT_PORT")
 import pandas as pd
 from datasets import Dataset
 
+
+def _resolve_eval_path(path_str: str) -> Path:
+    p = Path(path_str)
+    return p if p.is_absolute() else (EVAL_DIR / p)
+
+
+def _save_summary_files(mode: str, summary: dict):
+    txt_path = EVAL_DIR / f"evaluation_{mode}_summary.txt"
+    json_path = EVAL_DIR / f"evaluation_{mode}_summary.json"
+
+    lines = ["--- Summary ---"]
+    for k, v in summary.items():
+        if isinstance(v, float):
+            lines.append(f"{k}: {v:.4f}")
+        else:
+            lines.append(f"{k}: {v}")
+    content = "\n".join(lines)
+
+    with txt_path.open("w", encoding="utf-8") as f:
+        f.write(content + "\n")
+    with json_path.open("w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    print(f"Summary saved to {txt_path}")
+    print(f"Summary saved to {json_path}")
+
+def _load_test_data(data_file: str = "rag_eval_data.json", limit: Optional[int] = None):
+    data_path = _resolve_eval_path(data_file)
+    if not data_path.exists():
+        raise FileNotFoundError(f"Test data file not found: {data_path}")
+    with data_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    if limit is not None and limit > 0:
+        data = data[:limit]
+    return data
+
+
+def _extract_gold_title(ground_truth: str) -> str:
+    if not ground_truth:
+        return ""
+    # "<title> (<addr>) - <desc>" 형식에서 title 추출
+    left = ground_truth.split(" - ", 1)[0].strip()
+    title = left.split(" (", 1)[0].strip()
+    return title
+
+
+def _extract_gold_location(question: str) -> str:
+    if not question:
+        return ""
+    m = re.search(r"(서울특별시\s+[가-힣]+구)", question)
+    return m.group(1) if m else ""
+
+
+def _extract_gold_category(question: str) -> str:
+    if not question:
+        return ""
+    categories = ["관광지", "문화시설", "축제공연행사", "레포츠", "숙박", "음식점"]
+    for c in categories:
+        if c in question:
+            return c
+    return ""
+
+
+async def _invoke_graph(question: str):
+    from app.agents.graph import workflow
+
+    graph = workflow().compile()
+    inputs = {
+        "user_input": question,
+        "user_id": 1,
+        "room_id": 1,
+        "messages": [],
+    }
+    return await graph.ainvoke(inputs)
+
+
+def _to_slot_dict(slots):
+    if not slots:
+        return {}
+    if hasattr(slots, "model_dump"):
+        return slots.model_dump()
+    if hasattr(slots, "dict"):
+        return slots.dict()
+    if isinstance(slots, dict):
+        return slots
+    return {}
+
 def generate_test_data_from_llm_results(
     source_dir: str = "data/llm_result",
-    output_file: str = "tests/rag_eval_data.json",
+    output_file: str = "rag_eval_data.json",
     sample_size: int = 20,
     seed: int = 42,
 ):
@@ -197,7 +286,7 @@ def generate_test_data_from_llm_results(
     # 출력 포맷은 기존 rag_eval_data.json과 동일하게 유지
     sampled = [{"question": s["question"], "ground_truth": s["ground_truth"]} for s in sampled]
 
-    out_path = Path(output_file)
+    out_path = _resolve_eval_path(output_file)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(sampled, f, ensure_ascii=False, indent=4)
@@ -266,7 +355,274 @@ async def get_rag_response(question: str):
         print(f"  [WARN] Graph execution failed: {e}")
         return f"질문: {question}\n현재 환경 제약으로 에이전트 워크플로우를 실행하지 못했습니다.", [question]
 
-async def run_evaluation(limit: Optional[int] = None):
+
+async def run_intent_evaluation(limit: Optional[int] = None):
+    from app.agents.models.output import IntentType
+
+    test_data = _load_test_data(limit=limit)
+    rows = []
+    total = len(test_data)
+    primary_match = 0
+    loc_match = 0
+    cat_match = 0
+    loc_total = 0
+    cat_total = 0
+
+    print(f"--- Running Intent Node Evaluation for {total} samples ---")
+    for item in test_data:
+        q = item.get("question", "")
+        gold_location = _extract_gold_location(q)
+        gold_category = _extract_gold_category(q)
+
+        try:
+            result = await _invoke_graph(q)
+            pred_primary = str(result.get("primary_intent", ""))
+            pred_slots = _to_slot_dict(result.get("slots"))
+        except Exception as e:
+            pred_primary = f"ERROR:{e}"
+            pred_slots = {}
+
+        expected_primary = str(IntentType.PLACE_INQUIRY)
+        is_primary_match = pred_primary.endswith(expected_primary)
+        primary_match += 1 if is_primary_match else 0
+
+        pred_location = str(pred_slots.get("location") or "")
+        pred_category = str(pred_slots.get("category") or "")
+
+        is_loc_match = None
+        if gold_location:
+            is_loc_match = (gold_location in pred_location) or (pred_location in gold_location)
+            loc_total += 1
+            loc_match += 1 if is_loc_match else 0
+
+        is_cat_match = None
+        if gold_category:
+            is_cat_match = pred_category == gold_category
+            cat_total += 1
+            cat_match += 1 if is_cat_match else 0
+
+        rows.append(
+            {
+                "question": q,
+                "gold_primary_intent(proxy)": expected_primary,
+                "pred_primary_intent": pred_primary,
+                "primary_match": is_primary_match,
+                "gold_location(proxy)": gold_location,
+                "pred_location": pred_location,
+                "location_match": is_loc_match,
+                "gold_category(proxy)": gold_category,
+                "pred_category": pred_category,
+                "category_match": is_cat_match,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    report_file = str(EVAL_DIR / "evaluation_intent_report.csv")
+    df.to_csv(report_file, index=False)
+
+    summary = {
+        "mode": "intent",
+        "limit": limit if limit is not None else "all",
+        "sample_count": total,
+        "samples": total,
+        "primary_accuracy": (primary_match / total) if total else 0.0,
+        "location_slot_accuracy": (loc_match / loc_total) if loc_total else 0.0,
+        "category_slot_accuracy": (cat_match / cat_total) if cat_total else 0.0,
+        "location_evaluable_count": loc_total,
+        "category_evaluable_count": cat_total,
+    }
+    print("\n--- Intent Node Summary ---")
+    for k, v in summary.items():
+        if isinstance(v, float):
+            print(f"{k}: {v:.4f}")
+        else:
+            print(f"{k}: {v}")
+    print(f"Report saved to {report_file}")
+    _save_summary_files("intent", summary)
+    return summary
+
+
+async def run_retriever_evaluation(limit: Optional[int] = None):
+    test_data = _load_test_data(limit=limit)
+    rows = []
+    total = len(test_data)
+    hit1 = 0
+    hit3 = 0
+    hit5 = 0
+    mrr_sum = 0.0
+
+    print(f"--- Running Retriever Node Evaluation for {total} samples ---")
+    for item in test_data:
+        q = item.get("question", "")
+        gold_title = _extract_gold_title(item.get("ground_truth", ""))
+        try:
+            result = await _invoke_graph(q)
+            candidates = result.get("candidates", []) or []
+        except Exception as e:
+            print(f"[WARN] Retriever eval invoke failed: {e}")
+            candidates = []
+
+        names = []
+        for c in candidates:
+            payload = c.get("payload") if isinstance(c, dict) else {}
+            if not isinstance(payload, dict):
+                payload = {}
+            name = (payload.get("title") or payload.get("name") or c.get("title") or c.get("name") or "").strip()
+            names.append(name)
+
+        rank = 0
+        if gold_title:
+            for i, n in enumerate(names, start=1):
+                if n and (gold_title in n or n in gold_title):
+                    rank = i
+                    break
+
+        if rank == 1:
+            hit1 += 1
+        if 1 <= rank <= 3:
+            hit3 += 1
+        if 1 <= rank <= 5:
+            hit5 += 1
+        if rank > 0:
+            mrr_sum += 1.0 / rank
+
+        rows.append(
+            {
+                "question": q,
+                "gold_title(proxy)": gold_title,
+                "retrieved_titles_top5": names[:5],
+                "gold_rank_in_top5": rank if rank > 0 else None,
+                "hit@1": rank == 1,
+                "hit@3": 1 <= rank <= 3,
+                "hit@5": 1 <= rank <= 5,
+                "reciprocal_rank": (1.0 / rank) if rank > 0 else 0.0,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    report_file = str(EVAL_DIR / "evaluation_retriever_report.csv")
+    df.to_csv(report_file, index=False)
+
+    summary = {
+        "mode": "retriever",
+        "limit": limit if limit is not None else "all",
+        "sample_count": total,
+        "samples": total,
+        "hit@1": (hit1 / total) if total else 0.0,
+        "hit@3": (hit3 / total) if total else 0.0,
+        "hit@5": (hit5 / total) if total else 0.0,
+        "mrr@5": (mrr_sum / total) if total else 0.0,
+    }
+    print("\n--- Retriever Node Summary ---")
+    for k, v in summary.items():
+        if isinstance(v, float):
+            print(f"{k}: {v:.4f}")
+        else:
+            print(f"{k}: {v}")
+    print(f"Report saved to {report_file}")
+    _save_summary_files("retriever", summary)
+    return summary
+
+
+async def run_executor_evaluation(limit: Optional[int] = None):
+    from ragas import evaluate
+    from ragas.metrics import faithfulness, answer_relevancy
+    from ragas.llms import llm_factory
+    from ragas.embeddings import OpenAIEmbeddings, HuggingFaceEmbeddings
+    from openai import OpenAI
+    from app.utils.config import LLM_MODEL, TEXT_MODEL
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is not set")
+
+    openai_client = OpenAI(api_key=api_key)
+    eval_llm = llm_factory(model=LLM_MODEL, client=openai_client)
+
+    embedding_model = TEXT_MODEL
+    if embedding_model.startswith("openai/"):
+        eval_embeddings = OpenAIEmbeddings(
+            model=embedding_model.replace("openai/", ""),
+            client=openai_client,
+        )
+    elif "/" in embedding_model:
+        hf_embeddings = HuggingFaceEmbeddings(model=embedding_model)
+
+        class _EmbeddingAdapter:
+            def __init__(self, base):
+                self.base = base
+
+            def embed_query(self, text):
+                return self.base.embed_text(text)
+
+            def embed_documents(self, texts):
+                return self.base.embed_texts(texts)
+
+            async def aembed_query(self, text):
+                return await self.base.aembed_text(text)
+
+            async def aembed_documents(self, texts):
+                return await self.base.aembed_texts(texts)
+
+        eval_embeddings = _EmbeddingAdapter(hf_embeddings)
+    else:
+        eval_embeddings = OpenAIEmbeddings(model=embedding_model, client=openai_client)
+
+    faithfulness.llm = eval_llm
+    answer_relevancy.llm = eval_llm
+    answer_relevancy.embeddings = eval_embeddings
+
+    test_data = _load_test_data(limit=limit)
+    questions = [d["question"] for d in test_data]
+    ground_truths = [d["ground_truth"] for d in test_data]
+    answers = []
+    all_contexts = []
+
+    print(f"--- Running Executor Node Evaluation for {len(questions)} samples ---")
+    for q in questions:
+        ans, ctx = await get_rag_response(q)
+        answers.append((ans or "")[:700])
+        all_contexts.append([(c or "")[:220] for c in (ctx or [])[:4]])
+
+    dataset = Dataset.from_dict(
+        {
+            "question": questions,
+            "answer": answers,
+            "contexts": all_contexts,
+            "ground_truth": ground_truths,
+        }
+    )
+
+    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
+    df = result.to_pandas()
+    report_file = str(EVAL_DIR / "evaluation_executor_report.csv")
+    df.to_csv(report_file, index=False)
+    summary = {
+        "mode": "executor",
+        "limit": limit if limit is not None else "all",
+        "sample_count": len(df),
+        "samples": len(df),
+        "faithfulness": float(df["faithfulness"].mean()) if "faithfulness" in df else 0.0,
+        "answer_relevancy": float(df["answer_relevancy"].mean()) if "answer_relevancy" in df else 0.0,
+    }
+    print("\n--- Executor Node Summary ---")
+    for k, v in summary.items():
+        if isinstance(v, float):
+            print(f"{k}: {v:.4f}")
+        else:
+            print(f"{k}: {v}")
+    print(f"Report saved to {report_file}")
+    _save_summary_files("executor", summary)
+    return summary
+
+
+async def run_all_evaluations(limit: Optional[int] = None):
+    await run_intent_evaluation(limit=limit)
+    await run_retriever_evaluation(limit=limit)
+    await run_executor_evaluation(limit=limit)
+    await run_evaluation(limit=limit, mode="all")
+
+async def run_evaluation(limit: Optional[int] = None, mode: str = "e2e"):
     from ragas import evaluate
     from ragas.metrics import (
         faithfulness,
@@ -338,12 +694,12 @@ async def run_evaluation(limit: Optional[int] = None):
     context_recall.llm = eval_llm
 
     # 1. 테스트 데이터 로드
-    data_file = "tests/rag_eval_data.json"
-    if not os.path.exists(data_file):
+    data_file = _resolve_eval_path("rag_eval_data.json")
+    if not data_file.exists():
         print(f"[ERROR] Test data file not found: {data_file}")
         return
 
-    with open(data_file, "r", encoding="utf-8") as f:
+    with data_file.open("r", encoding="utf-8") as f:
         test_data = json.load(f)
 
     if limit is not None and limit > 0:
@@ -359,9 +715,9 @@ async def run_evaluation(limit: Optional[int] = None):
     for q in questions:
         print(f"Querying: {q}")
         ans, ctx = await get_rag_response(q)
-        # Faithfulness/precision 평가 시 컨텍스트가 과도하게 길면 judge max token 초과가 빈번하므로 제한
-        answers.append((ans or "")[:700])
-        all_contexts.append([(c or "")[:220] for c in (ctx or [])[:4]])
+        # Faithfulness judge max token 초과 방지를 위해 답변/컨텍스트를 더 짧게 제한
+        answers.append((ans or "")[:380])
+        all_contexts.append([(c or "")[:140] for c in (ctx or [])[:3]])
     
     # 2. Ragas 데이터셋 구성
     data_dict = {
@@ -395,8 +751,12 @@ async def run_evaluation(limit: Optional[int] = None):
         metric_cols = [col for col in df.columns if col in ['faithfulness', 'answer_relevancy', 'context_precision', 'context_recall', 'ragas_score']]
         averages = df[metric_cols].mean() if not df[metric_cols].empty else df.select_dtypes(include=['number']).mean()
         
+        sample_count = len(questions)
         summary_lines = [
             f"Evaluation Time: {timestamp}",
+            f"mode: {mode}",
+            f"limit: {limit if limit is not None else 'all'}",
+            f"sample_count: {sample_count}",
             "--- Average Scores ---"
         ]
         for metric_name, avg in averages.items():
@@ -405,14 +765,14 @@ async def run_evaluation(limit: Optional[int] = None):
         summary_content = "\n".join(summary_lines)
         
         # CSV 보고서 저장
-        output_file = "tests/evaluation_report.csv"
+        output_file = str(EVAL_DIR / "evaluation_report.csv")
         df.to_csv(output_file, index=False)
         print(f"\nReport saved to {output_file}")
         
         # 요약 파일 저장
-        summary_file = "tests/evaluation_summary.txt"
-        with open(summary_file, "a", encoding="utf-8") as f:
-            f.write("------------------\n")
+        summary_file = EVAL_DIR / "evaluation_summary.txt"
+        with summary_file.open("a", encoding="utf-8") as f:
+            f.write("\n\n------------------\n")
             f.write(summary_content)
         print(f"Summary saved to {summary_file}")
         
@@ -424,8 +784,14 @@ async def run_evaluation(limit: Optional[int] = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--generate-test-data", action="store_true")
+    parser.add_argument(
+        "--mode",
+        default="e2e",
+        choices=["e2e", "intent", "retriever", "executor", "all"],
+        help="평가 모드 선택",
+    )
     parser.add_argument("--source-dir", default="data/llm_result")
-    parser.add_argument("--output-file", default="tests/rag_eval_data.json")
+    parser.add_argument("--output-file", default="rag_eval_data.json")
     parser.add_argument("--sample-size", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--limit", type=int, default=None)
@@ -439,4 +805,13 @@ if __name__ == "__main__":
             seed=args.seed,
         )
     else:
-        asyncio.run(run_evaluation(limit=args.limit))
+        if args.mode == "intent":
+            asyncio.run(run_intent_evaluation(limit=args.limit))
+        elif args.mode == "retriever":
+            asyncio.run(run_retriever_evaluation(limit=args.limit))
+        elif args.mode == "executor":
+            asyncio.run(run_executor_evaluation(limit=args.limit))
+        elif args.mode == "all":
+            asyncio.run(run_all_evaluations(limit=args.limit))
+        else:
+            asyncio.run(run_evaluation(limit=args.limit))
