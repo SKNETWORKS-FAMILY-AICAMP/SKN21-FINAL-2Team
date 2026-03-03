@@ -84,7 +84,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    attractions, restaurants, hot_place as hot_place_api
+    random_picks, hot_place as hot_place_api
 )
 
 # Register Routers
@@ -94,8 +94,7 @@ app.include_router(chat.router)
 app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
-app.include_router(attractions.router)
-app.include_router(restaurants.router)
+app.include_router(random_picks.router)
 app.include_router(hot_place_api.router)
 
 logger = logging.getLogger("api_logger")

@@ -6,22 +6,20 @@ from app.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
-router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
+router = APIRouter(prefix="/api", tags=["recommendations"])
 
-@router.get("", response_model=List[dict])
-def get_random_restaurants(limit: int = 3):
+def get_random_places_by_type(content_type: str, limit: int = 3):
     """
-    음식점 데이터를 VectorDB(Qdrant)에서 랜덤으로 가져옵니다.
-    attractions.py와 동일한 필드 구성을 유지합니다.
+    VectorDB(Qdrant)에서 특정 타입의 장소를 랜덤으로 가져오는 공통 함수입니다.
     """
     client = PlaceRetriever.get_instance().client
     
     try:
-        # 1. '음식점' 데이터 50개를 먼저 가져온 후 랜덤 샘플링
+        # 1. 해당 타입의 데이터 50개를 먼저 가져온 후 랜덤 샘플링
         points, _ = client.scroll(
             collection_name=PLACES_COLLECTION,
             scroll_filter=Filter(
-                must=[FieldCondition(key="contenttypeid", match=MatchValue(value="음식점"))]
+                must=[FieldCondition(key="contenttypeid", match=MatchValue(value=content_type))]
             ),
             limit=50,
             with_payload=True
@@ -44,5 +42,15 @@ def get_random_restaurants(limit: int = 3):
         ]
         
     except Exception as e:
-        print(f"[ERROR] Failed to fetch random restaurants: {e}")
+        print(f"[ERROR] Failed to fetch random {content_type}: {e}")
         return []
+
+@router.get("/attractions", response_model=List[dict])
+def get_random_attractions(limit: int = 3):
+    """관광지 추천 상위 limit개를 반환합니다."""
+    return get_random_places_by_type("관광지", limit)
+
+@router.get("/restaurants", response_model=List[dict])
+def get_random_restaurants(limit: int = 3):
+    """음식점 추천 상위 limit개를 반환합니다."""
+    return get_random_places_by_type("음식점", limit)
