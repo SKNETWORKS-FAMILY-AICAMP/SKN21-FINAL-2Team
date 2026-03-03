@@ -22,6 +22,17 @@ const QUESTION_METADATA: Record<string, { title: string; description: string }> 
 // Order of questions
 const QUESTION_ORDER = ["plan_prefer", "vibe_prefer", "places_prefer"];
 
+// 선택지 value → 이미지 경로 매핑
+const IMAGE_MAP: Record<string, string> = {
+    "빽빽한 일정": "/image/planning.jpg",
+    "느슨한 일정": "/image/noplan.png",
+    "붐비는 도시": "/image/crowded.jpg",
+    "한적한 자연": "/image/lonely.jpg",
+    "맛집": "/image/kfood.jpg",
+    "역사적 명소": "/image/khistorical.jpg",
+    "K-culture": "/image/kculture.png",
+};
+
 export default function PersonaSurveyPage() {
     const router = useRouter();
     const [questions, setQuestions] = useState<QuestionType[]>([]);
@@ -113,15 +124,19 @@ export default function PersonaSurveyPage() {
                         <p className="text-gray-500 font-light">{currentQuestion.description}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                    <div className={`grid gap-6 w-full ${currentQuestion.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                         {currentQuestion.options.map((option) => (
                             <button
                                 key={option.value}
                                 onClick={() => handleSelect(option.value, questions[currentQuestionIndex].id)}
                                 className="group relative h-[400px] rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-4"
                             >
-                                <div className="absolute inset-0 bg-gray-200">
-                                    <div className="w-full h-full bg-gray-300" />
+                                <div className="absolute inset-0">
+                                    <img
+                                        src={IMAGE_MAP[option.value] ?? "/image/noplan.png"}
+                                        alt={option.value}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
                                 <div className="absolute bottom-0 left-0 w-full p-8 flex items-end justify-between">
