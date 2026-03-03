@@ -13,36 +13,36 @@ const categories = [
     { id: "activity", label: "Activity" },
 ];
 
-const destinations: Record<string, Destination[]> = {
-    "hot-places": [
-        { contentid: 1, title: "Seongsu-dong Cafe Street", image: "https://images.unsplash.com/photo-1735491428084-853fb91c09e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxTZW91bCUyMGNhZmUlMjBhZXN0aGV0aWMlMjBtaW5pbWFsaXN0fGVufDF8fHx8MTc3MTQ4MTgyNnww&ixlib=rb-4.1.0&q=80&w=1080", addr: "Seongsu-dong, Seongdong-gu" },
-        { contentid: 2, title: "Yeonnam-dong Park", image: "https://images.unsplash.com/photo-1692103675608-6e635afa077b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxLb3JlYW4lMjBzdHJlZXQlMjBmb29kJTIwdHRlb2tib2traSUyMGFlc3RoZXRpY3xlbnwxfHx8fDE3NzE0ODE4MjZ8MA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Yeonnam-dong, Mapo-gu" },
-        { contentid: 3, title: "Starfield Library", image: "https://images.unsplash.com/photo-1659243013574-3b0ffb781fe4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxTdGFyZmllbGQlMjBMaWJyYXJ5JTIwQ29leCUyME1hbGwlMjBTZW91bHxlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Samseong-dong, Gangnam-gu" },
-    ],
+// ✅ API 응답과 동일한 필드명을 사용하는 더미 데이터 (hot-places 제외 - 실제 API 연결)
+// 주의: hot-places는 아래 useEffect에서 /api/hot-places 로 실시간 호출합니다.
+const staticDestinations: Record<string, Destination[]> = {
     historical: [
-        { contentid: 4, title: "Gwanghwamun Gate", image: "https://images.unsplash.com/photo-1591203265333-2248cd9470c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxHd2FuZ2h3YW11biUyMGdhdGUlMjBTZW91bCUyMGhpc3RvcmljYWx8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Sajik-ro, Jongno-gu" },
-        { contentid: 5, title: "Bukchon Hanok Village", image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5vayUyMHZpbGxhZ2UlMjByb29mdG9wcyUyMHRyYWRpdGlvbmFsfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", addr: "Gahoe-dong, Jongno-gu" },
-        { contentid: 6, title: "Changdeokgung Secret Garden", image: "https://images.unsplash.com/photo-1665688523044-32afbd7a9d28?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxDaGFuZ2Rlb2tndW5nJTIwUGFsYWNlJTIwU2VjcmV0JTIwR2FyZGVufGVufDF8fHx8MTc3MTQ4MTkwOHww&ixlib=rb-4.1.0&q=80&w=1080", addr: "Yulgok-ro, Jongno-gu" },
+        { id: 4, name: "Gwanghwamun Gate", image_path: "https://images.unsplash.com/photo-1591203265333-2248cd9470c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxHd2FuZ2h3YW11biUyMGdhdGUlMjBTZW91bCUyMGhpc3RvcmljYWx8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Sajik-ro, Jongno-gu" },
+        { id: 5, name: "Bukchon Hanok Village", image_path: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5vayUyMHZpbGxhZ2UlMjByb29mdG9wcyUyMHRyYWRpdGlvbmFsfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Gahoe-dong, Jongno-gu" },
+        { id: 6, name: "Changdeokgung Secret Garden", image_path: "https://images.unsplash.com/photo-1665688523044-32afbd7a9d28?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxDaGFuZ2Rlb2tndW5nJTIwUGFsYWNlJTIwU2VjcmV0JTIwR2FyZGVufGVufDF8fHx8MTc3MTQ4MTkwOHww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Yulgok-ro, Jongno-gu" },
     ],
     nature: [
-        { contentid: 7, title: "Hangang Park Picnic", image: "https://images.unsplash.com/photo-1720250050813-78406c8d1350?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5nYW5nJTIwcml2ZXIlMjBwaWNuaWMlMjBzdW5zZXR8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Yeouido-dong, Yeongdeungpo-gu" },
-        { contentid: 8, title: "Namsan Seoul Tower", image: "https://images.unsplash.com/photo-1760788935785-2f50c6092980?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYW1zYW4lMjBTZW91bCUyMFRvd2VyJTIwc2NlbmljJTIwdmlld3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Namsan-gongwon-gil, Yongsan-gu" },
-        { contentid: 9, title: "Seoul Forest", image: "https://images.unsplash.com/photo-1707298409328-55d0c5fa9370?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxTZW91bCUyMEZvcmVzdCUyMFBhcmslMjBkZWVyJTIwdHJlZXN8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Seongsu-dong, Seongdong-gu" },
+        { id: 7, name: "Hangang Park Picnic", image_path: "https://images.unsplash.com/photo-1720250050813-78406c8d1350?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5nYW5nJTIwcml2ZXIlMjBwaWNuaWMlMjBzdW5zZXR8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Yeouido-dong, Yeongdeungpo-gu" },
+        { id: 8, name: "Namsan Seoul Tower", image_path: "https://images.unsplash.com/photo-1760788935785-2f50c6092980?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYW1zYW4lMjBTZW91bCUyMFRvd2VyJTIwc2NlbmljJTIwdmlld3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Namsan-gongwon-gil, Yongsan-gu" },
+        { id: 9, name: "Seoul Forest", image_path: "https://images.unsplash.com/photo-1707298409328-55d0c5fa9370?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxTZW91bCUyMEZvcmVzdCUyMFBhcmslMjBkZWVyJTIwdHJlZXN8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Seongsu-dong, Seongdong-gu" },
     ],
     activity: [
-        { contentid: 10, title: "Lotte World Adventure", image: "https://images.unsplash.com/photo-1674606067725-b6ab1e340753?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxMb3R0ZSUyMFdvcmxkJTIwVG93ZXIlMjBTZW91bCUyMHRoZW1lJTIwcGFya3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Jamsil-dong, Songpa-gu" },
-        { contentid: 11, title: "COEX Aquarium", image: "https://images.unsplash.com/photo-1677607219759-5ee7279f2774?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxBcXVhcml1bSUyMHR1bm5lbCUyMGZpc2glMjBibHVlfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", addr: "Samseong-dong, Gangnam-gu" },
-        { contentid: 12, title: "Hongdae Nightlife", image: "https://images.unsplash.com/photo-1676741556435-709eaa1f872f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOZW9uJTIwc2lnbiUyMG5pZ2h0JTIwc3RyZWV0JTIwU2VvdWwlMjBsaXZlbHl8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", addr: "Hongdae, Mapo-gu" },
+        { id: 10, name: "Lotte World Adventure", image_path: "https://images.unsplash.com/photo-1674606067725-b6ab1e340753?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxMb3R0ZSUyMFdvcmxkJTIwVG93ZXIlMjBTZW91bCUyMHRoZW1lJTIwcGFya3xlbnwxfHx8fDE3NzE0ODE5MDh8MA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Jamsil-dong, Songpa-gu" },
+        { id: 11, name: "COEX Aquarium", image_path: "https://images.unsplash.com/photo-1677607219759-5ee7279f2774?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxBcXVhcml1bSUyMHR1bm5lbCUyMGZpc2glMjBibHVlfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080", adress: "Samseong-dong, Gangnam-gu" },
+        { id: 12, name: "Hongdae Nightlife", image_path: "https://images.unsplash.com/photo-1676741556435-709eaa1f872f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOZW9uJTIwc2lnbiUyMG5pZ2h0JTIwc3RyZWV0JTIwU2VvdWwlMjBsaXZlbHl8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080", adress: "Hongdae, Mapo-gu" },
     ],
 };
 
-
-// 데이터베이스에서 올 장소 정보의 '설계도(타입)'
+// ✅ 백엔드 API 응답 구조와 동일한 타입 설계도
+// hot_place.py의 응답: { id, name, adress, image_path, feature, tag1, tag2 }
 export interface Destination {
-    contentid: number;
-    title: string;
-    image: string;
-    addr: string;
+    id: number;
+    name: string;
+    image_path: string;
+    adress: string;
+    feature?: string;  // 선택 속성 (화면에 표시하지 않아도 됨)
+    tag1?: string;
+    tag2?: string;
 }
 
 export function Destinations() {
@@ -91,42 +91,36 @@ export function Destinations() {
         return newArr;
     };
 
-    // 탭이 바뀔 때마다 해당 카테고리의 데이터를 가져와 랜덤하게 섞어 상태에 저장합니다.
+    // ✅ 탭이 바뀔 때마다 실행: hot-places는 실제 API, 나머지는 더미 데이터 사용
     useEffect(() => {
-        const items = destinations[activeTab as keyof typeof destinations];
-        if (items) {
-            setDisplayItems(shuffleArray(items));
+        if (activeTab === "hot-places") {
+            // 🌐 백엔드 /api/hot-places 에 GET 요청 (인증 불필요)
+            const fetchHotPlaces = async () => {
+                try {
+                    const response = await fetch("/api/hot-places?limit=3");
+
+                    if (!response.ok) {
+                        throw new Error("Hot Places 데이터를 불러오는데 실패했습니다.");
+                    }
+
+                    // 백엔드에서 받은 JSON 데이터를 Destination[] 타입으로 바로 사용합니다.
+                    const data: Destination[] = await response.json();
+                    setDisplayItems(data);
+                } catch (error) {
+                    console.error("API 호출 에러:", error);
+                    // 주의: 에러 발생 시(예: 서버 다운) 빈 배열로 유지됩니다.
+                    setDisplayItems([]);
+                }
+            };
+            fetchHotPlaces();
+        } else {
+            // hot-places 이외 탭은 더미 데이터를 랜덤 섞어 표시합니다.
+            const items = staticDestinations[activeTab as keyof typeof staticDestinations];
+            if (items) {
+                setDisplayItems(shuffleArray(items));
+            }
         }
     }, [activeTab]);
-
-    {/* // 탭이 바뀔 때마다 백엔드(DB) 서버에 해당 카테고리의 데이터를 3개 요청합니다.
-        //backend 데이터 연결 시 useEffect 대체할 부분.
-    useEffect(() => {
-        // 비동기(async) API 호출 함수 선언
-        const fetchDestinations = async () => {
-            try {
-                // 백엔드 API 주소로 GET 요청을 보냄 (category: 탭 이름, limit: 3개 제한)
-                // 현재 선택된 탭 이름(activeTab)을 주소 끝에 변수로 붙여줍니다.
-                const response = await fetch(`/api/destinations?category=${activeTab}&limit=3`);
-                
-                if (!response.ok) {
-                    throw new Error("데이터를 불러오는데 실패했습니다.");
-                }
-                
-                // 백엔드에서 준 무작위 3개 데이터를 JSON 형태로 변환
-                const data = await response.json(); 
-                
-                // 받아온 리스트를 화면에 보여줄 주머니(상태)에 쏙 담기!
-                setDisplayItems(data);
-            } catch (error) {
-                console.error("API 호출 에러:", error);
-                // // 주의: 여기에 에러 발생 시 처리할 로직 (예: "서버가 아파요 ㅠㅠ" 텍스트 띄우기) 추가 가능
-            }
-        };
-        // 방금 만든 비동기 함수를 실행!
-        fetchDestinations();
-        
-    }, [activeTab]); // activeTab(탭 이름)이 바뀔 때마다 위의 로직을 재실행*/}
 
     return (
         <section id="destinations" className="py-24 bg-gray-50/30">
@@ -160,19 +154,24 @@ export function Destinations() {
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                         >
                             {displayItems.map((place) => (
-                                <div key={place.contentid} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                                <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
                                     {/* 현재 모달은 미완성이므로 클릭 이벤트를 꺼둡니다.
                                         onClick={() => setSelectedPlace(place)} // 이미지 영역 클릭 시 해당 장소 데이터를 상태에 저장합니다. 
                                     */}
                                     <div
                                         className="relative aspect-[4/3] overflow-hidden"
                                     >
-                                        <img src={place.image} alt={place.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+                                        {/* image_path가 http로 시작하면 외부 URL, 아니면 /api/static/ 경로로 처리 */}
+                                        <img
+                                            src={place.image_path.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
+                                            alt={place.name}
+                                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                                        />
                                     </div>
                                     <div className="p-6 flex flex-col flex-grow">
-                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{place.title}</h3>
+                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
                                         <div className="flex items-center gap-4 text-gray-500 text-sm mb-6 font-mono">
-                                            <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.addr}</span></div>
+                                            <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.adress}</span></div>
                                         </div>
                                         <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
                                             <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100">
