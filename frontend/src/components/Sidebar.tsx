@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
+import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
 
 interface SidebarUserProfile {
@@ -118,6 +119,8 @@ export function Sidebar() {
     const [rooms, setRooms] = useState<ChatRoom[]>(() => sidebarCache.rooms);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [language, setLanguage] = useState<AppLanguage>("en");
+    const [showTripModal, setShowTripModal] = useState(false);
+    const [isTripLoading, setIsTripLoading] = useState(false);
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
@@ -189,6 +192,35 @@ export function Sidebar() {
         { icon: Grid, label: dict.collection, path: "/collection" },
         { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
     ];
+
+    // + 새 채팅 버튼 클릭 → 모달에서 컨텍스트 수집 후 방 생성
+    const handleModalConfirm = async (context: TripContext) => {
+        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → API 완료 후 페이지 전환 시 자연 unmount
+        setIsTripLoading(true);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            setRooms((prev) => {
+                const next = [newRoom, ...prev];
+                sidebarCache.rooms = next;
+                sidebarCache.loaded = true;
+                return next;
+            });
+            if (context.travelDuration || context.groupSize) {
+                localStorage.setItem(
+                    `triver:trip-context:${newRoom.id}`,
+                    JSON.stringify(context)
+                );
+            }
+            // router.push 이후 페이지가 전환되면 컴포넌트가 unmount되므로
+            // setShowTripModal(false)를 수동초출할 필요 없음
+            router.push(`/chatbot?roomId=${newRoom.id}`);
+        } catch (e) {
+            console.error("Failed to create room from sidebar", e);
+            setIsTripLoading(false);
+            setShowTripModal(false);
+            router.push("/chatbot");
+        }
+    };
 
     const handleSignOut = async () => {
         await logoutApi();
@@ -267,21 +299,7 @@ export function Sidebar() {
                 {/* New Chat Button */}
                 <div className={cn("pt-2", actuallyCollapsed ? "flex justify-center" : "")}>
                     <button
-                        onClick={async () => {
-                            try {
-                                const newRoom = await createRoom("새로운 여행 계획");
-                                setRooms((prev) => {
-                                    const next = [newRoom, ...prev];
-                                    sidebarCache.rooms = next;
-                                    sidebarCache.loaded = true;
-                                    return next;
-                                });
-                                router.push(`/chatbot?roomId=${newRoom.id}`);
-                            } catch (e) {
-                                console.error("Failed to create room from sidebar", e);
-                                router.push("/chatbot");
-                            }
-                        }}
+                        onClick={() => setShowTripModal(true)}
                         className={cn(
                             "flex items-center transition-all duration-300 group bg-black text-white hover:bg-gray-800 shadow-md",
                             actuallyCollapsed
@@ -398,6 +416,15 @@ export function Sidebar() {
                     </button>
                 )}
             </div>
+            {/* 주의: 모달은 fixed 포지션이라 aside 안에 있어도 화면 전체를 덮습니다 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleModalConfirm}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) setShowTripModal(false);
+                }}
+            />
         </aside>
     );
 }
