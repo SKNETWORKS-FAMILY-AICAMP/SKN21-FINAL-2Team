@@ -8,6 +8,7 @@ from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
 import asyncio
+import os
 
 async def _search_for_trip_planning(state: TravelState, emotional_text: str = None) -> List[Dict[str, Any]]:
     """
@@ -21,29 +22,34 @@ async def _search_for_trip_planning(state: TravelState, emotional_text: str = No
     if not itinerary:
         return []
 
+    # trip_concurrency: 병렬로 최대한 몇개 장소 검색할것인지? 10개라고 하면 최대 3개씩 병렬 검색
+    trip_concurrency = 3
+    semaphore = asyncio.Semaphore(trip_concurrency)
+
     async def search_item(item):
-        search_query = item.get("search_query", "")
-        if not search_query:
-            search_query = item.get("activity", "")
+        async with semaphore:
+            search_query = item.get("search_query", "")
+            if not search_query:
+                search_query = item.get("activity", "")
 
-        if not search_query:
-            return []
+            if not search_query:
+                return []
 
-        print(f"[Retriever] Searching for itinerary item: '{search_query}'")
-        try:
-            # itinerary 항목의 category를 필터에 활용
-            item_category = item.get("category")
-            results = await retriever.search_hybrid(
-                query=search_query,
-                image_url=image_path,
-                limit=3,
-                category=item_category,
-                emotional_text=emotional_text
-            )
-            return results
-        except Exception as e:
-            print(f"[Retriever] Search error for '{search_query}': {e}")
-            return []
+            print(f"[Retriever] Searching for itinerary item: '{search_query}'")
+            try:
+                # itinerary 항목의 category를 필터에 활용
+                item_category = item.get("category")
+                results = await retriever.search_hybrid(
+                    query=search_query,
+                    image_url=image_path,
+                    limit=3,
+                    category=item_category,
+                    emotional_text=emotional_text
+                )
+                return results
+            except Exception as e:
+                print(f"[Retriever] Search error for '{search_query}': {e}")
+                return []
 
     # 병렬 검색 실행
     tasks = [search_item(item) for item in itinerary]

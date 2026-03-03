@@ -98,7 +98,7 @@ PLANNER_PROMPT = """
 - time_slot: "morning" | "afternoon" | "evening"
 - activity: 활동 설명 (예: "전통 시장 방문", "산책")
 - search_query: 장소 검색용 키워드 (예: "전통 시장", "핫플", "K-pop 굿즈샵")
-- category: "관광지" | "음식점" | "카페" | "숙소" | "체험" | "쇼핑" | "기타"
+- category: "관광지" | "문화시설" | "축제공연행사" | "레포츠" | "숙박" | "음식점"
 
 ## missing_slots (List[str])
 여행 계획에 필수적이나 아직 모르는 정보:

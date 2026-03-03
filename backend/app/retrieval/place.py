@@ -1,8 +1,9 @@
 import os
 import numpy as np
+import asyncio
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue, ScoredPoint
+    Filter, FieldCondition, MatchValue
 )
 from sentence_transformers import SentenceTransformer
 from app.utils.config import (
@@ -17,12 +18,58 @@ from app.services.vision import describe_image
 
 class PlaceRetriever:
     _instance = None
+    CATEGORY_NORMALIZATION_MAP = {
+        "관광지": "관광지",
+        "명소": "관광지",
+        "볼거리": "관광지",
+        "문화시설": "문화시설",
+        "박물관": "문화시설",
+        "미술관": "문화시설",
+        "전시": "문화시설",
+        "축제공연행사": "축제공연행사",
+        "축제": "축제공연행사",
+        "공연": "축제공연행사",
+        "레포츠": "레포츠",
+        "액티비티": "레포츠",
+        "체험": "레포츠",
+        "숙박": "숙박",
+        "숙소": "숙박",
+        "호텔": "숙박",
+        "음식점": "음식점",
+        "맛집": "음식점",
+        "식당": "음식점",
+        "레스토랑": "음식점",
+        "카페": "음식점",
+    }
+
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
             print("[INFO] Initializing PlaceRetriever (Singleton)...")
             cls._instance = cls()
         return cls._instance
+
+    def normalize_category(self, category: str | None) -> str | None:
+        if not category:
+            return None
+        normalized = self.CATEGORY_NORMALIZATION_MAP.get(str(category).strip())
+        return normalized
+
+    def _normalize_place_id(self, value):
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        text = str(value).strip()
+        if text.isdigit():
+            return int(text)
+        return text
+
+    def _extract_place_id(self, point, source_collection: str):
+        payload = point.payload or {}
+        if source_collection == PHOTOS_COLLECTION:
+            return self._normalize_place_id(payload.get("contentid") or payload.get("place_id"))
+        return self._normalize_place_id(point.id)
 
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
@@ -40,10 +87,13 @@ class PlaceRetriever:
         """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
         must_conditions = []
         must_not_conditions = []
-        
-        if category:
+        normalized_category = self.normalize_category(category)
+
+        if normalized_category:
             # DB에 '관광지', '음식점' 등으로 저장되어 있음
-            must_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=category)))
+            if normalized_category != category:
+                print(f"[INFO] category normalized: '{category}' -> '{normalized_category}'")
+            must_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=normalized_category)))
             
         if has_image:
             # 'image' 필드가 비어있지 않은 것만 필터링
@@ -106,20 +156,19 @@ class PlaceRetriever:
         """
         print(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
         
-        # NOTE: download_image is sync, but it's usually fast if it's a local path or cached.
-        img = download_image(image_url)
+        img = await asyncio.to_thread(download_image, image_url)
         if img is None:
             return []
 
-        # encode is sync (CPU/GPU bound), but we can't easily make it async without to_thread
-        query_vec = self.vision_model.encode(img).astype(np.float32)
+        query_vec = await asyncio.to_thread(self.vision_model.encode, img)
+        query_vec = np.asarray(query_vec, dtype=np.float32)
         query_filter = self._build_category_filter(category)
 
-        # qdrant-client sync call
-        response = self.client.query_points_groups(
+        response = await asyncio.to_thread(
+            self.client.query_points_groups,
             collection_name=PHOTOS_COLLECTION,
             query=query_vec.tolist(),
-            group_by="place_id",
+            group_by="contentid",
             group_size=group_size,
             limit=limit,
             with_payload=True,
@@ -137,86 +186,95 @@ class PlaceRetriever:
         
         query_filter = self._build_category_filter(category)
         candidates_limit = limit * 5
-        score_map = {} # place_id -> {score, payload, match_types}
+        score_map = {}  # place_id -> {score, payload, matches}
+        rrf_k = 60
 
-        def collect_hits(hits, weight, match_type):
-            for h in hits:
-                pid = h.id
+        def collect_hits(hits, weight, match_type, source_collection):
+            for rank, h in enumerate(hits, start=1):
+                pid = self._extract_place_id(h, source_collection)
+                if pid is None:
+                    continue
+
                 if pid not in score_map:
-                    score_map[pid] = {"score": 0.0, "payload": h.payload, "matches": []}
-                # Scoring: Sum of (ScoredPoint.score * weight) + Fusion Boost
-                score_map[pid]["score"] += h.score * weight
-                score_map[pid]["matches"].append(match_type)
+                    score_map[pid] = {"score": 0.0, "payload": h.payload or {}, "matches": set()}
+                elif source_collection == PLACES_COLLECTION and h.payload:
+                    # photos 채널 payload보다 places payload를 우선 사용
+                    score_map[pid]["payload"] = h.payload
+
+                # 채널 간 점수 분포 차이를 줄이기 위해 RRF로 rank 기반 결합
+                score_map[pid]["score"] += weight * (1.0 / (rrf_k + rank))
+                score_map[pid]["matches"].add(match_type)
 
         # --- A. Text Search Channel ---
         if query and query.strip():
             # 1. Scenario: Semantic Text Search (BGE-M3)
-            text_emb = self.text_model.encode(query).astype(np.float32)
-            t_t_hits = self.client.query_points(
+            text_emb = await asyncio.to_thread(self.text_model.encode, query)
+            text_emb = np.asarray(text_emb, dtype=np.float32)
+            t_t_resp = await asyncio.to_thread(
+                self.client.query_points,
                 collection_name=PLACES_COLLECTION,
                 query=text_emb.tolist(),
-                # using="text_vec",
                 limit=candidates_limit,
                 with_payload=True,
                 query_filter=query_filter,
-            ).points
-            collect_hits(t_t_hits, 1.0, "text_semantic")
+            )
+            collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
             # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
-            clip_text_emb = self.vision_model.encode(query).astype(np.float32)
-            t_i_hits = self.client.query_points(
+            clip_text_emb = await asyncio.to_thread(self.vision_model.encode, query)
+            clip_text_emb = np.asarray(clip_text_emb, dtype=np.float32)
+            t_i_resp = await asyncio.to_thread(
+                self.client.query_points,
                 collection_name=PHOTOS_COLLECTION,
                 query=clip_text_emb.tolist(),
                 limit=candidates_limit,
                 with_payload=True,
                 query_filter=query_filter,
-            ).points
-            collect_hits(t_i_hits, 0.5, "text_to_image")
+            )
+            collect_hits(t_i_resp.points, 0.5, "text_to_image", PHOTOS_COLLECTION)
 
         # --- B. Image Search Channel ---
         if image_url:
-            img = download_image(image_url)
+            img = await asyncio.to_thread(download_image, image_url)
             if img:
                 # 3. Scenario: Visual Similarity (CLIP Vision)
-                img_emb = self.vision_model.encode(img).astype(np.float32)
-                i_i_hits = self.client.query_points(
+                img_emb = await asyncio.to_thread(self.vision_model.encode, img)
+                img_emb = np.asarray(img_emb, dtype=np.float32)
+                i_i_resp = await asyncio.to_thread(
+                    self.client.query_points,
                     collection_name=PHOTOS_COLLECTION,
                     query=img_emb.tolist(),
                     limit=candidates_limit,
                     with_payload=True,
                     query_filter=query_filter,
-                ).points
-                collect_hits(i_i_hits, 1.0, "image_visual")
+                )
+                collect_hits(i_i_resp.points, 1.0, "image_visual", PHOTOS_COLLECTION)
 
                 # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
                 if not emotional_text:
                     emotional_text = await describe_image(image_url)
                 
                 if emotional_text:
-                    emo_emb = self.text_model.encode(emotional_text).astype(np.float32)
-                    i_e_hits = self.client.query_points(
+                    emo_emb = await asyncio.to_thread(self.text_model.encode, emotional_text)
+                    emo_emb = np.asarray(emo_emb, dtype=np.float32)
+                    i_e_resp = await asyncio.to_thread(
+                        self.client.query_points,
                         collection_name=PLACES_COLLECTION,
                         query=emo_emb.tolist(),
                         limit=candidates_limit,
                         with_payload=True,
                         query_filter=query_filter,
-                    ).points
-                    collect_hits(i_e_hits, 0.8, "image_emotional")
+                    )
+                    collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
 
         # --- C. Fusion & Boosting ---
         results = []
         for pid, data in score_map.items():
-            final_score = data["score"]
-            # Fusion Boost: If the place matches multiple scenarios, it's a stronger candidate
-            num_matches = len(data["matches"])
-            if num_matches > 1:
-                final_score *= (1.0 + 0.2 * (num_matches - 1)) # 20% boost per extra scenario
-            
             results.append({
                 "id": pid,
-                "score": final_score,
+                "score": data["score"],
                 "payload": data["payload"],
-                "match_types": list(set(data["matches"]))
+                "match_types": sorted(list(data["matches"]))
             })
 
         results.sort(key=lambda x: x["score"], reverse=True)
@@ -294,6 +352,8 @@ class PlaceRetriever:
 async def retrieval_place(message_in: ChatMessageCreate):
     # Retrieval (Search Places)
     context_str = None
+    search_results = []
+    nearby_places = []
     try:        
         print(
             f"[INFO] retrieval_place start message_len={len(message_in.message or '')} "
@@ -351,7 +411,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
                 # PHOTOS_COLLECTION에서 place_id가 일치하는 사진들을 가져옴
                 photos_response, _ = retriever.client.scroll(
                     collection_name=PHOTOS_COLLECTION,
-                    scroll_filter=Filter(must=[FieldCondition(key="place_id", match=MatchValue(value=rid))]),
+                    scroll_filter=Filter(must=[FieldCondition(key="contentid", match=MatchValue(value=str(rid)))]),
                     limit=5,
                     with_payload=True
                 )

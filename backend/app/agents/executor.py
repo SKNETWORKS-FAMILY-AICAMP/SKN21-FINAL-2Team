@@ -32,7 +32,7 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
             encoded = urllib.parse.quote(query)
             payload['map_url'] = f"https://map.naver.com/v5/search/{encoded}?c=15.00,{lng},{lat},0,dh"
 
-        line = f"{i}. **{payload}**"
+        line = f"{i}. **{**payload}**"
 
         lines.append(line)
 
@@ -153,6 +153,7 @@ async def executor_node(state: TravelState):
 
     # 컨텍스트 구성
     place_context = _build_place_context(candidates)
+    print(f"[Executor] Place context: {place_context}")
     itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
 
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
