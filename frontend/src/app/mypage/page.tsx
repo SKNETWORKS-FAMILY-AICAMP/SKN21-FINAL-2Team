@@ -942,8 +942,8 @@ export default function MyPage() {
 
   return (
     <div className="flex w-full min-h-screen bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row flex-col lg:overflow-hidden">
-      <div className="flex-none lg:h-full max-w-full overflow-x-auto">
-        <div className="inline-block align-top">
+      <div className="flex-none lg:h-full max-w-full">
+        <div className="h-full">
           <Sidebar />
         </div>
       </div>
