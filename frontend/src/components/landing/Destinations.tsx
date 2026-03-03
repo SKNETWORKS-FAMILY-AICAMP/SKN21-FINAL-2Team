@@ -5,6 +5,8 @@ import { Star, MapPin, Search, CalendarPlus, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
+import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
+import { createRoom } from "@/services/api";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
@@ -54,6 +56,10 @@ export function Destinations() {
     // // 주의: 실제 로그인 상태는 Context API나 전역 상태 관리(Zustand 등) 혹은 쿠키에서 가져와야 하지만, 
     // 임시로 localStorage를 확인하는 방식을 사용합니다. (구글 로그인 구현 방식에 맞게 나중에 수정 필요)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    // 트립 컨텍스트 모달 상태
+    const [showTripModal, setShowTripModal] = useState(false);
+    const [pendingPlace, setPendingPlace] = useState<Destination | null>(null); // 모달 확인 후 이동할 장소
+    const [isTripLoading, setIsTripLoading] = useState(false);
 
     useEffect(() => {
         // 컴포넌트 마운트 시 로그인(토큰) 여부를 확인합니다.
@@ -66,13 +72,41 @@ export function Destinations() {
         if (e) e.stopPropagation();
 
         if (!isLoggedIn) {
-            // 로그인이 안 되어 있다면 바로 로그인 페이지로 이동합니다.
             router.push("/login");
         } else {
-            // 선택한 장소 정보를 localStorage에 저장 후 챗봇 페이지로 이동합니다.
-            localStorage.setItem("selectedForChat", JSON.stringify(place));
-            router.push("/chatbot");
+            // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
+            setPendingPlace(place);
+            setShowTripModal(true);
+        }
+    };
+
+    // 모달 확인 후 실행: 방 생성 + 컨텍스트 저장 + 이동
+    const handleModalConfirm = async (context: TripContext) => {
+        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시
+        setIsTripLoading(true);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            // 주의: chatbot API 호출 시 장소 + 여행 컨텍스트 둘 다 사용하도록 localStorage에 저장
+            if (pendingPlace) {
+                localStorage.setItem("selectedForChat", JSON.stringify(pendingPlace));
+            }
+            if (context.travelDuration || context.groupSize) {
+                localStorage.setItem(
+                    `triver:trip-context:${newRoom.id}`,
+                    JSON.stringify(context)
+                );
+            }
             setSelectedPlace(null);
+            router.push(`/chatbot?roomId=${newRoom.id}`);
+        } catch (e) {
+            console.error("Failed to create room from Destinations", e);
+            setIsTripLoading(false);
+            setShowTripModal(false);
+            // 에러 시 컨텍스트 없이 기본 이동
+            if (pendingPlace) {
+                localStorage.setItem("selectedForChat", JSON.stringify(pendingPlace));
+            }
+            router.push("/chatbot");
         }
     };
 
@@ -118,73 +152,84 @@ export function Destinations() {
     }, [activeTab]);
 
     return (
-        <section id="destinations" className="py-24 bg-gray-50/30">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-                    <div>
-                        <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
-                        <p className="text-gray-500 text-lg max-w-xl font-light">From historic palaces to neon-lit streets, find your perfect spot.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-lg overflow-hidden backdrop-blur-sm border border-gray-200">
-                        {categories.map((category) => (
-                            <button
-                                key={category.id}
-                                onClick={() => setActiveTab(category.id)}
-                                className={cn("px-5 py-2.5 rounded-md text-sm font-medium transition-all duration-300", activeTab === category.id ? "bg-black text-white shadow-sm" : "text-gray-500 hover:text-black hover:bg-gray-200/50")}
-                            >
-                                {category.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="min-h-[500px]">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.4 }}
-                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                        >
-                            {displayItems.map((place) => (
-                                <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                    <div
-                                        className="relative aspect-[4/3] overflow-hidden"
-                                    >
-                                        {/* image_path가 http로 시작하면 외부 URL, 아니면 /api/static/ 경로로 처리 */}
-                                        <img
-                                            src={place.image_path.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
-                                            alt={place.name}
-                                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
-                                        />
-                                    </div>
-                                    <div className="p-6 flex flex-col flex-grow">
-                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
-                                        <div className="flex items-center gap-4 text-gray-500 text-sm mb-6 font-mono">
-                                            <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.adress}</span></div>
-                                        </div>
-                                        <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
-                                            <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100">
-                                                <Search size={14} /><span>Reviews</span>
-                                            </button>
-                                            <button
-                                                onClick={(e) => handlePlanTripClick(place, e)}
-                                                className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
-                                            >
-                                                <CalendarPlus size={16} />Plan Trip
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+        <>
+            <section id="destinations" className="py-24 bg-gray-50/30">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+                        <div>
+                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
+                            <p className="text-gray-500 text-lg max-w-xl font-light">From historic palaces to neon-lit streets, find your perfect spot.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-lg overflow-hidden backdrop-blur-sm border border-gray-200">
+                            {categories.map((category) => (
+                                <button
+                                    key={category.id}
+                                    onClick={() => setActiveTab(category.id)}
+                                    className={cn("px-5 py-2.5 rounded-md text-sm font-medium transition-all duration-300", activeTab === category.id ? "bg-black text-white shadow-sm" : "text-gray-500 hover:text-black hover:bg-gray-200/50")}
+                                >
+                                    {category.label}
+                                </button>
                             ))}
-                        </motion.div>
-                    </AnimatePresence>
+                        </div>
+                    </div>
+
+                    <div className="min-h-[500px]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.4 }}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                            >
+                                {displayItems.map((place) => (
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                                        <div className="relative aspect-[4/3] overflow-hidden">
+                                            <img
+                                                src={place.image_path.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
+                                                alt={place.name}
+                                                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                                            />
+                                        </div>
+                                        <div className="p-6 flex flex-col flex-grow">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
+                                            <div className="flex items-center gap-4 text-gray-500 text-sm mb-6 font-mono">
+                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.adress}</span></div>
+                                            </div>
+                                            <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
+                                                <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100">
+                                                    <Search size={14} /><span>Reviews</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handlePlanTripClick(place, e)}
+                                                    className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
+                                                >
+                                                    <CalendarPlus size={16} />Plan Trip
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-
-        </section>
+            {/* TripContextModal: Plan Trip 시 여행 일정 + 인원 수집, fixed 포지션으로 전체 화면 덮음 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleModalConfirm}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) {
+                        setShowTripModal(false);
+                        setPendingPlace(null);
+                    }
+                }}
+            />
+        </>
     );
 }
+
