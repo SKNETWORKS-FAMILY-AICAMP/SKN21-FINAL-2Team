@@ -895,8 +895,9 @@ export default function MyPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-5 rounded-xl border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors"
               >
-                <div className="flex items-center gap-4 mb-5">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400">
+                <div className="flex flex-col gap-3 mb-5">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-24 h-24 rounded-xl overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                     {userProfile.profile_picture ? (
                       <img
                         src={userProfile.profile_picture}
@@ -906,18 +907,23 @@ export default function MyPage() {
                     ) : (
                       <span className="font-medium text-xs">{t("noImage")}</span>
                     )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base text-gray-900 truncate">{userProfile.nickname}</h3>
+                      <p className="text-[10px] text-gray-500 font-medium mt-1 truncate">{userProfile.bio}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-base text-gray-900">{userProfile.nickname}</h3>
-                    <p className="text-[10px] text-gray-500 font-medium mt-1">{userProfile.bio}</p>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/mypage/settings")}
+                      className="whitespace-nowrap bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
+                    >
+                      {t("settings")}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push("/mypage/settings")}
-                    className="whitespace-nowrap mt-2 bg-black text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:opacity-90 transition-all uppercase tracking-wide"
-                  >
-                    {t("settings")}
-                  </button>
                 </div>
               </motion.div>
 
