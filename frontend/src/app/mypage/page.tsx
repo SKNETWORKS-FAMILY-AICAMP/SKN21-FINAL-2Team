@@ -677,10 +677,33 @@ export default function MyPage() {
     const fetchUserProfile = async () => {
       try {
         const data = await fetchCurrentUser();
+
+        let hasLocalTravelPreferences = false;
+        try {
+          const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as unknown;
+            if (parsed && typeof parsed === "object") {
+              const candidate = (parsed as { travelPreferences?: unknown }).travelPreferences;
+              hasLocalTravelPreferences =
+                Array.isArray(candidate)
+                && candidate.length === 3
+                && candidate.every((x) => typeof x === "string" && x.trim().length > 0);
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        const dbPrefs = [data.extra_prefer1, data.extra_prefer2, data.extra_prefer3].filter(
+          (x): x is string => typeof x === "string" && x.trim().length > 0,
+        );
+
         setUserProfile((prev) => ({
           ...prev,
           nickname: prev.nickname || data.nickname || data.name || "User",
           profile_picture: data.profile_picture || prev.profile_picture || "",
+          preferences: hasLocalTravelPreferences ? prev.preferences : (dbPrefs.length ? dbPrefs.slice(0, 3) : prev.preferences),
         }));
       } catch (error) {
         console.error("Failed to fetch user profile", error);

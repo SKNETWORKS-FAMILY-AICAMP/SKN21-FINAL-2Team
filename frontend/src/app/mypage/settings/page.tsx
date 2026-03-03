@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Moon, Sun } from "lucide-react";
-import { fetchCurrentUser } from "@/services/api";
+import { fetchCurrentUser, updateCurrentUser } from "@/services/api";
 import { useGoogleLogin } from "@react-oauth/google";
 
 type AppLanguage = "en" | "ko" | "ja";
@@ -322,6 +322,14 @@ export default function MyPageSettingsPage() {
         const data = await fetchCurrentUser();
         if (typeof data?.profile_picture === "string") setProfilePictureUrl(data.profile_picture);
         if (typeof data?.email === "string") setEmail(data.email);
+
+        // Hydrate Travel Preference from DB when available (no backend change required).
+        const fromDb = [data?.extra_prefer1, data?.extra_prefer2, data?.extra_prefer3].filter(
+          (x): x is string => typeof x === "string" && x.trim().length > 0,
+        );
+        if (fromDb.length === 3) {
+          setTravelPreferences([fromDb[0], fromDb[1], fromDb[2]]);
+        }
       } catch {
         // ignore
       }
@@ -347,6 +355,20 @@ export default function MyPageSettingsPage() {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     window.dispatchEvent(new Event("triver:language"));
     window.dispatchEvent(new Event("triver:profile-settings"));
+
+    // Persist Travel Preference to DB (maps to existing user columns extra_prefer1~3).
+    // Travel Notes는 현재 백엔드 스키마에 대응 컬럼이 없어 저장하지 않습니다.
+    (async () => {
+      try {
+        await updateCurrentUser({
+          extra_prefer1: travelPreferences[0],
+          extra_prefer2: travelPreferences[1],
+          extra_prefer3: travelPreferences[2],
+        });
+      } catch {
+        // ignore: keep local saved settings even when API is unavailable
+      }
+    })();
 
     setSaveNotice(t("savedNotice"));
     if (saveNoticeTimerRef.current) {
