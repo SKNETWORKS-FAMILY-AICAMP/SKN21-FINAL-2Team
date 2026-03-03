@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
+import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
 
 interface SidebarUserProfile {
@@ -118,6 +119,7 @@ export function Sidebar() {
     const [rooms, setRooms] = useState<ChatRoom[]>(() => sidebarCache.rooms);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [language, setLanguage] = useState<AppLanguage>("en");
+    const [showTripModal, setShowTripModal] = useState(false);
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
@@ -189,6 +191,31 @@ export function Sidebar() {
         { icon: Grid, label: dict.collection, path: "/collection" },
         { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
     ];
+
+    // + 새 채팅 버튼 클릭 → 모달에서 컨텍스트 수집 후 방 생성
+    const handleModalConfirm = async (context: TripContext) => {
+        setShowTripModal(false);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            setRooms((prev) => {
+                const next = [newRoom, ...prev];
+                sidebarCache.rooms = next;
+                sidebarCache.loaded = true;
+                return next;
+            });
+            // 주의: 컨텍스트를 방 ID별로 저장 → ChatHome에서 첫 메시지 전송 시 읽어서 활용
+            if (context.travelDuration || context.groupSize) {
+                localStorage.setItem(
+                    `triver:trip-context:${newRoom.id}`,
+                    JSON.stringify(context)
+                );
+            }
+            router.push(`/chatbot?roomId=${newRoom.id}`);
+        } catch (e) {
+            console.error("Failed to create room from sidebar", e);
+            router.push("/chatbot");
+        }
+    };
 
     const handleSignOut = async () => {
         await logoutApi();
@@ -267,21 +294,7 @@ export function Sidebar() {
                 {/* New Chat Button */}
                 <div className={cn("pt-2", actuallyCollapsed ? "flex justify-center" : "")}>
                     <button
-                        onClick={async () => {
-                            try {
-                                const newRoom = await createRoom("새로운 여행 계획");
-                                setRooms((prev) => {
-                                    const next = [newRoom, ...prev];
-                                    sidebarCache.rooms = next;
-                                    sidebarCache.loaded = true;
-                                    return next;
-                                });
-                                router.push(`/chatbot?roomId=${newRoom.id}`);
-                            } catch (e) {
-                                console.error("Failed to create room from sidebar", e);
-                                router.push("/chatbot");
-                            }
-                        }}
+                        onClick={() => setShowTripModal(true)}
                         className={cn(
                             "flex items-center transition-all duration-300 group bg-black text-white hover:bg-gray-800 shadow-md",
                             actuallyCollapsed
@@ -398,6 +411,12 @@ export function Sidebar() {
                     </button>
                 )}
             </div>
+            {/* 주의: 모달은 fixed 포지션이라 aside 안에 있어도 화면 전체를 덮습니다 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleModalConfirm}
+                onClose={() => setShowTripModal(false)}
+            />
         </aside>
     );
 }
