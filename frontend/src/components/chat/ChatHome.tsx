@@ -287,23 +287,7 @@ export function ChatHome() {
         if (isSendingRef.current) return;
         if (!inputText.trim() || !currentRoomId) return;
 
-        isSendingRef.current = true;
-
-        // 첫 번째 메시지일 때 저장된 여행 컨텍스트를 AI 메시지 앞에 부착
-        let userText = inputText;
-        if (messages.length === 0) {
-            const ctxRaw = localStorage.getItem(`triver:trip-context:${currentRoomId}`);
-            if (ctxRaw) {
-                try {
-                    const ctx = JSON.parse(ctxRaw) as TripContext;
-                    if (ctx.travelDuration || ctx.groupSize) {
-                        userText = `[여행 정보 - 기간: ${ctx.travelDuration || "미정"}, 인원: ${ctx.groupSize || "미정"}]\n\n${inputText}`;
-                    }
-                } catch { /* 컨텍스트 파싱 실패 시 무시 */ }
-                // 주의: 사용한 컨텍스트는 삭제해서 다음 메시지에 중복 적용되지 않도록
-                localStorage.removeItem(`triver:trip-context:${currentRoomId}`);
-            }
-        }
+        const userText = inputText;
         setInputText("");
         setIsTyping(true);
         setIsStreaming(true);
