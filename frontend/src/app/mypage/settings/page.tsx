@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Moon, Sun } from "lucide-react";
 import { fetchCurrentUser } from "@/services/api";
+import { useGoogleLogin } from "@react-oauth/google";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -90,7 +91,7 @@ const formatTravelStyleOptionLabel = (opt: string) => {
 };
 
 // TODO: Google 계정 확인(재인증) UI/연동 붙일 때 true로 전환
-const ENABLE_GOOGLE_CONFIRM = false;
+const ENABLE_GOOGLE_CONFIRM = true;
 
 const I18N: Record<AppLanguage, Record<string, string>> = {
   en: {
@@ -278,6 +279,12 @@ export default function MyPageSettingsPage() {
   const [deactivateShowFinalConfirm, setDeactivateShowFinalConfirm] = useState<boolean>(false);
   const [deactivateEmailError, setDeactivateEmailError] = useState<string>("");
   const [deactivateAgreementError, setDeactivateAgreementError] = useState<string>("");
+  const [googleConfirmBusy, setGoogleConfirmBusy] = useState<boolean>(false);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const GOOGLE_CALLBACK_URL = API_BASE.endsWith("/api")
+    ? `${API_BASE}/auth/google/callback`
+    : `${API_BASE}/api/auth/google/callback`;
 
   const t = useMemo(() => {
     const dict = I18N[language] ?? I18N.en;
@@ -359,44 +366,61 @@ export default function MyPageSettingsPage() {
     setDeactivateAgreementError("");
   };
 
-  const confirmWithGoogle = async () => {
-    setDeactivateEmailError("");
-
-    const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
-    const isPlaceholderEmail = (value: string) => value.trim().toLowerCase() === "user@gmail.com";
-
-    const candidates: string[] = [];
-    if (typeof email === "string" && !isPlaceholderEmail(email)) candidates.push(email);
-
-    try {
-      const fromLocal = localStorage.getItem("user_email");
-      if (fromLocal) candidates.push(fromLocal);
-    } catch {
-      // ignore
-    }
-
-    const best = candidates.find((c) => typeof c === "string" && isValidEmail(c) && !isPlaceholderEmail(c));
-    if (best) {
-      setEmail(best);
-      setDeactivateEmailConfirmed(true);
+  const triggerGoogleConfirm = useGoogleLogin({
+    flow: "auth-code",
+    scope: "openid email profile",
+    onSuccess: async (codeResponse) => {
+      setGoogleConfirmBusy(true);
       setDeactivateEmailError("");
-      return;
-    }
 
-    try {
-      const data = await fetchCurrentUser();
-      if (typeof data?.email === "string" && isValidEmail(data.email) && !isPlaceholderEmail(data.email)) {
-        setEmail(data.email);
+      try {
+        const res = await fetch(GOOGLE_CALLBACK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code: codeResponse.code }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const { access_token, refresh_token, profile_picture, name, email: nextEmail } = data || {};
+
+        if (typeof window !== "undefined") {
+          if (access_token) localStorage.setItem("access_token", access_token);
+          if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
+          if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
+          if (name) localStorage.setItem("user_name", name);
+          if (nextEmail) localStorage.setItem("user_email", nextEmail);
+        }
+
+        if (typeof nextEmail === "string" && nextEmail.trim()) {
+          setEmail(nextEmail);
+        }
+
         setDeactivateEmailConfirmed(true);
         setDeactivateEmailError("");
-        return;
+      } catch (e) {
+        console.error("Google confirm failed:", e);
+        setDeactivateEmailConfirmed(false);
+        setDeactivateEmailError("Google confirmation failed");
+      } finally {
+        setGoogleConfirmBusy(false);
       }
-    } catch {
-      // ignore
-    }
+    },
+    onError: () => {
+      setDeactivateEmailConfirmed(false);
+      setDeactivateEmailError("Google confirmation canceled");
+    },
+  });
 
-    setDeactivateEmailConfirmed(false);
-    setDeactivateEmailError(t("errConfirmEmail"));
+  const confirmWithGoogle = () => {
+    if (googleConfirmBusy) return;
+    setDeactivateEmailError("");
+    triggerGoogleConfirm();
   };
 
   const requestDeactivate = () => {
@@ -750,10 +774,10 @@ export default function MyPageSettingsPage() {
                 <div className="mb-6">
                   <button
                     type="button"
-                    disabled={!ENABLE_GOOGLE_CONFIRM}
+                    disabled={!ENABLE_GOOGLE_CONFIRM || googleConfirmBusy}
                     onClick={ENABLE_GOOGLE_CONFIRM ? confirmWithGoogle : undefined}
                     className={
-                      ENABLE_GOOGLE_CONFIRM
+                      ENABLE_GOOGLE_CONFIRM && !googleConfirmBusy
                         ? "bg-black text-white px-6 py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                         : "bg-gray-200 text-gray-500 px-6 py-3 rounded-lg text-sm font-semibold cursor-not-allowed"
                     }
