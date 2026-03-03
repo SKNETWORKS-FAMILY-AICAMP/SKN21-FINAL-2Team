@@ -179,7 +179,18 @@ const getStoredLanguage = (): AppLanguage => {
   return isAppLanguage(raw) ? raw : "en";
 };
 
-const getCountryDisplayName = (code: string, fallbackName: string, language: AppLanguage) => {
+const normalizeCountryCode = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  // Backward-compat: 잘못된 한국 코드(ko=언어코드)를 ISO 3166-1(kr)로 정규화
+  if (lower === "ko") return "KR";
+  return trimmed.toUpperCase();
+};
+
+const getCountryDisplayName = (code: string, fallbackName: string, language: AppLanguage, mounted: boolean) => {
+  if (!mounted) return fallbackName;
   const normalized = (code || "").trim().toUpperCase();
   if (!normalized) return fallbackName;
 
@@ -217,35 +228,16 @@ export default function MyPageSettingsPage() {
 
   const saveNoticeTimerRef = useRef<number | null>(null);
 
+  const [mounted, setMounted] = useState<boolean>(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
-  const [language, setLanguage] = useState<AppLanguage>(() => getStoredLanguage());
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredTheme());
-  const [nickname, setNickname] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.nickname === "string" ? s.nickname : "Traveling_Trivers67";
-  });
-  const [bio, setBio] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.bio === "string" ? s.bio : "Explorer Lvl.3";
-  });
-  const [countryCode, setCountryCode] = useState<string>(() => {
-    const s = getStoredSettings() as Partial<ProfileSettings> & { country?: unknown };
-    if (typeof s.countryCode === "string" && s.countryCode.trim().length > 0) return s.countryCode;
-    // Backward compat for older local storage payloads
-    if (typeof s.country === "string" && s.country.trim().length === 2) return s.country.toUpperCase();
-    return "KR";
-  });
-  const [email, setEmail] = useState<string>(() => {
-    const s = getStoredSettings();
-    return typeof s.email === "string" ? s.email : "user@gmail.com";
-  });
-  const [travelNotes, setTravelNotes] = useState<string[]>(() => {
-    const s = getStoredSettings();
-    return Array.isArray(s.travelNotes)
-      ? s.travelNotes.filter((x): x is string => typeof x === "string")
-      : ["Religion", "Food Allergies"];
-  });
-  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(() => getStoredTravelPreferences());
+  const [language, setLanguage] = useState<AppLanguage>("en");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const [nickname, setNickname] = useState<string>("Traveling_Trivers67");
+  const [bio, setBio] = useState<string>("Explorer Lvl.3");
+  const [countryCode, setCountryCode] = useState<string>("KR");
+  const [email, setEmail] = useState<string>("user@gmail.com");
+  const [travelNotes, setTravelNotes] = useState<string[]>(["Religion", "Food Allergies"]);
+  const [travelPreferences, setTravelPreferences] = useState<[string, string, string]>(["Relaxation", "Food", "Culture"]);
   const [saveNotice, setSaveNotice] = useState<string>("");
 
   const [countries, setCountries] = useState<Country[]>([]);
@@ -286,6 +278,66 @@ export default function MyPageSettingsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
+
+    // Avoid hydration mismatch: localStorage는 마운트 이후에만 읽어서 state를 갱신
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (parsed && typeof parsed === "object") {
+          const s = parsed as {
+            nickname?: unknown;
+            bio?: unknown;
+            email?: unknown;
+            travelNotes?: unknown;
+            travelPreferences?: unknown;
+            preferences?: unknown;
+            countryCode?: unknown;
+            country?: unknown;
+            language?: unknown;
+          };
+
+          if (typeof s.nickname === "string" && s.nickname.trim()) setNickname(s.nickname);
+          if (typeof s.bio === "string" && s.bio.trim()) setBio(s.bio);
+          if (typeof s.email === "string" && s.email.trim()) setEmail(s.email);
+
+          const nextCode = normalizeCountryCode(s.countryCode) || normalizeCountryCode(s.country);
+          if (nextCode) setCountryCode(nextCode);
+
+          if (Array.isArray(s.travelNotes)) {
+            const notes = s.travelNotes.filter((x): x is string => typeof x === "string");
+            if (notes.length) setTravelNotes(notes);
+          }
+
+          const prefsCandidate =
+            Array.isArray(s.travelPreferences) ? s.travelPreferences : Array.isArray(s.preferences) ? s.preferences : null;
+          if (prefsCandidate) {
+            const prefs = prefsCandidate.filter((x): x is string => typeof x === "string");
+            if (prefs.length >= 3) setTravelPreferences([prefs[0], prefs[1], prefs[2]]);
+          }
+
+          if (isAppLanguage(s.language)) setLanguage(s.language);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (isAppLanguage(rawLang)) setLanguage(rawLang);
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (isThemeMode(rawTheme)) setThemeMode(rawTheme);
+    } catch {
+      // ignore
+    }
+
     return () => {
       if (saveNoticeTimerRef.current) {
         window.clearTimeout(saveNoticeTimerRef.current);
@@ -299,8 +351,12 @@ export default function MyPageSettingsPage() {
         const data = await fetchCurrentUser();
         if (typeof data?.profile_picture === "string") setProfilePictureUrl(data.profile_picture);
         if (typeof data?.email === "string") setEmail(data.email);
+        if (typeof data?.nickname === "string" && data.nickname.trim().length > 0) {
+          setNickname(data.nickname);
+        }
         if (typeof data?.country_code === "string" && data.country_code.trim().length > 0) {
-          setCountryCode(data.country_code);
+          const next = normalizeCountryCode(data.country_code);
+          if (next) setCountryCode(next);
         }
 
         // Hydrate Travel Preference from DB when available (no backend change required).
@@ -323,7 +379,18 @@ export default function MyPageSettingsPage() {
       try {
         const list = await fetchCountries();
         if (cancelled) return;
-        setCountries(Array.isArray(list) && list.length ? list : FALLBACK_COUNTRIES);
+        if (Array.isArray(list) && list.length) {
+          const byCode = new Map<string, Country>();
+          for (const c of list) {
+            const normalized = normalizeCountryCode(c?.code);
+            if (!normalized) continue;
+            byCode.set(normalized, { ...c, code: normalized });
+          }
+          const normalizedList = Array.from(byCode.values());
+          setCountries(normalizedList.length ? normalizedList : FALLBACK_COUNTRIES);
+        } else {
+          setCountries(FALLBACK_COUNTRIES);
+        }
       } catch {
         if (cancelled) return;
         setCountries(FALLBACK_COUNTRIES);
@@ -341,10 +408,11 @@ export default function MyPageSettingsPage() {
   };
 
   const handleSave = () => {
+    const normalizedCountryCode = normalizeCountryCode(countryCode) || "KR";
     const payload: ProfileSettings = {
       nickname,
       bio,
-      countryCode,
+      countryCode: normalizedCountryCode,
       email,
       language,
       travelNotes,
@@ -360,7 +428,8 @@ export default function MyPageSettingsPage() {
     (async () => {
       try {
         await updateCurrentUser({
-          country_code: countryCode,
+          nickname,
+          country_code: normalizedCountryCode,
           extra_prefer1: travelPreferences[0],
           extra_prefer2: travelPreferences[1],
           extra_prefer3: travelPreferences[2],
@@ -617,7 +686,7 @@ export default function MyPageSettingsPage() {
                     >
                       {(countries.length ? countries : FALLBACK_COUNTRIES).map((c) => (
                         <option key={c.code} value={c.code}>
-                          {getCountryDisplayName(c.code, c.name, language)}
+                          {getCountryDisplayName(c.code, c.name, language, mounted)}
                         </option>
                       ))}
                     </select>
