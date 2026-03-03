@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { fetchCurrentUser } from "@/services/api";
+import { fetchCurrentUser, fetchRoom, fetchRooms } from "@/services/api";
 
 type AppLanguage = "en" | "ko" | "ja";
 
@@ -594,6 +594,11 @@ export default function MyPage() {
     profile_picture: "",
   });
 
+  const [todayRecommendation, setTodayRecommendation] = useState({
+    title: "Seongsu-dong K-Beauty Tour",
+    description: "Continuing from session #8821. Focusing on flagship stores and hidden cafes.",
+  });
+
   const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
 
   const SETTINGS_STORAGE_KEY = "triver:profile-settings:v1";
@@ -610,6 +615,8 @@ export default function MyPage() {
   const [reservationPhotoById, setReservationPhotoById] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    let cancelled = false;
+
     const applyLanguage = () => {
       const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       if (raw === "en" || raw === "ko" || raw === "ja") {
@@ -674,7 +681,36 @@ export default function MyPage() {
       }
     };
 
+    const fetchTodayRecommendation = async () => {
+      try {
+        const rooms = await fetchRooms();
+        if (cancelled) return;
+
+        const latestRoom = Array.isArray(rooms) ? rooms[0] : undefined;
+        if (!latestRoom?.id) return;
+
+        const roomDetail = await fetchRoom(latestRoom.id);
+        if (cancelled) return;
+
+        const messages = Array.isArray(roomDetail?.messages) ? roomDetail.messages : [];
+        const lastAi = [...messages]
+          .reverse()
+          .find((m) => m?.role === "ai" && typeof m.message === "string" && m.message.trim().length > 0);
+
+        const clean = lastAi?.message ? lastAi.message.replace(/\s+/g, " ").trim() : "";
+
+        setTodayRecommendation((prev) => ({
+          title: (roomDetail?.title || "").trim() || prev.title,
+          description: clean || prev.description,
+        }));
+      } catch (error) {
+        // Keep the existing placeholder when chat API is unavailable (e.g., not logged in yet).
+        console.warn("Failed to fetch today's recommendation", error);
+      }
+    };
+
     fetchUserProfile();
+    fetchTodayRecommendation();
 
     try {
       const linked = localStorage.getItem(CALENDAR_LINKED_STORAGE_KEY);
@@ -686,6 +722,7 @@ export default function MyPage() {
     }
 
     return () => {
+      cancelled = true;
       window.removeEventListener("triver:language", onLang);
       window.removeEventListener("triver:profile-settings", onProfileSettings);
     };
@@ -967,9 +1004,9 @@ export default function MyPage() {
                     <div className="flex items-center gap-2 text-white/50 text-[9px] font-bold uppercase tracking-[0.2em] mb-3">
                       <Sparkles size={10} className="text-white" /> {t("todayRec")}
                     </div>
-                    <h2 className="text-xl font-serif italic font-light mb-2 tracking-wide">Seongsu-dong K-Beauty Tour</h2>
+                    <h2 className="text-xl font-serif italic font-light mb-2 tracking-wide">{todayRecommendation.title}</h2>
                     <p className="text-white/60 text-xs font-light max-w-md leading-relaxed">
-                      Continuing from session #8821. Focusing on flagship stores and hidden cafes.
+                      {todayRecommendation.description}
                     </p>
                   </div>
                   <button
