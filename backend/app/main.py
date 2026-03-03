@@ -74,7 +74,7 @@ app.add_middleware(
 )
 
 # 이미지 업로드 디렉토리 설정
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # /static 경로 유지 (기존 코드 호환)

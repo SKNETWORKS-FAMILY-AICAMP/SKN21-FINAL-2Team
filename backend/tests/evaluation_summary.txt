@@ -1,6 +1,22 @@
-Evaluation Time: 2026-02-23 15:16:30
+- **Retrieval**
+    -  질문에 대해 검색한 문서(context)들에 대한 평가
+    -  **Context Precision(문맥 정밀도)**
+        -  검색된 문서(context)들 중 질문과 관련 있는 것들이 **얼마나 상위 순위에 위치하는지** 평가하는 지표.
+    -  **Context Recall(문맥 재현률)**
+        -  검색된 문서(context)가 정답(ground-truth)의 정보를 얼마나 포함하고 있는지 평가하는 지표.
+- **Generation**
+    - llm 모델이 생성한 답변에 대한 평가 지표들.
+    - **Faithfulness(신뢰성)**
+        -  생성된 답변과 검색된 문서(context)간의 관련성을 평가하는 지표
+        -  생성된 답변이 주어진 문맥(context)에 얼마나 충실한지를 평가하는 지표로 할루시네이션에 대한 평가로 볼 수있다.
+    - **Answer relevancy(답변 적합성)**
+        - 생성된 답변과 사용자의 질문간의 관련성을 평가하는 지표
+        - 생성된 답변이 사용자의 질문과 얼마나 관련성이 있는지를 평가하는 지표.
+
+------------------
+Evaluation Time: 2026-03-03 07:27:26
 --- Average Scores ---
-faithfulness: 0.2579
-answer_relevancy: nan
-context_precision: 0.0000
-context_recall: 0.0000
+faithfulness: 0.3669
+answer_relevancy: 0.6115
+context_precision: 0.5556
+context_recall: 0.4167
