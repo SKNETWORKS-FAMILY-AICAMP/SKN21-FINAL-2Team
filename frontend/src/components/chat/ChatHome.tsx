@@ -8,6 +8,7 @@ import { createRoom, fetchRoom, fetchRooms, sendChatMessageStream, UserProfile, 
 import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
+import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import remarkGfm from 'remark-gfm';
 
 export function ChatHome() {
@@ -29,6 +30,8 @@ export function ChatHome() {
     const [isInitializing, setIsInitializing] = useState(true);
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
     const [isListening, setIsListening] = useState(false);
+    const [showTripModal, setShowTripModal] = useState(false);
+    const [isTripLoading, setIsTripLoading] = useState(false);
     const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -219,8 +222,8 @@ export function ChatHome() {
                     // Update URL without refreshing the page
                     router.replace(`/chatbot?roomId=${latestRoomId}`);
                 } else {
-                    // Create a new room if none exist
-                    handleCreateNewRoom();
+                    // 방이 없을 때(첫 방문) → 여행 컨텍스트 모달을 먼저 표시
+                    setShowTripModal(true);
                 }
             } catch (error) {
                 console.error("Failed to initialize chat", error);
@@ -247,20 +250,42 @@ export function ChatHome() {
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
-            // Sidebar에 방 목록 변경 알림
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
-            // URL 업데이트
             router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
             console.error("Failed to create a new room", error);
         }
     };
 
+    // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 시)
+    const handleCreateRoomWithContext = async (context: TripContext) => {
+        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → router.replace 시 자연 unmount
+        setIsTripLoading(true);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(newRoom.id);
+            setMessages([]);
+            if (context.travelDuration || context.groupSize) {
+                localStorage.setItem(
+                    `triver:trip-context:${newRoom.id}`,
+                    JSON.stringify(context)
+                );
+            }
+            window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+            router.replace(`/chatbot?roomId=${newRoom.id}`);
+        } catch (error) {
+            console.error("Failed to create a new room with context", error);
+            setIsTripLoading(false);
+            setShowTripModal(false);
+            // 에러 시 컨텍스트 없이 기본 방 생성
+            handleCreateNewRoom();
+        }
+    };
+
     const handleSendMessage = async () => {
         if (isSendingRef.current) return;
         if (!inputText.trim() || !currentRoomId) return;
-
-        isSendingRef.current = true;
 
         const userText = inputText;
         setInputText("");
@@ -526,6 +551,20 @@ export function ChatHome() {
                     Triver AI can make mistakes. Consider checking important information.
                 </p>
             </div>
+
+            {/* 주의: TripContextModal은 fixed 포지션으로 화면 전체를 덮습니다 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleCreateRoomWithContext}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) {
+                        setShowTripModal(false);
+                        // 건너뛰기 없이 그냥 닫으면 컨텍스트 없이 기본 방 생성으로 폴백
+                        handleCreateNewRoom();
+                    }
+                }}
+            />
         </div>
     );
 }
