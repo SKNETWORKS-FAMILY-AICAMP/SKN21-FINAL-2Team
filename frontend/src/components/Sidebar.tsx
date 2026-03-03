@@ -120,6 +120,7 @@ export function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [language, setLanguage] = useState<AppLanguage>("en");
     const [showTripModal, setShowTripModal] = useState(false);
+    const [isTripLoading, setIsTripLoading] = useState(false);
 
     const canCollapse = pathname === "/explore";
     const actuallyCollapsed = isCollapsed && canCollapse;
@@ -194,7 +195,8 @@ export function Sidebar() {
 
     // + 새 채팅 버튼 클릭 → 모달에서 컨텍스트 수집 후 방 생성
     const handleModalConfirm = async (context: TripContext) => {
-        setShowTripModal(false);
+        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → API 완료 후 페이지 전환 시 자연 unmount
+        setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
             setRooms((prev) => {
@@ -203,16 +205,19 @@ export function Sidebar() {
                 sidebarCache.loaded = true;
                 return next;
             });
-            // 주의: 컨텍스트를 방 ID별로 저장 → ChatHome에서 첫 메시지 전송 시 읽어서 활용
             if (context.travelDuration || context.groupSize) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
                     JSON.stringify(context)
                 );
             }
+            // router.push 이후 페이지가 전환되면 컴포넌트가 unmount되므로
+            // setShowTripModal(false)를 수동초출할 필요 없음
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch (e) {
             console.error("Failed to create room from sidebar", e);
+            setIsTripLoading(false);
+            setShowTripModal(false);
             router.push("/chatbot");
         }
     };
@@ -415,7 +420,10 @@ export function Sidebar() {
             <TripContextModal
                 isOpen={showTripModal}
                 onConfirm={handleModalConfirm}
-                onClose={() => setShowTripModal(false)}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) setShowTripModal(false);
+                }}
             />
         </aside>
     );
