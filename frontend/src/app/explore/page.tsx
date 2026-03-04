@@ -156,10 +156,10 @@ export default function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-center mb-4 z-10 flex-none">
                                 <div>
-                                    <h3 className="text-2xl font-serif font-medium text-gray-900 flex items-center gap-2">
+                                    <h3 className="page-title text-gray-900 flex items-center gap-2">
                                         Your Choices <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="section-subtitle mt-1">
                                         {userProfile?.name ? `${userProfile.name}님을 위한 맞춤 여행지` : "Curated recommendations based on your preferences"}
                                     </p>
                                 </div>
@@ -256,8 +256,8 @@ export default function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="text-xl font-serif font-medium text-gray-900">Hot Places</h3>
-                                    <p className="text-xs text-gray-400 mt-1">Trending neighborhoods</p>
+                                    <h3 className="page-title text-gray-900">Hot Places</h3>
+                                    <p className="section-subtitle mt-1">Trending neighborhoods</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <MapPin size={16} className="text-gray-400" />
@@ -298,8 +298,8 @@ export default function ExplorePage() {
                         <div className="flex-1 border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden min-h-[300px]">
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="text-xl font-serif font-medium text-gray-900">Contents</h3>
-                                    <p className="text-xs text-gray-400 mt-1">Events & Exhibitions</p>
+                                    <h3 className="page-title text-gray-900">Contents</h3>
+                                    <p className="section-subtitle mt-1">Events & Exhibitions</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <Calendar size={16} className="text-gray-400" />

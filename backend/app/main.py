@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
-from app.api import auth, users, chat, prefer, common, explore
+from app.api import auth, users, chat, prefer, common, explore, reservations
 from app.api import hot_place as hot_place_api
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation
@@ -84,7 +84,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    attractions, restaurants, hot_place as hot_place_api
+    attractions, restaurants, reservations, hot_place as hot_place_api
 )
 
 # Register Routers
@@ -96,6 +96,7 @@ app.include_router(common.router)
 app.include_router(explore.router)
 app.include_router(attractions.router)
 app.include_router(restaurants.router)
+app.include_router(reservations.router)
 app.include_router(hot_place_api.router)
 
 logger = logging.getLogger("api_logger")

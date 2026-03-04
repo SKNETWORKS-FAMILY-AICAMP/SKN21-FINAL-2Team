@@ -93,11 +93,11 @@ export default function LoginPage() {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="max-w-sm"
           >
-            <h2 className="text-3xl font-serif italic font-light leading-snug mb-4 text-white/90">
+            <h2 className="text-3xl font-semibold leading-snug mb-4 text-white/90">
               &quot;The journey of a thousand miles begins with a single step.&quot;
             </h2>
             <div className="h-[1px] w-12 bg-white/30 my-6"></div>
-            <p className="text-white/50 text-sm font-light leading-relaxed">
+            <p className="text-white/50 text-sm font-normal leading-relaxed">
               Join a community of travelers planning their next adventure with AI-powered insights.
             </p>
           </motion.div>
@@ -127,7 +127,7 @@ export default function LoginPage() {
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
               Welcome back
             </h1>
-            <p className="text-[13px] text-gray-500 font-light">
+            <p className="text-[13px] text-gray-500 font-normal">
               Log in to continue your journey
             </p>
           </div>

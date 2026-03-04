@@ -70,10 +70,10 @@ export default function ProfilePage() {
           {userInfo.picture && (
             <img src={userInfo.picture} alt="Profile" className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-2 border-white shadow-md" />
           )}
-          <h1 className="text-3xl font-serif italic font-light text-gray-900 mb-2">
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
             One last step, {userInfo.name.split(" ")[0]}
           </h1>
-          <p className="text-sm text-gray-500 font-light">
+          <p className="text-sm text-gray-500 font-normal">
             Help us personalize your travel experience.
           </p>
         </div>
@@ -109,7 +109,7 @@ export default function ProfilePage() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="How should we call you?"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all placeholder:text-gray-300 placeholder:font-light"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all placeholder:text-gray-300 placeholder:font-normal"
               />
             </div>
 

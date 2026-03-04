@@ -21,13 +21,16 @@ import {
   fetchReservations,
   createReservation,
   deleteReservation,
+  fetchTodayRecommendations,
   fetchCurrentUser,
-  fetchRoom,
   fetchRooms,
   updateCurrentUser,
   updateReservation,
+  uploadImageDataUrl,
+  resetCurrentUserProfilePictureToGoogle,
   type Country,
   type ReservationRecord,
+  type TodayRecommendationItem,
 } from "@/services/api";
 
 type AppLanguage = "en" | "ko" | "ja";
@@ -610,7 +613,8 @@ export default function MyPage() {
     vibePrefer: "",
     placesPrefer: "",
   });
-  const [todayRecommendation, setTodayRecommendation] = useState({ title: "", description: "" });
+  const [todayRecommendations, setTodayRecommendations] = useState<TodayRecommendationItem[]>([]);
+  const [selectedRecommendationId, setSelectedRecommendationId] = useState<string>("");
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [reservations, setReservations] = useState<ReservationItem[]>([]);
   const [bookmarkedRoomCount, setBookmarkedRoomCount] = useState<number>(0);
@@ -618,6 +622,7 @@ export default function MyPage() {
   const [calendarLinkNotice, setCalendarLinkNotice] = useState<string>("");
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
+  const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
   const [countryOptions, setCountryOptions] = useState<Country[]>([]);
   const [settingsDraft, setSettingsDraft] = useState({
     nickname: "",
@@ -663,11 +668,12 @@ export default function MyPage() {
 
     const fetchDashboardData = async () => {
       try {
-        const [user, roomsData, reservationsData, bookmarkedRooms] = await Promise.all([
+        const [user, roomsData, reservationsData, bookmarkedRooms, todayRecs] = await Promise.all([
           fetchCurrentUser(),
           fetchRooms(),
           fetchReservations(),
           fetchBookmarkedRooms(),
+          fetchTodayRecommendations(),
         ]);
         if (cancelled) return;
 
@@ -709,27 +715,10 @@ export default function MyPage() {
         setTrips(roomSummaries);
         setBookmarkedRoomCount(Array.isArray(bookmarkedRooms) ? bookmarkedRooms.length : 0);
         setReservations((Array.isArray(reservationsData) ? reservationsData : []).map(mapReservationRecordToItem));
+        const recs = Array.isArray(todayRecs) ? todayRecs : [];
+        setTodayRecommendations(recs);
+        setSelectedRecommendationId((prev) => prev || recs[0]?.id || "");
 
-        const latestRoom = roomSummaries[0];
-        if (!latestRoom) {
-          setTodayRecommendation({ title: "", description: "" });
-          return;
-        }
-
-        const roomDetail = await fetchRoom(Number(latestRoom.id));
-        if (cancelled) return;
-
-        const messages = Array.isArray(roomDetail?.messages) ? roomDetail.messages : [];
-        const lastAi = [...messages]
-          .reverse()
-          .find((m) => m?.role === "ai" && typeof m.message === "string" && m.message.trim().length > 0);
-
-        const clean = lastAi?.message ? lastAi.message.replace(/\s+/g, " ").trim() : "";
-
-        setTodayRecommendation({
-          title: (roomDetail?.title || "").trim(),
-          description: clean,
-        });
       } catch (error) {
         console.warn("Failed to fetch mypage dashboard data", error);
       }
@@ -873,11 +862,14 @@ export default function MyPage() {
     }
 
     try {
+      const resolvedImagePath = addReservationImage.startsWith("data:image/")
+        ? await uploadImageDataUrl(addReservationImage, "reservations")
+        : addReservationImage;
       const created = await createReservation({
         category: "transportation",
         name: trimmedName,
         date: new Date().toISOString().slice(0, 10),
-        image_path: addReservationImage,
+        image_path: resolvedImagePath,
       });
       const mapped = mapReservationRecordToItem(created);
       setReservations((prev) => [mapped, ...prev]);
@@ -937,23 +929,43 @@ export default function MyPage() {
   const handleSaveSettingsPopup = async () => {
     setSettingsSaving(true);
     try {
+      const resolvedProfilePicture = settingsDraft.profilePicture?.startsWith("data:image/")
+        ? await uploadImageDataUrl(settingsDraft.profilePicture, "profile")
+        : settingsDraft.profilePicture;
       const payload = {
         nickname: settingsDraft.nickname.trim() || null,
         country_code: settingsDraft.countryCode || null,
-        profile_picture: settingsDraft.profilePicture || null,
+        profile_picture: resolvedProfilePicture || null,
       };
       await updateCurrentUser(payload);
       setUserProfile((prev) => ({
         ...prev,
         nickname: settingsDraft.nickname.trim() || prev.nickname,
         countryCode: settingsDraft.countryCode,
-        profile_picture: settingsDraft.profilePicture,
+        profile_picture: resolvedProfilePicture,
       }));
+      setSettingsDraft((prev) => ({ ...prev, profilePicture: resolvedProfilePicture || "" }));
+      window.dispatchEvent(new Event("triver:profile-updated"));
       setSettingsOpen(false);
     } catch (error) {
       console.error("Failed to update user settings", error);
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleResetProfilePhotoToGoogle = async () => {
+    setSettingsResettingPhoto(true);
+    try {
+      const updated = await resetCurrentUserProfilePictureToGoogle();
+      const nextPicture = updated.profile_picture || "";
+      setSettingsDraft((prev) => ({ ...prev, profilePicture: nextPicture }));
+      setUserProfile((prev) => ({ ...prev, profile_picture: nextPicture }));
+      window.dispatchEvent(new Event("triver:profile-updated"));
+    } catch (error) {
+      console.error("Failed to reset profile photo to Google", error);
+    } finally {
+      setSettingsResettingPhoto(false);
     }
   };
 
@@ -964,19 +976,19 @@ export default function MyPage() {
           <Sidebar />
         </div>
       </div>
-      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto">
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900">
         <div className="p-4 sm:p-6">
           <header className="mb-6">
-            <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">{t("headerTitle")}</h1>
-            <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">{t("headerSubtitle")}</p>
+            <h1 className="page-title text-gray-900 mb-2">{t("headerTitle")}</h1>
+            <p className="page-subtitle">{t("headerSubtitle")}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[10px] font-bold text-gray-700">
+              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
                 Rooms {trips.length}
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[10px] font-bold text-gray-700">
+              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
                 Saved Rooms {bookmarkedRoomCount}
               </span>
-              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[10px] font-bold text-gray-700">
+              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
                 Reservations {reservations.length}
               </span>
             </div>
@@ -1003,11 +1015,11 @@ export default function MyPage() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h2 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 truncate">
+                      <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 truncate">
                         {userProfile.nickname}
                       </h2>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-gray-500 font-medium tracking-wide truncate">{userProfile.bio}</span>
+                        <span className="text-sm text-gray-500 truncate">{userProfile.bio}</span>
                       </div>
                     </div>
                   </div>
@@ -1026,7 +1038,7 @@ export default function MyPage() {
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">Travel Preferences</h3>
+                      <h3 className="text-[22px] font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
                       <button
                         type="button"
                         onClick={handleTogglePreferenceEdit}
@@ -1044,7 +1056,7 @@ export default function MyPage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">{t("dnaTitle")}</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">{t("dnaTitle")}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: SURVEY_ITEM_LABELS.plan, value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -1058,8 +1070,8 @@ export default function MyPage() {
                               <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 p-4">
-                                <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">{item.label}</p>
-                                <p className="text-sm text-white font-bold mt-1">{item.value || "-"}</p>
+                                <p className="text-[10px] text-white/80 font-semibold uppercase tracking-[0.12em]">{item.label}</p>
+                                <p className="text-sm text-white font-semibold mt-1">{item.value || "-"}</p>
                               </div>
                             </div>
                             {isEditingPreferences && (
@@ -1076,7 +1088,7 @@ export default function MyPage() {
                                         ...(item.key === "places" ? { placesPrefer: opt } : {}),
                                       }));
                                     }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${
+                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
                                       (item.key === "plan" && draftInsight.planPrefer === opt)
                                       || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                                       || (item.key === "places" && draftInsight.placesPrefer === opt)
@@ -1096,7 +1108,7 @@ export default function MyPage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Extra Prefer</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Extra Prefer</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
@@ -1135,22 +1147,46 @@ export default function MyPage() {
               >
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-white/50 text-[10px] font-bold uppercase tracking-[0.2em] mb-5">
+                  <div className="flex items-center gap-2 text-white/60 text-[10px] font-semibold uppercase tracking-[0.14em] mb-5">
                     <Sparkles size={12} className="text-white" />
                     {t("todayRec")}
                   </div>
-                  <h2 className="text-2xl font-serif italic font-light mb-3 tracking-wide leading-tight">
-                    {todayRecommendation.title || "No recent journey yet"}
-                  </h2>
-                  <p className="text-white/70 text-sm font-light leading-relaxed">
-                    {todayRecommendation.description || "Start a chat to build your next travel story."}
-                  </p>
+                  {(() => {
+                    const selected = todayRecommendations.find((r) => r.id === selectedRecommendationId)
+                      || todayRecommendations[0];
+                    return (
+                      <>
+                        <h2 className="text-3xl font-serif italic font-medium mb-3 tracking-tight leading-tight">
+                          {selected?.title || "No recent journey yet"}
+                        </h2>
+                        <p className="text-white/75 text-sm leading-relaxed">
+                          {selected?.description || "Start a chat to build your next travel story."}
+                        </p>
+                      </>
+                    );
+                  })()}
+                  <div className="mt-4 space-y-2">
+                    {(todayRecommendations.slice(0, 3)).map((rec) => (
+                      <button
+                        key={rec.id}
+                        type="button"
+                        onClick={() => setSelectedRecommendationId(rec.id)}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-[11px] font-medium border transition-colors ${
+                          rec.id === selectedRecommendationId
+                            ? "bg-white/15 text-white border-white/30"
+                            : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
+                        }`}
+                      >
+                        {rec.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => router.push("/chatbot")}
-                  className="relative z-10 w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-4 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all uppercase tracking-wide mt-6"
+                  className="relative z-10 w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-4 rounded-xl text-xs font-semibold hover:bg-gray-200 transition-all uppercase tracking-[0.12em] mt-6"
                 >
                   <MessageSquare size={16} />
                   {t("startPlanning")}
@@ -1164,14 +1200,14 @@ export default function MyPage() {
                 className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-bold text-sm text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                  <h3 className="font-semibold text-sm text-gray-900 uppercase tracking-[0.14em] flex items-center gap-2">
                     <Ticket size={16} />
                     {t("reservation")}
                   </h3>
                   <button
                     type="button"
                     onClick={handleAddReservation}
-                    className="text-[11px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
+                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
                   >
                     Add
                   </button>
@@ -1200,7 +1236,7 @@ export default function MyPage() {
                               <div className="flex items-center gap-1.5 mt-1 min-w-0">
                                 <span className="text-[10px] text-gray-500 font-medium uppercase truncate">{res.subtitle}</span>
                                 <span className="text-[10px] text-gray-300">•</span>
-                                <span className="text-[10px] text-gray-400 font-mono truncate">{res.dateLabel}</span>
+                                <span className="text-[10px] text-gray-400 font-medium truncate">{res.dateLabel}</span>
                               </div>
                             </div>
                           </div>
@@ -1210,7 +1246,7 @@ export default function MyPage() {
                           <button
                             type="button"
                             onClick={() => requestDeleteReservation(res)}
-                            className="text-[10px] font-bold text-gray-700 uppercase tracking-wider hover:opacity-70"
+                            className="text-[10px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
                           >
                             Delete
                           </button>
@@ -1245,8 +1281,11 @@ export default function MyPage() {
         onSavePhoto={async (nextUrl) => {
           if (!activeReservation) return;
           try {
+            const resolvedImagePath = (nextUrl && nextUrl.startsWith("data:image/"))
+              ? await uploadImageDataUrl(nextUrl, "reservations")
+              : nextUrl;
             const updated = await updateReservation(activeReservation.reservationId, {
-              image_path: nextUrl || null,
+              image_path: resolvedImagePath || null,
             });
             const mapped = mapReservationRecordToItem(updated);
             setReservations((prev) => prev.map((item) => (
@@ -1432,13 +1471,23 @@ export default function MyPage() {
               </div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Profile Photo</p>
-                <button
-                  type="button"
-                  onClick={() => settingsPhotoInputRef.current?.click()}
-                  className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  Change Photo
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => settingsPhotoInputRef.current?.click()}
+                    className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    Change Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetProfilePhotoToGoogle}
+                    disabled={settingsResettingPhoto}
+                    className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
+                  >
+                    {settingsResettingPhoto ? "Restoring..." : "Use Google Photo"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

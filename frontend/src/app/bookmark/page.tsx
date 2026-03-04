@@ -106,10 +106,10 @@ export default function BookmarkPage() {
             <main className="flex-1 h-full relative min-w-0 bg-white rounded-lg flex flex-col overflow-hidden">
                 <header className="flex-none p-6 pb-4 border-b border-gray-100 flex items-center justify-between bg-white z-10">
                     <div>
-                        <h1 className="text-xl font-serif font-bold text-gray-900 flex items-center gap-2">
+                        <h1 className="page-title text-gray-900 flex items-center gap-2">
                             Bookmarks <BookmarkIcon size={16} className="text-gray-400" />
                         </h1>
-                        <p className="text-xs text-gray-500 mt-1 font-medium tracking-wide uppercase">Saved Chats & Spots</p>
+                        <p className="page-subtitle mt-1">Saved Chats & Spots</p>
                     </div>
                     <div className="bg-gray-100 p-1 rounded-lg flex gap-0.5">
                         <button

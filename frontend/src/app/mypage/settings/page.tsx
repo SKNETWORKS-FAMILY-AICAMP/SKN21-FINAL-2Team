@@ -135,10 +135,10 @@ export default function SettingsPage() {
         {/* 헤더 */}
         <header className="p-6 border-b border-gray-100 flex items-end justify-between">
           <div>
-            <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1">
+            <h1 className="page-title text-gray-900 mb-1">
               Profile Settings
             </h1>
-            <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Profile</p>
+            <p className="page-subtitle">Profile</p>
           </div>
           <button
             type="button"

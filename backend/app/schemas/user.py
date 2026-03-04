@@ -28,6 +28,7 @@ class UserBase(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     nickname: Optional[str] = None
+    profile_picture: Optional[str] = None
     gender: Optional[GenderType] = None
     birthday: Optional[datetime] = None
 

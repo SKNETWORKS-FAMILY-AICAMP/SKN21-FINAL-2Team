@@ -118,10 +118,10 @@ export default function PersonaSurveyPage() {
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                             Question {currentQuestionIndex + 1} of {questions.length}
                         </span>
-                        <h2 className="text-3xl md:text-4xl font-serif font-light text-gray-900 mb-3">
+                        <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
                             {currentQuestion.title}
                         </h2>
-                        <p className="text-gray-500 font-light">{currentQuestion.description}</p>
+                        <p className="text-gray-500 font-normal">{currentQuestion.description}</p>
                     </div>
 
                     <div className={`grid gap-6 w-full ${currentQuestion.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>

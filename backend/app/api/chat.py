@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import List
+from pydantic import BaseModel
 from app.database.connection import get_db
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
@@ -75,6 +76,13 @@ def _build_user_preferences(user: User) -> str:
 
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+class TodayRecommendationItem(BaseModel):
+    id: str
+    title: str
+    description: str
+    prompt: str
 
 def _make_room_title(text: str) -> str:
     """Generate a concise room title from user input."""
@@ -160,6 +168,80 @@ def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_
         .all()
     )
     return rooms
+
+
+@router.get("/recommendations/today", response_model=List[TodayRecommendationItem])
+def get_today_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    latest_room = (
+        db.query(ChatRoom)
+        .filter(ChatRoom.user_id == current_user.id)
+        .order_by(ChatRoom.created_at.desc(), ChatRoom.id.desc())
+        .first()
+    )
+
+    latest_title = latest_room.title.strip() if latest_room and latest_room.title else "Your latest trip plan"
+
+    plan_pref = (current_user.plan_prefer or "").strip()
+    vibe_pref = (current_user.vibe_prefer or "").strip()
+    places_pref = (current_user.places_prefer or "").strip()
+    extra_prefs = [x for x in [current_user.extra_prefer1, current_user.extra_prefer2, current_user.extra_prefer3] if x]
+
+    continue_title = f"Continue: {latest_title}" if latest_room else "Start from your first travel theme"
+    continue_desc = (
+        "Pick up from your latest conversation and turn it into a complete plan."
+        if latest_room
+        else "Start a new conversation and shape your first travel plan with Triver."
+    )
+    continue_prompt = (
+        f"Continue planning based on this topic: {latest_title}. "
+        "Please provide a practical itinerary with timing, transport, and food spots."
+    )
+
+    new_angle_title = "Try a new angle"
+    new_angle_desc = "Explore a different perspective from your profile preferences."
+    new_angle_prompt_parts = []
+    if plan_pref:
+        new_angle_prompt_parts.append(f"Plan style: {plan_pref}")
+    if vibe_pref:
+        new_angle_prompt_parts.append(f"Travel vibe: {vibe_pref}")
+    if places_pref:
+        new_angle_prompt_parts.append(f"Interest: {places_pref}")
+    if extra_prefs:
+        new_angle_prompt_parts.append(f"Special preferences: {', '.join(extra_prefs)}")
+    if not new_angle_prompt_parts:
+        new_angle_prompt_parts.append("Use a balanced travel style with local highlights and practical movement.")
+    new_angle_prompt = "Create a new trip concept with this profile context: " + " | ".join(new_angle_prompt_parts)
+
+    quick_plan_title = "Fast plan for today"
+    quick_plan_desc = "Generate a short, executable trip idea you can use immediately."
+    quick_plan_prompt = (
+        "Create a quick half-day plan with 3 stops, moving order, and expected duration. "
+        "Keep it concise and realistic."
+    )
+
+    return [
+        TodayRecommendationItem(
+            id="continue",
+            title=continue_title,
+            description=continue_desc,
+            prompt=continue_prompt,
+        ),
+        TodayRecommendationItem(
+            id="new-angle",
+            title=new_angle_title,
+            description=new_angle_desc,
+            prompt=new_angle_prompt,
+        ),
+        TodayRecommendationItem(
+            id="fast-plan",
+            title=quick_plan_title,
+            description=quick_plan_desc,
+            prompt=quick_plan_prompt,
+        ),
+    ]
 
 # 채팅방 생성
 @router.post("/rooms", response_model=ChatRoomResponse)
@@ -267,7 +349,7 @@ def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Ses
         {
             "id": room.id,
             "user_id": room.user_id,
-            "title": room.title,
+            "title": room.title or "새 채팅",
             "created_at": room.created_at,
             "bookmark_yn": room.bookmark_yn,
             "latest_message_preview": latest_message_preview,
@@ -302,7 +384,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "bookmark_yn": place.bookmark_yn,
             "messages_id": place.messages_id,
             "room_id": room_id,
-            "room_title": room_title,
+            "room_title": room_title or "새 채팅",
         }
         for place, room_id, room_title in rows
     ]
