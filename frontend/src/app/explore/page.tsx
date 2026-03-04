@@ -44,6 +44,8 @@ const CONTENTS = [
 
 import { Sidebar } from "@/components/Sidebar";
 import { fetchCategoryPlaces, fetchCurrentUser, fetchHotPlaces, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+import { isAuthFailureError } from "@/services/authError";
+import { clearAuth } from "@/services/errorHandler";
 import { useEffect, useState } from "react";
 
 type YourChoicesState = {
@@ -122,6 +124,11 @@ export default function ExplorePage() {
                 setYourChoices(payload.choices);
                 setHotPlaces(payload.hotPlaces);
             } catch (error) {
+                if (isAuthFailureError(error)) {
+                    clearAuth();
+                    window.location.href = "/login";
+                    return;
+                }
                 console.error("Failed to fetch explore data:", error);
             } finally {
                 setIsLoading(false);

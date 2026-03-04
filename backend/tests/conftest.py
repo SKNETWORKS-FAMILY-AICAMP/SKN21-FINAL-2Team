@@ -1,8 +1,16 @@
+import sys
+from pathlib import Path
+
 import pytest
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
+
+# Ensure `app` package is importable regardless of pytest invocation cwd.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
 from app.main import app
 from app.database.connection import get_db, Base
 from app.models.user import User
