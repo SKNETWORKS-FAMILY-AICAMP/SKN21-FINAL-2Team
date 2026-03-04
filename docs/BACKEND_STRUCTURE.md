@@ -24,7 +24,7 @@ backend/
 │   ├── database/            # DB 연결 및 스키마 초기화
 │   ├── models/              # SQLAlchemy ORM 모델
 │   ├── schemas/             # Pydantic 요청/응답 스키마
-│   ├── services/            # LLM 호출 및 프롬프트 관리
+│   ├── services/            # 프롬프트 관리 및 기타 유틸리티 서비스
 │   ├── retrieval/           # Qdrant 벡터 검색 로직
 │   └── scripts/             # 데이터 전처리 및 Qdrant 초기 적재 스크립트
 │
@@ -317,21 +317,13 @@ AI의 역할: **초개인화 한국 여행 에이전트**
 
 ---
 
-### `app/services/llm.py`
-OpenAI API를 호출하는 함수를 제공합니다.
+### `app/services/vision.py`
+GPT-4o-mini를 사용하여 이미지의 정서적 특징 및 검색 키워드를 추출합니다.
 
-**`generate_response(user_input, image, location, context)`**
+**`describe_image(image_data)`**
 
-| 파라미터     | 설명                                 |
-| ------------ | ------------------------------------ |
-| `user_input` | 사용자 질문 텍스트                   |
-| `image`      | Base64 또는 URL 형식 이미지 (선택)   |
-| `location`   | `"위도, 경도"` 형식 현재 위치 (선택) |
-| `context`    | RAG 검색 결과 문자열 (선택)          |
-
-- 사용 모델: `gpt-4o-mini`
-- 메시지 구성 순서: System Prompt → Context → 위치 → 사용자 질문 → 이미지
-- 오류 발생 시 `"죄송합니다. 오류가 발생했습니다."` 반환
+- 입력: Base64 이미지 스트링 또는 URL
+- 출력: 이미지에 대한 감정 키워드, 장소 특징, 검색 키워드 포함 텍스트
 
 ---
 
@@ -512,7 +504,7 @@ SSE 스트리밍 엔드포인트 (`/ask/stream`) 자동 테스트입니다. `htt
                            ├─ [retrieval/place.py] → Qdrant 벡터 검색
                            │       └─ [scripts/preprocess_data.py] (이미지 다운로드)
                            │
-                           └─ [services/llm.py] → OpenAI GPT-4o-mini
+                           └─ [agents/graph.py] → LangGraph (Intent, Planner, Retriever, Executor)
                                    └─ [services/prompts.py] (시스템 프롬프트)
 ```
 
