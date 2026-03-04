@@ -1,159 +1,179 @@
 # Evaluation 가이드
 
-## 목적
-이 문서는 현재 프로젝트의 평가 방식을 하나로 통합한 기준 문서입니다.
+## 한눈에 보는 3단계 평가
+여행 추천 챗봇 평가는 아래 3가지를 분리해서 봅니다.
 
-- 리트리버 품질 평가 (RAGAS 비의존)
-- End-to-End RAG 평가 (RAGAS 기반)
-- 평가 데이터(`rag_eval_data.json`) 보강/운영
+1. Retrieval(검색): 질문에 맞는 후보를 잘 찾았는가?
+- 왜 중요한가: 후보를 잘못 찾으면 뒤 단계가 좋아도 결과가 나빠집니다.
+- 점수가 낮을 때 보이는 문제: 엉뚱한 장소가 많이 섞이거나, 맞는 장소가 후보에 아예 없음.
+- 개선 모듈: 검색기(BM25/벡터 검색/하이브리드 검색).
+
+2. Rerank(재정렬): 찾은 후보의 순서를 잘 세웠는가?
+- 왜 중요한가: 같은 후보라도 순서가 좋아야 상위 추천 품질이 올라갑니다.
+- 점수가 낮을 때 보이는 문제: 관련 장소가 뒤로 밀려 사용자 체감 품질 하락.
+- 개선 모듈: Reranker, 점수 결합 로직.
+
+3. Recommendation(최종 추천): 후보 중 최종 추천을 잘 골랐는가?
+- 왜 중요한가: 사용자에게 실제로 노출되는 결과가 이 단계에서 결정됩니다.
+- 점수가 낮을 때 보이는 문제: 추천이 부정확하거나 너무 비슷한 장소만 반복됨.
+- 개선 모듈: 추천 선택 로직(`selected_ids` 생성 부분).
+
+4. Generation(설명 생성): 추천 이유를 근거 있게 설명했는가?
+- 왜 중요한가: 추천 이유가 어색하거나 근거가 약하면 신뢰도가 떨어집니다.
+- 점수가 낮을 때 보이는 문제: 질문과 무관한 설명, 근거 부족, 환각성 문장.
+- 개선 모듈: Executor 프롬프트/응답 생성 로직.
 
 ## 평가 스크립트
-- `backend/evaluation/evaluate_retrieval.py`
-- `backend/evaluation/evaluate_rag.py`
-- `backend/evaluation/evaluate_testdata.py`
-- `backend/evaluation/create_dataset.py` — Ragas TestsetGenerator 기반 합성 데이터셋 생성
+- `backend/evaluation/evaluate_retrieval.py`: Retrieval + Rerank 평가
+- `backend/evaluation/evaluate_recommendation.py`: Recommendation 평가
+- `backend/evaluation/evaluate_generation.py`: Generation(RAGAS) 평가
+- `backend/evaluation/evaluate_all.py`: 통합 실행
+- `backend/evaluation/evaluate_prepare_enriched.py`: enriched CSV 생성
+- `backend/evaluation/evaluate_ragas.py`: 합성 데이터 생성/보조 유틸
 
-## 평가 데이터셋
-기본 파일: `backend/evaluation/rag_eval_data.json`
+## CSV 입력 표준
+기본 입력: `backend/evaluation/evaluate_testdata.csv`
 
-기본 호환 포맷:
+권장 운영 입력: `backend/evaluation/evaluate_testdata_enriched.csv`
 
-```json
-[
-  {
-    "question": "서울 강남구 맛집 추천해줘",
-    "ground_truth": "서울특별시 강남구 음식점 추천 답변 ...",
-    "reference": {
-      "title": "가담",
-      "category": "음식점",
-      "district": "서울특별시 강남구"
-    }
-  }
-]
-```
+필수 컬럼(통합 평가 기준):
+- `question` 또는 `user_input`
+- `reference`
+- `response`
+- `retrieved_contexts`
+- `relevant_ids`
+- `selected_ids`
+- `retrieved_candidates`
 
-- `question`: 필수
-- `ground_truth`: RAGAS/e2e 평가 시 사용
-- `reference`: 선택 (`evaluate_retrieval.py --enrich-reference`로 자동 보강 가능)
+BM25/Reranker 확장 필드( `retrieved_candidates` 내부 권장 ):
+- `first_stage_source` (`dense`/`bm25`/`hybrid`)
+- `first_stage_score`
+- `first_stage_rank`
+- `rerank_score`
+- `final_rank`
+- `match_features` (선택)
 
-## 1) 리트리버 평가 (RAGAS 비의존)
-### 개요
-`question` + 리트리버 반환 문서만으로 검색 품질을 측정합니다.
+## 현재 CSV 사용 가능 여부
+원본 `evaluate_testdata.csv`는 Generation 평가는 즉시 가능하지만,
+`relevant_ids`, `selected_ids`, `retrieved_candidates`가 없어 Retrieval/Recommendation 정량 평가는 제한됩니다.
 
-### 모드
-1. `unsupervised`
-- `sim@1`, `sim@k_mean`, `sim@k_min`
-- `query_coverage`
-- `vector_score@1`, `keyword_score@k`, `bm25_score@k`
-- `category_consistency@k`, `district_consistency@k`
+보강본 `evaluate_testdata_enriched.csv`는 위 3개 컬럼이 추가되어
+Retrieval/Recommendation/Generation 통합 평가(`evaluate_all.py --mode all`)에 사용 가능합니다.
 
-2. `labeled`
-- `hit@1`, `hit@3`, `hit@5`
-- `mrr@k`
-- `ndcg@k`
-- `gold_rank`
+## 단계별 주요 지표
 
-3. `all`
-- `unsupervised` + `labeled` 동시 수행
+### 1) Retrieval / Rerank
+- 후보 생성(1단): `Recall@K`, `Precision@K`, `MAP@K`
+- 재정렬(2단): `MRR@K`, `nDCG@K`, `MAP@K`
+- 전후 비교: `delta_ndcg@k`, `delta_mrr@k`
 
-### 실행
-#### Docker 우선
-```bash
-docker compose run --rm backend python evaluation/evaluate_retrieval.py --mode all --top-k 5
-```
+### 2) Recommendation
+- 정확도: `Precision@N`, `Recall@N`, `nDCG@N`
+- 다양성: `ILD@N`, `Category Coverage`, `District Diversity`
+- 안정성: `Entity Existence Rate`
 
-### Reference 자동 보강
-```bash
-docker compose run --rm backend python evaluation/evaluate_retrieval.py --mode labeled --top-k 5 --enrich-reference
-```
-
-또는 보강 유틸만 별도 실행:
-
-```bash
-docker compose run --rm backend python evaluation/evaluate_testdata.py --data-file rag_eval_data.json
-```
-
-### 결과 파일
-- `backend/evaluation/result/evaluation_retrieval_report.csv`
-- `backend/evaluation/result/evaluation_retrieval_summary.json`
-- `backend/evaluation/result/evaluation_retrieval_summary.txt`
-
-## 2) End-to-End RAG 평가 (RAGAS 기반)
-### 개요
-LangGraph 실행 결과(`answer`, `contexts`)를 기반으로 RAGAS 메트릭을 계산합니다.
-
-### 주요 메트릭
+### 3) Generation
 - `faithfulness`
 - `answer_relevancy`
 - `context_precision`
 - `context_recall`
 
-### 실행
-#### Docker 우선
+운영 규칙:
+- 생성 평가는 기본 컨텍스트 `Top30` 권장.
+- 엔티티 존재성은 Recommendation 리포트와 분리해서 해석.
+
+## 실행 예시 (Docker 우선)
+
+### Enriched CSV 생성
 ```bash
-docker compose run --rm backend python evaluation/evaluate_rag.py --mode e2e --limit 20
+docker compose run --rm backend python evaluation/evaluate_prepare_enriched.py --input-csv evaluation/evaluate_testdata.csv --output-csv evaluation/evaluate_testdata_enriched.csv --top-k 30 --top-n 5
 ```
 
-#### 모드별 실행 예시
+### Retrieval + Rerank
 ```bash
-docker compose run --rm backend python evaluation/evaluate_rag.py --mode intent --limit 20
-docker compose run --rm backend python evaluation/evaluate_rag.py --mode retriever --limit 20
-docker compose run --rm backend python evaluation/evaluate_rag.py --mode executor --limit 20
-docker compose run --rm backend python evaluation/evaluate_rag.py --mode all --limit 20
+docker compose run --rm backend python evaluation/evaluate_retrieval.py --input-csv evaluation/evaluate_testdata_enriched.csv --stage all --top-k 30
 ```
 
-### 결과 파일
-- `backend/evaluation/result/evaluation_report.csv`
-- `backend/evaluation/result/evaluation_summary.txt`
-- `backend/evaluation/result/evaluation_*_summary.(txt|json)`
-- `backend/evaluation/result/evaluation_*_report.csv`
-
-## 3) 운영 권장 순서
-1. `evaluate_retrieval.py --mode unsupervised`
-- 인프라/리트리버 기본 상태 점검
-
-2. `evaluate_retrieval.py --mode labeled --enrich-reference`
-- 랭킹 품질(Hit/MRR/nDCG) 확인
-
-3. `evaluate_rag.py --mode e2e`
-- 최종 답변 품질까지 종합 점검
-
-## 4) 해석 가이드
-- `sim@k`가 높아도 `hit@k`가 낮을 수 있습니다. 유사도와 정답 순위를 같이 보세요.
-- `category_consistency@k`가 낮으면 intent/category 필터 로직부터 점검하세요.
-- `district_consistency@k`가 낮으면 지역 파싱/주소 정규화 로직을 우선 점검하세요.
-- `retrieval_failed_count > 0`이면 Qdrant 연결/모델 로딩/환경변수를 먼저 확인하세요.
-
-## 5) 주의사항
-- `--enrich-reference`는 `rag_eval_data.json` 파일을 직접 갱신합니다.
-- 대규모 실행 시 임베딩 모델 로딩 시간이 길 수 있습니다.
-- Docker 실행 시 `qdrant` 컨테이너 상태를 먼저 확인하세요.
-
-## 6) 합성 데이터셋 생성 (TestsetGenerator)
-
-### 개요
-Ragas `TestsetGenerator`를 사용해 Qdrant `places` 컬렉션 문서로부터
-다양한 유형의 질문-답변 쌍을 자동 생성합니다.
-
-### 실행
-#### Docker 우선
+### Recommendation
 ```bash
-docker compose run --rm backend python evaluation/create_dataset.py --num-samples 20 --limit 200
+docker compose run --rm backend python evaluation/evaluate_recommendation.py --input-csv evaluation/evaluate_testdata_enriched.csv --top-n 5
 ```
 
-#### 주요 옵션
-| 옵션 | 기본값 | 설명 |
-|------|--------|------|
-| `--num-samples` | 20 | 생성할 테스트 샘플 수 |
-| `--limit` | 200 | Qdrant에서 가져올 소스 문서 수 |
-| `--output` | `rag_eval_data_synthetic.json` | 출력 파일 경로 |
-| `--seed` | 42 | 재현성을 위한 시드 값 |
-
-### 출력
-- `backend/evaluation/rag_eval_data_synthetic.json` (기존 `rag_eval_data.json`과 동일 포맷)
-
-### 생성된 데이터로 평가 실행
+### Generation
 ```bash
-docker compose run --rm backend python evaluation/evaluate_retrieval.py --data-file evaluation/rag_eval_data_synthetic.json --mode all --top-k 5
+docker compose run --rm backend python evaluation/evaluate_generation.py --input-csv evaluation/evaluate_testdata.csv --context-k 30
 ```
 
+### 통합 실행
+```bash
+docker compose run --rm backend python evaluation/evaluate_all.py --mode all --input-csv evaluation/evaluate_testdata_enriched.csv --compare-rerank
+```
+
+## 결과 파일
+- `backend/evaluation/result/evaluation_retrieval_report.csv`
+- `backend/evaluation/result/evaluation_recommendation_report.csv`
+- `backend/evaluation/result/evaluation_generation_report.csv`
+- `backend/evaluation/result/evaluation_all_summary.json`
+- 각 스크립트별 `*_summary.json`, `*_summary.txt`
+
+## 주의사항
+- 입력 CSV에 필수 컬럼이 없으면 해당 단계는 실패 대신 `skipped`로 기록됩니다.
+- `--compare-rerank`는 Retrieval 단계에서 재정렬 전/후 비교 요약을 함께 출력합니다.
+- 외부 LLM 키가 없으면 Generation은 fallback 점수로 동작합니다.
+
+## 최근 실행 결과 해석
+기준 실행:
+- `mode=all`
+- `input_csv=evaluation/evaluate_testdata_enriched.csv`
+- `compare_rerank=true`
+- 샘플 수: 단계별 21건
+
+### 1) Retrieval / Rerank
+- `first_precision@k=0.2381`: Top30 후보 중 관련 항목 비율이 평균 약 23.8%
+    - Precision@K: TopK 후보 중 관련 항목 비율
+- `first_recall@k=0.8095`: 관련 항목의 약 80.9%를 Top30 안에서 회수
+    - Recall@K: 관련 항목의 TopK 안에 포함된 비율
+- `first_map@k=0.6782`: 관련 항목이 전반적으로 상위권에 배치됨
+    - MAP@K: 관련 항목이 전반적으로 상위권에 배치됨
+- `rerank_mrr@k=0.6786`, `rerank_ndcg@k=0.7156`, `rerank_map@k=0.6782`: 재정렬 후 순위 품질은 중상
+    - MRR@K: 첫 타겟 속도
+    - nDCG@K: 상위 순서 전체 품질
+    - MAP@K: 여러 정답에 대한 평균 정밀도 품질
+- `delta_ndcg@k=0.0`, `delta_mrr@k=0.0`: 현재 데이터에서는 재정렬 전/후 개선 효과가 없음
+
+해석:
+- 후보를 찾는 능력(Recall)은 충분히 높음
+- 다만 Top30 내 노이즈가 많아 Precision은 낮은 편
+- rerank delta가 0인 것은 `final_rank`가 사실상 first rank와 유사하게 구성되었기 때문일 가능성이 큼
+
+### 2) Recommendation
+- `precision@n=0.7778`, `recall@n=0.7857`, `ndcg@n=0.7911`: 최종 추천 정확도/순위 품질은 양호
+    - Precision@N: TopN 후보 중 관련 항목 비율
+    - Recall@N: 관련 항목의 TopN 안에 포함된 비율
+    - nDCG@N: 상위 순서 전체 품질
+- `ild@n=0.0794`: 추천 리스트 내 다양성은 낮음(유사 항목 반복 가능성)
+    - ILD@N: 추천 리스트 내 다양성
+- `category_coverage=0.6825`, `district_diversity=0.7937`: 카테고리/지역 분산은 중간 이상
+    - Category Coverage: 카테고리 다양성
+    - District Diversity: 지역 다양성
+- `entity_existence_rate=1.0`: 추천 엔티티 존재성은 안정적
+    - Entity Existence Rate: 추천 엔티티 존재성
+
+해석:
+- 추천 품질 자체는 괜찮지만, 체감 다양성(특히 ILD)은 개선 여지가 큼
+    - 추천 리스트 내 다양성은 낮음(유사 항목 반복 가능성)
+    - 카테고리/지역 분산은 중간 이상
+    - 추천 엔티티 존재성은 안정적
+    
+### 3) Generation
+- `faithfulness=0.1573`: 컨텍스트 근거 충실도 낮음
+    - Faithfulness: 컨텍스트 근거 충실도
+- `answer_relevancy=0.5385`: 질문 적합성은 중간 수준
+    - Answer Relevancy: 질문 적합성
+- `context_precision=0.0`, `context_recall=0.1417`: 컨텍스트 근거 품질이 낮음
+    - Context Precision: 컨텍스트 근거 정밀도
+    - Context Recall: 컨텍스트 근거 재현율
+
+해석:
+- 현재 가장 큰 병목은 생성 단계의 근거성/정합성
+- 추천 결과가 괜찮아도 설명 품질이 낮아 사용자 신뢰가 떨어질 수 있음

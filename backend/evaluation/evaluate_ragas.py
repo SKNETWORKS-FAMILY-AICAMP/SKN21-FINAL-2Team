@@ -260,7 +260,7 @@ def eval_ragas(path: Path):
 def generate_dataset(
     num_samples: int = 20,
     limit: int = 200,
-    output: Path = Path("rag_eval_data_synthetic.json"),
+    output: Path = Path("rag_eval_data_synthetic.csv"),
     seed: int = 42,
     source: str = "data/llm_result",
 ) -> list[dict]:
@@ -328,7 +328,7 @@ def generate_dataset(
 
 
 if __name__ == "__main__":
-    output = Path("rag_eval_data_synthetic.json")
+    output = Path("rag_eval_data_synthetic.csv")
     if not output.is_absolute():
         output = EVAL_DIR / output
     output.parent.mkdir(parents=True, exist_ok=True)

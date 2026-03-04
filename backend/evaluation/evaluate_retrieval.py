@@ -20,6 +20,18 @@ from typing import Any, Awaitable, Callable, Optional
 
 import numpy as np
 
+from evaluation.common import (
+    average_precision_at_k,
+    build_evaluation_summary,
+    load_and_validate_csv,
+    mrr_at_k,
+    ndcg_at_k,
+    parse_structured_columns,
+    precision_at_k,
+    recall_at_k,
+    write_evaluation_outputs,
+)
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 EVAL_DIR = Path(__file__).resolve().parent
 RESULT_DIR = EVAL_DIR / "result"
@@ -600,11 +612,186 @@ async def run(
     return summary
 
 
+def _extract_first_stage_rankings(candidates: list[dict[str, Any]], k: int) -> list[str]:
+    """후보 생성 단계 순위를 추출한다."""
+    enriched = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get("id") or candidate.get("contentid") or "").strip()
+        if not cid:
+            continue
+        rank = candidate.get("first_stage_rank")
+        if rank is None:
+            rank = candidate.get("rank")
+        try:
+            rank_value = int(rank) if rank is not None else 10**9
+        except Exception:
+            rank_value = 10**9
+        enriched.append((rank_value, cid))
+    enriched.sort(key=lambda x: x[0])
+    return [cid for _, cid in enriched[:k]]
+
+
+def _extract_rerank_rankings(candidates: list[dict[str, Any]], k: int) -> list[str]:
+    """재정렬 단계 순위를 추출한다."""
+    enriched = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        cid = str(candidate.get("id") or candidate.get("contentid") or "").strip()
+        if not cid:
+            continue
+        final_rank = candidate.get("final_rank")
+        if final_rank is None:
+            final_rank = candidate.get("rerank_rank")
+        try:
+            final_rank_value = int(final_rank) if final_rank is not None else 10**9
+        except Exception:
+            final_rank_value = 10**9
+        enriched.append((final_rank_value, cid))
+    enriched.sort(key=lambda x: x[0])
+    return [cid for _, cid in enriched[:k]]
+
+
+def _compute_first_stage_metrics(predicted_ids: list[str], relevant_ids: set[str], k: int) -> dict[str, float]:
+    """후보 생성 단계의 핵심 지표를 계산한다."""
+    return {
+        "precision@k": precision_at_k(predicted_ids, relevant_ids, k),
+        "recall@k": recall_at_k(predicted_ids, relevant_ids, k),
+        "map@k": average_precision_at_k(predicted_ids, relevant_ids, k),
+    }
+
+
+def _compute_rerank_metrics(predicted_ids: list[str], relevant_ids: set[str], k: int) -> dict[str, float]:
+    """재정렬 단계의 핵심 지표를 계산한다."""
+    return {
+        "mrr@k": mrr_at_k(predicted_ids, relevant_ids, k),
+        "ndcg@k": ndcg_at_k(predicted_ids, relevant_ids, k),
+        "map@k": average_precision_at_k(predicted_ids, relevant_ids, k),
+    }
+
+
+def _compute_rerank_deltas(first_metrics: dict[str, float], rerank_metrics: dict[str, float]) -> dict[str, float]:
+    """재정렬 전/후 성능 차이를 계산한다."""
+    return {
+        "delta_ndcg@k": float(rerank_metrics.get("ndcg@k", 0.0) - first_metrics.get("ndcg@k", 0.0)),
+        "delta_mrr@k": float(rerank_metrics.get("mrr@k", 0.0) - first_metrics.get("mrr@k", 0.0)),
+    }
+
+
+def _extract_relevant_ids(record: dict[str, Any]) -> set[str]:
+    """CSV 레코드의 relevant_ids를 정규화해 집합으로 반환한다."""
+    values = record.get("relevant_ids")
+    if isinstance(values, list):
+        return {str(v).strip() for v in values if str(v).strip()}
+    return set()
+
+
+def _mean_metric(rows: list[dict[str, Any]], key: str) -> float:
+    """행 기반 결과에서 특정 metric 평균을 계산한다."""
+    values = [float(row.get(key, 0.0)) for row in rows if row.get(key) is not None]
+    return float(sum(values) / len(values)) if values else 0.0
+
+
+def run_csv_stage_evaluation(
+    input_csv: str,
+    stage: str,
+    top_k: int,
+    output_prefix: str,
+) -> dict[str, Any]:
+    """CSV 입력으로 후보생성/재정렬 평가를 실행한다."""
+    required = ["reference", "retrieved_contexts", "retrieved_candidates", "relevant_ids"]
+    try:
+        df = load_and_validate_csv(input_csv, required_columns=required)
+    except ValueError as e:
+        summary = build_evaluation_summary(
+            stage="retrieval",
+            sample_count=0,
+            executed=False,
+            metrics={},
+            skipped_reason=str(e),
+        )
+        write_evaluation_outputs([], summary, output_prefix, RESULT_DIR)
+        return summary
+
+    df = parse_structured_columns(df, ["retrieved_candidates", "relevant_ids"])
+    records = [
+        {
+            "question": str(row.get("question") or row.get("user_input") or ""),
+            "retrieved_candidates": row.get("retrieved_candidates")
+            if isinstance(row.get("retrieved_candidates"), list)
+            else [],
+            "relevant_ids": row.get("relevant_ids") if isinstance(row.get("relevant_ids"), list) else [],
+        }
+        for _, row in df.iterrows()
+    ]
+
+    rows: list[dict[str, Any]] = []
+    for idx, record in enumerate(records):
+        candidates = record["retrieved_candidates"]
+        relevant_ids = _extract_relevant_ids(record)
+        first_ranked = _extract_first_stage_rankings(candidates, top_k)
+        rerank_ranked = _extract_rerank_rankings(candidates, top_k)
+
+        first_metrics = _compute_first_stage_metrics(first_ranked, relevant_ids, top_k)
+        first_rank_metrics = {
+            "mrr@k": mrr_at_k(first_ranked, relevant_ids, top_k),
+            "ndcg@k": ndcg_at_k(first_ranked, relevant_ids, top_k),
+        }
+        first_metrics.update(first_rank_metrics)
+        rerank_metrics = _compute_rerank_metrics(rerank_ranked, relevant_ids, top_k)
+        deltas = _compute_rerank_deltas(first_rank_metrics, rerank_metrics)
+
+        row = {
+            "idx": idx,
+            "question": record["question"],
+            "relevant_count": len(relevant_ids),
+            "first_predicted_ids": first_ranked,
+            "rerank_predicted_ids": rerank_ranked,
+            **{f"first_{k}": v for k, v in first_metrics.items()},
+            **{f"rerank_{k}": v for k, v in rerank_metrics.items()},
+            **deltas,
+        }
+        rows.append(row)
+
+    metrics: dict[str, Any] = {"top_k": top_k, "stage": stage}
+    if stage in ("first", "all"):
+        metrics.update(
+            {
+                "first_precision@k": _mean_metric(rows, "first_precision@k"),
+                "first_recall@k": _mean_metric(rows, "first_recall@k"),
+                "first_map@k": _mean_metric(rows, "first_map@k"),
+            }
+        )
+    if stage in ("rerank", "all"):
+        metrics.update(
+            {
+                "rerank_mrr@k": _mean_metric(rows, "rerank_mrr@k"),
+                "rerank_ndcg@k": _mean_metric(rows, "rerank_ndcg@k"),
+                "rerank_map@k": _mean_metric(rows, "rerank_map@k"),
+                "delta_ndcg@k": _mean_metric(rows, "delta_ndcg@k"),
+                "delta_mrr@k": _mean_metric(rows, "delta_mrr@k"),
+            }
+        )
+
+    summary = build_evaluation_summary(
+        stage="retrieval",
+        sample_count=len(rows),
+        executed=True,
+        metrics=metrics,
+    )
+    write_evaluation_outputs(rows, summary, output_prefix, RESULT_DIR)
+    return summary
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="RAGAS 비의존 리트리버 평가")
+    parser.add_argument("--input-csv", default=None, help="CSV 입력 기반 평가 경로")
+    parser.add_argument("--stage", default="all", choices=["first", "rerank", "all"])
     parser.add_argument("--data-file", default="rag_eval_data.json")
     parser.add_argument("--mode", default="all", choices=["unsupervised", "labeled", "all"])
-    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--top-k", type=int, default=30)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--embedding-model", default=None)
     parser.add_argument("--output-prefix", default="evaluation_retrieval")
@@ -615,14 +802,23 @@ def build_parser() -> argparse.ArgumentParser:
 
 if __name__ == "__main__":
     args = build_parser().parse_args()
-    asyncio.run(
-        run(
-            data_file=args.data_file,
-            mode=args.mode,
+    if args.input_csv:
+        summary = run_csv_stage_evaluation(
+            input_csv=args.input_csv,
+            stage=args.stage,
             top_k=args.top_k,
-            limit=args.limit,
             output_prefix=args.output_prefix,
-            embedding_model=args.embedding_model,
-            enrich_reference=args.enrich_reference,
         )
-    )
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    else:
+        asyncio.run(
+            run(
+                data_file=args.data_file,
+                mode=args.mode,
+                top_k=args.top_k,
+                limit=args.limit,
+                output_prefix=args.output_prefix,
+                embedding_model=args.embedding_model,
+                enrich_reference=args.enrich_reference,
+            )
+        )
