@@ -5,47 +5,26 @@ import { ArrowRight, Calendar, MapPin, Sparkles, X, CheckCircle, Clock } from "l
 import { useState } from "react";
 import { cn } from "../../../utils";
 
-const demoContent = {
-    "Hyper personalized": {
-        user: "I need a quiet place in Seoul to focus, maybe with jazz?",
-        ai: "I've found a hidden gem in Seongsu-dong called 'Blue Note Shelter'. It has excellent wifi, a strict quiet policy, and plays soft jazz vinyls.",
-        details: { name: "Blue Note Shelter", type: "Jazz Cafe", rating: "4.9" },
-    },
-    "Smart itinerary": {
-        user: "I have 4 hours in Itaewon. Optimize my route.",
-        ai: "Route optimized. Starting at Namsan Park (1h) → Walk down Antique Street (30m) → Late lunch at Plant (1h) → Coffee at Anthracite (30m). You save 45 minutes of walking time.",
-        details: { totalTime: "3h 45m", stops: 4, saved: "45 min" },
-    },
-    "Integrated booking": {
-        user: "Book a table for 2 at Mingles for this Friday, 7 PM.",
-        ai: "Checking availability... Confirmed. I've reserved a window table for two at Mingles, Friday at 19:00.",
-        details: { status: "Confirmed", time: "19:00", date: "Fri, Oct 24" },
-    },
-};
-
 const features = [
     {
         title: "Hyper personalized",
         shortTitle: "Personalized",
-        description: "Our advanced AI doesn't just list popular spots; it learns your unique travel DNA. By analyzing your preferences—from your favorite cuisine to your preferred pace of travel—it crafts a bespoke journey that feels exclusively yours.",
+        description: "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 여행지를 추천합니다.",
         icon: Sparkles,
-        image: "https://images.unsplash.com/photo-1656975852164-37b8b18546f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxJbmR1c3RyaWFsJTIwY2FmZSUyMGludGVyaW9yJTIwY29mZmVlfGVufDF8fHx8MTc3MTQ4MTkxOXww&ixlib=rb-4.1.0&q=80&w=1080",
-        mockupImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop", // Dashboard/User page mock
+        mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Dashboard/User page mock
     },
     {
         title: "Smart itinerary",
         shortTitle: "Smart Route",
-        description: "Forget the hassle of manual scheduling. Our intelligent system optimizes your routes in real-time, accounting for traffic patterns, opening hours, and geographical proximity.",
+        description: "가고 싶은 장소들을 선택하면,\n 최적의 루트로 동선을 계획합니다.\nTriever와 함께 스마트한 \n여행 코스를 만들어보세요.",
         icon: Calendar,
-        image: "https://images.unsplash.com/photo-1764344558503-0579b0b0cb73?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxVcmJhbiUyMHBhcmslMjBjaXR5JTIwcGVvcGxlJTIwcmVsYXhpbmd8ZW58MXx8fHwxNzcxNDgxOTE5fDA&ixlib=rb-4.1.0&q=80&w=1080",
         mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Chatbot/Search mock
     },
     {
         title: "Integrated booking",
         shortTitle: "Booking",
-        description: "Experience true convenience with our all-in-one booking platform. From reserving a table at a Michelin-starred restaurant to securing tickets for cultural exhibitions, everything is just a tap away.",
+        description: "여행 준비도, 관리도 간편하게.\n여러 곳에서 예약한 티켓을 \n한 번에 모아서 확인할 수 있어요.",
         icon: MapPin,
-        image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIYW5bokl2aWxsYWdlJTIwcm9vZnRvcHMlMjB0cmFkaXRpb25hbHxlbnwxfHx8fDE3NzE0ODE5MTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
         mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop", // Calendar/Schedule mock
     },
 ];
@@ -77,7 +56,7 @@ export function Features() {
                                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
                                 exit={{ opacity: 0, x: 30, rotateY: -5 }}
                                 transition={{ duration: 0.5, ease: "easeOut" }}
-                                className="w-full aspect-[4/3] sm:aspect-[16/9] lg:aspect-[4/3] bg-white rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-900 relative"
+                                className="w-full aspect-[4/3] sm:aspect-[16/9] lg:aspect-[4/3] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
                             >
                                 <img
                                     src={activeFeature.mockupImage}
@@ -128,7 +107,7 @@ export function Features() {
                                                         transition={{ duration: 0.3 }}
                                                         className="overflow-hidden"
                                                     >
-                                                        <p className="text-gray-600 leading-relaxed font-light text-base pr-4">
+                                                        <p className="text-gray-600 leading-relaxed font-light text-base pr-4 whitespace-pre-line">
                                                             {feature.description}
                                                         </p>
                                                     </motion.div>

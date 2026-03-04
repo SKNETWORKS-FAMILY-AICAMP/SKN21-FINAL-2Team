@@ -57,7 +57,8 @@ export function Hero() {
                         <input
                             type="text"
                             placeholder="Where is your next destination?"
-                            className="w-full bg-transparent text-white placeholder-white/70 outline-none text-lg font-light"
+                            className="w-full bg-transparent text-white placeholder-white/70 outline-none text-lg font-light cursor-default"
+                            readOnly
                         />
                         <button
                             onClick={handleNavigation}
