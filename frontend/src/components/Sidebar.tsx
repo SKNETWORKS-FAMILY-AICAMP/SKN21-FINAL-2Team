@@ -4,7 +4,7 @@ import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare } from "lu
 import { cn } from "../../utils";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
@@ -112,7 +112,7 @@ const resetSidebarCache = () => {
     sidebarCache.inFlight = null;
 };
 
-export function Sidebar() {
+function SidebarContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -445,5 +445,17 @@ export function Sidebar() {
                 }}
             />
         </aside>
+    );
+}
+
+export function Sidebar() {
+    return (
+        <Suspense
+            fallback={
+                <aside className="h-full w-64 bg-white border-r border-gray-200 rounded-lg animate-pulse" />
+            }
+        >
+            <SidebarContent />
+        </Suspense>
     );
 }

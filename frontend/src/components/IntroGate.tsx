@@ -10,9 +10,13 @@ type IntroGateProps = {
 };
 
 export default function IntroGate({ children }: IntroGateProps) {
+  const hasPlayedInSession = () => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem(STORAGE_KEY) === "1";
+  };
+
   const [show, setShow] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !localStorage.getItem(STORAGE_KEY);
+    return !hasPlayedInSession();
   });
   const initialOverflow = useRef<string | null>(null);
 
@@ -31,7 +35,7 @@ export default function IntroGate({ children }: IntroGateProps) {
   }, [show]);
 
   const handleDone = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
+    window.sessionStorage.setItem(STORAGE_KEY, "1");
     setShow(false);
     document.body.style.overflow = initialOverflow.current || "auto";
   };
