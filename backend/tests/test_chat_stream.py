@@ -77,7 +77,11 @@ async def _mock_astream_events(*args, **kwargs):
     """LangGraph astream_events를 모킹 — 노드 이벤트 + LLM 토큰"""
     # intent 노드
     yield {"event": "on_chain_start", "name": "intent", "data": {}}
-    yield {"event": "on_chain_end", "name": "intent", "data": {"output": {"summary_query": "요약된 제목"}}}
+    yield {
+        "event": "on_chain_end",
+        "name": "intent",
+        "data": {"output": {"summary_query": "요약된 제목", "summary_message": "요약 메시지 제목"}},
+    }
 
     # retriever 노드
     yield {"event": "on_chain_start", "name": "retriever", "data": {}}
@@ -201,7 +205,7 @@ async def test_done_event_with_message_id(user_and_room):
 
 @pytest.mark.asyncio
 async def test_room_title_updated_to_summary(user_and_room):
-    """첫 질문 시 방 제목이 요약본으로 업데이트되는지 확인"""
+    """초기 2개 메시지 구간에서는 summary_query로 제목을 갱신한다."""
     user, room, token, db = user_and_room
     # 초기 제목 설정
     room.title = "새로운 여행 계획"
@@ -225,6 +229,56 @@ async def test_room_title_updated_to_summary(user_and_room):
             lines = response.text.strip().split("\n\n")
             last_data = json.loads(lines[-1][6:])
             assert last_data["room_title"] == "요약된 제목"
+
+
+@pytest.mark.asyncio
+async def test_stream_does_not_overwrite_custom_title_even_within_first_two_messages(user_and_room):
+    user, room, token, db = user_and_room
+    room.title = "내가 정한 제목"
+    db.add(room)
+    db.commit()
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+
+    db.refresh(room)
+    assert room.title == "내가 정한 제목"
+
+
+@pytest.mark.asyncio
+async def test_room_title_not_updated_when_message_count_exceeds_two(user_and_room):
+    """메시지 수가 3개 이상이면 제목 자동 갱신을 하지 않는다."""
+    user, room, token, db = user_and_room
+
+    room.title = "유지 제목"
+    db.add(room)
+    db.commit()
+
+    db.add_all([
+        ChatMessage(room_id=room.id, message="m1", role="human"),
+        ChatMessage(room_id=room.id, message="m2", role="ai"),
+    ])
+    db.commit()
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "m3", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert response.status_code == 200
+
+    db.refresh(room)
+    assert room.title == "유지 제목"
 
 
 @pytest.mark.asyncio

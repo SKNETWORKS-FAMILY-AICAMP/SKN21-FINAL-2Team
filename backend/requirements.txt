@@ -38,5 +38,6 @@ langchain-tavily
 
 # Evaluation
 ragas
+rapidfuzz
 pandas
 datasets

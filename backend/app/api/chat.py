@@ -5,6 +5,7 @@ import math
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import List
 from app.database.connection import get_db
@@ -76,12 +77,45 @@ def _build_user_preferences(user: User) -> str:
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
+AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅"}
+
 def _make_room_title(text: str) -> str:
     """Generate a concise room title from user input."""
     clean = re.sub(r"\s+", " ", (text or "")).strip()
     if len(clean) > 30:
         clean = clean[:30].rstrip() + "..."
     return clean or "새 채팅"
+
+
+def _should_update_room_title(db: Session, room_id: int) -> bool:
+    count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
+    return int(count) <= 2
+
+
+def _can_overwrite_room_title(room: ChatRoom) -> bool:
+    return (room.title or "").strip() in AUTO_ROOM_TITLES
+
+
+def _save_room_title(db: Session, room: ChatRoom, next_title: str | None) -> bool:
+    raw_title = (next_title or "").strip()
+    if not raw_title:
+        return False
+
+    # 기존 정책(원문 우선)을 유지하되, DB 길이(255) 초과 시에만 축약 제목 사용
+    title_to_save = raw_title if len(raw_title) <= 255 else _make_room_title(raw_title)
+    if len(title_to_save) > 255:
+        title_to_save = title_to_save[:255]
+
+    room.title = title_to_save
+    db.add(room)
+    try:
+        db.commit()
+        db.refresh(room)
+        return True
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"[ChatAPI] Room title update failed(room_id={room.id}): {e}")
+        return False
 
 
 def _safe_float(value):
@@ -314,9 +348,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
 async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     room = _get_owned_room_or_404(db, room_id, current_user.id)
     _save_human_message_if_needed(db, room_id, message_in)
-    
-    # 방 제목 자동 설정 (초기값인 경우에만)
-    # 아래 graph_app.ainvoke 결과에서 summary_query를 받아와서 업데이트하도록 이동
+    should_update_title = _should_update_room_title(db, room_id)
 
     # Backend에서 사용자 선호도 조회 후 LLM에 전달
     prefs_info = _build_user_preferences(current_user)
@@ -334,13 +366,12 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
         
-        # 방 제목 자동 설정 (기본값인 경우에만 요약된 제목으로 업데이트)
-        summary_query = result.get("summary_query")
-        if summary_query and (not room.title or room.title == "새로운 여행 계획"):
-            room.title = summary_query
-            db.add(room)
-            db.commit()
-            db.refresh(room)
+        if should_update_title and _can_overwrite_room_title(room):
+            # 방 제목 자동 설정 (메시지 2개 이하일 때만)
+            summary_query = result.get("summary_query")
+            fallback_message = message_in.message
+            next_title = summary_query if summary_query else fallback_message
+            _save_room_title(db, room, next_title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
         import traceback
@@ -371,6 +402,7 @@ def _build_streaming_response(
     db: Session,
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
+    should_update_title = _should_update_room_title(db, room_id)
     prefs_info = _build_user_preferences(current_user)
     inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
@@ -461,14 +493,12 @@ def _build_streaming_response(
                     # Intent 노드 종료 시점에 summary_query로 제목 즉시 업데이트
                     if name == "intent":
                         output = event.get("data", {}).get("output")
-                        if output and "summary_query" in output:
-                            summary_query = output["summary_query"]
-                            if summary_query and (not room.title or room.title == "새로운 여행 계획"):
-                                room.title = summary_query
-                                db.add(room)
-                                db.commit()
-                                db.refresh(room)
-                                print(f"[ChatAPI] Room title updated to: {summary_query}")
+                        if should_update_title and output and _can_overwrite_room_title(room):
+                            summary_query = output.get("summary_query")
+                            fallback_message = message_in.message
+                            next_title = summary_query if summary_query else fallback_message
+                            if _save_room_title(db, room, next_title):
+                                print(f"[ChatAPI] Room title updated to: {room.title}")
                                 # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
                                 yield f"data: {json.dumps({'room_title': room.title})}\n\n"
 
@@ -495,10 +525,15 @@ def _build_streaming_response(
                             streamed_visible_text = visible_text
 
 
+        except asyncio.CancelledError:
+            db.rollback()
+            print(f"[ChatAPI] Stream cancelled in room_id {room_id}")
+            raise
         except Exception as e:
             print(f"[ChatAPI] Stream error in room_id {room_id}: {e}")
             import traceback
             traceback.print_exc()
+            db.rollback()
             if not full_answer:
                 full_answer = "죄송합니다. 오류가 발생했습니다."
                 yield f"data: {json.dumps({'token': full_answer})}\n\n"
