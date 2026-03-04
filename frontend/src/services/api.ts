@@ -535,6 +535,44 @@ export const fetchCountries = async (): Promise<Country[]> => {
     return response.json();
 };
 
+export interface ReservationRecord {
+    id: number;
+    user_id: number;
+    category?: string | null;
+    name?: string | null;
+    date?: string | null;
+    image_path?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export type ReservationPayload = {
+    category?: string | null;
+    name?: string | null;
+    date?: string | null;
+    image_path?: string | null;
+};
+
+export const fetchReservations = async (): Promise<ReservationRecord[]> => {
+    const response = await fetchWithAuth(`${API_URL}/reservations`);
+    return response.json();
+};
+
+export const createReservation = async (payload: ReservationPayload): Promise<ReservationRecord> => {
+    const response = await fetchWithAuth(`${API_URL}/reservations`, { method: "POST", body: payload });
+    return response.json();
+};
+
+export const updateReservation = async (reservationId: number, payload: ReservationPayload): Promise<ReservationRecord> => {
+    const response = await fetchWithAuth(`${API_URL}/reservations/${reservationId}`, { method: "PATCH", body: payload });
+    return response.json();
+};
+
+export const deleteReservation = async (reservationId: number): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/reservations/${reservationId}`, { method: "DELETE" });
+    return response.json();
+};
+
 export interface CategoryPlaceItem {
     contentid: string;
     title: string;
