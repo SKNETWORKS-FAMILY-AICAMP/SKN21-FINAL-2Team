@@ -26,6 +26,9 @@ export function ChatHome() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const roomIdParam = searchParams.get("roomId");
+    // 주의: Destinations에서 비로그인 Plan Trip → 로그인 → 여기로 오는 경우
+    // pendingDestination이 localStorage에 있으면 모달을 먼저 표시합니다
+    const fromDestinationParam = searchParams.get("fromDestination");
 
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
     const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
@@ -221,7 +224,11 @@ export function ChatHome() {
                 const fetchedRooms = await fetchRooms();
                 setRooms(fetchedRooms);
 
-                if (roomIdParam) {
+                // fromDestination=1: Destinations에서 비로그인 Plan Trip 후 로그인한 경우
+                // pendingDestination이 있으면 방 생성 전에 모달을 먼저 표시
+                if (fromDestinationParam === "1" && localStorage.getItem("pendingDestination")) {
+                    setShowTripModal(true);
+                } else if (roomIdParam) {
                     const parsedRoomId = parseInt(roomIdParam, 10);
                     setCurrentRoomId(parsedRoomId);
                     await loadRoomMessages(parsedRoomId);
@@ -268,7 +275,7 @@ export function ChatHome() {
         }
     };
 
-    // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 시)
+    // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 또는 Destinations에서 온 경우)
     const handleCreateRoomWithContext = async (context: TripContext) => {
         // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → router.replace 시 자연 unmount
         setIsTripLoading(true);
@@ -277,6 +284,27 @@ export function ChatHome() {
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
+
+            // 주의: fromDestination 경로로 온 경우 pendingDestination을 챗봇 autostart 형식으로 변환
+            // autostart는 triver:selected-places:${roomId} 키를 읽어 장소 기반 추천을 시작합니다
+            const pendingRaw = localStorage.getItem("pendingDestination");
+            if (pendingRaw) {
+                try {
+                    const place = JSON.parse(pendingRaw);
+                    // Destination 타입 → SelectedPlaceSeed 배열로 변환
+                    const seedPlaces = [{
+                        name: place.name,
+                        adress: place.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        place_id: typeof place.id === "number" ? place.id : 0,
+                    }];
+                    localStorage.setItem(`triver:selected-places:${newRoom.id}`, JSON.stringify(seedPlaces));
+                } catch {
+                    // 파싱 실패 시 무시
+                } finally {
+                    localStorage.removeItem("pendingDestination"); // 사용 후 정리
+                }
+            }
+
             if ((context.travelDuration || "").trim()) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
@@ -765,9 +793,8 @@ export function ChatHome() {
                         <button
                             type="button"
                             onClick={handleToggleRoomBookmark}
-                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
-                                currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
-                            }`}
+                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
+                                }`}
                             title="채팅방 북마크 토글"
                             disabled={!currentRoomId}
                         >

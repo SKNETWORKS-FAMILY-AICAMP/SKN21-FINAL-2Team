@@ -14,33 +14,30 @@ export default function LoginPage() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/auth/google/callback`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: codeResponse.code }),
         });
 
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
         const data = await res.json();
-        const { access_token, refresh_token, is_join, profile_picture, name, email } = data;
+        const { access_token, refresh_token, profile_picture, name, email } = data;
 
-        // 토큰 및 프로필 정보 저장
         localStorage.setItem("access_token", access_token);
         if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
         if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
         if (name) localStorage.setItem("user_name", name);
         if (email) localStorage.setItem("user_email", email);
 
-        // is_join 기반 라우팅
         const user = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/users/me`, {
           headers: { "Authorization": `Bearer ${access_token}` }
         }).then(r => r.json());
 
         const { getPostLoginPath } = await import("@/services/api");
         const targetPath = getPostLoginPath(user);
+
+        // 주의: pendingDestination이 있으면 getPostLoginPath가 "/chatbot?fromDestination=1"을 반환합니다.
+        // 챗봇 페이지에서 pendingDestination을 읽어 TripContextModal을 표시합니다.
         router.push(targetPath);
 
       } catch (error) {
@@ -55,13 +52,7 @@ export default function LoginPage() {
     flow: "auth-code",
   });
 
-  const handleBack = () => {
-    router.push("/");
-  };
-
-  const handleSignUpClick = () => {
-    router.push("/signup");
-  };
+  const handleBack = () => router.push("/");
 
   return (
     <div className="min-h-screen w-full flex bg-white">
@@ -77,10 +68,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 p-12 flex flex-col justify-between h-full text-white w-full">
-          <div
-            className="flex items-center gap-3 cursor-pointer w-fit group"
-            onClick={handleBack}
-          >
+          <div className="flex items-center gap-3 cursor-pointer w-fit group" onClick={handleBack}>
             <div className="w-8 h-8 bg-white text-black flex items-center justify-center">
               <span className="font-serif font-bold text-xl leading-none italic">T</span>
             </div>

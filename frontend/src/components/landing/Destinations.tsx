@@ -61,6 +61,9 @@ export function Destinations() {
         if (e) e.stopPropagation();
 
         if (!isLoggedIn) {
+            // 주의: 로그인 후 챗봇 연결을 위해 선택한 장소를 localStorage에 임시 저장
+            // 로그인 완료 후 login/page.tsx에서 이 값을 읽어 TripContextModal을 띄웁니다
+            localStorage.setItem("pendingDestination", JSON.stringify(place));
             router.push("/login");
         } else {
             // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
