@@ -785,22 +785,28 @@ export function ChatHome() {
     }
 
     return (
-        <div className="flex flex-col h-full min-h-0 bg-white relative rounded-2xl overflow-hidden">
-            <header className="h-14 flex items-center justify-between px-6 bg-white z-10 sticky top-0">
-                <div className="flex items-center gap-2 min-w-0">
-                    <Sparkles size={16} className="text-slate-900 flex-none" />
-                    <span className="font-semibold text-[17px] tracking-tight text-slate-900 truncate">{currentRoom?.title || "Travel Assistant"}</span>
-                    <button
-                        type="button"
-                        onClick={handleToggleRoomBookmark}
-                        className={`inline-flex items-center justify-center rounded-full p-1 transition-colors ${
-                            currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
-                        }`}
-                        title="채팅방 북마크 토글"
-                        disabled={!currentRoomId}
-                    >
-                        <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
-                    </button>
+        <div className="flex flex-col h-full bg-white relative">
+            <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        {currentRoom?.title || "New Trip Planning"}
+                        <button
+                            type="button"
+                            onClick={handleToggleRoomBookmark}
+                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
+                                }`}
+                            title="채팅방 북마크 토글"
+                            disabled={!currentRoomId}
+                        >
+                            <Bookmark size={14} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                        </button>
+                        <Sparkles size={14} className="text-gray-400" />
+                    </h2>
+                    {roomTripContext && (
+                        <p className="mt-1 text-xs text-gray-500 font-medium">
+                            {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
