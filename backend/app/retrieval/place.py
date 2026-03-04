@@ -1,11 +1,14 @@
 import os
 import numpy as np
 import asyncio
+import math
+import re
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Filter, FieldCondition, MatchValue
 )
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
+
 from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE
@@ -82,6 +85,8 @@ class PlaceRetriever:
         print(f"[INFO] Loading models: Text={TEXT_MODEL}, Vision={VISION_MODEL}")
         self.text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
         self.vision_model = SentenceTransformer(VISION_MODEL, device=DEVICE)
+        self._reranker = None
+        self._reranker_load_attempted = False
         
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
@@ -178,7 +183,136 @@ class PlaceRetriever:
         )
         return response.groups
 
-    async def search_hybrid(self, query: str, image_url: str = None, limit: int = 5, category: str = None, emotional_text: str = None):
+    def _tokenize(self, text: str) -> list[str]:
+        return re.findall(r"[가-힣A-Za-z0-9]+", text or "")
+
+    def _candidate_to_text(self, payload: dict) -> str:
+        title = str(payload.get("title") or payload.get("name") or "")
+        category = str(payload.get("contenttypeid") or payload.get("category") or "")
+        addr = str(payload.get("addr") or payload.get("address") or "")
+        desc = str(payload.get("description") or payload.get("llm_text") or "")
+        return " ".join([title, category, addr, desc]).strip()
+
+    def _bm25_like_score(self, query: str, payload: dict) -> float:
+        tokens = self._tokenize(query)
+        if not tokens:
+            return 0.0
+        doc_text = self._candidate_to_text(payload)
+        doc_tokens = self._tokenize(doc_text)
+        if not doc_tokens:
+            return 0.0
+
+        freq = {}
+        for tok in doc_tokens:
+            freq[tok] = freq.get(tok, 0) + 1
+
+        k1 = 1.2
+        b = 0.75
+        avgdl = 120.0
+        doc_len = len(doc_tokens)
+        score = 0.0
+        for t in tokens:
+            tf = freq.get(t, 0)
+            if tf <= 0:
+                continue
+            denom = tf + k1 * (1 - b + b * (doc_len / avgdl))
+            score += ((k1 + 1) * tf) / denom
+        return float(1 - math.exp(-score))
+
+    def _payload_matches_category(self, payload: dict, normalized_category: str | None) -> bool:
+        if not normalized_category:
+            return True
+        value = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
+        return value == normalized_category
+
+    async def _search_bm25_lexical(self, query: str, category: str | None, candidate_k: int) -> list[dict]:
+        normalized_category = self.normalize_category(category)
+        all_points = []
+        offset = None
+        while True:
+            points, offset = await asyncio.to_thread(
+                self.client.scroll,
+                collection_name=PLACES_COLLECTION,
+                limit=200,
+                with_payload=True,
+                with_vectors=False,
+                offset=offset,
+            )
+            all_points.extend(points)
+            if offset is None:
+                break
+
+        scored = []
+        for p in all_points:
+            payload = p.payload or {}
+            if not self._payload_matches_category(payload, normalized_category):
+                continue
+            lexical_score = self._bm25_like_score(query, payload)
+            if lexical_score <= 0:
+                continue
+            scored.append(
+                {
+                    "id": _normalize_place_id(p.id),
+                    "payload": payload,
+                    "score": lexical_score,
+                }
+            )
+
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        return scored[:candidate_k]
+
+    def _ensure_reranker(self):
+        if self._reranker_load_attempted:
+            return
+        self._reranker_load_attempted = True
+        try:
+
+            self._reranker = CrossEncoder("BAAI/bge-reranker-base", device=DEVICE)
+            print("[INFO] Reranker loaded: BAAI/bge-reranker-base")
+        except Exception as e:
+            self._reranker = None
+            print(f"[WARN] Reranker unavailable: {e}")
+
+    async def _rerank_candidates(self, query: str, candidates: list[dict], top_k: int) -> list[dict]:
+        self._ensure_reranker()
+        if not self._reranker or not candidates:
+            for idx, c in enumerate(candidates[:top_k], start=1):
+                c["rerank_score"] = None
+                c["final_rank"] = idx
+            return candidates[:top_k]
+
+        pairs = []
+        for c in candidates:
+            payload = c.get("payload", {})
+            pairs.append((query, self._candidate_to_text(payload)))
+
+        try:
+            scores = await asyncio.to_thread(self._reranker.predict, pairs)
+            for c, s in zip(candidates, scores):
+                c["rerank_score"] = float(s)
+            candidates.sort(key=lambda x: float(x.get("rerank_score", 0.0)), reverse=True)
+            for idx, c in enumerate(candidates[:top_k], start=1):
+                c["final_rank"] = idx
+            return candidates[:top_k]
+        except Exception as e:
+            print(f"[WARN] Reranker inference failed: {e}")
+            for idx, c in enumerate(candidates[:top_k], start=1):
+                c["rerank_score"] = None
+                c["final_rank"] = idx
+            return candidates[:top_k]
+
+    async def search_hybrid(
+        self,
+        query: str,
+        image_url: str = None,
+        limit: int = 5,
+        category: str = None,
+        emotional_text: str = None,
+        candidate_k: int = 30,
+        enable_bm25: bool = True,
+        enable_rerank: bool = True,
+        rerank_top_k: int = 30,
+    ):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
         1. Text Input -> BGE-M3 (Text DB) + CLIP Text (Image DB)
@@ -187,7 +321,9 @@ class PlaceRetriever:
         print(f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'}")
         
         query_filter = self._build_category_filter(category)
-        candidates_limit = limit * 5
+        candidate_k = max(int(candidate_k or 0), int(limit or 0), 1)
+        rerank_top_k = max(int(rerank_top_k or 0), int(limit or 0), 1)
+        candidates_limit = max(candidate_k * 5, 30)
         score_map = {}  # place_id -> {score, payload, matches}
         rrf_k = 60
 
@@ -269,18 +405,46 @@ class PlaceRetriever:
                     )
                     collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
 
+        if enable_bm25 and query and query.strip():
+            try:
+                lexical_hits = await self._search_bm25_lexical(query=query, category=category, candidate_k=candidates_limit)
+                for rank, item in enumerate(lexical_hits, start=1):
+                    pid = _normalize_place_id(item.get("id"))
+                    if pid is None:
+                        continue
+                    payload = item.get("payload") or {}
+                    if pid not in score_map:
+                        score_map[pid] = {"score": 0.0, "payload": payload, "matches": set()}
+                    elif payload and not score_map[pid].get("payload"):
+                        score_map[pid]["payload"] = payload
+                    score_map[pid]["score"] += 0.7 * (1.0 / (rrf_k + rank))
+                    score_map[pid]["matches"].add("bm25_lexical")
+            except Exception as e:
+                print(f"[WARN] bm25 lexical channel failed: {e}")
+
         # --- C. Fusion & Boosting ---
         results = []
-        for pid, data in score_map.items():
+        for idx, (pid, data) in enumerate(sorted(score_map.items(), key=lambda x: x[1]["score"], reverse=True), start=1):
             results.append({
                 "id": pid,
                 "score": data["score"],
+                "first_stage_score": data["score"],
+                "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"]))
             })
 
-        results.sort(key=lambda x: x["score"], reverse=True)
-        return results[:limit]
+        first_stage_results = results[:candidate_k]
+        if enable_rerank:
+            reranked = await self._rerank_candidates(query=query, candidates=first_stage_results, top_k=min(rerank_top_k, candidate_k))
+        else:
+            reranked = first_stage_results[: min(rerank_top_k, candidate_k)]
+            for idx, c in enumerate(reranked, start=1):
+                c["rerank_score"] = None
+                c["final_rank"] = idx
+
+        # 기존 인터페이스 호환: limit 기준으로 반환
+        return reranked[: max(int(limit or 0), 1)]
         
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
         """

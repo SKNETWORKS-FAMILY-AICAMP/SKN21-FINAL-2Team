@@ -13,6 +13,7 @@ from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
 from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
 from app.utils.llm_factory import LLMFactory
+from app.utils.common import parse_payload
 
 
 def _normalize_text(value: str) -> str:
@@ -60,9 +61,6 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
     if not candidates:
         return ""
 
-    if len(candidates) == 0:
-        return ""
-
     lines = ["## 검색된 장소 정보"]
     for i, c in enumerate(candidates, 1):
         payload = c.get("payload", {})
@@ -71,7 +69,6 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
 
         # 네이버 지도 링크 생성
         title = payload.get("title") or payload.get("name") or "Unknown"
-        address = payload.get("address") or payload.get("addr") or payload.get("road_address") or "Unknown"
         contentid = payload.get("contentid") or c.get("id") or "Unknown"
         
         if title:
@@ -80,7 +77,13 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
 
         map_url = payload.get("map_url", "Unknown")
 
-        line = f"{i}. 명칭: {title} / 주소: {address} / 지도링크: {map_url} / (ID: {contentid})"
+        # payload에서 빈값/불필요 필드 제거 후 JSON string
+        payload_str = parse_payload(payload)
+
+        line = (
+            f"{i}. (ID: {contentid}) / 지도링크: {map_url}\n"
+            f"   {payload_str}"
+        )
         lines.append(line)
 
     return "\n".join(lines)
@@ -197,6 +200,7 @@ async def executor_node(state: TravelState):
     t0 = time.perf_counter()
 
     candidates = state.get("candidates", [])
+    candidate_pool = state.get("candidate_pool", candidates) or []
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", {})
@@ -298,7 +302,26 @@ async def executor_node(state: TravelState):
         cleaned_answer = full_content.strip()
 
     if not selected_ids:
-        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidates)
+        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
+
+    # 후보 풀에 존재하지 않는 ID는 제거
+    valid_candidate_ids = set()
+    for c in candidate_pool:
+        payload = c.get("payload", {}) if isinstance(c, dict) else {}
+        cid = str(payload.get("contentid") or c.get("id") or "").strip()
+        if cid:
+            valid_candidate_ids.add(cid)
+
+    invalid_ids = [cid for cid in selected_ids if cid not in valid_candidate_ids]
+    selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
+
+    # LLM 태그가 모두 무효하면 텍스트 기반 fallback 재시도
+    if not selected_ids:
+        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
+        selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
+
+    if invalid_ids:
+        print(f"[Executor] Invalid selected IDs filtered: {invalid_ids}")
 
     print(f"[Executor] Selected IDs: {selected_ids}")
     print(f"[Executor] Answer length: {len(cleaned_answer)}")

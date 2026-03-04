@@ -19,7 +19,8 @@ def route_by_missing(state: TravelState):
     next_node = 'retriever'
     missing = state.get('missing_slots', [])
     
-    if len(missing) > 2:
+    # 누락 슬롯이 1개라도 있으면 검색/추천으로 진행하지 않고 재질문 우선
+    if len(missing) > 0:
         next_node = 'executor_missing'
 
     return Send(next_node,{

@@ -21,6 +21,7 @@ from evaluation.common import (  # noqa: E402
     parse_structured_columns,
     write_evaluation_outputs,
 )
+from app.utils.common import parse_payload
 
 
 def extract_generation_inputs(df: pd.DataFrame, context_k: int) -> pd.DataFrame:
@@ -33,17 +34,14 @@ def extract_generation_inputs(df: pd.DataFrame, context_k: int) -> pd.DataFrame:
 
         candidates = row.get("retrieved_candidates")
         if isinstance(candidates, list) and candidates:
-            # candidate pool 기반 context 확장
+            # candidate pool 기반 context 확장 — payload를 JSON string으로
             contexts = []
-            for c in candidates[:context_k]:
+            for i, c in enumerate(candidates[:context_k], 1):
                 if not isinstance(c, dict):
                     continue
                 payload = c.get("payload") if isinstance(c.get("payload"), dict) else {}
-                name = payload.get("title") or payload.get("name") or c.get("title") or "이름없음"
-                category = payload.get("contenttypeid") or payload.get("category") or ""
-                addr = payload.get("addr") or payload.get("address") or ""
-                desc = payload.get("description") or payload.get("llm_text") or ""
-                contexts.append(f"이름:{name} | 분류:{category} | 주소:{addr} | 설명:{desc}")
+                payload_str = parse_payload(payload)
+                contexts.append(f"{i}. {payload_str}")
         else:
             contexts = contexts[:context_k]
 

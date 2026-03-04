@@ -30,7 +30,10 @@ class TravelState(TypedDict, total=False):
     itinerary: List[Dict[str, Any]]         # 시간순/일차별 정렬된 데이터
     
     # retriever
-    candidates: List[Dict[str, Any]]      # 검색된 장소 및 식당 리스트
+    candidate_pool: List[Dict[str, Any]]      # 검색된 TopK 후보 풀
+    candidates: List[Dict[str, Any]]          # 최종 노출용 TopN 후보
+    retrieval_diagnostics: Dict[str, Any]     # 채널별 hit/점수/순위 진단 정보
+    selection_mode: str                       # deterministic | explore
 
     # final
     missing_slots: List[str]                # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)

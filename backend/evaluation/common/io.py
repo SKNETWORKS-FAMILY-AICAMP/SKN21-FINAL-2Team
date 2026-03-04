@@ -31,7 +31,6 @@ def _safe_parse_literal(value: Any) -> Any:
             return value
     return value
 
-
 def parse_structured_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """리스트/딕셔너리 문자열 컬럼을 파싱한다."""
     parsed = df.copy()

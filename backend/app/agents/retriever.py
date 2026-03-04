@@ -6,19 +6,24 @@ from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
 import asyncio
 import random
-import time
+
+
+DEFAULT_CANDIDATE_K = 30
+DEFAULT_FINAL_K = 5
+
+
+def _candidate_id(candidate: Dict[str, Any]) -> str:
+    return str(candidate.get("id") or candidate.get("contentid") or "").strip()
 
 
 def _candidate_category(candidate: Dict[str, Any]) -> str:
     payload = candidate.get("payload", {})
-    # 분산 기준 카테고리 우선순위
+    # 카테고리 필드는 아래 우선순위로 통일
     return (
-        str(payload.get("cat3") or "").strip()
-        or str(payload.get("cat2") or "").strip()
-        or str(payload.get("cat1") or "").strip()
+        str(payload.get("contenttypeid") or "").strip()
+        or str(payload.get("category") or "").strip()
         or "unknown"
     )
-
 
 def _candidate_score(candidate: Dict[str, Any]) -> float:
     try:
@@ -27,18 +32,48 @@ def _candidate_score(candidate: Dict[str, Any]) -> float:
         return 1e-6
 
 
-def _pick_diverse_candidates(candidates: List[Dict[str, Any]], final_k: int = 5, top_pool: int = 12) -> List[Dict[str, Any]]:
-    """
-    상위 후보 풀에서 점수 가중 랜덤 샘플링 + 카테고리 분산을 적용해
-    매 요청마다 장소 구성이 고정되지 않도록 한다.
-    """
+def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], final_k: int, top_pool: int) -> List[Dict[str, Any]]:
+    """결정론 모드: 점수 우선 + 카테고리 분산 tie-break."""
     if len(candidates) <= final_k:
         return candidates
 
-    pool = list(candidates[:min(len(candidates), top_pool)])
+    pool = list(candidates[: min(len(candidates), top_pool)])
     selected: List[Dict[str, Any]] = []
     used_categories = set()
-    rng = random.Random(time.time_ns())
+
+    # 1차: 카테고리 중복 최소화
+    for c in pool:
+        cat = _candidate_category(c)
+        if cat not in used_categories:
+            selected.append(c)
+            used_categories.add(cat)
+            if len(selected) >= final_k:
+                return selected
+
+    # 2차: 남은 슬롯은 점수 순으로 채움
+    selected_ids = {_candidate_id(c) for c in selected}
+    for c in pool:
+        cid = _candidate_id(c)
+        if cid and cid not in selected_ids:
+            selected.append(c)
+            selected_ids.add(cid)
+            if len(selected) >= final_k:
+                break
+
+    return selected
+
+
+def _pick_diverse_candidates_explore(
+    candidates: List[Dict[str, Any]], final_k: int, top_pool: int, seed: int | None = None
+) -> List[Dict[str, Any]]:
+    """탐색 모드: 시드 기반 랜덤 다양화."""
+    if len(candidates) <= final_k:
+        return candidates
+
+    pool = list(candidates[: min(len(candidates), top_pool)])
+    selected: List[Dict[str, Any]] = []
+    used_categories = set()
+    rng = random.Random(seed)
 
     while pool and len(selected) < final_k:
         unseen_pool = [c for c in pool if _candidate_category(c) not in used_categories]
@@ -52,60 +87,70 @@ def _pick_diverse_candidates(candidates: List[Dict[str, Any]], final_k: int = 5,
 
     return selected
 
-async def _search_for_trip_planning(state: TravelState, emotional_text: str = None) -> List[Dict[str, Any]]:
-    """
-    TRIP_PLANNING: planner가 생성한 itinerary의 각 항목에 대해 장소 검색
-    """
+
+def _pick_candidates(
+    candidates: List[Dict[str, Any]],
+    final_k: int = DEFAULT_FINAL_K,
+    top_pool: int = 30,
+    selection_mode: str = "deterministic",
+    seed: int | None = None,
+) -> List[Dict[str, Any]]:
+    if selection_mode == "explore":
+        return _pick_diverse_candidates_explore(candidates, final_k=final_k, top_pool=top_pool, seed=seed)
+    return _pick_diverse_candidates_deterministic(candidates, final_k=final_k, top_pool=top_pool)
+
+
+async def _search_for_trip_planning(
+    state: TravelState,
+    emotional_text: str | None = None,
+    candidate_k: int = DEFAULT_CANDIDATE_K,
+) -> List[Dict[str, Any]]:
+    """TRIP_PLANNING: planner itinerary 기반 후보 검색."""
     retriever = PlaceRetriever.get_instance()
 
     itinerary = state.get("itinerary", [])
     image_path = state.get("image_path")
-    
+
     if not itinerary:
         return []
 
-    # trip_concurrency: 병렬로 최대한 몇개 장소 검색할것인지? 10개라고 하면 최대 3개씩 병렬 검색
-    trip_concurrency = 3
-    semaphore = asyncio.Semaphore(trip_concurrency)
+    # Semaphore(3) : 병렬로 최대한 몇개 장소 검색할것인지? 10개라고 하면 최대 3개씩 병렬 검색
+    semaphore = asyncio.Semaphore(3)
 
     async def search_item(item):
         async with semaphore:
-            search_query = item.get("search_query", "")
-            if not search_query:
-                search_query = item.get("activity", "")
-
+            search_query = item.get("search_query", "") or item.get("activity", "")
             if not search_query:
                 return []
 
-            print(f"[Retriever] Searching for itinerary item: '{search_query}'")
             try:
-                # itinerary 항목의 category를 필터에 활용
                 item_category = item.get("category")
-                results = await retriever.search_hybrid(
+                # itinerary 항목별 검색은 전체 K를 쓰지 않고 상위 일부만 취합
+                return await retriever.search_hybrid(
                     query=search_query,
                     image_url=image_path,
-                    limit=3,
+                    limit=max(10, candidate_k // 3),
+                    candidate_k=max(10, candidate_k // 3),
                     category=item_category,
-                    emotional_text=emotional_text
+                    emotional_text=emotional_text,
+                    enable_bm25=True,
+                    enable_rerank=True,
+                    rerank_top_k=max(10, candidate_k // 3),
                 )
-                return results
             except Exception as e:
                 print(f"[Retriever] Search error for '{search_query}': {e}")
                 return []
 
-    # 병렬 검색 실행
-    tasks = [search_item(item) for item in itinerary]
-    all_results_lists = await asyncio.gather(*tasks)
-    
-    # 리스트 평탄화
-    all_candidates = [res for sublist in all_results_lists for res in sublist]
-    return all_candidates
+    all_results_lists = await asyncio.gather(*[search_item(item) for item in itinerary])
+    return [res for sublist in all_results_lists for res in sublist]
 
 
-async def _search_for_general(state: TravelState, emotional_text: str = None) -> List[Dict[str, Any]]:
-    """
-    일반 검색: 사용자 입력 + 위치/이미지 기반으로 장소 검색
-    """
+async def _search_for_general(
+    state: TravelState,
+    emotional_text: str | None = None,
+    candidate_k: int = DEFAULT_CANDIDATE_K,
+) -> List[Dict[str, Any]]:
+    """일반 검색: 텍스트/이미지/위치 기반 하이브리드 후보 풀 검색."""
     retriever = PlaceRetriever.get_instance()
 
     user_input = state.get("user_input", "")
@@ -114,7 +159,6 @@ async def _search_for_general(state: TravelState, emotional_text: str = None) ->
     longitude = state.get("longitude")
     slots = state.get("slots")
 
-    # 위치 정보가 있으면 검색 쿼리에 주소 추가
     query = user_input
     if latitude and longitude:
         try:
@@ -122,74 +166,107 @@ async def _search_for_general(state: TravelState, emotional_text: str = None) ->
             geocode_data = geocoder.reverse_geocoder(latitude, longitude)
             if geocode_data:
                 road = (geocode_data.get("road_address") or "").strip()
-                jibun = (geocode_data.get("jibun_address") or "").strip()
                 if road:
                     query += f"\n현재 내 위치 주소: {road}"
-                if jibun:
-                    query += f"\n현재 내 위치 구주소: {jibun}"
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
 
-    # slots에서 category 정보 추출 및 쿼리 구성
     category = None
     if slots:
-        category = slots.category if hasattr(slots, 'category') else (slots.get("category") if isinstance(slots, dict) else None)
+        category = slots.category if hasattr(slots, "category") else (slots.get("category") if isinstance(slots, dict) else None)
 
-    # 1. 하이브리드 검색 (텍스트 + 이미지)
-    print(f"[Retriever] Hybrid search query: '{query[:100]}' category={category}")
-    results = []
     try:
-        results = await retriever.search_hybrid(
+        return await retriever.search_hybrid(
             query=query,
             image_url=image_path,
-            limit=5,
+            limit=candidate_k,
+            candidate_k=candidate_k,
             category=category,
-            emotional_text=emotional_text
+            emotional_text=emotional_text,
+            enable_bm25=True,
+            enable_rerank=True,
+            rerank_top_k=candidate_k,
         )
     except Exception as e:
         print(f"[Retriever] Hybrid search error: {e}")
+        return []
 
-    return results
+
+def _build_retrieval_diagnostics(candidate_pool: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """채널 기여도와 순위 정보를 진단용으로 집계한다."""
+    channel_hits: Dict[str, int] = {}
+    top_preview = []
+    for c in candidate_pool[:10]:
+        for channel in c.get("match_types", []):
+            channel_hits[channel] = channel_hits.get(channel, 0) + 1
+        top_preview.append(
+            {
+                "id": _candidate_id(c),
+                "score": float(c.get("score", 0.0)),
+                "first_stage_rank": c.get("first_stage_rank"),
+                "final_rank": c.get("final_rank"),
+                "match_types": c.get("match_types", []),
+            }
+        )
+
+    return {
+        "candidate_pool_size": len(candidate_pool),
+        "channel_hits_top10": channel_hits,
+        "top10": top_preview,
+    }
 
 
 async def retriever_node(state: TravelState):
-    """
-    장소 검색 Agent
-    """
+    """장소 검색 Agent: 후보 풀 생성 + 최종 노출 후보 선택."""
     print("--- Retriever Agent ---")
 
-    # missing_slots가 있으면 (planner가 추가 정보 요청 중) 검색 생략
     missing_slots = state.get("missing_slots", None)
     if missing_slots:
         print(f"[Retriever] Skipping search — missing_slots={missing_slots}")
         return state
 
+    candidate_k = int(state.get("candidate_k", DEFAULT_CANDIDATE_K) or DEFAULT_CANDIDATE_K)
+    final_k = int(state.get("final_k", DEFAULT_FINAL_K) or DEFAULT_FINAL_K)
+    selection_mode = str(state.get("selection_mode", "deterministic") or "deterministic")
+    selection_seed = state.get("selection_seed")
+
     image_path = state.get("image_path")
     emotional_text = None
     if image_path:
-        print(f"[Retriever] Image detected. Fetching description once...")
+        print("[Retriever] Image detected. Fetching description once...")
         emotional_text = await describe_image(image_path)
 
     primary_intent = state.get("primary_intent")
-
-    print(f"[Retriever] Start General search!!!! primary intent: {primary_intent}")
-    candidates = await _search_for_general(state, emotional_text=emotional_text)
+    candidate_pool = await _search_for_general(state, emotional_text=emotional_text, candidate_k=candidate_k)
 
     if primary_intent == IntentType.TRIP_PLANNING:
-        print("[Retriever] Start Trip planning search!!!!")
-        trip_candidates = await _search_for_trip_planning(state, emotional_text=emotional_text)
-        candidates.extend(trip_candidates)
+        trip_candidates = await _search_for_trip_planning(state, emotional_text=emotional_text, candidate_k=candidate_k)
+        candidate_pool.extend(trip_candidates)
 
-    print(f"[Retriever] Total candidates count: {len(candidates)}")
+    # pool 기준 dedup + 점수 정렬
+    unique_by_id: Dict[str, Dict[str, Any]] = {}
+    for c in candidate_pool:
+        cid = _candidate_id(c)
+        if not cid:
+            continue
+        if cid not in unique_by_id or _candidate_score(c) > _candidate_score(unique_by_id[cid]):
+            unique_by_id[cid] = c
 
-    # 중복 제거 (place_id 기준)
-    seen_ids = set()
-    unique_candidates = []
-    for c in candidates:
-        pid = c.get("id")
-        if pid not in seen_ids:
-            unique_candidates.append(c)
-            seen_ids.add(pid)
+    dedup_pool = sorted(unique_by_id.values(), key=_candidate_score, reverse=True)[:candidate_k]
 
-    diversified_candidates = _pick_diverse_candidates(unique_candidates, final_k=5, top_pool=12)
-    return {"candidates": diversified_candidates}
+    exposed_candidates = _pick_candidates(
+        dedup_pool,
+        final_k=final_k,
+        top_pool=min(candidate_k, 30),
+        selection_mode=selection_mode,
+        seed=selection_seed,
+    )
+
+    diagnostics = _build_retrieval_diagnostics(dedup_pool)
+
+    return {
+        "candidate_pool": dedup_pool,
+        "candidates": exposed_candidates,
+        "retrieval_diagnostics": diagnostics,
+        "selection_mode": selection_mode,
+    }

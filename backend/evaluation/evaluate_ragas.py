@@ -158,65 +158,82 @@ def create_testset_generator() -> TestsetGenerator:
     return generator
 
 
+# context에서 제외할 키 (좌표/이미지 등 LLM/평가에 불필요한 대용량 필드)
+_EXCLUDE_KEYS = {"image", "image_urls", "mapx", "mapy", "map_url"}
+
+
+def _payload_to_context(candidates: list[dict]) -> list[str]:
+    """candidates의 payload를 빈값/불필요 키 제거 후 JSON string context 리스트로 변환"""
+    contexts = []
+    for i, c in enumerate(candidates, 1):
+        payload = c.get("payload") if isinstance(c, dict) else {}
+        if not isinstance(payload, dict):
+            payload = {}
+        filtered = {
+            k: v for k, v in payload.items()
+            if k not in _EXCLUDE_KEYS and v not in (None, "", [], {})
+        }
+        payload_str = json.dumps(filtered, ensure_ascii=False)
+        contexts.append(f"{i}. {payload_str}")
+    return contexts
+
+
+def _infer_relevant_ids(reference: str, reference_contexts: list, candidates: list[dict]) -> list[str]:
+    """reference 내 장소명이 candidates에 포함되면 relevant_id로 추정"""
+    import re
+    if not candidates:
+        return []
+    corpus_parts = [str(reference or "")]
+    corpus_parts.extend([str(x) for x in (reference_contexts or [])])
+    corpus = re.sub(r"\s+", "", " ".join(corpus_parts)).lower()
+
+    relevant = []
+    for c in candidates:
+        payload = c.get("payload", {}) if isinstance(c, dict) else {}
+        title = str(payload.get("title") or "")
+        title_key = re.sub(r"\s+", "", title).lower()
+        if title_key and title_key in corpus:
+            cid = str(payload.get("contentid") or c.get("id") or "").strip()
+            if cid and cid not in relevant:
+                relevant.append(cid)
+    return relevant
+
+
 async def _invoke_graph(question: str):
-    """실제 RAG 시스템을 통해 답변과 컨텍스트 추출"""
+    """
+    실제 RAG 시스템을 통해 답변, 컨텍스트, candidates, selected_ids를 추출.
+    evaluate_prepare_enriched.py 없이 enriched 데이터를 한 번에 생성하기 위해
+    그래프 결과의 모든 필요 정보를 반환합니다.
+    """
     try:
         print(f"  [DEBUG] Workflow generating for: {question}")
         graph = workflow().compile()
 
-        # 초기 상태 설정
         inputs = {
             "user_input": question,
-            "user_id": 1, # 샘플 유저 ID (기본 데이터가 있다고 가정)
+            "user_id": 1,
             "room_id": 1,
             "messages": []
         }
 
-        # 그래프 실행
         print("  [DEBUG] Invoking graph...")
         result = await graph.ainvoke(inputs)
         print("  [DEBUG] Graph invocation completed.")
-        
+
         answer = result.get("answer", "")
-        # candidates 정보를 context 리스트로 변환
         candidates = result.get("candidates", [])
-        contexts = []
-        for c in candidates:
-            payload = c.get("payload") if isinstance(c, dict) else {}
-            if not isinstance(payload, dict):
-                payload = {}
+        selected_ids = result.get("selected_ids", [])
+        contexts = _payload_to_context(candidates)
 
-            # payload = ingest_data(payload)
-            name = (
-                payload.get("title")
-                or payload.get("name")
-                or c.get("title")
-                or c.get("name")
-                or "이름 없음"
-            )
-            category = payload.get("contenttypeid") or payload.get("contenttypeid_code") or ""
-            addr = payload.get("addr") or payload.get("address") or ""
-
-            # description이 없으면 llm_text를 우선 사용
-            desc = (
-                payload.get("description")
-                or payload.get("llm_text")
-                or c.get("description")
-                or ""
-            )
-            usetime = payload.get("usetime") or ""
-            restdate = payload.get("restdate") or ""
-
-            context = (
-                f"이름:{name} | 분류:{category} | 주소:{addr} | 이용시간:{usetime} | 휴무:{restdate} | 설명:{desc}"
-            )
-            contexts.append(context)
-        
-        return answer, contexts
+        return answer, contexts, candidates, selected_ids
     except Exception as e:
-        # 제한 환경(의존성/DB/Qdrant 미구성)에서도 평가 파이프라인 자체는 실행 가능하도록 fallback
         print(f"  [WARN] Graph execution failed: {e}")
-        return f"질문: {question}\n현재 환경 제약으로 에이전트 워크플로우를 실행하지 못했습니다.", [question]
+        return (
+            f"질문: {question}\n현재 환경 제약으로 에이전트 워크플로우를 실행하지 못했습니다.",
+            [question],
+            [],
+            [],
+        )
 
 
 def eval_ragas(path: Path):
@@ -260,28 +277,22 @@ def eval_ragas(path: Path):
 def generate_dataset(
     num_samples: int = 20,
     limit: int = 200,
-    output: Path = Path("rag_eval_data_synthetic.csv"),
+    output: Path = Path("evaluate_testdata.csv"),
     seed: int = 42,
     source: str = "data/llm_result",
-) -> list[dict]:
+) -> None:
     """
-    TestsetGenerator를 사용하여 합성 테스트 데이터셋을 생성합니다.
+    TestsetGenerator로 합성 데이터셋 생성 + RAG 파이프라인 실행 +
+    enriched 컬럼(retrieved_candidates, selected_ids, relevant_ids) 포함하여
+    evaluate_testdata.csv에 저장합니다.
 
-    Args:
-        num_samples: 생성할 테스트 샘플 수
-        limit: 소스에서 가져올 문서 수
-        output: 출력 파일 경로
-        seed: 재현성을 위한 시드 값
-        source: 문서 소스 ('qdrant' 또는 jsonl 디렉토리 경로, 기본: 'data/llm_result')
-
-    Returns:
-        생성된 테스트 데이터 리스트
+    evaluate_prepare_enriched.py 없이 한 번에 완성된 평가 데이터를 만듭니다.
     """
     print("=" * 60)
-    print("  Ragas TestsetGenerator 기반 합성 데이터셋 생성")
+    print("  Ragas TestsetGenerator 기반 Enriched 데이터셋 생성")
     print("=" * 60)
 
-    # 1. 문서 로드 (jsonl 기본, qdrant 옵션)
+    # 1. 문서 로드
     print(f"\n[Step 1/4] 문서 로드... (소스: {source})")
     documents = load_documents_from_jsonl(source_dir=source, limit=limit, seed=seed)
     if not documents:
@@ -304,42 +315,65 @@ def generate_dataset(
     eval_df = testset.to_pandas()
     print(eval_df.head())
 
-    # >>>> RAG 파이프라인으로 응답 생성
+    # 4. RAG 파이프라인 실행 → enriched 컬럼 생성
+    print(f"\n[Step 4/4] RAG 파이프라인 실행 + enriched 데이터 생성...")
     response_list = []
     retrieved_context_list = []
+    retrieved_candidates_list = []
+    selected_ids_list = []
+    relevant_ids_list = []
 
-    for user_input in eval_df['user_input']:
-        print(f"  [RAG] 질의: {user_input[:60]}...")
-        answer, contexts = asyncio.run(_invoke_graph(user_input))
+    for idx, row in eval_df.iterrows():
+        user_input = row['user_input']
+        reference = str(row.get('reference', '') or '')
+        reference_contexts = row.get('reference_contexts', []) or []
+
+        print(f"  [{idx+1}/{len(eval_df)}] 질의: {user_input[:60]}...")
+        answer, contexts, candidates, selected_ids = asyncio.run(_invoke_graph(user_input))
+
+        # relevant_ids: reference에 포함된 장소명 기반 추정
+        relevant_ids = _infer_relevant_ids(reference, reference_contexts, candidates)
+
         response_list.append(answer)
         retrieved_context_list.append(contexts)
+        # candidates를 JSON serializable하게 정리
+        retrieved_candidates_list.append(json.dumps(candidates, ensure_ascii=False, default=str))
+        selected_ids_list.append(json.dumps(selected_ids, ensure_ascii=False))
+        relevant_ids_list.append(json.dumps(relevant_ids, ensure_ascii=False))
 
-    # >>>> eval_df에 응답과 context 추가
+    # eval_df에 모든 컬럼 추가
     eval_df['response'] = response_list
     eval_df['retrieved_contexts'] = retrieved_context_list
+    eval_df['retrieved_candidates'] = retrieved_candidates_list
+    eval_df['selected_ids'] = selected_ids_list
+    eval_df['relevant_ids'] = relevant_ids_list
+
+    # 컬럼명 통일 (question 컬럼 추가)
+    if 'question' not in eval_df.columns and 'user_input' in eval_df.columns:
+        eval_df['question'] = eval_df['user_input']
+
     print(eval_df.head())
+    print(f"\n[컬럼 목록] {list(eval_df.columns)}")
 
-    # eval_df 파일 저장
+    # CSV 저장
     eval_df.to_csv(output, index=False, encoding="utf-8-sig")
-
-    print(f"[Step 4/4] 테스트셋 생성 완료: {output}")
-
-    eval_ragas(output)
+    print(f"\n✅ Enriched 데이터셋 저장 완료: {output}")
+    print(f"   - 샘플 수: {len(eval_df)}")
+    print(f"   - evaluate_all.py --input-csv {output} 로 바로 평가 가능")
 
 
 if __name__ == "__main__":
-    output = Path("rag_eval_data_synthetic.csv")
+    output = Path("evaluate_testdata.csv")
     if not output.is_absolute():
         output = EVAL_DIR / output
     output.parent.mkdir(parents=True, exist_ok=True)
 
+    generate_dataset(
+        num_samples=20,
+        limit=200,
+        output=output,
+        seed=42,
+        source="data/llm_result",
+    )
 
-    # generate_dataset(
-    #     num_samples=20,
-    #     limit=200,
-    #     output=output,
-    #     seed=42,
-    #     source="data/llm_result",
-    # )
-
-    eval_ragas(output)
+    # eval_ragas(output)
