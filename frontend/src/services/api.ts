@@ -597,6 +597,8 @@ export interface CategoryPlaceItem {
     image_url: string;
     score: number;
     description: string;
+    start_date?: string;
+    end_date?: string;
 }
 
 export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<string, CategoryPlaceItem[]>> => {

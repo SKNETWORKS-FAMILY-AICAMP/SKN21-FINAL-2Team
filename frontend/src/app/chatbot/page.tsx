@@ -17,7 +17,7 @@ export default function ChatbotPage() {
           <Sidebar />
         </div>
       </Suspense>
-      <main className="flex-1 h-full relative min-w-0 bg-white border-r border-gray-200 rounded-lg">
+      <main className="flex-1 h-full relative min-w-0 bg-white border-r border-gray-200 rounded-lg overflow-hidden">
         <Suspense
           fallback={
             <div className="flex w-full h-full items-center justify-center">

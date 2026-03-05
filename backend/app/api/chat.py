@@ -84,6 +84,17 @@ class TodayRecommendationItem(BaseModel):
     description: str
     prompt: str
 
+
+def _clean_history_text(value: str) -> str:
+    clean = re.sub(r"\s+", " ", (value or "")).strip()
+    return clean
+
+
+def _shorten_text(value: str, limit: int = 64) -> str:
+    if len(value) <= limit:
+        return value
+    return value[:limit].rstrip() + "..."
+
 def _make_room_title(text: str) -> str:
     """Generate a concise room title from user input."""
     clean = re.sub(r"\s+", " ", (text or "")).strip()
@@ -175,51 +186,58 @@ def get_today_recommendations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    latest_room = (
+    rooms_with_history = (
         db.query(ChatRoom)
         .filter(ChatRoom.user_id == current_user.id)
+        .filter(ChatRoom.history.isnot(None))
+        .filter(func.length(func.trim(ChatRoom.history)) > 0)
         .order_by(ChatRoom.created_at.desc(), ChatRoom.id.desc())
-        .first()
+        .limit(5)
+        .all()
     )
 
-    latest_title = latest_room.title.strip() if latest_room and latest_room.title else "Your latest trip plan"
+    if not rooms_with_history:
+        return []
 
-    plan_pref = (current_user.plan_prefer or "").strip()
-    vibe_pref = (current_user.vibe_prefer or "").strip()
-    places_pref = (current_user.places_prefer or "").strip()
-    extra_prefs = [x for x in [current_user.extra_prefer1, current_user.extra_prefer2, current_user.extra_prefer3] if x]
+    latest_room = rooms_with_history[0]
+    latest_history = _clean_history_text(latest_room.history or "")
+    latest_title = latest_room.title.strip() if latest_room and latest_room.title else "최근 여행 대화"
+    latest_snippet = _shorten_text(latest_history, 56)
 
-    continue_title = f"Continue: {latest_title}" if latest_room else "Start from your first travel theme"
-    continue_desc = (
-        "Pick up from your latest conversation and turn it into a complete plan."
-        if latest_room
-        else "Start a new conversation and shape your first travel plan with Triver."
-    )
+    recent_histories: List[str] = []
+    for room in rooms_with_history:
+        text = _clean_history_text(room.history or "")
+        if text:
+            recent_histories.append(text)
+
+    uniq_histories: List[str] = []
+    for text in recent_histories:
+        if text not in uniq_histories:
+            uniq_histories.append(text)
+
+    first_theme = _shorten_text(uniq_histories[0], 52) if uniq_histories else latest_snippet
+    second_theme = _shorten_text(uniq_histories[1], 52) if len(uniq_histories) > 1 else first_theme
+
+    continue_title = f"Continue: {latest_title}"
+    continue_desc = "최근 대화 맥락을 이어서 바로 다음 계획으로 확장해보세요."
     continue_prompt = (
-        f"Continue planning based on this topic: {latest_title}. "
-        "Please provide a practical itinerary with timing, transport, and food spots."
+        f"다음은 최근 대화 요약입니다: {latest_history}\n"
+        "기존 맥락을 이어 하루 단위로 실행 가능한 여행 계획을 제안해줘."
     )
 
     new_angle_title = "Try a new angle"
-    new_angle_desc = "Explore a different perspective from your profile preferences."
-    new_angle_prompt_parts = []
-    if plan_pref:
-        new_angle_prompt_parts.append(f"Plan style: {plan_pref}")
-    if vibe_pref:
-        new_angle_prompt_parts.append(f"Travel vibe: {vibe_pref}")
-    if places_pref:
-        new_angle_prompt_parts.append(f"Interest: {places_pref}")
-    if extra_prefs:
-        new_angle_prompt_parts.append(f"Special preferences: {', '.join(extra_prefs)}")
-    if not new_angle_prompt_parts:
-        new_angle_prompt_parts.append("Use a balanced travel style with local highlights and practical movement.")
-    new_angle_prompt = "Create a new trip concept with this profile context: " + " | ".join(new_angle_prompt_parts)
+    new_angle_desc = f"최근 대화 주제와 다른 관점으로 새 플랜을 제안합니다: {second_theme}"
+    new_angle_prompt = (
+        "다음 최근 대화 요약들을 참고해 기존과 다른 각도의 여행 아이디어를 1개 제안해줘.\n"
+        + "\n".join([f"- {h}" for h in uniq_histories[:3]])
+        + "\n새 아이디어는 이동 동선과 핵심 포인트를 포함해 간결하게 작성해줘."
+    )
 
     quick_plan_title = "Fast plan for today"
-    quick_plan_desc = "Generate a short, executable trip idea you can use immediately."
+    quick_plan_desc = f"최근 요약 기반으로 바로 실행 가능한 짧은 일정: {first_theme}"
     quick_plan_prompt = (
-        "Create a quick half-day plan with 3 stops, moving order, and expected duration. "
-        "Keep it concise and realistic."
+        f"최근 대화 요약: {latest_history}\n"
+        "오늘 바로 실행할 수 있는 3스팟 반나절 일정(순서/이동/예상시간 포함)을 간단히 제시해줘."
     )
 
     return [

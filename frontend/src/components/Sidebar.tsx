@@ -132,8 +132,9 @@ function SidebarContent() {
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
-    const canCollapse = pathname === "/explore";
-    const actuallyCollapsed = isCollapsed && canCollapse;
+    const canCollapse = true;
+    const actuallyCollapsed = isCollapsed;
+
     const activeRoomIdParam = searchParams.get("roomId");
     const parsedActiveRoomId = activeRoomIdParam ? Number(activeRoomIdParam) : NaN;
     const activeRoomId = Number.isFinite(parsedActiveRoomId) ? parsedActiveRoomId : null;

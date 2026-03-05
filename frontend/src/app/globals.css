@@ -23,13 +23,17 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+.font-serif-korean {
+  font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
 /* Utility tweaks to align with imported UI kit vibes */
 .shadow-soft {
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
 }
 
 .page-title {
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   font-size: 1.5rem;
   line-height: 2rem;
   font-style: italic;
