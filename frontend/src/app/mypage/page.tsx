@@ -27,6 +27,7 @@ import type { ReservationItem, TripSummary } from "./_types";
 
 import {
   fetchBookmarkedRooms,
+  fetchCountries,
   fetchReservations,
   createReservation,
   deleteReservation,
@@ -36,6 +37,8 @@ import {
   updateCurrentUser,
   updateReservation,
   uploadImageDataUrl,
+  resetCurrentUserProfilePictureToGoogle,
+  type Country,
   type ReservationRecord,
   type TodayRecommendationItem,
 } from "@/services/api";
@@ -114,6 +117,16 @@ export default function MyPage() {
   const [isEditingPreferences, setIsEditingPreferences] = useState<boolean>(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState<boolean>(false);
   const [draftExtraPreferences, setDraftExtraPreferences] = useState<string[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
+  const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
+  const [countryOptions, setCountryOptions] = useState<Country[]>([]);
+  const [settingsDraft, setSettingsDraft] = useState({
+    nickname: "",
+    countryCode: "",
+    profilePicture: "",
+  });
+  const settingsPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
   const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
@@ -188,6 +201,22 @@ export default function MyPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCountries = async () => {
+      try {
+        const items = await fetchCountries();
+        if (!cancelled) setCountryOptions(Array.isArray(items) ? items : []);
+      } catch (error) {
+        console.warn("Failed to fetch countries", error);
+      }
+    };
+    void loadCountries();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 
   const handleAddReservation = () => {
@@ -221,6 +250,56 @@ export default function MyPage() {
     if (!reservationToDelete) return;
     void handleDeleteReservation(reservationToDelete.id);
     setReservationToDelete(null);
+  };
+
+  const handleOpenSettings = () => {
+    setSettingsDraft({
+      nickname: userProfile.nickname,
+      countryCode: userProfile.countryCode,
+      profilePicture: userProfile.profile_picture,
+    });
+    setSettingsOpen(true);
+  };
+
+  const handleSaveSettingsPopup = async () => {
+    setSettingsSaving(true);
+    try {
+      const resolvedProfilePicture = settingsDraft.profilePicture?.startsWith("data:image/")
+        ? await uploadImageDataUrl(settingsDraft.profilePicture, "profile")
+        : settingsDraft.profilePicture;
+      await updateCurrentUser({
+        nickname: settingsDraft.nickname.trim() || null,
+        country_code: settingsDraft.countryCode || null,
+        profile_picture: resolvedProfilePicture || null,
+      });
+      setUserProfile((prev) => ({
+        ...prev,
+        nickname: settingsDraft.nickname.trim() || prev.nickname,
+        countryCode: settingsDraft.countryCode,
+        profile_picture: resolvedProfilePicture || "",
+      }));
+      window.dispatchEvent(new Event("triver:profile-updated"));
+      setSettingsOpen(false);
+    } catch (error) {
+      console.error("Failed to update user settings", error);
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleResetProfilePhotoToGoogle = async () => {
+    setSettingsResettingPhoto(true);
+    try {
+      const updated = await resetCurrentUserProfilePictureToGoogle();
+      const nextPicture = updated.profile_picture || "";
+      setSettingsDraft((prev) => ({ ...prev, profilePicture: nextPicture }));
+      setUserProfile((prev) => ({ ...prev, profile_picture: nextPicture }));
+      window.dispatchEvent(new Event("triver:profile-updated"));
+    } catch (error) {
+      console.error("Failed to reset profile photo to Google", error);
+    } finally {
+      setSettingsResettingPhoto(false);
+    }
   };
 
   const handleSaveManualReservation = async () => {
@@ -347,7 +426,7 @@ export default function MyPage() {
 
                   <button
                     type="button"
-                    onClick={() => router.push("/mypage/settings")}
+                    onClick={handleOpenSettings}
                     className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
                   >
                     Settings
@@ -467,7 +546,7 @@ export default function MyPage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
                     <Sparkles size={20} className="text-white" />
-                    Today's Recommendation
+                    Today&apos;s Recommendation
                   </div>
                   {todayRecommendations.length > 0 ? (
                     <>
@@ -750,6 +829,105 @@ export default function MyPage() {
               className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
             >
               Save
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
+
+      <SimpleModal open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
+        <div className="space-y-5">
+          <input
+            ref={settingsPhotoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const next = typeof reader.result === "string" ? reader.result : "";
+                if (!next) return;
+                setSettingsDraft((prev) => ({ ...prev, profilePicture: next }));
+              };
+              reader.readAsDataURL(file);
+              e.currentTarget.value = "";
+            }}
+          />
+
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-white flex items-center justify-center text-gray-400">
+                {settingsDraft.profilePicture ? (
+                  <img src={settingsDraft.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-semibold">No Image</span>
+                )}
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Profile Photo</p>
+                <button
+                  type="button"
+                  onClick={() => settingsPhotoInputRef.current?.click()}
+                  className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  Change Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetProfilePhotoToGoogle}
+                  disabled={settingsResettingPhoto}
+                  className="h-9 ml-2 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
+                >
+                  {settingsResettingPhoto ? "Restoring..." : "Use Google Photo"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Nickname</label>
+              <input
+                value={settingsDraft.nickname}
+                onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+                placeholder="Nickname"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Country</label>
+              <select
+                value={settingsDraft.countryCode}
+                onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+              >
+                <option value="">Select country</option>
+                {countryOptions.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="pt-1 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(false)}
+              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveSettingsPopup}
+              disabled={settingsSaving}
+              className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+            >
+              {settingsSaving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>

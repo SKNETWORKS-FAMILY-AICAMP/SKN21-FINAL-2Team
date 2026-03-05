@@ -37,6 +37,10 @@ export interface PreferItem {
 export const getPostLoginPath = (user: UserProfile): string => {
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
+    // 주의: Destinations에서 비로그인으로 Plan Trip 클릭 시 장소 데이터가 여기 저장됨
+    // 이 값이 있으면 챗봇 페이지로 이동 후 TripContextModal을 표시합니다
+    const pending = safeLocalGet("pendingDestination");
+    if (pending) return "/chatbot?fromDestination=1";
     return "/explore";
 };
 
@@ -68,10 +72,12 @@ export interface ChatPlaceItem {
     id: number;
     place_id?: number;
     name?: string | null;
+    category?: string | null;
     adress?: string | null;
     image_path?: string | null;
     longitude?: number;
     latitude?: number;
+    map_url?: string | null;
     bookmark_yn?: boolean | null;
 }
 

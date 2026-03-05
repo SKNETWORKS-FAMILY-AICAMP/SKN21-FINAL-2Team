@@ -61,6 +61,9 @@ export function Destinations() {
         if (e) e.stopPropagation();
 
         if (!isLoggedIn) {
+            // 주의: 로그인 후 챗봇 연결을 위해 선택한 장소를 localStorage에 임시 저장
+            // 로그인 완료 후 login/page.tsx에서 이 값을 읽어 TripContextModal을 띄웁니다
+            localStorage.setItem("pendingDestination", JSON.stringify(place));
             router.push("/login");
         } else {
             // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
@@ -75,27 +78,31 @@ export function Destinations() {
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            // 주의: chatbot API 호출 시 장소 + 여행 컨텍스트 둘 다 사용하도록 localStorage에 저장
+            // 주의: autostart는 triver:selected-places:${roomId} 키를 읽습니다 (bookmark와 동일한 방식)
+            // selectedForChat(범용 키)이 아닌 방별 키로 저장해야 챗봇에서 장소 정보가 출력됩니다
             if (pendingPlace) {
-                localStorage.setItem("selectedForChat", JSON.stringify(pendingPlace));
+                localStorage.setItem(
+                    `triver:selected-places:${newRoom.id}`,
+                    JSON.stringify([{
+                        name: pendingPlace.name,
+                        adress: pendingPlace.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                    }])
+                );
             }
             if ((context.travelDuration || "").trim()) {
                 localStorage.setItem(
                     `triver:trip-context:${newRoom.id}`,
                     JSON.stringify(context)
                 );
-            } else {
-                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch (e) {
             console.error("Failed to create room from Destinations", e);
             setIsTripLoading(false);
             setShowTripModal(false);
-            // 에러 시 컨텍스트 없이 기본 이동
-            if (pendingPlace) {
-                localStorage.setItem("selectedForChat", JSON.stringify(pendingPlace));
-            }
+            // 에러 시 방 ID 없이 이동 → 장소 데이터는 포기하고 기본 챗봇 화면으로
+            // (방 생성 자체가 실패했으므로 roomId 기반 키 저장 불가)
             router.push("/chatbot");
         }
     };
@@ -222,7 +229,7 @@ export function Destinations() {
                         </div>
                     </div>
 
-                    <div className="min-h-[500px]">
+                    <div className="min-h-[400px]">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeTab}
@@ -234,7 +241,7 @@ export function Destinations() {
                             >
                                 {displayItems.map((place) => (
                                     <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                                        <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
                                             {/* 주의: image가 빈 문자열("")이면 브라우저 에러 발생 → 있을 때만 img 렌더링 */}
                                             {place.image ? (
                                                 <img
@@ -293,10 +300,10 @@ export function Destinations() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-6 flex flex-col flex-grow">
+                                        <div className="p-4 flex flex-col flex-grow">
                                             <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
-                                            <div className="flex items-center gap-4 text-gray-500 text-sm mb-6 font-mono">
-                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span className="truncate max-w-[120px]">{place.address}</span></div>
+                                            <div className="flex items-center gap-4 text-gray-500 text-sm mb-2 font-mono">
+                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span>{place.address}</span></div>
                                             </div>
                                             <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
                                                 <button className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100">
