@@ -535,7 +535,7 @@ export default function MyPage() {
               </motion.div>
             </div>
 
-            <div className="flex flex-col gap-6 lg:h-[calc(100vh-200px)] lg:max-h-[800px]">
+            <div className="flex flex-col gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -609,7 +609,7 @@ export default function MyPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm overflow-hidden"
+                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col shadow-sm overflow-hidden min-h-[340px]"
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
