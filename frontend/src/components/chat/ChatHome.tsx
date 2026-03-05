@@ -785,7 +785,6 @@ export function ChatHome() {
     }
 
     return (
-<<<<<<< HEAD
         <div className="flex flex-col h-full min-h-0 bg-white relative rounded-2xl overflow-hidden">
             <header className="h-14 flex items-center justify-between px-6 bg-white z-10 sticky top-0">
                 <div className="flex items-center gap-2 min-w-0">
@@ -794,38 +793,13 @@ export function ChatHome() {
                     <button
                         type="button"
                         onClick={handleToggleRoomBookmark}
-                        className={`inline-flex items-center justify-center rounded-full p-1 transition-colors ${
-                            currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
-                        }`}
+                        className={`inline-flex items-center justify-center rounded-full p-1 transition-colors ${currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
+                            }`}
                         title="채팅방 북마크 토글"
                         disabled={!currentRoomId}
                     >
                         <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
                     </button>
-=======
-        <div className="flex flex-col h-full bg-white relative">
-            <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        {currentRoom?.title || "New Trip Planning"}
-                        <button
-                            type="button"
-                            onClick={handleToggleRoomBookmark}
-                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
-                                }`}
-                            title="채팅방 북마크 토글"
-                            disabled={!currentRoomId}
-                        >
-                            <Bookmark size={14} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
-                        </button>
-                        <Sparkles size={14} className="text-gray-400" />
-                    </h2>
-                    {roomTripContext && (
-                        <p className="mt-1 text-xs text-gray-500 font-medium">
-                            {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
-                        </p>
-                    )}
->>>>>>> c0a6d391b2dd2e98d19a39cb3a681bcfc156b896
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
@@ -856,136 +830,136 @@ export function ChatHome() {
 
             <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar bg-gray-50/30">
                 <div className="w-full min-h-full flex flex-col px-4 pt-2 space-y-6">
-                {messages.length === 0 && !isTyping && (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                        <Sparkles className="w-8 h-8 mb-4 opacity-50" />
-                        <p className="text-sm font-medium">채팅을 시작해보세요!</p>
-                    </div>
-                )}
+                    {messages.length === 0 && !isTyping && (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                            <Sparkles className="w-8 h-8 mb-4 opacity-50" />
+                            <p className="text-sm font-medium">채팅을 시작해보세요!</p>
+                        </div>
+                    )}
 
-                {messages.map((msg) => {
-                    // 스트리밍 중 빈 AI 메시지는 숨김 (파이프라인만 보이도록)
-                    if (isStreaming && msg.id === streamingMsgId && !msg.message && showPipeline) {
-                        return null;
-                    }
-                    // 스트리밍 중 빈 AI 메시지는 숨김 (토큰 도착 후 보임)
-                    if (isStreaming && msg.id === streamingMsgId && !msg.message) {
-                        return null;
-                    }
+                    {messages.map((msg) => {
+                        // 스트리밍 중 빈 AI 메시지는 숨김 (파이프라인만 보이도록)
+                        if (isStreaming && msg.id === streamingMsgId && !msg.message && showPipeline) {
+                            return null;
+                        }
+                        // 스트리밍 중 빈 AI 메시지는 숨김 (토큰 도착 후 보임)
+                        if (isStreaming && msg.id === streamingMsgId && !msg.message) {
+                            return null;
+                        }
 
-                    if (msg.role === "human") {
+                        if (msg.role === "human") {
+                            return (
+                                <motion.div
+                                    key={msg.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex justify-end w-full px-4"
+                                >
+                                    <div className="bg-black text-white px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[66%] shadow-sm">
+                                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                                        <div className="text-[9px] mt-2 font-medium text-gray-300/70 text-right">
+                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        }
+
                         return (
-                            <motion.div
-                                key={msg.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex justify-end w-full px-4"
-                            >
-                                <div className="bg-black text-white px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[66%] shadow-sm">
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                                    <div className="text-[9px] mt-2 font-medium text-gray-300/70 text-right">
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            <div key={msg.id} className="flex flex-col gap-3 mb-2 w-full px-4">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-start gap-3 w-full"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                                        <Sparkles size={14} className="text-white" />
                                     </div>
-                                </div>
-                            </motion.div>
-                        );
-                    }
 
-                    return (
-                        <div key={msg.id} className="flex flex-col gap-3 mb-2 w-full px-4">
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-start gap-3 w-full"
-                            >
-                                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
-                                    <Sparkles size={14} className="text-white" />
-                                </div>
-
-                                <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[64%]">
-                                    {!!msg.message && (
-                                        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm inline-block w-full mb-3">
-                                            <div className="prose prose-sm max-w-none prose-slate prose-p:my-3 prose-p:leading-7 prose-pre:bg-slate-50 prose-pre:text-slate-900">
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={{
-                                                        a: (props) => (
-                                                            <a
-                                                                {...props}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            />
-                                                        ),
-                                                    }}
-                                                >
-                                                    {msg.message}
-                                                </ReactMarkdown>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {msg.places && msg.places.length > 0 && (
-                                        <div className="mt-1 w-full">
-                                            <h5 className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.08em] mb-2 ml-1">
-                                                Recommended Places
-                                            </h5>
-                                            <div className="flex overflow-x-auto pb-3 gap-3 snap-x custom-scrollbar -mx-1 px-1">
-                                                {msg.places.map((place) => (
-                                                    <div
-                                                        key={place.id}
-                                                        className="snap-start flex-shrink-0 relative w-[176px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm group"
+                                    <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[64%]">
+                                        {!!msg.message && (
+                                            <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm inline-block w-full mb-3">
+                                                <div className="prose prose-sm max-w-none prose-slate prose-p:my-3 prose-p:leading-7 prose-pre:bg-slate-50 prose-pre:text-slate-900">
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            a: (props) => (
+                                                                <a
+                                                                    {...props}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                />
+                                                            ),
+                                                        }}
                                                     >
-                                                        <div className="relative h-[110px] bg-gray-100">
-                                                            <img
-                                                                src={place.image_path || DEFAULT_PLACEHOLDER}
-                                                                alt={place.name || "Place image"}
-                                                                className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                                                            />
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
-                                                            <button
-                                                                onClick={() => handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn)}
-                                                                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 bg-white/90 hover:text-yellow-500 hover:bg-gray-100"}`}
-                                                            >
-                                                                <Bookmark size={13} fill={place.bookmark_yn ? "currentColor" : "none"} />
-                                                            </button>
-                                                        </div>
-                                                        <div className="p-3">
-                                                            <h4 className="font-semibold text-gray-900 leading-tight line-clamp-1 text-[12px]">
-                                                                {place.name}
-                                                            </h4>
-                                                            <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{place.adress}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                        {msg.message}
+                                                    </ReactMarkdown>
+                                                </div>
                                             </div>
+                                        )}
+
+                                        {msg.places && msg.places.length > 0 && (
+                                            <div className="mt-1 w-full">
+                                                <h5 className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.08em] mb-2 ml-1">
+                                                    Recommended Places
+                                                </h5>
+                                                <div className="flex overflow-x-auto pb-3 gap-3 snap-x custom-scrollbar -mx-1 px-1">
+                                                    {msg.places.map((place) => (
+                                                        <div
+                                                            key={place.id}
+                                                            className="snap-start flex-shrink-0 relative w-[176px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm group"
+                                                        >
+                                                            <div className="relative h-[110px] bg-gray-100">
+                                                                <img
+                                                                    src={place.image_path || DEFAULT_PLACEHOLDER}
+                                                                    alt={place.name || "Place image"}
+                                                                    className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                                                                />
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+                                                                <button
+                                                                    onClick={() => handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn)}
+                                                                    className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 bg-white/90 hover:text-yellow-500 hover:bg-gray-100"}`}
+                                                                >
+                                                                    <Bookmark size={13} fill={place.bookmark_yn ? "currentColor" : "none"} />
+                                                                </button>
+                                                            </div>
+                                                            <div className="p-3">
+                                                                <h4 className="font-semibold text-gray-900 leading-tight line-clamp-1 text-[12px]">
+                                                                    {place.name}
+                                                                </h4>
+                                                                <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{place.adress}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="text-[9px] mt-2 font-medium opacity-50 text-gray-400">
+                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                         </div>
-                                    )}
-
-                                    <div className="text-[9px] mt-2 font-medium opacity-50 text-gray-400">
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                     </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    );
-                })}
+                                </motion.div>
+                            </div>
+                        );
+                    })}
 
-                {/* 파이프라인 진행 표시 — messages.map과 독립적으로 표시 */}
-                {showPipeline && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-start gap-3"
-                    >
-                        <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-black text-white shadow-sm">
-                            <span className="font-serif italic text-sm">T</span>
-                        </div>
-                        <PipelineProgress steps={pipelineSteps} visible={true} />
-                    </motion.div>
-                )}
+                    {/* 파이프라인 진행 표시 — messages.map과 독립적으로 표시 */}
+                    {showPipeline && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex items-start gap-3"
+                        >
+                            <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-black text-white shadow-sm">
+                                <span className="font-serif italic text-sm">T</span>
+                            </div>
+                            <PipelineProgress steps={pipelineSteps} visible={true} />
+                        </motion.div>
+                    )}
 
-                <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef} />
                 </div>
             </div>
 
