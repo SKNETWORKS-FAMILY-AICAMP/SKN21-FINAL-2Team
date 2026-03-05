@@ -72,10 +72,12 @@ export interface ChatPlaceItem {
     id: number;
     place_id?: number;
     name?: string | null;
+    category?: string | null;
     adress?: string | null;
     image_path?: string | null;
     longitude?: number;
     latitude?: number;
+    map_url?: string | null;
     bookmark_yn?: boolean | null;
 }
 
