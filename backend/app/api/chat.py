@@ -479,7 +479,7 @@ def _build_streaming_response(
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
-    prefs_info = _build_user_preferences(current_user)
+    prefs_info = current_user.build_preferences()
     inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
