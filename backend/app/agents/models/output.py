@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 # # Intent Output
@@ -21,22 +21,23 @@ class InputType(str, Enum):
 
 
 class IntentSlots(BaseModel):
-    input_type: InputType
-    location: Optional[str] = None # 여행지
-    category: Optional[str] = None  # 관광지, 문화시설, 축제공연행사, 레포츠, 숙박, 음식점
-    dates: Optional[str] = None # 여행 날짜
-    duration: Optional[str] = None # 여행 기간
-    party_size: Optional[int] = None # 인원수
-    budget_level: Optional[str] = None # 예산 범위
-    must_have: Optional[str] = None # 필수 포함 정보
-    nice_to_have: Optional[str] = None # 있으면 좋은 정보
+    input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
+    location: Optional[str] = Field(default=None, description="여행지 (도시 | 지역)")
+    category: Optional[Literal["관광지", "문화시설", "축제공연행사", "레포츠", "숙박", "음식점"]] = Field(default=None, description="사용자 입력에서 추출된 카테고리")
+    dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
+    duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")
+    party_size: Optional[int] = Field(default=None, description="인원수")
+    budget_level: Optional[Literal["low", "medium", "high"]] = Field(default=None, description="예산 범위 (가성비/저렴/싸게: low, 보통/적당히: medium, 럭셔리/비싸도: high)")
+    nice_to_have: Optional[str] = Field(default=None, description="있으면 좋은 조건")
 
 
 class IntentOutput(BaseModel):
     intents: List[IntentType]
     primary_intent: IntentType
     slots: IntentSlots
-    summary_query: str = Field(description="사용자의 질문 내용을 15자 이내로 요약한 문장")
+    summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
+    summary_message: str = Field(default="", description="대화 요약")
+
 
 # # Planner Output
 class PlannerItineraryItem(BaseModel):

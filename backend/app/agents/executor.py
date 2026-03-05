@@ -203,7 +203,7 @@ async def executor_node(state: TravelState):
     candidate_pool = state.get("candidate_pool", candidates) or []
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
-    prefs_info = state.get("prefs_info", {})
+    prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
     image_path = state.get("image_path") # 이미지 경로 가져오기
@@ -361,7 +361,7 @@ async def executor_missing_node(state: TravelState):
         "messages": state.get("messages")[-10:],
         "user_input": state.get("user_input"),
         "slots_info": state.get("slots"),
-        "prefs_info": state.get("prefs_info"),
+        "prefs_info": state.get("prefs_info", ""),
         "missing_info": missing_context,
     })
 

@@ -81,7 +81,7 @@ def test_ask_uses_summary_query_as_room_title_within_first_two_messages(client, 
     mock_graph = AsyncMock()
     mock_graph.ainvoke = AsyncMock(return_value={
         "answer": "답변",
-        "summary_query": "요약 쿼리",
+        "summary_title": "요약 쿼리",
         "summary_message": "요약 메시지 제목",
     })
 

@@ -18,7 +18,7 @@ async def planner_node(state: TravelState):
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
     slots = state.get("slots")
-    prefs_info = state.get("prefs_info", {})
+    prefs_info = state.get("prefs_info", "")
 
     if not user_input:
         return state
