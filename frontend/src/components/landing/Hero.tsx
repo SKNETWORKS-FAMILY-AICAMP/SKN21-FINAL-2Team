@@ -1,17 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { verifyAndRefreshToken } from "@/services/api";
 
 export function Hero() {
     const router = useRouter();
+    const [isNavigating, setIsNavigating] = useState(false);
 
-    const handleNavigation = () => {
+    const handleNavigation = async () => {
+        // 중복 클릭 방지
+        if (isNavigating) return;
+
         const token = localStorage.getItem("access_token");
-        if (token) {
-            router.push("/explore");
-        } else {
+
+        // 토큰 자체가 없으면 바로 로그인 페이지로
+        if (!token) {
             router.push("/login");
+            return;
+        }
+
+        setIsNavigating(true);
+        try {
+            // 주의: localStorage에 토큰이 있어도 만료되었을 수 있으므로 서버 검증 필수
+            await verifyAndRefreshToken();
+            // 검증 성공 → explore 이동
+            router.push("/explore");
+        } catch {
+            // 토큰 만료 또는 유효하지 않은 경우 → 정리 후 로그인
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+            router.push("/login");
+        } finally {
+            setIsNavigating(false);
         }
     };
 
@@ -62,9 +84,10 @@ export function Hero() {
                         />
                         <button
                             onClick={handleNavigation}
-                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors"
+                            disabled={isNavigating}
+                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            Start
+                            {isNavigating ? "..." : "Start"}
                         </button>
                     </div>
                 </motion.div>
