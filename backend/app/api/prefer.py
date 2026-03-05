@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.utils.security import get_current_user
-from app.database.connection import get_db
+from app.database.connection import db_manager
 from app.models.user import User
 from app.schemas.prefer import PreferResponse, SurveySubmitRequest
 from app.schemas.user import UserResponse
@@ -45,7 +45,7 @@ def read_prefers(
 def submit_survey(
     survey: SurveySubmitRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(db_manager.get_db),
 ):
     """
     사용자가 선택한 선호도 조사 결과를 users 테이블에 저장한다.

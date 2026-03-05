@@ -37,3 +37,21 @@ class User(BaseModel):
     # Relations
     rooms = relationship("ChatRoom", back_populates="user")
     reservations = relationship("Reservation", back_populates="user")
+
+    def build_preferences(self) -> str:
+        """
+        prefs_info 문자열을 반환합니다.
+        """
+        if not self:
+            return "특별한 선호도 정보 없음"
+
+        lines = []
+
+        if self.plan_prefer:
+            lines.append(f"- 여행 일정 스타일: **{self.plan_prefer}**")
+        if self.vibe_prefer:
+            lines.append(f"- 선호 여행 환경: **{self.vibe_prefer}**")
+        if self.places_prefer:
+            lines.append(f"- 관심 장소 유형: **{self.places_prefer}**")
+
+        return "\n".join(lines) if lines else "특별한 선호도 정보 없음"

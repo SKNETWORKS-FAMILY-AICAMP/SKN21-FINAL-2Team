@@ -8,7 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import List
-from app.database.connection import get_db
+from app.database.connection import db_manager, get_db
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import RoleType
@@ -53,27 +53,6 @@ async def get_graph_app():
             _graph_app = workflow().compile(checkpointer=_checkpointer)
             print('compile graph app (with AsyncMySaver checkpointer)')
     return _graph_app
-
-
-def _build_user_preferences(user: User) -> str:
-    """
-    DB의 사용자 정보를 기반으로 선호도 텍스트를 생성합니다.
-    LLM Agent에 전달할 prefs_info 문자열을 반환합니다.
-    """
-    if not user:
-        return "특별한 선호도 정보 없음"
-
-    lines = []
-
-    if user.plan_prefer:
-        lines.append(f"- 📋 여행 일정 스타일: **{user.plan_prefer}**")
-    if user.vibe_prefer:
-        lines.append(f"- ✨ 선호 여행 환경: **{user.vibe_prefer}**")
-    if user.places_prefer:
-        lines.append(f"- � 관심 장소 유형: **{user.places_prefer}**")
-
-    return "\n".join(lines) if lines else "특별한 선호도 정보 없음"
-
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -184,7 +163,7 @@ def _build_graph_inputs(room_id: int, user_id: int, message_in: ChatMessageCreat
 
 # 채팅방 목록 조회
 @router.get("/rooms", response_model=List[ChatRoomResponse])
-def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     rooms = (
         db.query(ChatRoom)
         .filter(ChatRoom.user_id == current_user.id)
@@ -197,7 +176,7 @@ def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_
 
 # 채팅방 생성
 @router.post("/rooms", response_model=ChatRoomResponse)
-def create_room(room_in: ChatRoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_room(room_in: ChatRoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     new_room = ChatRoom(user_id=current_user.id, title=room_in.title)
     db.add(new_room)
     db.commit()
@@ -206,7 +185,7 @@ def create_room(room_in: ChatRoomCreate, current_user: User = Depends(get_curren
 
 # 채팅방 상세 조회 (대화 내역 포함)
 @router.get("/rooms/{room_id}", response_model=ChatRoomResponse)
-def get_room_history(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_room_history(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     room = db.query(ChatRoom).options(
         joinedload(ChatRoom.messages).joinedload(ChatMessage.places)
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
@@ -216,7 +195,7 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
 
 
 @router.patch("/rooms/{room_id}/bookmark", response_model=ChatRoomResponse)
-def update_room_bookmark(room_id: int, bookmark: bool, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_room_bookmark(room_id: int, bookmark: bool, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     room = db.query(ChatRoom).filter(
         ChatRoom.id == room_id,
         ChatRoom.user_id == current_user.id,
@@ -233,7 +212,7 @@ def update_room_bookmark(room_id: int, bookmark: bool, current_user: User = Depe
 
 # 메시지 저장
 @router.post("/messages", response_model=ChatMessageResponse)
-def create_message(message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_message(message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     # 채팅방 소유권 확인
     room = db.query(ChatRoom).filter(ChatRoom.id == message_in.room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
@@ -255,7 +234,7 @@ def create_message(message_in: ChatMessageCreate, current_user: User = Depends(g
 
 # 추천 장소 북마크 업데이트
 @router.patch("/places/{place_id}/bookmark", response_model=ChatPlaceResponse)
-def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     # 장소를 찾고, 해당 메시지의 세션 소유자가 현재 사용자인지 확인 (조인 필요)
     place = db.query(ChatPlace).join(ChatMessage).join(ChatRoom).filter(
         ChatPlace.id == place_id,
@@ -274,7 +253,7 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
 
 
 @router.get("/bookmarks/rooms", response_model=List[BookmarkedRoomResponse])
-def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     latest_message_subquery = (
         db.query(
             ChatMessage.room_id.label("room_id"),
@@ -311,7 +290,7 @@ def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Ses
 
 
 @router.get("/bookmarks/places", response_model=List[BookmarkedPlaceResponse])
-def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     rows = (
         db.query(ChatPlace, ChatMessage.room_id, ChatRoom.title)
         .join(ChatMessage, ChatMessage.id == ChatPlace.messages_id)
@@ -345,13 +324,13 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
 
 # 대화하기 (User Message 저장 -> LLM 생성 -> AI Message 저장 -> 반환)
 @router.post("/rooms/{room_id}/ask", response_model=ChatMessageResponse)
-async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
     room = _get_owned_room_or_404(db, room_id, current_user.id)
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
 
     # Backend에서 사용자 선호도 조회 후 LLM에 전달
-    prefs_info = _build_user_preferences(current_user)
+    prefs_info = current_user.build_preferences()
 
     # 그래프 입력 상태 구성 (대화 이력은 checkpointer가 자동 관리)
     inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
@@ -390,8 +369,6 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     db.refresh(ai_message)
     
     return ai_message
-
-
 
 
 def _build_streaming_response(
@@ -646,7 +623,7 @@ async def ask_chat_stream(
     room_id: int,
     message_in: ChatMessageCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(db_manager.get_db),
 ):
     room = _get_owned_room_or_404(db, room_id, current_user.id)
     return _build_streaming_response(room_id, room, message_in, current_user, db)
@@ -657,7 +634,7 @@ async def auto_start_chat_room_stream(
     room_id: int,
     auto_start_in: AutoStartChatRoomRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(db_manager.get_db),
 ):
     room = _get_owned_room_or_404(db, room_id, current_user.id)
 

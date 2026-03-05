@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 from fastapi import APIRouter, Depends
 
-from app.database.connection import get_db
+from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
 
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/hot-places", tags=["hot-place"])
 @router.get("", response_model=List[dict])
 def get_hot_places(
     limit: int = 3,
-    db: Session = Depends(get_db),
+    db: Session = Depends(db_manager.get_db),
 ):
     """
     hot_places 테이블에서 랜덤으로 limit개(기본 3개) 반환한다.

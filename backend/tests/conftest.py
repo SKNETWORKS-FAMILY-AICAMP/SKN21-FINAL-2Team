@@ -12,7 +12,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.main import app
-from app.database.connection import get_db, Base
+from app.database.connection import get_db, Base, db_manager
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
 from app.models.enums import GenderType, RoleType
@@ -50,6 +50,7 @@ def client(db):
             pass # db closed in fixture
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[db_manager.get_db] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

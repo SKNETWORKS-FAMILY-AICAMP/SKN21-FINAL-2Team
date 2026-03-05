@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from app.database.connection import SessionLocal
+from app.database.connection import db_manager
 from app.models.country import Country
 from app.models.hot_place import HotPlace
 
@@ -78,7 +78,7 @@ def insert_country() -> dict[str, int]:
     중복 기준: code
     """
     countries = [
-        {"code": "ko", "name": "한국"},
+        {"code": "ko", "name": "대한민국"},
         {"code": "jp", "name": "일본"},
         {"code": "it", "name": "이탈리아"},
         {"code": "us", "name": "미국"},
@@ -100,7 +100,7 @@ def insert_country() -> dict[str, int]:
         {"code": "mx", "name": "멕시코"},
     ]
 
-    db = SessionLocal()
+    db = db_manager.get_session()
     inserted = 0
     skipped = 0
     try:
@@ -134,7 +134,7 @@ def insert_hot_place() -> dict[str, int]:
     with HOT_PLACE_DATA_PATH.open("r", encoding="utf-8") as f:
         places = json.load(f)
 
-    db = SessionLocal()
+    db = db_manager.get_session()
     inserted = 0
     skipped = 0
     try:
@@ -162,8 +162,7 @@ def insert_hot_place() -> dict[str, int]:
     finally:
         db.close()
 
-
-if __name__ == "__main__":
+def insert_data():
     # Country 데이터 삽입
     cntry_res = insert_country()
     print(f"[INFO] country insert done: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
@@ -171,3 +170,6 @@ if __name__ == "__main__":
     # HotPlace 데이터 삽입
     hot_res = insert_hot_place()
     print(f"[INFO] hot_place insert done: inserted={hot_res['inserted']}, skipped={hot_res['skipped']}")
+
+if __name__ == "__main__":
+    insert_data()

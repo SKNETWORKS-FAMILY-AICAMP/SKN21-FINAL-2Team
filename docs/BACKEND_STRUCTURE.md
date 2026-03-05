@@ -93,7 +93,7 @@ app/
 
 ### 3-4. `app/database/`
 
-- `connection.py`: SQLAlchemy engine/session
+- `connection.py`: SQLAlchemy engine/session (DBManager Singleton 적용)
 - `checkpointer.py`: LangGraph 체크포인터
 - `create_db.py`: 초기 스키마 생성
 - `insert_db.py`: 초기 데이터 삽입

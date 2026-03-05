@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from app.database.connection import get_db
+from app.database.connection import db_manager
 from app.models.user import User
 from app.schemas.user import UserResponse, Token, GoogleLoginRequest, RefreshRequest
 from app.utils.security import create_access_token, create_refresh_token, verify_refresh_token, verify_google_auth_code, get_current_user
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def login_google(
     request: GoogleLoginRequest, 
     response: Response,                  
-    db: Session = Depends(get_db),
+    db: Session = Depends(db_manager.get_db),
 ):
     # 1. Google Auth Code 교환 및 검증
     # verify_google_auth_code는 {id_info, access_token, refresh_token, ...} 반환
@@ -86,7 +86,7 @@ def login_google(
     }
 
 @router.post("/refresh", response_model=Token)
-def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
+def refresh_token(request: RefreshRequest, db: Session = Depends(db_manager.get_db)):
     refresh_token = request.refresh_token
 
     if not refresh_token:

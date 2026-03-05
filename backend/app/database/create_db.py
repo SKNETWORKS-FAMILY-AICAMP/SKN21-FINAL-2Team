@@ -5,6 +5,7 @@ from pathlib import Path
 import pymysql
 from pydbml import PyDBML
 from dotenv import load_dotenv
+from app.database.insert_db import insert_data
 
 load_dotenv(override=True) # .env 로드
 
@@ -285,4 +286,10 @@ def deploy_db_from_dbml():
             connection.close()
 
 if __name__ == "__main__":
+    print(f"[INFO] dbml deploy start")
     deploy_db_from_dbml()
+    print(f"[INFO] dbml deploy done")
+
+    print(f"[INFO] data insert start")
+    insert_data()
+    print(f"[INFO] data insert done")
