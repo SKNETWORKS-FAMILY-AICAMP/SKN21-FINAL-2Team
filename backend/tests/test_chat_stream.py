@@ -456,6 +456,27 @@ async def test_get_bookmarked_rooms_returns_latest_preview(user_and_room):
 
 
 @pytest.mark.asyncio
+async def test_get_bookmarked_rooms_null_title_falls_back(user_and_room):
+    """북마크 방 title이 NULL이어도 기본 제목으로 반환되어야 한다."""
+    user, room, token, db = user_and_room
+    room.bookmark_yn = True
+    room.title = None
+    db.add(room)
+    db.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/chat/bookmarks/rooms",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["title"] == "새 채팅"
+
+
+@pytest.mark.asyncio
 async def test_get_bookmarked_places_only_user_scope(user_and_room):
     """북마크 장소 목록이 사용자 소유 방으로 제한되는지 확인"""
     user, room, token, db = user_and_room
@@ -495,6 +516,35 @@ async def test_get_bookmarked_places_only_user_scope(user_and_room):
         assert body[0]["name"] == "User Place"
         assert body[0]["room_id"] == room.id
         assert body[0]["room_title"] == room.title
+
+
+@pytest.mark.asyncio
+async def test_get_bookmarked_places_null_room_title_falls_back(user_and_room):
+    """북마크 장소의 room_title이 NULL이어도 기본 제목으로 반환되어야 한다."""
+    user, room, token, db = user_and_room
+    room.title = None
+    db.add(room)
+    db.commit()
+
+    msg = ChatMessage(room_id=room.id, message="msg", role="ai")
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    place = ChatPlace(messages_id=msg.id, name="User Place", bookmark_yn=True)
+    db.add(place)
+    db.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(
+            "/api/chat/bookmarks/places",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["room_title"] == "새 채팅"
 
 
 @pytest.mark.asyncio

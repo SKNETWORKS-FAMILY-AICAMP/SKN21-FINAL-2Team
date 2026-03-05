@@ -143,7 +143,7 @@ def step1_normalize(raw: list) -> list:
             "usetime"         : item.get("hours", "").strip() or None,
             "start_date"      : start_date,
             "end_date"        : end_date,
-            "restdate"        : f"{end_date}까지" if end_date else None,
+            "restdate"        : "",
             "introduction"    : item.get("introduction", "").strip() or None,
         }
 
@@ -306,7 +306,7 @@ def step4_generate_llm_text(data: list) -> list:
 FINAL_FIELDS = [
     "contentid", "title", "contenttypeid", "image",
     "usetime", "restdate", "start_date", "end_date",
-    "parking", "fee", "addr", "road_address", "old_address",
+    "parking", "fee", "addr",
     "mapy", "mapx", "contenttypeid_code", "llm_text",
 ]
 
@@ -324,12 +324,8 @@ def step5_save_jsonl(data: list) -> None:
                 print(f"  [제외] llm_text 없음: '{item.get('title')}'")
                 continue
 
-            # 필드 순서 정리 (FINAL_FIELDS 순서대로, 존재하는 것만)
+            # FINAL_FIELDS 순서대로, 존재하는 필드만 저장
             record = {k: item[k] for k in FINAL_FIELDS if k in item}
-            # 위에 없는 나머지 키도 포함
-            for k, v in item.items():
-                if k not in record:
-                    record[k] = v
 
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 

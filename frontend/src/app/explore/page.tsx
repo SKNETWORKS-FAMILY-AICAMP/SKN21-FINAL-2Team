@@ -35,12 +35,7 @@ const YOUR_CHOICES = {
     ],
 };
 
-// 3. Contents (Events/Exhibitions) - Randomly shown
-const CONTENTS = [
-    { id: 1, title: "Seoul Living Design Fair", type: "Exhibition", date: "Until Mar 15", image: "https://images.unsplash.com/photo-1634028281608-d636a88abc09?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMGxhbmRtYXJrJTIwbWluaW1hbHxlbnwxfHx8fDE3NzE4OTk4NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080" },
-    { id: 2, title: "Gentle Monster Popup", type: "Popup Store", date: "New Opening", image: "https://images.unsplash.com/photo-1748696009693-a04d400d08de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMGNhZmUlMjB0cmVuZHl8ZW58MXx8fHwxNzcxODk5ODUyfDA&ixlib=rb-4.1.0&q=80&w=1080" },
-    { id: 3, title: "Night Race 2024", type: "Leports", date: "Registration Open", image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzE0NTM5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080" },
-];
+// Contents 섹션은 API에서 팝업스토어 데이터를 가져옴
 
 import { Sidebar } from "@/components/Sidebar";
 import { fetchCategoryPlaces, fetchCurrentUser, fetchHotPlaces, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
@@ -58,6 +53,7 @@ type ExploreInitPayload = {
     user: UserProfile;
     choices: YourChoicesState;
     hotPlaces: HotPlace[];
+    popupStores: CategoryPlaceItem[];
 };
 
 let exploreInitInFlight: Promise<ExploreInitPayload> | null = null;
@@ -76,6 +72,7 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
     return {
         user,
         hotPlaces,
+        popupStores: data["팝업스토어"] || [],
         choices: {
             restaurants: data["음식점"] || [],
             tourist: data["문화시설"] || [],
@@ -113,6 +110,7 @@ export default function ExplorePage() {
         activities: [],
     });
     const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
+    const [popupStores, setPopupStores] = useState<CategoryPlaceItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -123,6 +121,7 @@ export default function ExplorePage() {
                 setUserProfile(payload.user);
                 setYourChoices(payload.choices);
                 setHotPlaces(payload.hotPlaces);
+                setPopupStores(payload.popupStores);
             } catch (error) {
                 if (isAuthFailureError(error)) {
                     clearAuth();
@@ -156,10 +155,10 @@ export default function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-center mb-4 z-10 flex-none">
                                 <div>
-                                    <h3 className="text-2xl font-serif font-medium text-gray-900 flex items-center gap-2">
+                                    <h3 className="page-title text-gray-900 flex items-center gap-2">
                                         Your Choices <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="section-subtitle mt-1">
                                         {userProfile?.name ? `${userProfile.name}님을 위한 맞춤 여행지` : "Curated recommendations based on your preferences"}
                                     </p>
                                 </div>
@@ -256,8 +255,8 @@ export default function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="text-xl font-serif font-medium text-gray-900">Hot Places</h3>
-                                    <p className="text-xs text-gray-400 mt-1">Trending neighborhoods</p>
+                                    <h3 className="page-title text-gray-900">Hot Places</h3>
+                                    <p className="section-subtitle mt-1">Trending neighborhoods</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <MapPin size={16} className="text-gray-400" />
@@ -298,8 +297,8 @@ export default function ExplorePage() {
                         <div className="flex-1 border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden min-h-[300px]">
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="text-xl font-serif font-medium text-gray-900">Contents</h3>
-                                    <p className="text-xs text-gray-400 mt-1">Events & Exhibitions</p>
+                                    <h3 className="page-title text-gray-900">Contents</h3>
+                                    <p className="section-subtitle mt-1">Events & Exhibitions</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <Calendar size={16} className="text-gray-400" />
@@ -308,31 +307,44 @@ export default function ExplorePage() {
 
                             <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
                                 <div className="flex flex-col gap-3 pb-2">
-                                    {CONTENTS.map((item) => (
-                                        <motion.div
-                                            key={item.id}
-                                            whileHover={{ x: 5 }}
-                                            className="flex gap-3 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100"
-                                        >
-                                            <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 relative">
-                                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div className="flex flex-col justify-center flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
-                                                        {item.type}
-                                                    </span>
+                                    {isLoading ? (
+                                        <div className="h-full flex items-center justify-center py-8">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
+                                        </div>
+                                    ) : popupStores.length === 0 ? (
+                                        <p className="text-xs text-gray-400 text-center py-6">팝업스토어 정보가 없습니다</p>
+                                    ) : (
+                                        popupStores.map((item) => (
+                                            <motion.div
+                                                key={item.contentid}
+                                                whileHover={{ x: 5 }}
+                                                className="flex gap-3 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100"
+                                            >
+                                                <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                                                    {item.image_url ? (
+                                                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                                                    )}
                                                 </div>
-                                                <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
-                                                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                                                    <Clock size={10} /> {item.date}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center justify-center text-gray-300 group-hover:text-black transition-colors">
-                                                <ArrowRight size={16} />
-                                            </div>
-                                        </motion.div>
-                                    ))}
+                                                <div className="flex flex-col justify-center flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
+                                                            POPUP STORE
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
+                                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                                        <Clock size={10} />
+                                                        {item.end_date ? `~ ${item.end_date}` : "진행 중"}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center justify-center text-gray-300 group-hover:text-black transition-colors">
+                                                    <ArrowRight size={16} />
+                                                </div>
+                                            </motion.div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>

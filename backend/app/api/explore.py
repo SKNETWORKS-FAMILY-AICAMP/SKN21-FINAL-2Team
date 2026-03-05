@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 import random
 
 from app.retrieval.place import PlaceRetriever
@@ -122,9 +122,11 @@ class CategoryPlaceItem(BaseModel):
     image_url: str
     score: float
     description: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
 
-SEARCH_CATEGORIES = ["관광지", "음식점", "숙박", "레포츠", "문화시설", "축제공연행사"]
+SEARCH_CATEGORIES = ["관광지", "음식점", "숙박", "레포츠", "문화시설", "축제공연행사", "팝업스토어"]
 
 
 @router.post("/category-places", response_model=Dict[str, List[CategoryPlaceItem]])
@@ -137,6 +139,9 @@ async def get_category_places(request: CategoryPlacesRequest):
 
     results: Dict[str, List[CategoryPlaceItem]] = {}
 
+    from datetime import date
+    today = date.today().isoformat()
+
     for cat in SEARCH_CATEGORIES:
         try:
             # 매번 동일한 결과가 나오지 않도록 검색 범위를 넓히고 (limit=20)
@@ -147,17 +152,18 @@ async def get_category_places(request: CategoryPlacesRequest):
                 has_image=True
             )
 
-            # 결과 중 3개를 무작위로 샘플링
-            sampled_results = random.sample(search_results, min(3, len(search_results)))
-
             items = []
-            for res in sampled_results:
+            for res in search_results:
                 payload = res.payload or {}
                 pid = res.id
                 score = res.score
-
-                # 응답에 payload에 있는 image를 사용
                 image_url = payload.get("image", payload.get("firstimage", ""))
+
+                # 팝업스토어는 진행 중인 항목만 포함
+                if cat == "팝업스토어":
+                    end_date = payload.get("end_date", "")
+                    if end_date and end_date < today:
+                        continue
 
                 items.append(
                     CategoryPlaceItem(
@@ -167,14 +173,18 @@ async def get_category_places(request: CategoryPlacesRequest):
                         image_url=image_url,
                         score=round(score, 4),
                         description=payload.get("description", "")[:200],
+                        start_date=payload.get("start_date") if cat == "팝업스토어" else None,
+                        end_date=payload.get("end_date") if cat == "팝업스토어" else None,
                     )
                 )
 
-            results[cat] = items
+            # 결과 중 3개를 무작위로 샘플링
+            results[cat] = random.sample(items, min(3, len(items)))
 
         except Exception as e:
             print(f"[WARN] Category '{cat}' search failed: {e}")
             results[cat] = []
 
     return results
+
 

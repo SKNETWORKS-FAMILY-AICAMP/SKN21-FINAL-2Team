@@ -49,7 +49,6 @@ def client(db):
         finally:
             pass # db closed in fixture
 
-    app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[db_manager.get_db] = override_get_db
     with TestClient(app) as c:
         yield c

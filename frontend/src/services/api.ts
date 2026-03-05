@@ -107,6 +107,13 @@ export interface BookmarkedPlaceItem {
     room_title: string;
 }
 
+export interface TodayRecommendationItem {
+    id: string;
+    title: string;
+    description: string;
+    prompt: string;
+}
+
 export type AutoStartChatMode = "trip_context" | "selected_places" | "combined" | "greeting";
 
 export interface AutoStartTripContextPayload {
@@ -319,6 +326,11 @@ export const fetchBookmarkedPlaces = async (): Promise<BookmarkedPlaceItem[]> =>
     return response.json();
 };
 
+export const fetchTodayRecommendations = async (): Promise<TodayRecommendationItem[]> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/recommendations/today`);
+    return response.json();
+};
+
 export const sendChatMessage = async (
     roomId: number,
     message: string,
@@ -505,6 +517,11 @@ export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<
     return response.json();
 };
 
+export const resetCurrentUserProfilePictureToGoogle = async (): Promise<UserProfile> => {
+    const response = await fetchWithAuth(`${API_URL}/users/me/reset-profile-picture`, { method: "POST" });
+    return response.json();
+};
+
 export const submitSurvey = async (answers: Record<string, string>): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/prefers`, { method: 'PATCH', body: answers });
     return response.json();
@@ -542,8 +559,8 @@ export interface ReservationRecord {
     name?: string | null;
     date?: string | null;
     image_path?: string | null;
-    created_at: string;
-    updated_at: string;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export type ReservationPayload = {
@@ -580,6 +597,8 @@ export interface CategoryPlaceItem {
     image_url: string;
     score: number;
     description: string;
+    start_date?: string;
+    end_date?: string;
 }
 
 export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<string, CategoryPlaceItem[]>> => {
@@ -607,4 +626,14 @@ export const updatePlaceBookmark = async (placeId: number, bookmark: boolean): P
         method: 'PATCH'
     });
     return response.json();
+};
+
+export const uploadImageDataUrl = async (dataUrl: string, folder = "misc"): Promise<string> => {
+    if (!dataUrl || !dataUrl.startsWith("data:image/")) return dataUrl;
+    const response = await fetchWithAuth(`${API_URL}/common/upload-image`, {
+        method: "POST",
+        body: { data_url: dataUrl, folder },
+    });
+    const data = await response.json();
+    return data.image_path as string;
 };

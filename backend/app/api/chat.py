@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import List
+from pydantic import BaseModel
 from app.database.connection import db_manager, get_db
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
@@ -55,6 +56,23 @@ async def get_graph_app():
     return _graph_app
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+class TodayRecommendationItem(BaseModel):
+    id: str
+    title: str
+    description: str
+    prompt: str
+
+
+def _clean_history_text(value: str) -> str:
+    clean = re.sub(r"\s+", " ", (value or "")).strip()
+    return clean
+
+
+def _shorten_text(value: str, limit: int = 64) -> str:
+    if len(value) <= limit:
+        return value
+    return value[:limit].rstrip() + "..."
 
 AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅"}
 
@@ -174,6 +192,87 @@ def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_
     )
     return rooms
 
+
+@router.get("/recommendations/today", response_model=List[TodayRecommendationItem])
+def get_today_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(db_manager.get_db),
+):
+    rooms_with_history = (
+        db.query(ChatRoom)
+        .filter(ChatRoom.user_id == current_user.id)
+        .filter(ChatRoom.history.isnot(None))
+        .filter(func.length(func.trim(ChatRoom.history)) > 0)
+        .order_by(ChatRoom.created_at.desc(), ChatRoom.id.desc())
+        .limit(5)
+        .all()
+    )
+
+    if not rooms_with_history:
+        return []
+
+    latest_room = rooms_with_history[0]
+    latest_history = _clean_history_text(latest_room.history or "")
+    latest_title = latest_room.title.strip() if latest_room and latest_room.title else "최근 여행 대화"
+    latest_snippet = _shorten_text(latest_history, 56)
+
+    recent_histories: List[str] = []
+    for room in rooms_with_history:
+        text = _clean_history_text(room.history or "")
+        if text:
+            recent_histories.append(text)
+
+    uniq_histories: List[str] = []
+    for text in recent_histories:
+        if text not in uniq_histories:
+            uniq_histories.append(text)
+
+    first_theme = _shorten_text(uniq_histories[0], 52) if uniq_histories else latest_snippet
+    second_theme = _shorten_text(uniq_histories[1], 52) if len(uniq_histories) > 1 else first_theme
+
+    continue_title = f"Continue: {latest_title}"
+    continue_desc = "최근 대화 맥락을 이어서 바로 다음 계획으로 확장해보세요."
+    continue_prompt = (
+        f"다음은 최근 대화 요약입니다: {latest_history}\n"
+        "기존 맥락을 이어 하루 단위로 실행 가능한 여행 계획을 제안해줘."
+    )
+
+    new_angle_title = "Try a new angle"
+    new_angle_desc = f"최근 대화 주제와 다른 관점으로 새 플랜을 제안합니다: {second_theme}"
+    new_angle_prompt = (
+        "다음 최근 대화 요약들을 참고해 기존과 다른 각도의 여행 아이디어를 1개 제안해줘.\n"
+        + "\n".join([f"- {h}" for h in uniq_histories[:3]])
+        + "\n새 아이디어는 이동 동선과 핵심 포인트를 포함해 간결하게 작성해줘."
+    )
+
+    quick_plan_title = "Fast plan for today"
+    quick_plan_desc = f"최근 요약 기반으로 바로 실행 가능한 짧은 일정: {first_theme}"
+    quick_plan_prompt = (
+        f"최근 대화 요약: {latest_history}\n"
+        "오늘 바로 실행할 수 있는 3스팟 반나절 일정(순서/이동/예상시간 포함)을 간단히 제시해줘."
+    )
+
+    return [
+        TodayRecommendationItem(
+            id="continue",
+            title=continue_title,
+            description=continue_desc,
+            prompt=continue_prompt,
+        ),
+        TodayRecommendationItem(
+            id="new-angle",
+            title=new_angle_title,
+            description=new_angle_desc,
+            prompt=new_angle_prompt,
+        ),
+        TodayRecommendationItem(
+            id="fast-plan",
+            title=quick_plan_title,
+            description=quick_plan_desc,
+            prompt=quick_plan_prompt,
+        ),
+    ]
+
 # 채팅방 생성
 @router.post("/rooms", response_model=ChatRoomResponse)
 def create_room(room_in: ChatRoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
@@ -280,7 +379,7 @@ def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Ses
         {
             "id": room.id,
             "user_id": room.user_id,
-            "title": room.title,
+            "title": room.title or "새 채팅",
             "created_at": room.created_at,
             "bookmark_yn": room.bookmark_yn,
             "latest_message_preview": latest_message_preview,
@@ -315,7 +414,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "bookmark_yn": place.bookmark_yn,
             "messages_id": place.messages_id,
             "room_id": room_id,
-            "room_title": room_title,
+            "room_title": room_title or "새 채팅",
         }
         for place, room_id, room_title in rows
     ]

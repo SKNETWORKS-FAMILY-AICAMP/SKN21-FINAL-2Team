@@ -90,11 +90,11 @@ export default function SignUpPage() {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="max-w-sm"
           >
-            <h2 className="text-3xl font-serif italic font-light leading-snug mb-4 text-white/90">
+            <h2 className="text-3xl font-semibold leading-snug mb-4 text-white/90">
               &quot;To travel is to live.&quot;
             </h2>
             <div className="h-[1px] w-12 bg-white/30 my-6"></div>
-            <p className="text-white/50 text-sm font-light leading-relaxed">
+            <p className="text-white/50 text-sm font-normal leading-relaxed">
               Start your journey with Triver today. Curated experiences awaiting.
             </p>
           </motion.div>
@@ -124,7 +124,7 @@ export default function SignUpPage() {
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
               Create your account
             </h1>
-            <p className="text-[13px] text-gray-500 font-light">
+            <p className="text-[13px] text-gray-500 font-normal">
               Join Triver for personalized travel planning
             </p>
           </div>

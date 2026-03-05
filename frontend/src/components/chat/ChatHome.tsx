@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, MicOff, Square, User, Sparkles, Loader2, Bookmark } from "lucide-react";
+import { Send, Mic, MicOff, Square, User, Sparkles, Loader2, Bookmark, Paperclip } from "lucide-react";
 import { motion } from "framer-motion";
 import { createRoom, fetchRoom, fetchRooms, sendAutoStartChatRoomStream, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, fetchCurrentUser, verifyAndRefreshToken, updatePlaceBookmark, updateRoomBookmark } from "@/services/api";
 import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
@@ -757,33 +757,29 @@ export function ChatHome() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-white relative">
-            <header className="flex-none p-6 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm z-10 sticky top-0">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        {currentRoom?.title || "New Trip Planning"}
-                        <button
-                            type="button"
-                            onClick={handleToggleRoomBookmark}
-                            className={`inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
-                                currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
-                            }`}
-                            title="채팅방 북마크 토글"
-                            disabled={!currentRoomId}
-                        >
-                            <Bookmark size={14} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
-                        </button>
-                        <Sparkles size={14} className="text-gray-400" />
-                    </h2>
-                    {roomTripContext && (
-                        <p className="mt-1 text-xs text-gray-500 font-medium">
-                            {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
-                        </p>
-                    )}
+        <div className="flex flex-col h-full min-h-0 bg-white relative rounded-2xl overflow-hidden">
+            <header className="h-14 flex items-center justify-between px-6 bg-white z-10 sticky top-0">
+                <div className="flex items-center gap-2 min-w-0">
+                    <Sparkles size={16} className="text-slate-900 flex-none" />
+                    <span className="font-semibold text-[17px] tracking-tight text-slate-900 truncate">{currentRoom?.title || "Travel Assistant"}</span>
+                    <button
+                        type="button"
+                        onClick={handleToggleRoomBookmark}
+                        className={`inline-flex items-center justify-center rounded-full p-1 transition-colors ${
+                            currentRoom?.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"
+                        }`}
+                        title="채팅방 북마크 토글"
+                        disabled={!currentRoomId}
+                    >
+                        <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                    </button>
                 </div>
-                <div className="flex -space-x-2">
-                    <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-serif italic border-2 border-white rounded-full shadow-sm">T</div>
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs sm:text-sm ring-2 ring-white shadow-sm grayscale-[20%]">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Online
+                    </span>
+                    <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-500 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
                         {displayImage ? (
                             <img
                                 src={displayImage}
@@ -797,7 +793,16 @@ export function ChatHome() {
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 scroll-smooth">
+            {roomTripContext && (
+                <div className="flex-none px-6 pb-2 bg-white">
+                    <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
+                        {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
+                    </div>
+                </div>
+            )}
+
+            <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar bg-gray-50/30">
+                <div className="w-full min-h-full flex flex-col px-4 pt-2 space-y-6">
                 {messages.length === 0 && !isTyping && (
                     <div className="h-full flex flex-col items-center justify-center text-gray-400">
                         <Sparkles className="w-8 h-8 mb-4 opacity-50" />
@@ -815,29 +820,39 @@ export function ChatHome() {
                         return null;
                     }
 
+                    if (msg.role === "human") {
+                        return (
+                            <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex justify-end w-full px-4"
+                            >
+                                <div className="bg-black text-white px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[66%] shadow-sm">
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                                    <div className="text-[9px] mt-2 font-medium text-gray-300/70 text-right">
+                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    }
+
                     return (
-                        <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`flex items-end gap-3 ${msg.role === "human" ? "flex-row-reverse" : "flex-row"}`}
-                        >
-                            <div className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full shadow-sm text-white text-xs ${msg.role === "human" ? "bg-gray-900" : "bg-black"}`}>
-                                {msg.role === "human" ? (
-                                    userProfile?.profile_picture ? (
-                                        <img src={userProfile.profile_picture} className="w-full h-full object-cover rounded-full grayscale" alt="User" />
-                                    ) : (
-                                        <User size={14} />
-                                    )
-                                ) : (
-                                    <span className="font-serif italic text-sm">T</span>
-                                )}
-                            </div>
-                            <div className={`max-w-[75%] md:max-w-[60%] p-4 text-[13px] leading-relaxed shadow-sm ${msg.role === "human" ? "bg-gray-900 text-white rounded-[24px] rounded-br-sm" : "bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-sm"}`}>
-                                {(() => {
-                                    if (msg.role === "ai") {
-                                        return (
-                                            <div className="prose prose-sm max-w-none prose-slate prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:text-slate-900">
+                        <div key={msg.id} className="flex flex-col gap-3 mb-2 w-full px-4">
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-start gap-3 w-full"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
+                                    <Sparkles size={14} className="text-white" />
+                                </div>
+
+                                <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[64%]">
+                                    {!!msg.message && (
+                                        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm inline-block w-full mb-3">
+                                            <div className="prose prose-sm max-w-none prose-slate prose-p:my-3 prose-p:leading-7 prose-pre:bg-slate-50 prose-pre:text-slate-900">
                                                 <ReactMarkdown
                                                     remarkPlugins={[remarkGfm]}
                                                     components={{
@@ -852,42 +867,53 @@ export function ChatHome() {
                                                 >
                                                     {msg.message}
                                                 </ReactMarkdown>
-
-                                                {msg.places && msg.places.length > 0 && (
-                                                    <div className="not-prose mt-4 grid grid-cols-1 gap-3">
-                                                        {msg.places.map((place) => (
-                                                            <div key={place.id} className="flex gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100 relative group/card">
-                                                                <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
-                                                                    <img
-                                                                        src={place.image_path || DEFAULT_PLACEHOLDER}
-                                                                        alt={place.name || "Place image"}
-                                                                        className="absolute inset-0 m-0 w-full h-full object-cover object-center"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col justify-center min-w-0 flex-1">
-                                                                    <h4 className="text-sm font-bold text-gray-900 truncate">{place.name}</h4>
-                                                                    <p className="text-[11px] text-gray-500 truncate">{place.adress}</p>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn)}
-                                                                    className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 hover:text-yellow-500 hover:bg-gray-100"}`}
-                                                                >
-                                                                    <Bookmark size={14} fill={place.bookmark_yn ? "currentColor" : "none"} />
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
                                             </div>
-                                        );
-                                    }
-                                    return <div className="whitespace-pre-wrap">{msg.message}</div>;
-                                })()}
-                                <div className={`text-[9px] mt-2 font-medium opacity-50 ${msg.role === "human" ? "text-gray-400 text-right" : "text-gray-400"}`}>
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        </div>
+                                    )}
+
+                                    {msg.places && msg.places.length > 0 && (
+                                        <div className="mt-1 w-full">
+                                            <h5 className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.08em] mb-2 ml-1">
+                                                Recommended Places
+                                            </h5>
+                                            <div className="flex overflow-x-auto pb-3 gap-3 snap-x custom-scrollbar -mx-1 px-1">
+                                                {msg.places.map((place) => (
+                                                    <div
+                                                        key={place.id}
+                                                        className="snap-start flex-shrink-0 relative w-[176px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm group"
+                                                    >
+                                                        <div className="relative h-[110px] bg-gray-100">
+                                                            <img
+                                                                src={place.image_path || DEFAULT_PLACEHOLDER}
+                                                                alt={place.name || "Place image"}
+                                                                className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                                                            />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+                                                            <button
+                                                                onClick={() => handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn)}
+                                                                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 bg-white/90 hover:text-yellow-500 hover:bg-gray-100"}`}
+                                                            >
+                                                                <Bookmark size={13} fill={place.bookmark_yn ? "currentColor" : "none"} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="p-3">
+                                                            <h4 className="font-semibold text-gray-900 leading-tight line-clamp-1 text-[12px]">
+                                                                {place.name}
+                                                            </h4>
+                                                            <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{place.adress}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="text-[9px] mt-2 font-medium opacity-50 text-gray-400">
+                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        </div>
                     );
                 })}
 
@@ -907,21 +933,34 @@ export function ChatHome() {
                 )}
 
                 <div ref={messagesEndRef} />
+                </div>
             </div>
 
-            <div className="flex-none p-6 md:p-8 pt-2 bg-white/90 backdrop-blur-md">
-                <div className="relative max-w-4xl mx-auto">
-                    <textarea
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                        placeholder="Ask Triver regarding your next destination..."
-                        className="w-full bg-gray-50 border-0 text-gray-900 placeholder-gray-400 text-sm rounded-[28px] px-6 py-4 pr-32 focus:outline-none focus:ring-2 focus:ring-black/5 focus:bg-white resize-none h-[60px] shadow-sm transition-all duration-300"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-20">
+                <div className="w-full mx-auto relative px-2">
+                    <div className="flex items-end gap-2 bg-white border border-gray-200 rounded-[28px] p-2 pr-2 shadow-sm focus-within:ring-2 focus-within:ring-black/5 focus-within:border-gray-300 transition-all">
+                        <button
+                            type="button"
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/50 transition-colors"
+                            title="첨부 파일 (준비 중)"
+                            disabled
+                        >
+                            <Paperclip size={20} />
+                        </button>
+
+                        <textarea
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            placeholder="Ask Triver regarding your next destination..."
+                            className="flex-1 bg-transparent border-none outline-none resize-none py-3 max-h-[120px] text-sm text-gray-800 placeholder:text-gray-400 custom-scrollbar"
+                            rows={1}
+                            style={{ minHeight: "44px" }}
+                        />
+
                         <button
                             onClick={handleToggleListening}
-                            className={`p-2 rounded-full transition-all duration-300 relative ${micButtonClass}`}
+                            className={`p-2.5 rounded-full transition-all duration-300 relative ${micButtonClass}`}
                             title={micButtonTitle}
                             disabled={sttPermission === "unsupported"}
                         >
@@ -936,18 +975,22 @@ export function ChatHome() {
                                 <Mic size={18} strokeWidth={1.5} />
                             )}
                         </button>
-                        <button
+
+                        <motion.button
+                            initial={false}
+                            animate={{ scale: inputText.trim() && !isTyping ? 1 : 0.98, opacity: 1 }}
                             onClick={handleSendMessage}
                             disabled={!inputText.trim() || isTyping}
-                            className={`p-2 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white hover:scale-105" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                            className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white hover:bg-gray-800" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
                         >
-                            <Send size={16} strokeWidth={2} />
-                        </button>
+                            <Send size={18} />
+                        </motion.button>
                     </div>
+
+                    <p className="text-[10px] text-center text-gray-300 mt-2">
+                        Triver AI can make mistakes. Please check important info.
+                    </p>
                 </div>
-                <p className="text-center text-[10px] text-gray-300 mt-3 font-medium">
-                    Triver AI can make mistakes. Consider checking important information.
-                </p>
             </div>
 
             {/* 주의: TripContextModal은 fixed 포지션으로 화면 전체를 덮습니다 */}

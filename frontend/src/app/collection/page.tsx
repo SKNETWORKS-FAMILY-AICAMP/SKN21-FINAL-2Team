@@ -38,10 +38,10 @@ export default function CollectionPage() {
             <main className="flex-1 h-full min-w-0 bg-white rounded-lg flex flex-col overflow-hidden">
                 <header className="flex-none p-6 pb-4 border-b border-gray-100 flex items-end justify-between">
                     <div>
-                        <h1 className="text-2xl font-serif italic font-medium text-gray-900 mb-1 flex items-center gap-2">
+                        <h1 className="page-title text-gray-900 mb-1 flex items-center gap-2">
                             My gallery <Grid size={16} className="text-gray-400" />
                         </h1>
-                        <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Inspirations & Moments</p>
+                        <p className="page-subtitle">Inspirations & Moments</p>
                     </div>
                 </header>
 
@@ -111,7 +111,7 @@ export default function CollectionPage() {
                                                     <Camera size={24} className="text-zinc-500 group-hover:text-white transition-colors" />
                                                 </div>
                                                 <h3 className="text-white font-medium text-sm mb-2 uppercase tracking-wide">Upload Photo</h3>
-                                                <p className="text-zinc-600 text-xs max-w-xs mx-auto mb-8 font-mono">Drag and drop your photo here to compare.</p>
+                                                <p className="text-zinc-600 text-xs max-w-xs mx-auto mb-8 font-medium">Drag and drop your photo here to compare.</p>
                                                 <button onClick={handleUploadMock} className="bg-white text-black px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-colors flex items-center gap-2 mx-auto">
                                                     <Upload size={14} /> Select File
                                                 </button>

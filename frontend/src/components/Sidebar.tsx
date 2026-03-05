@@ -105,6 +105,15 @@ const refreshSidebarRooms = async () => {
     sidebarCache.loaded = true;
 };
 
+const refreshSidebarUserProfile = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const userData = await fetchCurrentUser();
+    sidebarCache.userProfile = toSidebarUserProfile(userData);
+    sidebarCache.loaded = true;
+};
+
 const resetSidebarCache = () => {
     sidebarCache.userProfile = null;
     sidebarCache.rooms = [];
@@ -123,8 +132,9 @@ function SidebarContent() {
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
-    const canCollapse = pathname === "/explore";
-    const actuallyCollapsed = isCollapsed && canCollapse;
+    const canCollapse = true;
+    const actuallyCollapsed = isCollapsed;
+
     const activeRoomIdParam = searchParams.get("roomId");
     const parsedActiveRoomId = activeRoomIdParam ? Number(activeRoomIdParam) : NaN;
     const activeRoomId = Number.isFinite(parsedActiveRoomId) ? parsedActiveRoomId : null;
@@ -182,10 +192,24 @@ function SidebarContent() {
         };
         window.addEventListener("triver:rooms-updated", onRoomsUpdated);
 
+        const onProfileUpdated = async () => {
+            try {
+                await refreshSidebarUserProfile();
+                if (cancelled) return;
+                const snapshot = getSidebarSnapshot();
+                setUserProfile(snapshot.userProfile);
+            } catch (error: unknown) {
+                console.error("Failed to refresh sidebar profile", error);
+                handleAuthFailure(error);
+            }
+        };
+        window.addEventListener("triver:profile-updated", onProfileUpdated);
+
         return () => {
             cancelled = true;
             window.removeEventListener("triver:language", onLang);
             window.removeEventListener("triver:rooms-updated", onRoomsUpdated);
+            window.removeEventListener("triver:profile-updated", onProfileUpdated);
         };
     }, []);
 

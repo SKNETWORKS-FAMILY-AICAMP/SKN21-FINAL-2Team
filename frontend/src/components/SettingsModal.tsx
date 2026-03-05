@@ -125,7 +125,7 @@ export function SettingsModal({
                         </h4>
                         <div className="text-xs text-gray-500 flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
                             <span>Email</span>
-                            <span className="font-mono">leo@example.com</span>
+                            <span className="font-medium">leo@example.com</span>
                         </div>
                     </div>
                 </div>

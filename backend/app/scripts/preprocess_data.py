@@ -14,7 +14,7 @@ from app.utils.geocoder import GeoCoder
 NONE_VALUES = [None, "", [], {}, 0, 0.0]
 
 # download image from URL or Base64
-def download_image(url: str, timeout: int = 10) -> Image.Image | None:
+def download_image(url: str, timeout: int = 600) -> Image.Image | None:
     try:
         # 1. Base64 Handling
         if url.startswith("data:image"):

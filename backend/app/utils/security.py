@@ -4,7 +4,7 @@ from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from app.database.connection import get_db
+from app.database.connection import db_manager
 from app.models.user import User
 from app.utils.error_handler import AppException, ErrorCode
 import os
@@ -47,7 +47,7 @@ def create_refresh_token(user_id: str):
     return encoded_jwt
 
 # Dependency to get current user (Access Token Validation)
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(db_manager.get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
