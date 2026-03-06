@@ -11,7 +11,6 @@ from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
 from app.api import auth, users, chat, prefer, common, explore, reservations
-from app.api import hot_place as hot_place_api
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation
 from app.retrieval.place import PlaceRetriever
@@ -84,7 +83,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    attractions, restaurants, reservations, hot_place as hot_place_api
+    reservations
 )
 
 # Register Routers
@@ -94,10 +93,7 @@ app.include_router(chat.router)
 app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
-app.include_router(attractions.router)
-app.include_router(restaurants.router)
 app.include_router(reservations.router)
-app.include_router(hot_place_api.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)
@@ -115,4 +111,3 @@ async def log_requests(request: Request, call_next):
 def read_root():
     return {"message": "Hello World"}
 
-# 실행 명령어: uvicorn app.main:app --reload

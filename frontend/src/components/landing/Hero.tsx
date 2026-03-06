@@ -17,7 +17,7 @@ export function Hero() {
 
         // 토큰 자체가 없으면 바로 로그인 페이지로
         if (!token) {
-            router.push("/login");
+            router.push("/signup");
             return;
         }
 
@@ -31,7 +31,7 @@ export function Hero() {
             // 토큰 만료 또는 유효하지 않은 경우 → 정리 후 로그인
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
-            router.push("/login");
+            router.push("/signup");
         } finally {
             setIsNavigating(false);
         }

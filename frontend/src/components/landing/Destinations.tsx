@@ -2,11 +2,11 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Search, CalendarPlus } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
-import { createRoom } from "@/services/api";
+import { createRoom, fetchRandomExplorePlaces } from "@/services/api";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
@@ -14,78 +14,64 @@ const categories = [
     { id: "foods", label: "Foods" },
 ];
 
+// ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
+export interface Destination {
+    id: number | string;
+    name: string;
+    image: string;
+    address: string;
+}
+
 // ✅ tourist-spot, foods 탭의 임시 더미 데이터 (통합 필드명 사용)
-// 주의: 나중에 각 탭에 API가 연결되면 이 데이터는 삭제합니다.
 const staticDestinations: Record<string, Destination[]> = {
     "tourist-spot": [
-        { id: 101, name: "Gyeongbokgung Palace", image: "https://images.unsplash.com/photo-1604640213-0251ead81922?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Sajik-ro, Jongno-gu" },
-        { id: 102, name: "N Seoul Tower", image: "https://images.unsplash.com/photo-1614935151651-0bea6508db6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Namsan-gongwon-gil, Yongsan-gu" },
-        { id: 103, name: "Bukchon Hanok Village", image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Gahoe-dong, Jongno-gu" },
+        { id: "101", name: "Gyeongbokgung Palace", image: "https://images.unsplash.com/photo-1604640213-0251ead81922?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Sajik-ro, Jongno-gu" },
+        { id: "102", name: "N Seoul Tower", image: "https://images.unsplash.com/photo-1614935151651-0bea6508db6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Namsan-gongwon-gil, Yongsan-gu" },
+        { id: "103", name: "Bukchon Hanok Village", image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Gahoe-dong, Jongno-gu" },
     ],
     foods: [
-        { id: 201, name: "Gwangjang Market", image: "https://images.unsplash.com/photo-1583394293214-cce78e594a77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jongno-gu, Seoul" },
-        { id: 202, name: "Myeongdong Street Food", image: "https://images.unsplash.com/photo-1548943487-a2e4e43b4853?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Myeongdong, Jung-gu" },
-        { id: 203, name: "Tongin Market", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jahamun-ro, Jongno-gu" },
+        { id: "201", name: "Gwangjang Market", image: "https://images.unsplash.com/photo-1583394293214-cce78e594a77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jongno-gu, Seoul" },
+        { id: "202", name: "Myeongdong Street Food", image: "https://images.unsplash.com/photo-1548943487-a2e4e43b4853?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Myeongdong, Jung-gu" },
+        { id: "203", name: "Tongin Market", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jahamun-ro, Jongno-gu" },
     ],
 };
-
-// ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
-// fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
-export interface Destination {
-    id: number | string;   // hot_place: id(number) | attractions·restaurants: contentid(string)
-    name: string;          // 세 API 모두 동일
-    image: string;         // hot_place: /api/static/ + image_path | 나머지: image URL 그대로
-    address: string;       // hot_place: adress(오타) | 나머지: address 로 통일
-}
 
 export function Destinations() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
-    // // 주의: 실제 로그인 상태는 Context API나 전역 상태 관리(Zustand 등) 혹은 쿠키에서 가져와야 하지만, 
-    // 임시로 localStorage를 확인하는 방식을 사용합니다. (구글 로그인 구현 방식에 맞게 나중에 수정 필요)
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    // 트립 컨텍스트 모달 상태
     const [showTripModal, setShowTripModal] = useState(false);
-    const [pendingPlace, setPendingPlace] = useState<Destination | null>(null); // 모달 확인 후 이동할 장소
+    const [pendingPlace, setPendingPlace] = useState<Destination | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
+    const [allRandomData, setAllRandomData] = useState<Record<string, Destination[]>>({});
 
     useEffect(() => {
-        // 컴포넌트 마운트 시 로그인(토큰) 여부를 확인합니다.
-        const token = localStorage.getItem("access_token"); // 또는 구글 OAuth 관련 저장값
+        const token = localStorage.getItem("access_token");
         setIsLoggedIn(!!token);
     }, []);
 
-    // Plan Trip 버튼 클릭 핸들러
     const handlePlanTripClick = (place: Destination, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-
         if (!isLoggedIn) {
-            // 주의: 로그인 후 챗봇 연결을 위해 선택한 장소를 localStorage에 임시 저장
-            // 로그인 완료 후 login/page.tsx에서 이 값을 읽어 TripContextModal을 띄웁니다
             localStorage.setItem("pendingDestination", JSON.stringify(place));
-            router.push("/login");
+            router.push("/signup");
         } else {
-            // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
             setPendingPlace(place);
             setShowTripModal(true);
         }
     };
 
-    // 모달 확인 후 실행: 방 생성 + 컨텍스트 저장 + 이동
     const handleModalConfirm = async (context: TripContext) => {
-        // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            // 주의: autostart는 triver:selected-places:${roomId} 키를 읽습니다 (bookmark와 동일한 방식)
-            // selectedForChat(범용 키)이 아닌 방별 키로 저장해야 챗봇에서 장소 정보가 출력됩니다
             if (pendingPlace) {
                 localStorage.setItem(
                     `triver:selected-places:${newRoom.id}`,
                     JSON.stringify([{
                         name: pendingPlace.name,
-                        adress: pendingPlace.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: pendingPlace.address || (pendingPlace as any).adress, // API 응답에 따라 필드명이 다를 수 있음
                         place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
                     }])
                 );
@@ -101,13 +87,10 @@ export function Destinations() {
             console.error("Failed to create room from Destinations", e);
             setIsTripLoading(false);
             setShowTripModal(false);
-            // 에러 시 방 ID 없이 이동 → 장소 데이터는 포기하고 기본 챗봇 화면으로
-            // (방 생성 자체가 실패했으므로 roomId 기반 키 저장 불가)
             router.push("/chatbot");
         }
     };
 
-    // 배열을 랜덤하게 섞어주는 함수 (Fisher-Yates Shuffle)
     const shuffleArray = <T,>(array: T[]): T[] => {
         const newArr = [...array];
         for (let i = newArr.length - 1; i > 0; i--) {
@@ -116,95 +99,70 @@ export function Destinations() {
         }
         return newArr;
     };
+    const [isLoading, setIsLoading] = useState(false);
 
-    // ✅ 탭이 바뀔 때마다 실행: 각 탭의 API 호출 후 통합 Destination 타입으로 매핑
+    // ✅ 탭이 바뀔 때마다 서버에서 새로운 랜덤 데이터를 가져옵니다.
     useEffect(() => {
-        if (activeTab === "hot-places") {
-            // 🌐 /api/hot-places → { id, name, adress, image_path } 반환
-            const fetch_ = async () => {
-                try {
-                    const res = await fetch("/api/hot-places?limit=3");
-                    if (!res.ok) throw new Error("Hot Places fetch 실패");
-                    type HotPlaceApiItem = {
-                        id: number;
-                        name: string;
-                        adress?: string | null;
-                        image_path?: string | null;
-                    };
-                    const raw: HotPlaceApiItem[] = await res.json();
-                    // 주의: hot_place API는 adress(오타), image_path(상대경로)를 사용하므로 변환
-                    const mapped: Destination[] = raw.map((p) => ({
-                        id: p.id,
-                        name: p.name,
-                        address: p.adress || "",
-                        image: p.image_path ? `/api/static/${p.image_path}` : "",
-                    }));
-                    setDisplayItems(mapped);
-                } catch (error) {
-                    console.error("[hot-places] API 호출 에러:", error);
-                    setDisplayItems([]);
-                }
-            };
-            fetch_();
+        const fetchCurrentTabRandom = async () => {
+            setIsLoading(true);
+            try {
+                const raw = await fetchRandomExplorePlaces();
+                const mappedData: Record<string, Destination[]> = {};
 
-        } else if (activeTab === "tourist-spot") {
-            // 🌐 /api/attractions → { contentid, name, address, image } 반환
-            const fetch_ = async () => {
-                try {
-                    const res = await fetch("/api/attractions?limit=3");
-                    if (!res.ok) throw new Error("Attractions fetch 실패");
-                    type CategoryApiItem = {
-                        contentid: string;
-                        name: string;
-                        address?: string | null;
-                        image?: string | null;
-                    };
-                    const raw: CategoryApiItem[] = await res.json();
-                    // 주의: attractions API는 contentid(string), address, image(외부URL) 사용
-                    const mapped: Destination[] = raw.map((p) => ({
-                        id: p.contentid,
-                        name: p.name,
-                        address: p.address || "",
-                        image: p.image || "",
-                    }));
-                    setDisplayItems(mapped);
-                } catch (error) {
-                    console.error("[tourist-spot] API 호출 에러:", error);
-                    // 주의: API 에러 시 더미 데이터로 폴백
+                // 1. 핫플레이스 매핑
+                mappedData["hot-places"] = (raw["hot_places"] || []).map(p => ({
+                    id: p.contentid,
+                    name: p.title,
+                    address: p.address,
+                    // 주의: image_url이 있을 때만 경로를 생성, 없으면 빈 문자열(placeholder용)
+                    image: p.image_url && p.image_url.trim() !== ""
+                        ? (p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`)
+                        : ""
+                }));
+
+                // 2. 관광지 매핑
+                mappedData["tourist-spot"] = (raw["tourist_spots"] || []).map(p => ({
+                    id: p.contentid,
+                    name: p.title,
+                    address: p.address,
+                    image: p.image_url || ""
+                }));
+
+                // 3. 음식점 매핑
+                mappedData["foods"] = (raw["restaurants"] || []).map(p => ({
+                    id: p.contentid,
+                    name: p.title,
+                    address: p.address,
+                    image: p.image_url || ""
+                }));
+
+                // 현재 탭에 맞는 데이터로 즉시 업데이트
+                if (mappedData[activeTab] && mappedData[activeTab].length > 0) {
+                    setDisplayItems(mappedData[activeTab]);
+                } else {
+                    // 데이터가 없는 경우 더미 데이터 폴백
+                    if (activeTab === "tourist-spot") {
+                        setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));
+                    } else if (activeTab === "foods") {
+                        setDisplayItems(shuffleArray(staticDestinations["foods"]));
+                    } else {
+                        setDisplayItems([]);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch random places on tab change:", error);
+                // 에러 발생 시 더미 데이터 폴백
+                if (activeTab === "tourist-spot") {
                     setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));
-                }
-            };
-            fetch_();
-
-        } else if (activeTab === "foods") {
-            // 🌐 /api/restaurants → { contentid, name, address, image } 반환
-            const fetch_ = async () => {
-                try {
-                    const res = await fetch("/api/restaurants?limit=3");
-                    if (!res.ok) throw new Error("Restaurants fetch 실패");
-                    type CategoryApiItem = {
-                        contentid: string;
-                        name: string;
-                        address?: string | null;
-                        image?: string | null;
-                    };
-                    const raw: CategoryApiItem[] = await res.json();
-                    // restaurants API도 attractions과 동일한 필드 구조
-                    const mapped: Destination[] = raw.map((p) => ({
-                        id: p.contentid,
-                        name: p.name,
-                        address: p.address || "",
-                        image: p.image || "",
-                    }));
-                    setDisplayItems(mapped);
-                } catch (error) {
-                    console.error("[foods] API 호출 에러:", error);
-                    // 주의: API 에러 시 더미 데이터로 폴백
+                } else if (activeTab === "foods") {
                     setDisplayItems(shuffleArray(staticDestinations["foods"]));
                 }
-            };
-            fetch_();
-        }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCurrentTabRandom();
     }, [activeTab]);
 
     return (
@@ -229,10 +187,18 @@ export function Destinations() {
                         </div>
                     </div>
 
-                    <div className="min-h-[400px]">
+                    <div className="min-h-[400px] relative">
+                        {isLoading && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Refreshing...</span>
+                                </div>
+                            </div>
+                        )}
                         <AnimatePresence mode="wait">
                             <motion.div
-                                key={activeTab}
+                                key={activeTab + (isLoading ? "-loading" : "-ready")}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
@@ -240,60 +206,41 @@ export function Destinations() {
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                        <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
-                                            {/* 주의: image가 빈 문자열("")이면 브라우저 에러 발생 → 있을 때만 img 렌더링 */}
-                                            {place.image ? (
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
+                                        <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
+                                            {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
+                                            {place.image && place.image.trim() !== "" ? (
                                                 <img
                                                     src={place.image}
                                                     alt={place.name}
-                                                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                                                    className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
                                                 />
                                             ) : (
-                                                // 이미지 없을 때: 탭별 픽토그램 placeholder
-                                                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+                                                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
                                                     {activeTab === "tourist-spot" ? (
-                                                        // 🗼 남산타워 픽토그램
                                                         <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            {/* 안테나 */}
                                                             <rect x="38" y="0" width="4" height="18" rx="2" fill="#CBD5E1" />
-                                                            {/* 전망대 디스크 */}
                                                             <ellipse cx="40" cy="26" rx="18" ry="7" fill="#94A3B8" />
                                                             <rect x="36" y="18" width="8" height="10" fill="#94A3B8" />
-                                                            {/* 타워 몸통 (위) */}
                                                             <polygon points="36,28 44,28 48,60 32,60" fill="#CBD5E1" />
-                                                            {/* 타워 받침 */}
                                                             <rect x="28" y="60" width="24" height="8" rx="2" fill="#94A3B8" />
-                                                            {/* 다리 왼쪽 */}
                                                             <polygon points="28,68 34,68 30,92 24,92" fill="#CBD5E1" />
-                                                            {/* 다리 오른쪽 */}
                                                             <polygon points="46,68 52,68 56,92 50,92" fill="#CBD5E1" />
-                                                            {/* 받침대 */}
                                                             <rect x="20" y="92" width="40" height="5" rx="2.5" fill="#94A3B8" />
                                                         </svg>
                                                     ) : activeTab === "foods" ? (
-                                                        // 🍲 비빔밥 픽토그램
                                                         <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            {/* 그릇 테두리 */}
                                                             <ellipse cx="50" cy="38" rx="42" ry="12" fill="#94A3B8" />
-                                                            {/* 그릇 몸통 */}
                                                             <path d="M8 38 Q8 78 50 78 Q92 78 92 38 Z" fill="#CBD5E1" />
-                                                            {/* 밥 (흰색) */}
                                                             <ellipse cx="50" cy="36" rx="36" ry="9" fill="#F8FAFC" />
-                                                            {/* 나물 - 초록 */}
                                                             <ellipse cx="34" cy="32" rx="10" ry="5" fill="#86EFAC" transform="rotate(-20 34 32)" />
-                                                            {/* 당근 - 주황 */}
                                                             <ellipse cx="62" cy="31" rx="10" ry="5" fill="#FCA5A5" transform="rotate(15 62 31)" />
-                                                            {/* 고추장 - 빨강 */}
                                                             <ellipse cx="50" cy="30" rx="8" ry="5" fill="#F87171" />
-                                                            {/* 계란 노른자 */}
                                                             <circle cx="50" cy="29" r="5" fill="#FDE68A" />
-                                                            {/* 그릇 하단 굽 */}
                                                             <ellipse cx="50" cy="78" rx="20" ry="5" fill="#94A3B8" />
                                                             <rect x="30" y="78" width="40" height="6" rx="3" fill="#94A3B8" />
                                                         </svg>
                                                     ) : (
-                                                        // 기본 (혹시 다른 탭 추가 시)
                                                         <MapPin size={40} className="text-gray-300" />
                                                     )}
                                                     <span className="text-xs font-medium text-gray-400">No Image</span>
@@ -325,7 +272,6 @@ export function Destinations() {
                 </div>
             </section>
 
-            {/* TripContextModal: Plan Trip 시 여행 일정 + 인원 수집, fixed 포지션으로 전체 화면 덮음 */}
             <TripContextModal
                 isOpen={showTripModal}
                 onConfirm={handleModalConfirm}

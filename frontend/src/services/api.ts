@@ -546,7 +546,7 @@ export interface HotPlace {
 }
 
 export const fetchHotPlaces = async (limit = 3): Promise<HotPlace[]> => {
-    const response = await fetchWithAuth(`${API_URL}/hot-places?limit=${limit}`);
+    const response = await fetchWithAuth(`${API_URL}/explore/hot-places?limit=${limit}`);
     return response.json();
 };
 
@@ -614,6 +614,11 @@ export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<str
         method: 'POST',
         body: { user_prefs: userPrefs }
     });
+    return response.json();
+};
+
+export const fetchRandomExplorePlaces = async (): Promise<Record<string, CategoryPlaceItem[]>> => {
+    const response = await fetchWithAuth(`${API_URL}/explore/random-places`);
     return response.json();
 };
 
