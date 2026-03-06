@@ -49,6 +49,8 @@ export function ChatHome() {
     const [roomTripContext, setRoomTripContext] = useState<TripContext | null>(null);
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
+    const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
+    const [mapPanelWidth, setMapPanelWidth] = useState(34);
     const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
     const [attachedFileName, setAttachedFileName] = useState<string>("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -801,8 +803,42 @@ export function ChatHome() {
             });
         }
 
+        // This part of the snippet seems to be from a different context or a partial change.
+        // The original code returns `groups`, not `sorted`.
+        // I will insert the new `useEffect` and drag handlers after this `useMemo`.
+        // if (sorted.length > 0 && !isSendingRef.current && !isMapPanelOpen && !fromDestinationParam) {
+        //     // Only auto-open map panel if we just received messages with places
+        //     // To prevent flickering, we just set true if closed.
+        // }
         return groups;
     }, [messages, mapPlaces, toMapId]);
+
+    // 지도 데이터가 생기면 자동으로 패널 열기 (단, 최초 로드 제외)
+    useEffect(() => {
+        if (mapPlaces.length > 0 && messages.length > 0) {
+            setIsMapPanelOpen(true);
+        } else if (mapPlaces.length === 0) {
+            setIsMapPanelOpen(false);
+        }
+    }, [mapPlaces.length, messages.length]);
+
+    const handleMapResizeDrag = useCallback((e: MouseEvent) => {
+        const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+        setMapPanelWidth(Math.min(Math.max(newWidth, 20), 50));
+    }, []);
+
+    const stopMapResizeDrag = useCallback(() => {
+        document.removeEventListener("mousemove", handleMapResizeDrag);
+        document.removeEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "default";
+    }, [handleMapResizeDrag]);
+
+    const startMapResizeDrag = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        document.addEventListener("mousemove", handleMapResizeDrag);
+        document.addEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "col-resize";
+    }, [handleMapResizeDrag, stopMapResizeDrag]);
 
     useEffect(() => {
         if (!mapPlaces.length) {
@@ -865,10 +901,22 @@ export function ChatHome() {
                             title="채팅방 북마크 토글"
                             disabled={!currentRoomId}
                         >
-                            <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                            <Bookmark size={16} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} className="opacity-80" />
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3">
+                        {/* Desktop Map Toggle */}
+                        {mapPlaces.length > 0 && (
+                            <button
+                                onClick={() => setIsMapPanelOpen(!isMapPanelOpen)}
+                                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${isMapPanelOpen ? 'bg-black text-white border-black' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+                                title={isMapPanelOpen ? "지도 닫기" : "지도 열기"}
+                            >
+                                <MapIcon size={14} className={isMapPanelOpen ? "text-white" : "text-slate-500"} />
+                                {isMapPanelOpen ? "Map On" : "Map Off"}
+                            </button>
+                        )}
                         <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Online
@@ -1054,16 +1102,29 @@ export function ChatHome() {
                 </div>
             </div>
 
-            <aside className="hidden lg:block w-[34%] min-w-[320px] max-w-[460px] border-l border-gray-100 bg-white">
-                <PlaceMapPanel
-                    className="h-full"
-                    places={mapPlaces}
-                    groups={mapPlaceGroups}
-                    selectedMapPlaceId={selectedMapPlaceId}
-                    onSelectPlace={handleSelectMapPlace}
-                    onMarkerClick={focusPlaceCardFromMap}
-                />
-            </aside>
+            {/* Desktop Map Panel with Resizer */}
+            {isMapPanelOpen && mapPlaces.length > 0 && (
+                <>
+                    {/* Resizer Handle */}
+                    <div
+                        onMouseDown={startMapResizeDrag}
+                        className="hidden lg:block w-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-20"
+                    />
+                    <aside
+                        style={{ width: `${mapPanelWidth}%` }}
+                        className="hidden lg:block min-w-[320px] max-w-[800px] border-l border-gray-100 bg-white z-10"
+                    >
+                        <PlaceMapPanel
+                            className="h-full"
+                            places={mapPlaces}
+                            groups={mapPlaceGroups}
+                            selectedMapPlaceId={selectedMapPlaceId}
+                            onSelectPlace={handleSelectMapPlace}
+                            onMarkerClick={focusPlaceCardFromMap}
+                        />
+                    </aside>
+                </>
+            )}
 
             <PlaceMapSheet
                 open={isMapSheetOpen}
