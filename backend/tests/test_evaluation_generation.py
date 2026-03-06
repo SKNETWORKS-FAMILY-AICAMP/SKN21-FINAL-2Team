@@ -25,7 +25,7 @@ def test_extract_generation_inputs_uses_candidates_as_context_topk():
     contexts = out.iloc[0]["retrieved_contexts"]
 
     assert len(contexts) == 1
-    assert "이름:A" in contexts[0]
+    assert "\"title\": \"A\"" in contexts[0]
 
 
 def test_run_generation_metrics_fallback_without_api_key(monkeypatch):

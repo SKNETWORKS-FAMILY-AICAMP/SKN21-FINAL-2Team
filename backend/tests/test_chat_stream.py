@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database.connection import get_db, Base
+from app.database.connection import Base, db_manager
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage, ChatPlace
 from app.utils.security import create_access_token
@@ -48,7 +48,7 @@ def override_db(db):
         finally:
             pass
 
-    app.dependency_overrides[get_db] = _override
+    app.dependency_overrides[db_manager.get_db] = _override
     yield db
     app.dependency_overrides.clear()
 
@@ -80,7 +80,7 @@ async def _mock_astream_events(*args, **kwargs):
     yield {
         "event": "on_chain_end",
         "name": "intent",
-        "data": {"output": {"summary_query": "요약된 제목", "summary_message": "요약 메시지 제목"}},
+        "data": {"output": {"summary_title": "요약된 제목", "summary_message": "요약 메시지 제목"}},
     }
 
     # retriever 노드
@@ -205,7 +205,7 @@ async def test_done_event_with_message_id(user_and_room):
 
 @pytest.mark.asyncio
 async def test_room_title_updated_to_summary(user_and_room):
-    """초기 2개 메시지 구간에서는 summary_query로 제목을 갱신한다."""
+    """초기 2개 메시지 구간에서는 summary_title로 제목을 갱신한다."""
     user, room, token, db = user_and_room
     # 초기 제목 설정
     room.title = "새로운 여행 계획"
