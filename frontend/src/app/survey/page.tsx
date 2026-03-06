@@ -83,7 +83,14 @@ export default function PersonaSurveyPage() {
         } else {
             try {
                 await submitSurvey(newAnswers);
-                router.push("/explore");
+
+                // 주의: Destinations에서 챗봇 플로우를 위해 선택된 장소가 있다면 그곳으로 넘깁니다.
+                const pending = localStorage.getItem("pendingDestination");
+                if (pending) {
+                    router.push("/chatbot?fromDestination=1");
+                } else {
+                    router.push("/explore");
+                }
             } catch (e) {
                 console.error("Failed to submit survey:", e);
                 alert("Failed to save preferences.");
