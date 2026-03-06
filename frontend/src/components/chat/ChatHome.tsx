@@ -887,7 +887,7 @@ export function ChatHome() {
                     </div>
                 </header>
 
-                {roomTripContext && (
+                {roomTripContext && roomTripContext.travelDuration && (
                     <div className="flex-none px-6 pb-2 bg-white">
                         <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
                             {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
