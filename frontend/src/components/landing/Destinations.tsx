@@ -34,7 +34,7 @@ const staticDestinations: Record<string, Destination[]> = {
 export interface Destination {
     id: number | string;   // hot_place: id(number) | attractions·restaurants: contentid(string)
     name: string;          // 세 API 모두 동일
-    image: string;         // hot_place: /api/static/ + image_path | 나머지: image URL 그대로
+    image: string;         // API 응답 이미지 URL
     address: string;       // hot_place: adress(오타) | 나머지: address 로 통일
 }
 
@@ -137,7 +137,7 @@ export function Destinations() {
                         id: p.id,
                         name: p.name,
                         address: p.adress || "",
-                        image: p.image_path ? `/api/static/${p.image_path}` : "",
+                        image: p.image_path || "",
                     }));
                     setDisplayItems(mapped);
                 } catch (error) {

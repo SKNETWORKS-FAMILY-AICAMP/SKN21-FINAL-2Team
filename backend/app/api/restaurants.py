@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION
+from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
@@ -38,7 +39,7 @@ def get_random_restaurants(limit: int = 3):
                 "contentid": str(p.id),
                 "name": p.payload.get("title", "Unknown"),
                 "address": p.payload.get("addr") or p.payload.get("address") or "주소 정보 없음",
-                "image": p.payload.get("image") or p.payload.get("firstimage", "")
+                "image": to_client_image_url(p.payload.get("image") or p.payload.get("firstimage", ""))
             }
             for p in sampled
         ]

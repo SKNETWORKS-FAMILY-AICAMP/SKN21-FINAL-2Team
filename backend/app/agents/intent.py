@@ -48,7 +48,6 @@ async def intent_node(state: TravelState):
 
     chain = prompt | structured_llm
 
-    # 요약 업데이트와 의도 분석을 병렬로 실행 (서로 독립적)
     print(f"[Intent] Prefs info from state: {prefs_info}")
     result = await chain.ainvoke({
             "messages": messages, 

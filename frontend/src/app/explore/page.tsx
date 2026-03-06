@@ -274,7 +274,7 @@ export default function ExplorePage() {
                                             className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
                                         >
                                             <img
-                                                src={place.image_path ? `/api/static/${place.image_path}` : ""}
+                                                src={place.image_path || ""}
                                                 alt={place.name}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
                                             />

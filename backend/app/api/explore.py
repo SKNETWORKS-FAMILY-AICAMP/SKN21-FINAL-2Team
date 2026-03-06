@@ -5,6 +5,7 @@ import random
 
 from app.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
+from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 router = APIRouter(prefix="/api/explore", tags=["explore"])
@@ -100,7 +101,7 @@ def get_random_places():
                     contentid=str(pid),
                     title=payload.get("title", "Unknown"),
                     address=payload.get("addr") or payload.get("address") or payload.get("road_address", "주소 없음"),
-                    image_url=image_url
+                    image_url=to_client_image_url(image_url)
                 )
             )
 
@@ -157,7 +158,7 @@ async def get_category_places(request: CategoryPlacesRequest):
                 payload = res.payload or {}
                 pid = res.id
                 score = res.score
-                image_url = payload.get("image", payload.get("firstimage", ""))
+                image_url = to_client_image_url(payload.get("image", payload.get("firstimage", "")))
 
                 # 팝업스토어는 진행 중인 항목만 포함
                 if cat == "팝업스토어":
@@ -186,5 +187,4 @@ async def get_category_places(request: CategoryPlacesRequest):
             results[cat] = []
 
     return results
-
 

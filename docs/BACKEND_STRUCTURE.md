@@ -120,6 +120,21 @@ app/
 ### 3-8. `app/retrieval/`
 
 - `place.py`: Qdrant 기반 텍스트/이미지/위치 검색
+- 검색 스코프 정책
+  - `place_only`: `places` 컬렉션만 검색(텍스트 시맨틱 + BM25)
+  - `photo_only`: `photos` 컬렉션만 검색(텍스트-이미지/이미지-이미지)
+  - `auto`: 기존 하이브리드 전체 채널
+  - `retriever.py`에서 intent/입력타입으로 스코프를 결정해 검색 범위를 제한
+- 성능 최적화 정책
+  - BM25 입력 텍스트는 `title + category + addr` 경량 포맷 사용
+  - Rerank 대상 수는 Retrieval 프로파일에서 상한 관리
+  - BM25는 전체 스캔 대신 벡터 1차 후보 풀(기본 `100`)에서만 계산
+  - 벡터 후보 수/상위 점수가 충분하면 BM25를 조건부로 스킵
+- Retrieval 프로파일 정책 (`app/utils/config.py`)
+  - `serving`: 저지연/저비용 기본값 (`candidate_k=20`, `top_k=5`, `rerank_max_k=8`)
+  - `evaluation`: 품질 상한 확인 기본값 (`candidate_k=60`, `top_k=10`, `rerank_max_k=30`)
+  - 서비스 경로(`agents/retriever.py`)는 `serving` 프로파일을 고정 사용
+  - 평가 스크립트는 `evaluation` 기본값 + CLI 오버라이드로 실행
 
 ### 3-9. `app/utils/`
 

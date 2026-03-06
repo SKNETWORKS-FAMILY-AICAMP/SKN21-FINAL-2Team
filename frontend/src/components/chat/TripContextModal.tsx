@@ -207,7 +207,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     onConfirm({ travelDuration: "", adultCount: 1, childCount: 0 });
                                     resetState();
                                 }}
-                                className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-300 hover:text-gray-500 transition-colors"
+                                className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"
                             >
                                 건너뛰고 바로 시작하기
                                 <ArrowRight size={12} />

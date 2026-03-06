@@ -1,16 +1,15 @@
+import asyncio
+import random
 from typing import Dict, Any, List
+
 from app.agents.models.state import TravelState
-from app.agents.models.output import IntentType
+from app.agents.models.output import IntentType, InputType
 from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
-import asyncio
-import random
+from app.utils.common import getattr_safe
 
-
-DEFAULT_CANDIDATE_K = 30
-DEFAULT_FINAL_K = 5
-
+from app.utils.config import get_retrieval_params
 
 def _candidate_id(candidate: Dict[str, Any]) -> str:
     return str(candidate.get("id") or candidate.get("contentid") or "").strip()
@@ -30,6 +29,31 @@ def _candidate_score(candidate: Dict[str, Any]) -> float:
         return max(float(candidate.get("score", 0.0)), 1e-6)
     except Exception:
         return 1e-6
+
+
+def _resolve_search_scope(
+    primary_intent: IntentType | None,
+    slots: Any,
+    image_path: str | None,
+) -> str:
+    """검색 범위를 단일 컬렉션으로 제한하기 위한 스코프 결정."""
+    if primary_intent == IntentType.TRIP_PLANNING:
+        return "place_only"
+
+    if not image_path:
+        return "place_only"
+
+    input_type = None
+    if slots:
+        input_type = getattr_safe(slots, "input_type")
+
+    if primary_intent == IntentType.IMAGE_SIMILAR:
+        return "photo_only"
+
+    if input_type == InputType.IMAGE or str(input_type) == str(InputType.IMAGE.value):
+        return "photo_only"
+
+    return "place_only"
 
 
 def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], final_k: int, top_pool: int) -> List[Dict[str, Any]]:
@@ -90,8 +114,8 @@ def _pick_diverse_candidates_explore(
 
 def _pick_candidates(
     candidates: List[Dict[str, Any]],
-    final_k: int = DEFAULT_FINAL_K,
-    top_pool: int = 30,
+    final_k: int = 5,
+    top_pool: int = 20,
     selection_mode: str = "deterministic",
     seed: int | None = None,
 ) -> List[Dict[str, Any]]:
@@ -103,7 +127,8 @@ def _pick_candidates(
 async def _search_for_trip_planning(
     state: TravelState,
     emotional_text: str | None = None,
-    candidate_k: int = DEFAULT_CANDIDATE_K,
+    candidate_k: int = 20,
+    rerank_max_k: int = 8,
 ) -> List[Dict[str, Any]]:
     """TRIP_PLANNING: planner itinerary 기반 후보 검색."""
     retriever = PlaceRetriever.get_instance()
@@ -135,7 +160,8 @@ async def _search_for_trip_planning(
                     emotional_text=emotional_text,
                     enable_bm25=True,
                     enable_rerank=True,
-                    rerank_top_k=max(10, candidate_k // 3),
+                    rerank_top_k=min(rerank_max_k, max(10, candidate_k // 3)),
+                    search_scope="place_only",
                 )
             except Exception as e:
                 print(f"[Retriever] Search error for '{search_query}': {e}")
@@ -148,7 +174,9 @@ async def _search_for_trip_planning(
 async def _search_for_general(
     state: TravelState,
     emotional_text: str | None = None,
-    candidate_k: int = DEFAULT_CANDIDATE_K,
+    candidate_k: int = 20,
+    rerank_max_k: int = 8,
+    search_scope: str = "place_only",
 ) -> List[Dict[str, Any]]:
     """일반 검색: 텍스트/이미지/위치 기반 하이브리드 후보 풀 검색."""
     retriever = PlaceRetriever.get_instance()
@@ -173,7 +201,7 @@ async def _search_for_general(
 
     category = None
     if slots:
-        category = slots.category if hasattr(slots, "category") else (slots.get("category") if isinstance(slots, dict) else None)
+        category = getattr_safe(slots, "category")
 
     try:
         return await retriever.search_hybrid(
@@ -185,7 +213,8 @@ async def _search_for_general(
             emotional_text=emotional_text,
             enable_bm25=True,
             enable_rerank=True,
-            rerank_top_k=candidate_k,
+            rerank_top_k=min(rerank_max_k, candidate_k),
+            search_scope=search_scope,
         )
     except Exception as e:
         print(f"[Retriever] Hybrid search error: {e}")
@@ -220,15 +249,15 @@ async def retriever_node(state: TravelState):
     """장소 검색 Agent: 후보 풀 생성 + 최종 노출 후보 선택."""
     print("--- Retriever Agent ---")
 
-    missing_slots = state.get("missing_slots", None)
-    if missing_slots:
-        print(f"[Retriever] Skipping search — missing_slots={missing_slots}")
-        return state
-
-    candidate_k = int(state.get("candidate_k", DEFAULT_CANDIDATE_K) or DEFAULT_CANDIDATE_K)
-    final_k = int(state.get("final_k", DEFAULT_FINAL_K) or DEFAULT_FINAL_K)
-    selection_mode = str(state.get("selection_mode", "deterministic") or "deterministic")
-    selection_seed = state.get("selection_seed")
+    serving_params = get_retrieval_params("serving")
+    candidate_k = int(state.get("candidate_k") or serving_params["candidate_k"])
+    final_k = int(state.get("final_k") or serving_params["top_k"])
+    rerank_max_k = int(state.get("rerank_max_k") or serving_params["rerank_max_k"])
+    candidate_k = max(candidate_k, 1)
+    final_k = max(final_k, 1)
+    rerank_max_k = max(rerank_max_k, 1)
+    selection_mode = "deterministic"
+    selection_seed = 42
 
     image_path = state.get("image_path")
     emotional_text = None
@@ -237,10 +266,27 @@ async def retriever_node(state: TravelState):
         emotional_text = await describe_image(image_path)
 
     primary_intent = state.get("primary_intent")
-    candidate_pool = await _search_for_general(state, emotional_text=emotional_text, candidate_k=candidate_k)
+    search_scope = _resolve_search_scope(
+        primary_intent=primary_intent,
+        slots=state.get("slots"),
+        image_path=image_path,
+    )
+    print(f"[Retriever] search_scope={search_scope}")
+    candidate_pool = await _search_for_general(
+        state,
+        emotional_text=emotional_text,
+        candidate_k=candidate_k,
+        rerank_max_k=rerank_max_k,
+        search_scope=search_scope,
+    )
 
     if primary_intent == IntentType.TRIP_PLANNING:
-        trip_candidates = await _search_for_trip_planning(state, emotional_text=emotional_text, candidate_k=candidate_k)
+        trip_candidates = await _search_for_trip_planning(
+            state,
+            emotional_text=emotional_text,
+            candidate_k=candidate_k,
+            rerank_max_k=rerank_max_k,
+        )
         candidate_pool.extend(trip_candidates)
 
     # pool 기준 dedup + 점수 정렬

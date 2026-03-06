@@ -20,10 +20,23 @@ class InputType(str, Enum):
     BOTH = "both"
 
 
+class CategoryType(str, Enum):
+    TOURIST_ATTRACTION = "관광지"
+    CULTURAL_FACILITY = "문화시설"
+    FESTIVAL_PERFORMANCE_EVENT = "축제공연행사"
+    LEISURE = "레포츠"
+    ACCOMMODATION = "숙박"
+    RESTAURANT = "음식점"
+
+class PlannerNeedType(str, Enum): # 계획 필수 타입 
+    DURATION = "여행 기간"
+    PARTY_SIZE = "여행 인원"
+
+
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
     location: Optional[str] = Field(default=None, description="여행지 (도시 | 지역)")
-    category: Optional[Literal["관광지", "문화시설", "축제공연행사", "레포츠", "숙박", "음식점"]] = Field(default=None, description="사용자 입력에서 추출된 카테고리")
+    category: Optional[CategoryType] = Field(default=None, description="사용자 입력에서 추출된 카테고리")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")
     party_size: Optional[int] = Field(default=None, description="인원수")
@@ -43,21 +56,18 @@ class IntentOutput(BaseModel):
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
-    time_slot: str = Field(description="morning | afternoon | evening")
+    time_slot: Literal["morning", "afternoon", "evening"] = Field(description="시간대")
     activity: str = Field(description="활동 설명")
-    search_query: str = Field(description="장소 검색용 키워드")
-    category: str = Field(description="관광지 | 문화시설 | 축제공연행사 | 레포츠 | 숙박 | 음식점")
+    search_query: str = Field(description="Qdrant 검색에 유리한 구체적 한국어 키워드 (사용자 선호 반영)")
+    category: CategoryType = Field(description="장소 카테고리")
 
 
 class PlannerOutput(BaseModel):
     """Planner LLM 출력 스키마"""
-    itinerary: List[PlannerItineraryItem] = Field(description="시간순/일차별 여행 일정")
-    missing_slots: List[str] = Field(default_factory=list, description="부족한 정보 목록")
-    followup_question: Optional[str] = Field(
-        default=None,
+    itinerary: List[PlannerItineraryItem] = Field(description="최소 1개 이상의 시간순/일차별 여행 일정")
+    missing_slots: List[PlannerNeedType] = Field(default_factory=list, description="일정 계획 진행에 반드시 필요한 누락 정보 목록 (예: 여행 인원)")
+    followup_question: str = Field(
         description=(
-            "부족한 정보가 있을 때, 사용자의 대화 맥락과 취향을 고려한 자연스럽고 친근한 후속 질문. "
-            "예: '혹시 서울 여행은 며칠 정도 생각하고 계세요? 1박2일이면 핵심 명소 위주로, "
-            "2박3일이면 숨은 명소까지 넣어볼 수 있어요 😊'"
+            "항상 생성되는 후속 질문 1문장. duration 누락 시 여행 기간을 재질문하고 문장에 반드시 '여행일정'을 포함"
         )
     )

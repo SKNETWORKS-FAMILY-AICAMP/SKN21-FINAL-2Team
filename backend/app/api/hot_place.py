@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
+from app.utils.common import to_client_image_url
 
 
 router = APIRouter(prefix="/api/hot-places", tags=["hot-place"])
@@ -27,7 +28,7 @@ def get_hot_places(
             "feature": p.feature,
             "tag1": p.tag1,
             "tag2": p.tag2,
-            "image_path": p.image_path,
+            "image_path": to_client_image_url(p.image_path),
         }
         for p in places
     ]

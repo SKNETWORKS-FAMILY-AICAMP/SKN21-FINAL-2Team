@@ -25,6 +25,7 @@ from app.schemas.chat import (
 )
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
+from app.utils.common import to_client_image_url
 from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
@@ -297,6 +298,11 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
         raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
+    for message in room.messages:
+        if message.image_path:
+            message.image_path = to_client_image_url(message.image_path)
+        for place in message.places:
+            place.image_path = to_client_image_url(place.image_path)
     return room
 
 
@@ -355,6 +361,7 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
     db.add(place)
     db.commit()
     db.refresh(place)
+    place.image_path = to_client_image_url(place.image_path)
     return place
 
 
@@ -415,7 +422,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "place_id": _normalize_int_or_zero(place.place_id),
             "name": place.name,
             "adress": place.adress,
-            "image_path": place.image_path,
+            "image_path": to_client_image_url(place.image_path),
             "longitude": _normalize_float_or_zero(place.longitude),
             "latitude": _normalize_float_or_zero(place.latitude),
             "bookmark_yn": place.bookmark_yn,
@@ -705,7 +712,7 @@ def _build_streaming_response(
                 "place_id": _normalize_int_or_zero(p.place_id),
                 "name": p.name,
                 "adress": p.adress,
-                "image_path": p.image_path,
+                "image_path": to_client_image_url(p.image_path),
                 "longitude": _normalize_float_or_zero(p.longitude),
                 "latitude": _normalize_float_or_zero(p.latitude),
                 "bookmark_yn": p.bookmark_yn

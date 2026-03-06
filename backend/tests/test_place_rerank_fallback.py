@@ -1,6 +1,8 @@
 import asyncio
+from types import SimpleNamespace
 
-from app.retrieval.place import PlaceRetriever
+from app.retrieval.place import PlaceRetriever, _build_compact_text
+from app.utils.config import get_retrieval_params
 
 
 def test_bm25_like_score_positive_for_matching_terms():
@@ -33,3 +35,85 @@ def test_rerank_fallback_sets_final_rank_without_model():
     assert out[0]["final_rank"] == 1
     assert out[1]["final_rank"] == 2
     assert out[0]["rerank_score"] is None
+
+
+def test_build_compact_text_uses_title_category_addr_only():
+    payload = {
+        "title": "강남 맛집",
+        "contenttypeid": "음식점",
+        "addr": "서울 강남구",
+        "description": "긴 설명",
+        "llm_text": "더 긴 설명",
+    }
+
+    compact = _build_compact_text(payload)
+
+    assert compact == "강남 맛집 음식점 서울 강남구"
+    assert "설명" not in compact
+
+
+def test_bm25_lexical_scores_only_given_candidates():
+    retriever = object.__new__(PlaceRetriever)
+    retriever.normalize_category = lambda category: category
+
+    candidates = [
+        SimpleNamespace(id=1, payload={"title": "강남 맛집", "contenttypeid": "음식점", "addr": "서울 강남구"}),
+        SimpleNamespace(id=2, payload={"title": "제주 카페", "contenttypeid": "음식점", "addr": "제주"}),
+    ]
+
+    out = asyncio.run(
+        retriever._search_bm25_lexical(
+            query="강남 맛집",
+            category=None,
+            candidate_points=candidates,
+            candidate_k=2,
+            pool_limit=2,
+        )
+    )
+
+    assert len(out) >= 1
+    assert out[0]["id"] == 1
+
+
+def test_search_hybrid_caps_rerank_top_k_to_serving_profile():
+    retriever = object.__new__(PlaceRetriever)
+    retriever._build_category_filter = lambda category=None, has_image=False: None
+    retriever.text_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
+    retriever.vision_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
+    retriever.client = SimpleNamespace(
+        query_points=lambda **kwargs: SimpleNamespace(
+            points=[
+                SimpleNamespace(
+                    id=1,
+                    payload={"contentid": "1", "title": "A", "contenttypeid": "음식점", "addr": "서울"},
+                    score=0.3,
+                )
+            ]
+        )
+    )
+
+    captured = {"top_k": None}
+
+    async def _fake_rerank(query, candidates, top_k):
+        captured["top_k"] = top_k
+        for idx, c in enumerate(candidates, start=1):
+            c["final_rank"] = idx
+            c["rerank_score"] = 0.0
+        return candidates[:top_k]
+
+    retriever._rerank_candidates = _fake_rerank
+
+    out = asyncio.run(
+        retriever.search_hybrid(
+            query="강남 맛집",
+            limit=5,
+            candidate_k=30,
+            enable_bm25=False,
+            enable_rerank=True,
+            rerank_top_k=30,
+            search_scope="place_only",
+        )
+    )
+
+    assert captured["top_k"] == get_retrieval_params("serving")["rerank_max_k"]
+    assert len(out) == 1
