@@ -26,6 +26,8 @@ class PlaceExploreItem(BaseModel):
     description: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    tag1: Optional[str] = None
+    tag2: Optional[str] = None
 
 def is_valid_image(url: Optional[str]) -> bool:
     """이미지 URL이 유효한지(비어있지 않은지) 확인합니다."""
@@ -75,7 +77,7 @@ def get_random_places(db: Session = Depends(db_manager.get_db)):
         # 이미지가 없더라도 일단 정보는 가져오도록 필터링 완화 (사용자 피드백 반영)
         # 하지만 사용자가 "이미지가 있는 데이터만" 요청했으므로, 
         # 로직상 필터링하되 만약 하나도 없다면 백로그용으로 로그를 남깁니다.
-        valid_hot_places = [hp for hp in hot_places if is_valid_image(hp.image_path)]
+        valid_hot_places = [hp for hp in hot_places if is_valid_image(hp.image_path)]  # type: ignore
         
         # 만약 이미지가 있는 것이 하나도 없다면, 디버깅을 위해 이미지 없는 것도 일부 허용해봅니다 (텍스트 정보 확인용)
         # ※ 최종 배포시에는 다시 엄격하게 조정 가능
@@ -91,8 +93,8 @@ def get_random_places(db: Session = Depends(db_manager.get_db)):
                         address=str(hp.adress or "주소 정보 없음"),
                         image_url=str(hp.image_path or ""),
                         description=str(hp.feature or ""),
-                        tag1=hp.tag1,
-                        tag2=hp.tag2
+                        tag1=hp.tag1,  # type: ignore
+                        tag2=hp.tag2   # type: ignore
                     )
                 )
         else:
@@ -187,9 +189,9 @@ def get_random_restaurants_legacy(limit: int = 3):
         return [
             {
                 "contentid": str(p.id),
-                "name": p.payload.get("title", "Unknown"),
-                "address": p.payload.get("addr") or p.payload.get("address") or "주소 정보 없음",
-                "image": p.payload.get("image") or p.payload.get("firstimage", "")
+                "name": (p.payload or {}).get("title", "Unknown"),
+                "address": (p.payload or {}).get("addr") or (p.payload or {}).get("address") or "주소 정보 없음",
+                "image": (p.payload or {}).get("image") or (p.payload or {}).get("firstimage", "")
             }
             for p in sampled
         ]
@@ -215,9 +217,9 @@ def get_random_attractions_legacy(limit: int = 3):
         return [
             {
                 "contentid": str(p.id),
-                "name": p.payload.get("title", "Unknown"),
-                "address": p.payload.get("addr") or p.payload.get("address") or "주소 정보 없음",
-                "image": p.payload.get("image") or p.payload.get("firstimage", "")
+                "name": (p.payload or {}).get("title", "Unknown"),
+                "address": (p.payload or {}).get("addr") or (p.payload or {}).get("address") or "주소 정보 없음",
+                "image": (p.payload or {}).get("image") or (p.payload or {}).get("firstimage", "")
             }
             for p in sampled
         ]
