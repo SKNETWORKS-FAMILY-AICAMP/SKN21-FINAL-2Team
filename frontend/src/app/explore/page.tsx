@@ -64,19 +64,30 @@ const EXPLORE_DEDUPE_TTL_MS = 2000;
 const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
     const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
-    const [data, hotPlaces] = await Promise.all([
+
+    // 1. 카테고리 검색 기반 데이터 (팝업스토어 등)
+    // 2. 통합 랜덤 데이터 (핫플레이스, 음식점, 관광지)
+    const [categoryData, randomData] = await Promise.all([
         fetchCategoryPlaces(userPrefs),
-        fetchHotPlaces(3),
+        fetchRandomExplorePlaces(),
     ]);
 
     return {
         user,
-        hotPlaces,
-        popupStores: data["팝업스토어"] || [],
+        hotPlaces: (randomData["hot_places"] || []).map(p => ({
+            id: Number(p.contentid),
+            name: p.title,
+            adress: p.address,
+            image_path: p.image_url,
+            feature: p.description,
+            tag1: p.tag1,
+            tag2: p.tag2
+        })) as unknown as HotPlace[],
+        popupStores: categoryData["팝업스토어"] || [],
         choices: {
-            restaurants: data["음식점"] || [],
-            tourist: data["문화시설"] || [],
-            activities: data["축제공연행사"] || [],
+            restaurants: randomData["restaurants"] || [],
+            tourist: randomData["tourist_spots"] || [],
+            activities: categoryData["축제공연행사"] || [], // 축제공연행사는 여전히 검색 기반에서 가져옴
         },
     };
 };
