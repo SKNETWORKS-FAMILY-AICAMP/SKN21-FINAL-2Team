@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ArrowRight, User, Globe, MessageSquare } from "lucide-react";
+import { Check, ArrowRight, User, Globe, MessageSquare, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchCountries, updateCurrentUser } from "@/services/api";
 
@@ -84,6 +84,15 @@ export default function ProfilePage() {
       console.error("Profile Update Failed:", error);
       alert("프로필 저장에 실패했습니다.");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("profile_picture");
+    localStorage.removeItem("user_name");
+    localStorage.removeItem("user_email");
+    router.replace("/signup");
   };
 
   return (
@@ -238,8 +247,15 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <div className="text-center mt-8">
-          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors">
+        <div className="text-center mt-8 flex flex-col items-center gap-4">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <LogOut size={14} />
+            다른 구글 계정으로 로그인하기
+          </button>
+          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors hidden cursor-default">
             Skip setup (Demo only)
           </button>
         </div>

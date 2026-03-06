@@ -18,7 +18,7 @@ const BACKGROUND_IMAGES = [
 export default function SignUpPage() {
   const router = useRouter();
 
-  const [bgImage, setBgImage] = useState(BACKGROUND_IMAGES[0]);
+  const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
     // 주의: Next.js 환경에서 서버 렌더링 결과와 불일치하는 것을 막기 위해 (Hydration 에러 방지)
@@ -80,20 +80,18 @@ export default function SignUpPage() {
     router.push("/");
   };
 
-  const handleLoginClick = () => {
-    router.push("/signup");
-  };
-
   return (
     <div className="min-h-screen w-full flex bg-white">
       {/* Left Side - Image & Brand */}
       <div className="hidden lg:flex w-[45%] bg-black relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={bgImage}
-            alt="Travel Background"
-            className="w-full h-full object-cover opacity-70"
-          />
+        <div className="absolute inset-0 z-0 bg-black">
+          {bgImage && (
+            <img
+              src={bgImage}
+              alt="Travel Background"
+              className="w-full h-full object-cover opacity-70 transition-opacity duration-1000 ease-in-out"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-purple-900/10 to-black/30" />
         </div>
 
@@ -138,7 +136,7 @@ export default function SignUpPage() {
         >
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
-              Create your account
+              Welcome to Triver
             </h1>
             <p className="text-[13px] text-gray-500 font-normal">
               Join Triver for personalized travel planning
@@ -157,13 +155,8 @@ export default function SignUpPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              Sign up with Google
+              Continue with Google
             </Button>
-          </div>
-
-          <div className="mt-6 text-[11px] text-gray-400">
-            Already have an account?{" "}
-            <Button variant="ghost" onClick={handleLoginClick} className="font-bold text-black p-0 h-auto text-[11px]">Log in</Button>
           </div>
 
           <div className="mt-8 pt-8 border-t border-gray-100">
