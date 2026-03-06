@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useGoogleLogin } from "@react-oauth/google";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -68,12 +69,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 p-12 flex flex-col justify-between h-full text-white w-full">
-          <div className="flex items-center gap-3 cursor-pointer w-fit group" onClick={handleBack}>
-            <div className="w-8 h-8 bg-white text-black flex items-center justify-center">
-              <span className="font-serif font-bold text-xl leading-none italic">T</span>
-            </div>
-            <span className="font-serif font-bold text-xl tracking-tighter opacity-90 group-hover:opacity-100 transition-opacity">Triver.</span>
-          </div>
+          <Logo tone="light" size={34} className="w-fit opacity-90 group-hover:opacity-100 transition-opacity" />
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}

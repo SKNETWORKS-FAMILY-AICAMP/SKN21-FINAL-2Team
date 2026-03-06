@@ -2,12 +2,13 @@
 
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PlaceMapPanel, type ChatMapPlace } from "./PlaceMapPanel";
+import { PlaceMapPanel, type ChatMapPlace, type ChatMapPlaceGroup } from "./PlaceMapPanel";
 
 type PlaceMapSheetProps = {
   open: boolean;
   onClose: () => void;
   places: ChatMapPlace[];
+  groups: ChatMapPlaceGroup[];
   selectedMapPlaceId: string | null;
   onSelectPlace: (mapId: string) => void;
   onMarkerClick: (mapId: string) => void;
@@ -17,6 +18,7 @@ export function PlaceMapSheet({
   open,
   onClose,
   places,
+  groups,
   selectedMapPlaceId,
   onSelectPlace,
   onMarkerClick,
@@ -59,6 +61,7 @@ export function PlaceMapSheet({
             <PlaceMapPanel
               className="h-[calc(62vh-48px)]"
               places={places}
+              groups={groups}
               selectedMapPlaceId={selectedMapPlaceId}
               onSelectPlace={onSelectPlace}
               onMarkerClick={onMarkerClick}

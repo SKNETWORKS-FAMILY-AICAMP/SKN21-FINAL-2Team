@@ -7,6 +7,7 @@ export type NaverLatLng = { lat: () => number; lng: () => number };
 export type NaverMapInstance = {
   setCenter: (latLng: NaverLatLng) => void;
   setZoom: (zoom: number) => void;
+  getCenter: () => NaverLatLng;
   fitBounds: (bounds: NaverLatLngBounds, padding?: { top: number; right: number; bottom: number; left: number }) => void;
 };
 export type NaverMarker = {
@@ -33,6 +34,7 @@ export type NaverMapsNamespace = {
     Point: new (x: number, y: number) => unknown;
     Event: {
       addListener: (target: unknown, eventName: string, listener: () => void) => void;
+      trigger: (target: unknown, eventName: string) => void;
     };
   };
 };
@@ -101,7 +103,7 @@ export function useNaverMap(clientId?: string) {
 
     const script = document.createElement("script");
     script.id = NAVER_MAP_SCRIPT_ID;
-    script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${encodeURIComponent(normalizedClientId)}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(normalizedClientId)}`;
     script.async = true;
 
     script.onload = () => {
