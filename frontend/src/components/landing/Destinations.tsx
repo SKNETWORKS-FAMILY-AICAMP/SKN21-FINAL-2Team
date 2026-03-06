@@ -6,7 +6,8 @@ import React, { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
-import { createRoom, fetchRandomExplorePlaces } from "@/services/api";
+import { createRoom, fetchCurrentUser } from "@/services/api";
+import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
@@ -41,14 +42,24 @@ export function Destinations() {
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userProfile, setUserProfile] = useState<any>(null);
+    // 트립 컨텍스트 모달 상태
     const [showTripModal, setShowTripModal] = useState(false);
     const [pendingPlace, setPendingPlace] = useState<Destination | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
-    const [allRandomData, setAllRandomData] = useState<Record<string, Destination[]>>({});
+
+    // 가입/설문 미완료 시 경고 모달 상태
+    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [warningStep, setWarningStep] = useState<"profile" | "survey" | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         setIsLoggedIn(!!token);
+        if (token) {
+            fetchCurrentUser()
+                .then(user => setUserProfile(user))
+                .catch(() => console.warn("Failed to fetch user profile in Destinations"));
+        }
     }, []);
 
     const handlePlanTripClick = (place: Destination, e?: React.MouseEvent) => {
@@ -57,8 +68,42 @@ export function Destinations() {
             localStorage.setItem("pendingDestination", JSON.stringify(place));
             router.push("/signup");
         } else {
+            // 주의: 로그인 후 정보나 설문 기입이 덜 끝났다면 즉시 이동하지 않고 모달 표시
+            if (userProfile && !userProfile.is_join) {
+                // 사용자가 챗봇 목적지로 향하려 했다는 의도를 남겨두기 위해 세팅
+                localStorage.setItem("pendingDestination", JSON.stringify(place));
+                setWarningStep("profile");
+                setIsWarningModalOpen(true);
+                return;
+            }
+            if (userProfile && !userProfile.is_prefer) {
+                localStorage.setItem("pendingDestination", JSON.stringify(place));
+                setWarningStep("survey");
+                setIsWarningModalOpen(true);
+                return;
+            }
+
+            // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
             setPendingPlace(place);
             setShowTripModal(true);
+        }
+    };
+
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
+        }
+    };
+
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
         }
     };
 
@@ -282,6 +327,13 @@ export function Destinations() {
                         setPendingPlace(null);
                     }
                 }}
+            />
+            {/* 미가입/미설문 경고 모달 */}
+            <IncompleteSignupModal
+                isOpen={isWarningModalOpen}
+                missingStep={warningStep}
+                onClose={() => setIsWarningModalOpen(false)}
+                onConfirm={confirmWarning}
             />
         </>
     );

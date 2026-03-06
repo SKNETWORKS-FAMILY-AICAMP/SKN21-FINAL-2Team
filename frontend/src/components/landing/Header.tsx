@@ -6,22 +6,27 @@ import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { useRouter } from "next/navigation";
 import { fetchCurrentUser } from "@/services/api";
+import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
 
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
-    // 로그인 상태와 프로필 사진 URL 관리
+    const [userProfile, setUserProfile] = useState<any>(null); // To store full user info for navigation guard
     const [profilePicture, setProfilePicture] = useState<string | null>(null);
     const [userInitial, setUserInitial] = useState<string>("?");
     const [imgError, setImgError] = useState(false);
 
-    // 컴포넌트 마운트 시 토큰 확인 → 프로필 사진 가져오기
+    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [warningStep, setWarningStep] = useState<"profile" | "survey" | null>(null);
+
+    // 컴포넌트 마운트 시 토큰 확인 → 프로필 정보 가져오기
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
         fetchCurrentUser()
             .then((user) => {
+                setUserProfile(user);
                 if (user.profile_picture) {
                     setProfilePicture(user.profile_picture);
                 }
@@ -31,16 +36,36 @@ export function Header() {
             })
             .catch(() => {
                 // 주의: 토큰 만료 시 조용히 무시 (버튼은 Get Started로 유지)
-                console.warn("Header: 프로필 사진 로드 실패 (토큰 만료 가능성)");
+                console.warn("Header: 프로필 정보 로드 실패 (토큰 만료 가능성)");
             });
     }, []);
 
     const handleNavigation = () => {
         const token = localStorage.getItem("access_token");
-        if (token) {
+        if (token && userProfile) {
+            // 주의: 가입 기입 내용이나 설문을 다 마치지 않았다면, explore 대신 경고 모달 표시
+            if (!userProfile.is_join) {
+                setWarningStep("profile");
+                setIsWarningModalOpen(true);
+                return;
+            }
+            if (!userProfile.is_prefer) {
+                setWarningStep("survey");
+                setIsWarningModalOpen(true);
+                return;
+            }
             router.push("/explore");
         } else {
             router.push("/signup");
+        }
+    };
+
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
         }
     };
 
@@ -62,8 +87,8 @@ export function Header() {
                 </nav>
 
                 <div className="hidden md:flex items-center gap-4">
-                    {/* 로그인 상태: 프로필 사진 | 비로그인: Get Started 버튼 */}
-                    {profilePicture && !imgError ? (
+                    {/* 로그인 상태 & 가입 완료(is_join, is_prefer): 프로필 사진 | 비로그인 or 가입 미완료: Get Started 버튼 */}
+                    {profilePicture && !imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                         <button
                             onClick={handleNavigation}
                             className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105"
@@ -76,7 +101,7 @@ export function Header() {
                                 onError={() => setImgError(true)}
                             />
                         </button>
-                    ) : profilePicture && imgError ? (
+                    ) : profilePicture && imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                         // 이미지 로드 실패 시 이니셜 폴백
                         <button
                             onClick={handleNavigation}
@@ -120,7 +145,7 @@ export function Header() {
                         ))}
                         <hr className="my-2 border-gray-100" />
                         {/* 모바일 메뉴: 로그인 상태에서도 동일하게 프로필 처리 */}
-                        {profilePicture && !imgError ? (
+                        {profilePicture && !imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                             <button
                                 onClick={() => { setIsOpen(false); handleNavigation(); }}
                                 className="flex items-center gap-3 w-full"
@@ -134,7 +159,7 @@ export function Header() {
                                 />
                                 <span className="text-base font-medium text-gray-700">내 프로필로 이동</span>
                             </button>
-                        ) : profilePicture && imgError ? (
+                        ) : profilePicture && imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                             <button
                                 onClick={() => { setIsOpen(false); handleNavigation(); }}
                                 className="flex items-center gap-3 w-full"
@@ -155,6 +180,13 @@ export function Header() {
                     </nav>
                 </motion.div>
             )}
+
+            <IncompleteSignupModal
+                isOpen={isWarningModalOpen}
+                missingStep={warningStep}
+                onClose={() => setIsWarningModalOpen(false)}
+                onConfirm={confirmWarning}
+            />
         </header>
     );
 }
