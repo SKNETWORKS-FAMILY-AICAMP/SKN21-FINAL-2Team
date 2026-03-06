@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { MapPin, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { MapPin, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { NaverInfoWindow, NaverMapInstance, NaverMarker, useNaverMap } from "./useNaverMap";
 
 export type ChatMapPlace = {
@@ -13,13 +13,27 @@ export type ChatMapPlace = {
   map_url?: string | null;
 };
 
+export type ChatMapPlaceGroup = {
+  groupId: string;
+  label: string;
+  places: ChatMapPlace[];
+};
+
 type PlaceMapPanelProps = {
   places: ChatMapPlace[];
+  groups?: ChatMapPlaceGroup[];
   selectedMapPlaceId: string | null;
   onSelectPlace: (mapId: string) => void;
   onMarkerClick: (mapId: string) => void;
   className?: string;
   showHeader?: boolean;
+};
+
+const SEOUL_BOUNDS = {
+  minLat: 37.4133,
+  maxLat: 37.7151,
+  minLng: 126.7341,
+  maxLng: 127.2693,
 };
 
 function escapeHtml(raw: string) {
@@ -33,6 +47,7 @@ function escapeHtml(raw: string) {
 
 export function PlaceMapPanel({
   places,
+  groups,
   selectedMapPlaceId,
   onSelectPlace,
   onMarkerClick,
@@ -51,6 +66,39 @@ export function PlaceMapPanel({
     return [...places].sort((a, b) => a.name.localeCompare(b.name));
   }, [places]);
 
+  const groupedPlaces = useMemo(() => {
+    if (groups?.length) {
+      return groups.filter((group) => group.places.length > 0);
+    }
+    return [{ groupId: "all", label: "All recommendations", places: sortedPlaces }];
+  }, [groups, sortedPlaces]);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollability = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkScrollability();
+    window.addEventListener("resize", checkScrollability);
+    return () => window.removeEventListener("resize", checkScrollability);
+  }, [checkScrollability, groupedPlaces]);
+
+  const scrollBy = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = direction === "left" ? -200 : 200;
+      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
   useEffect(() => {
     if (status !== "ready" || !naver?.maps || !mapRef.current) return;
 
@@ -68,6 +116,19 @@ export function PlaceMapPanel({
         anchorSize: new naver.maps.Size(10, 10),
         pixelOffset: new naver.maps.Point(0, -8),
       });
+
+      const enforceSeoulBounds = () => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+        const center = map.getCenter();
+        const clampedLat = Math.min(SEOUL_BOUNDS.maxLat, Math.max(SEOUL_BOUNDS.minLat, center.lat()));
+        const clampedLng = Math.min(SEOUL_BOUNDS.maxLng, Math.max(SEOUL_BOUNDS.minLng, center.lng()));
+        if (Math.abs(clampedLat - center.lat()) > 0.000001 || Math.abs(clampedLng - center.lng()) > 0.000001) {
+          map.setCenter(new naver.maps.LatLng(clampedLat, clampedLng));
+        }
+      };
+
+      naver.maps.Event.addListener(mapInstanceRef.current, "dragend", enforceSeoulBounds);
     }
 
     const map = mapInstanceRef.current;
@@ -171,26 +232,91 @@ export function PlaceMapPanel({
 
         {status === "ready" && (
           <>
-            <div ref={mapRef} className="flex-1 min-h-[260px]" />
-            <div className="flex-none border-t border-gray-100 p-3 space-y-2 max-h-[200px] overflow-y-auto">
-              {sortedPlaces.map((place) => (
-                <button
-                  key={place.mapId}
-                  type="button"
-                  onClick={() => {
-                    onSelectPlace(place.mapId);
-                    onMarkerClick(place.mapId);
-                  }}
-                  className={`w-full text-left rounded-xl border px-3 py-2 transition-colors ${
-                    place.mapId === selectedMapPlaceId
-                      ? "border-black bg-gray-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
+            <div className="relative flex-1 min-h-[320px]">
+              <div ref={mapRef} className="h-full min-h-[320px] w-full" />
+
+              {/* Floating Carousel at the bottom */}
+              <div className="absolute left-0 right-0 bottom-4 z-10 px-4 group/carousel">
+                {canScrollLeft && (
+                  <button
+                    type="button"
+                    onClick={() => scrollBy("left")}
+                    className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                    aria-label="이전 장소 보기"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                )}
+
+                <div
+                  ref={scrollContainerRef}
+                  onScroll={checkScrollability}
+                  className="flex overflow-x-auto gap-3 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
                 >
-                  <div className="text-xs font-semibold text-gray-900 truncate">{place.name}</div>
-                  {!!place.adress && <div className="text-[10px] text-gray-500 truncate mt-0.5">{place.adress}</div>}
-                </button>
-              ))}
+                  {groupedPlaces.map((group) => (
+                    group.places.map((place) => {
+                      const isSelected = place.mapId === selectedMapPlaceId;
+                      const searchUrl = place.map_url || `https://map.naver.com/v5/search/${encodeURIComponent(place.name)}`;
+                      return (
+                        <div
+                          key={`${group.groupId}:${place.mapId}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            onSelectPlace(place.mapId);
+                            onMarkerClick(place.mapId);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onSelectPlace(place.mapId);
+                              onMarkerClick(place.mapId);
+                            }
+                          }}
+                          className={`group/card snap-center flex-shrink-0 w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
+                            ? "border-black bg-white/95 ring-2 ring-black/10"
+                            : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
+                            }`}
+                        >
+                          <a
+                            href={searchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-2.5 right-2.5 text-gray-400 hover:text-blue-500 transition-colors bg-white/50 hover:bg-white/80 rounded-full p-1 opacity-0 group-hover/card:opacity-100 focus:opacity-100"
+                            title="네이버 지도 객체 검색"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+
+                          <div className="pr-4">
+                            <div className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">{place.name}</div>
+                            {!!place.adress && (
+                              <div className="text-[11px] font-medium text-gray-500 truncate">{place.adress}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ))}
+                  {!groupedPlaces.length && (
+                    <p className="text-xs text-center w-full text-gray-800 bg-white/80 backdrop-blur-md rounded-xl py-3 shadow-sm mx-auto">
+                      No places found for map overlay.
+                    </p>
+                  )}
+                </div>
+
+                {canScrollRight && (
+                  <button
+                    type="button"
+                    onClick={() => scrollBy("right")}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                    aria-label="다음 장소 보기"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}

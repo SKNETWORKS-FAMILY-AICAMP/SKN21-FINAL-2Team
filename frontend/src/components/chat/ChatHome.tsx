@@ -6,11 +6,12 @@ import { motion } from "framer-motion";
 import { createRoom, fetchRoom, fetchRooms, sendAutoStartChatRoomStream, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, ChatPlaceItem, fetchCurrentUser, verifyAndRefreshToken, updatePlaceBookmark, updateRoomBookmark } from "@/services/api";
 import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
-import ReactMarkdown from 'react-markdown';
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
-import remarkGfm from 'remark-gfm';
-import { PlaceMapPanel, type ChatMapPlace } from "./PlaceMapPanel";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { PlaceMapPanel, type ChatMapPlace, type ChatMapPlaceGroup } from "./PlaceMapPanel";
 import { PlaceMapSheet } from "./PlaceMapSheet";
+import { ChatMessageItem } from "./ChatMessageItem";
+import { BrandMark } from "@/components/Logo";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
@@ -43,153 +44,20 @@ export function ChatHome() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
-    const [isListening, setIsListening] = useState(false);
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
-    const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
     const [roomTripContext, setRoomTripContext] = useState<TripContext | null>(null);
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const placeCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
+    const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
+        inputText,
+        setInputText
+    });
+
     const isSendingRef = useRef(false);
     const autoStartedRoomsRef = useRef<Set<number>>(new Set());
-
-    const getSpeechRecognitionAPI = () =>
-        (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
-
-    const syncMicPermission = useCallback(async () => {
-        const SpeechRecognitionAPI = getSpeechRecognitionAPI();
-        if (!SpeechRecognitionAPI) {
-            setSttPermission("unsupported");
-            return;
-        }
-
-        if (!navigator.permissions?.query) {
-            setSttPermission((prev) => (prev === "unknown" || prev === "unsupported" ? "prompt" : prev));
-            return;
-        }
-
-        try {
-            const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-            if (status.state === "granted") setSttPermission("granted");
-            else if (status.state === "denied") setSttPermission("denied");
-            else setSttPermission("prompt");
-
-            if (micPermissionStatusRef.current && micPermissionStatusRef.current !== status) {
-                micPermissionStatusRef.current.onchange = null;
-            }
-            status.onchange = () => { void syncMicPermission(); };
-            micPermissionStatusRef.current = status;
-        } catch {
-            setSttPermission((prev) => (prev === "unknown" || prev === "unsupported" ? "prompt" : prev));
-        }
-    }, []);
-
-    // 음성 인식(STT) 토글 핸들러
-    const handleToggleListening = useCallback(async () => {
-        // 이미 녹음 중이면 중지
-        if (isListening && recognitionRef.current) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-            return;
-        }
-
-        // Web Speech API 지원 확인
-        const SpeechRecognitionAPI = getSpeechRecognitionAPI();
-
-        if (!SpeechRecognitionAPI) {
-            setSttPermission("unsupported");
-            alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해주세요.");
-            return;
-        }
-
-        // 녹음 시작 시점의 기존 입력 텍스트를 기준점으로 저장
-        const baseText = inputText;
-
-        // 음성 인식 시작
-        const recognition = new SpeechRecognitionAPI();
-        recognition.lang = "ko-KR";
-        recognition.interimResults = true;
-        recognition.continuous = true;
-        recognition.maxAlternatives = 1;
-        recognitionRef.current = recognition;
-
-        let finalTranscript = "";
-
-        recognition.onstart = () => {
-            setIsListening(true);
-            setSttPermission("granted");
-        };
-
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let interim = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript;
-                } else {
-                    interim += transcript;
-                }
-            }
-            // baseText 위에 최종 + 중간 결과를 덮어쓰기 (중복 방지)
-            const separator = baseText && !baseText.endsWith(" ") ? " " : "";
-            setInputText(baseText + separator + finalTranscript + interim);
-        };
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            console.error("Speech recognition error:", event.error);
-            if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-                setSttPermission("denied");
-            }
-            setIsListening(false);
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-            recognitionRef.current = null;
-            // 최종 결과만 남기도록: 중간 결과 제거하고 baseText + finalTranscript만 유지
-            const separator = baseText && !baseText.endsWith(" ") ? " " : "";
-            setInputText((baseText + separator + finalTranscript).trim());
-        };
-
-        try {
-            recognition.start();
-        } catch (error) {
-            console.error("Speech recognition start failed:", error);
-            setIsListening(false);
-            await syncMicPermission();
-        }
-    }, [isListening, inputText, syncMicPermission]);
-
-    // 컴포넌트 언마운트 시 음성 인식 정리
-    useEffect(() => {
-        syncMicPermission();
-
-        const onFocus = () => { void syncMicPermission(); };
-        const onVisibilityChange = () => {
-            if (document.visibilityState === "visible") {
-                void syncMicPermission();
-            }
-        };
-
-        window.addEventListener("focus", onFocus);
-        document.addEventListener("visibilitychange", onVisibilityChange);
-
-        return () => {
-            if (recognitionRef.current) {
-                recognitionRef.current.stop();
-            }
-            const cleanupStatus = micPermissionStatusRef.current;
-            if (cleanupStatus) {
-                cleanupStatus.onchange = null;
-            }
-            window.removeEventListener("focus", onFocus);
-            document.removeEventListener("visibilitychange", onVisibilityChange);
-        };
-    }, [syncMicPermission]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -202,6 +70,10 @@ export function ChatHome() {
     // Re-run initialization or room switch when roomIdParam changes
     useEffect(() => {
         const initializeChat = async () => {
+            // 주의: 이미 보고 있는 방이라면 (방 생성 직후 라우팅으로 인한) 불필요한 전체 초기화를 막습니다.
+            const paramId = roomIdParam ? parseInt(roomIdParam, 10) : null;
+            if (paramId && paramId === currentRoomId) return;
+
             setIsInitializing(true);
             try {
                 // 토큰 유효성 검증 (만료 시 자동 refresh 시도)
@@ -212,16 +84,27 @@ export function ChatHome() {
                         return;
                     }
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
                 // Load user profile
                 try {
                     const data = await fetchCurrentUser();
+
+                    // 주의: 가입(is_join)이나 설문(is_prefer)을 완료하지 않고 챗봇 페이지로 억지로 진입한 경우 방어
+                    if (!data.is_join) {
+                        window.location.href = "/signup/profile";
+                        return;
+                    }
+                    if (!data.is_prefer) {
+                        window.location.href = "/survey";
+                        return;
+                    }
+
                     setUserProfile(data);
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -270,6 +153,10 @@ export function ChatHome() {
     const handleCreateNewRoom = async () => {
         try {
             const newRoom = await createRoom("새로운 여행 계획");
+
+            // 주의: 빈 방 생성 시 기본 인사말 스트림을 띄우기 위해 로컬스토리지에 미리 세팅
+            localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
+
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
@@ -286,12 +173,9 @@ export function ChatHome() {
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            setRooms((prev) => [newRoom, ...prev]);
-            setCurrentRoomId(newRoom.id);
-            setMessages([]);
 
-            // 주의: fromDestination 경로로 온 경우 pendingDestination을 챗봇 autostart 형식으로 변환
-            // autostart는 triver:selected-places:${roomId} 키를 읽어 장소 기반 추천을 시작합니다
+            // 주의: 상태(setCurrentRoomId)를 변경하기 전에 로컬 스토리지에 컨텍스트를 먼저 세팅해야,
+            // 렌더링 후 실행되는 Autostart useEffect가 데이터를 문제없이 읽을 수 있습니다.
             const pendingRaw = localStorage.getItem("pendingDestination");
             if (pendingRaw) {
                 try {
@@ -299,7 +183,7 @@ export function ChatHome() {
                     // Destination 타입 → SelectedPlaceSeed 배열로 변환
                     const seedPlaces = [{
                         name: place.name,
-                        adress: place.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: place.address || place.adress, // API 응답에 따라 address 또는 adress 일 수 있음
                         place_id: typeof place.id === "number" ? place.id : 0,
                     }];
                     localStorage.setItem(`triver:selected-places:${newRoom.id}`, JSON.stringify(seedPlaces));
@@ -318,6 +202,11 @@ export function ChatHome() {
             } else {
                 localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
+
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(newRoom.id);
+            setMessages([]);
+
             setShowTripModal(false);
             setIsTripLoading(false);
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
@@ -594,7 +483,6 @@ export function ChatHome() {
 
     useEffect(() => {
         if (!currentRoomId || isInitializing || isStreaming) return;
-        if (messages.length > 0) return;
         if (autoStartedRoomsRef.current.has(currentRoomId)) return;
 
         const contextKey = `triver:trip-context:${currentRoomId}`;
@@ -638,6 +526,12 @@ export function ChatHome() {
 
         const hasContext = !!context;
         const hasSelectedPlaces = selectedPlaces.length > 0;
+
+        // 주의: 만약 이미 메시지가 리스트에 있는데 넘겨줄(context/places) 데이터가 아무것도 없다면, 진짜 빈 일반 방이므로 실행 무시
+        if (messages.length > 0 && !hasContext && !hasSelectedPlaces) {
+            return;
+        }
+
         if (!hasContext && !hasSelectedPlaces && !shouldGreeting) return;
 
         autoStartedRoomsRef.current.add(currentRoomId);
@@ -801,6 +695,47 @@ export function ChatHome() {
         return Array.from(dedup.values());
     }, [messages, toMapId]);
 
+    const mapPlaceGroups = useMemo<ChatMapPlaceGroup[]>(() => {
+        if (!mapPlaces.length) return [];
+
+        const allowedMapIds = new Set(mapPlaces.map((place) => place.mapId));
+        const groups: ChatMapPlaceGroup[] = [];
+        const globalSeen = new Set<string>(); // 전체 메시지에 걸쳐 맵 ID 중복 추적
+
+        for (const msg of messages) {
+            if (msg.role !== "ai" || !msg.places?.length) continue;
+            const groupPlaces: ChatMapPlace[] = [];
+
+            for (const place of msg.places) {
+                const lat = Number(place.latitude ?? 0);
+                const lng = Number(place.longitude ?? 0);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) continue;
+
+                const mapId = toMapId(place);
+                if (!allowedMapIds.has(mapId) || globalSeen.has(mapId)) continue;
+                globalSeen.add(mapId); // 추가된 장소는 전역 seen에 기록
+
+                groupPlaces.push({
+                    mapId,
+                    name: (place.name || "").trim() || "Recommended place",
+                    adress: place.adress,
+                    latitude: lat,
+                    longitude: lng,
+                    map_url: place.map_url,
+                });
+            }
+
+            if (!groupPlaces.length) continue;
+            groups.push({
+                groupId: `msg:${msg.id}`,
+                label: `AI Reply · ${new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+                places: groupPlaces,
+            });
+        }
+
+        return groups;
+    }, [messages, mapPlaces, toMapId]);
+
     useEffect(() => {
         if (!mapPlaces.length) {
             setSelectedMapPlaceId(null);
@@ -848,9 +783,9 @@ export function ChatHome() {
     }
 
     return (
-        <div className="flex h-full min-h-0 bg-white relative rounded-2xl overflow-hidden">
-            <div className="flex-1 min-w-0 min-h-0 flex flex-col relative">
-                <header className="h-14 flex items-center justify-between px-6 bg-white z-10 sticky top-0">
+        <div className="flex h-full min-h-0 bg-white relative rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-slate-50/30">
+                <header className="h-14 flex items-center justify-between px-6 bg-white/70 backdrop-blur-md z-10 sticky top-0 border-b border-white/50">
                     <div className="flex items-center gap-2 min-w-0">
                         <Sparkles size={16} className="text-slate-900 flex-none" />
                         <span className="font-semibold text-[17px] tracking-tight text-slate-900 truncate">{currentRoom?.title || "Travel Assistant"}</span>
@@ -892,132 +827,29 @@ export function ChatHome() {
                     </div>
                 )}
 
-                <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar bg-gray-50/30">
-                    <div className="w-full min-h-full flex flex-col px-4 pt-2 space-y-6">
+                <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar">
+                    <div className="w-full min-h-full flex flex-col px-4 lg:px-6 pt-4 space-y-6">
                         {messages.length === 0 && !isTyping && (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                <Sparkles className="w-8 h-8 mb-4 opacity-50" />
-                                <p className="text-sm font-medium">채팅을 시작해보세요!</p>
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                <Sparkles className="w-8 h-8 mb-4 opacity-40 text-slate-300" />
+                                <p className="text-sm font-medium tracking-tight">채팅을 시작해보세요!</p>
                             </div>
                         )}
 
-                        {messages.map((msg) => {
-                            if (isStreaming && msg.id === streamingMsgId && !msg.message && showPipeline) {
-                                return null;
-                            }
-                            if (isStreaming && msg.id === streamingMsgId && !msg.message) {
-                                return null;
-                            }
-
-                            if (msg.role === "human") {
-                                return (
-                                    <motion.div
-                                        key={msg.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="flex justify-end w-full px-4"
-                                    >
-                                        <div className="bg-black text-white px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[66%] shadow-sm">
-                                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                                            <div className="text-[9px] mt-2 font-medium text-gray-300/70 text-right">
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            }
-
-                            return (
-                                <div key={msg.id} className="flex flex-col gap-3 mb-2 w-full px-4">
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="flex items-start gap-3 w-full"
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
-                                            <Sparkles size={14} className="text-white" />
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[66%]">
-                                            {!!msg.message && (
-                                                <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm inline-block w-full mb-3">
-                                                    <div className="prose prose-sm max-w-none prose-slate prose-p:my-3 prose-p:leading-7 prose-pre:bg-slate-50 prose-pre:text-slate-900">
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm]}
-                                                            components={{
-                                                                a: (props) => (
-                                                                    <a
-                                                                        {...props}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                    />
-                                                                ),
-                                                            }}
-                                                        >
-                                                            {msg.message}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {msg.places && msg.places.length > 0 && (
-                                                <div className="mt-1 w-full">
-                                                    <h5 className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.08em] mb-2 ml-1">
-                                                        Recommended Places
-                                                    </h5>
-                                                    <div className="flex overflow-x-auto pb-3 gap-3 snap-x custom-scrollbar -mx-1 px-1">
-                                                        {msg.places.map((place) => {
-                                                            const mapId = toMapId(place);
-                                                            const isMapSelected = selectedMapPlaceId === mapId;
-                                                            return (
-                                                                <div
-                                                                    key={place.id}
-                                                                    ref={(element) => {
-                                                                        placeCardRefs.current[mapId] = element;
-                                                                    }}
-                                                                    onMouseEnter={() => handleSelectMapPlace(mapId)}
-                                                                    onClick={() => handleSelectMapPlace(mapId)}
-                                                                    className={`snap-start flex-shrink-0 relative w-[176px] bg-white rounded-2xl overflow-hidden border shadow-sm group cursor-pointer transition-all ${isMapSelected ? "border-black ring-2 ring-black/5" : "border-gray-100 hover:border-gray-300"
-                                                                        }`}
-                                                                >
-                                                                    <div className="relative h-[110px] bg-gray-100">
-                                                                        <img
-                                                                            src={place.image_path || DEFAULT_PLACEHOLDER}
-                                                                            alt={place.name || "Place image"}
-                                                                            className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                                                                        />
-                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
-                                                                        <button
-                                                                            onClick={(event) => {
-                                                                                event.stopPropagation();
-                                                                                handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn);
-                                                                            }}
-                                                                            className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${place.bookmark_yn ? "text-yellow-500 bg-yellow-50" : "text-gray-300 bg-white/90 hover:text-yellow-500 hover:bg-gray-100"}`}
-                                                                        >
-                                                                            <Bookmark size={13} fill={place.bookmark_yn ? "currentColor" : "none"} />
-                                                                        </button>
-                                                                    </div>
-                                                                    <div className="p-3">
-                                                                        <h4 className="font-semibold text-gray-900 leading-tight line-clamp-1 text-[12px]">
-                                                                            {place.name}
-                                                                        </h4>
-                                                                        <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{place.adress}</p>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="text-[9px] mt-2 font-medium opacity-50 text-gray-400">
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            );
-                        })}
+                        {messages.map((msg) => (
+                            <ChatMessageItem
+                                key={msg.id}
+                                msg={msg}
+                                isStreaming={isStreaming}
+                                streamingMsgId={streamingMsgId}
+                                showPipeline={showPipeline}
+                                selectedMapPlaceId={selectedMapPlaceId}
+                                toMapId={toMapId}
+                                handleSelectMapPlace={handleSelectMapPlace}
+                                handleTogglePlaceBookmark={handleTogglePlaceBookmark}
+                                placeCardRefs={placeCardRefs}
+                            />
+                        ))}
 
                         {showPipeline && (
                             <motion.div
@@ -1027,7 +859,7 @@ export function ChatHome() {
                                 className="flex items-start gap-3"
                             >
                                 <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-black text-white shadow-sm">
-                                    <span className="font-serif italic text-sm">T</span>
+                                    <BrandMark tone="light" size={14} />
                                 </div>
                                 <PipelineProgress steps={pipelineSteps} visible={true} />
                             </motion.div>
@@ -1037,24 +869,24 @@ export function ChatHome() {
                     </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-20">
-                    <div className="w-full mx-auto relative px-2">
-                        <div className="flex items-end gap-2 bg-white border border-gray-200 rounded-[28px] p-2 pr-2 shadow-sm focus-within:ring-2 focus-within:ring-black/5 focus-within:border-gray-300 transition-all">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-4 px-4 z-20 pointer-events-none">
+                    <div className="w-full mx-auto relative px-2 pointer-events-auto max-w-4xl">
+                        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
                             <button
                                 type="button"
-                                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/50 transition-colors"
+                                className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
                                 title="첨부 파일 (준비 중)"
                                 disabled
                             >
-                                <Paperclip size={20} />
+                                <Paperclip size={18} />
                             </button>
 
                             <textarea
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={handleKeyPress}
-                                placeholder="Ask Triver regarding your next destination..."
-                                className="flex-1 bg-transparent border-none outline-none resize-none py-3 max-h-[120px] text-sm text-gray-800 placeholder:text-gray-400 custom-scrollbar"
+                                placeholder="어디로 떠나고 싶으신가요?"
+                                className="flex-1 bg-transparent border-none outline-none resize-none py-2.5 max-h-[120px] text-[15px] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar mt-[2px]"
                                 rows={1}
                                 style={{ minHeight: "44px" }}
                             />
@@ -1062,7 +894,7 @@ export function ChatHome() {
                             <button
                                 type="button"
                                 onClick={() => setIsMapSheetOpen(true)}
-                                className="p-2.5 rounded-full transition-all duration-300 text-gray-500 hover:text-black hover:bg-gray-100 lg:hidden"
+                                className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
                                 title="지도 보기"
                             >
                                 <MapIcon size={18} />
@@ -1076,8 +908,8 @@ export function ChatHome() {
                             >
                                 {isListening ? (
                                     <>
-                                        <Square size={14} fill="currentColor" strokeWidth={0} />
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                        <Square size={16} fill="currentColor" strokeWidth={0} />
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50" />
                                     </>
                                 ) : sttPermission === "denied" ? (
                                     <MicOff size={18} strokeWidth={1.5} />
@@ -1088,16 +920,16 @@ export function ChatHome() {
 
                             <motion.button
                                 initial={false}
-                                animate={{ scale: inputText.trim() && !isTyping ? 1 : 0.98, opacity: 1 }}
+                                animate={{ scale: inputText.trim() && !isTyping ? 1 : 0.9, opacity: inputText.trim() && !isTyping ? 1 : 0.7 }}
                                 onClick={handleSendMessage}
                                 disabled={!inputText.trim() || isTyping}
-                                className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white hover:bg-gray-800" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                                className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
                             >
                                 <Send size={18} />
                             </motion.button>
                         </div>
 
-                        <p className="text-[10px] text-center text-gray-300 mt-2">
+                        <p className="text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide">
                             Triver AI can make mistakes. Please check important info.
                         </p>
                     </div>
@@ -1108,6 +940,7 @@ export function ChatHome() {
                 <PlaceMapPanel
                     className="h-full"
                     places={mapPlaces}
+                    groups={mapPlaceGroups}
                     selectedMapPlaceId={selectedMapPlaceId}
                     onSelectPlace={handleSelectMapPlace}
                     onMarkerClick={focusPlaceCardFromMap}
@@ -1118,6 +951,7 @@ export function ChatHome() {
                 open={isMapSheetOpen}
                 onClose={() => setIsMapSheetOpen(false)}
                 places={mapPlaces}
+                groups={mapPlaceGroups}
                 selectedMapPlaceId={selectedMapPlaceId}
                 onSelectPlace={handleSelectMapPlace}
                 onMarkerClick={focusPlaceCardFromMap}

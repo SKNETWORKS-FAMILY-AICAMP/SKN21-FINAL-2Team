@@ -399,9 +399,9 @@ export default function MyPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 sm:p-6 sm:pb-8 rounded-3xl border border-gray-200 bg-white shadow-sm h-full flex flex-col"
+                className="p-4 sm:p-6 sm:pb-4 rounded-3xl border border-gray-200 bg-white shadow-sm flex flex-col"
               >
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
                   <div className="flex items-center gap-4 min-w-0">
                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                       {userProfile.profile_picture ? (
@@ -433,9 +433,9 @@ export default function MyPage() {
                   </button>
                 </div>
 
-                <hr className="border-gray-100 my-6" />
+                <hr className="border-gray-100 my-3" />
 
-                <div className="space-y-8 flex-1">
+                <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
                       <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
@@ -465,7 +465,7 @@ export default function MyPage() {
                         const imageSrc = SURVEY_IMAGE_MAP[item.value] ?? "/image/noplan.png";
                         return (
                           <div key={item.key} className="space-y-2">
-                            <div className="relative h-32 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                            <div className="relative h-48 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                               <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 p-4">
@@ -505,7 +505,7 @@ export default function MyPage() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="mt-6">
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Extra Prefer</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
@@ -535,7 +535,7 @@ export default function MyPage() {
               </motion.div>
             </div>
 
-            <div className="flex flex-col gap-6 lg:h-[calc(100vh-200px)] lg:max-h-[800px]">
+            <div className="flex flex-col gap-6 h-full">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

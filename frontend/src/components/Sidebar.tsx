@@ -143,7 +143,7 @@ function SidebarContent() {
         if (!(error instanceof Error)) return;
         if (error?.message === "Unauthorized" || error?.message === "Session expired") {
             clearAuth();
-            window.location.href = "/login";
+            window.location.href = "/signup";
         }
     };
 
