@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
-import { createRoom, fetchCurrentUser } from "@/services/api";
+import { createRoom, fetchCurrentUser, fetchRandomExplorePlaces, type CategoryPlaceItem } from "@/services/api";
 import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
 
 const categories = [
@@ -146,7 +146,7 @@ export function Destinations() {
                 const mappedData: Record<string, Destination[]> = {};
 
                 // 1. 핫플레이스 매핑
-                mappedData["hot-places"] = (raw["hot_places"] || []).map(p => ({
+                mappedData["hot-places"] = (raw["hot_places"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
@@ -157,7 +157,7 @@ export function Destinations() {
                 }));
 
                 // 2. 관광지 매핑
-                mappedData["tourist-spot"] = (raw["tourist_spots"] || []).map(p => ({
+                mappedData["tourist-spot"] = (raw["tourist_spots"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
@@ -165,7 +165,7 @@ export function Destinations() {
                 }));
 
                 // 3. 음식점 매핑
-                mappedData["foods"] = (raw["restaurants"] || []).map(p => ({
+                mappedData["foods"] = (raw["restaurants"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
