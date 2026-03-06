@@ -204,15 +204,15 @@ export function Destinations() {
                             >
                                 {displayItems.map((place) => (
                                     <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                                        <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
+                                        <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
                                             {place.image ? (
                                                 <img
                                                     src={place.image}
                                                     alt={place.name}
-                                                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
+                                                    className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-in-out"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
+                                                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50">
                                                     {activeTab === "tourist-spot" ? (
                                                         <svg width="80" height="100" viewBox="0 0 80 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                             <rect x="38" y="0" width="4" height="18" rx="2" fill="#CBD5E1" />
