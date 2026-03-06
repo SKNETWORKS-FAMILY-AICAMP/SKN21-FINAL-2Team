@@ -43,14 +43,12 @@ _graph_app_lock = asyncio.Lock()
 
 async def get_graph_app():
     global _graph_app, _checkpointer
-    if _graph_app is not None:
-        return _graph_app
-
-    # 다중 요청 시 checkpointer/setup 중복 실행 방지
+    # 다중 요청 시 checkpointer/setup/compile 중복 실행 방지
     async with _graph_app_lock:
-        if _graph_app is None:
+        latest_checkpointer = await get_checkpointer()
+        if _graph_app is None or _checkpointer is not latest_checkpointer:
             print('init graph app')
-            _checkpointer = await get_checkpointer()
+            _checkpointer = latest_checkpointer
             _graph_app = workflow().compile(checkpointer=_checkpointer)
             print('compile graph app (with AsyncMySaver checkpointer)')
     return _graph_app
