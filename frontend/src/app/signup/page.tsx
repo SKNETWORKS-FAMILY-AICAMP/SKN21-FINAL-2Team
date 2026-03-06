@@ -6,9 +6,26 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useGoogleLogin } from "@react-oauth/google";
 import { Logo } from "@/components/Logo";
+import { useState, useEffect } from "react";
+
+const BACKGROUND_IMAGES = [
+  "https://images.unsplash.com/photo-1448523183439-d2ac62aca997?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1602479185195-32f5cd203559?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1538485399081-7191377e8241?q=80&w=674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1546672136-49179bf19b4e?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+];
 
 export default function SignUpPage() {
   const router = useRouter();
+
+  const [bgImage, setBgImage] = useState(BACKGROUND_IMAGES[0]);
+
+  useEffect(() => {
+    // 주의: Next.js 환경에서 서버 렌더링 결과와 불일치하는 것을 막기 위해 (Hydration 에러 방지)
+    // 랜덤 이미지는 항상 클라이언트 사이드인 useEffect 내에서 설정합니다.
+    const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    setBgImage(BACKGROUND_IMAGES[randomIndex]);
+  }, []);
 
   const handleSignUp = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -73,8 +90,8 @@ export default function SignUpPage() {
       <div className="hidden lg:flex w-[45%] bg-black relative overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1760539618919-5516b979bab4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxLLXBvcCUyMHN0eWxlJTIwY29uY2VydCUyMGNyb3dkJTIwbGlnaHRzdGljayUyMGFlc3RoZXRpY3xlbnwxfHx8fDE3NzE0ODE4MjZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-            alt="K-Pop Energy"
+            src={bgImage}
+            alt="Travel Background"
             className="w-full h-full object-cover opacity-70"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-purple-900/10 to-black/30" />
