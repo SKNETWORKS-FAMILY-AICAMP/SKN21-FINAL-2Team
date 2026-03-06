@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ArrowRight, User, Globe, MessageSquare } from "lucide-react";
+import { Check, ArrowRight, User, Globe, MessageSquare, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchCountries, updateCurrentUser } from "@/services/api";
 
@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
   const [nickname, setNickname] = useState("");
+  const [nicknameError, setNicknameError] = useState(""); // 닉네임 에러 메시지 상태 추가
   const [gender, setGender] = useState("");
 
   // 사용자 정보 State
@@ -31,7 +32,34 @@ export default function ProfilePage() {
     fetchCountries().then(setCountries).catch(console.error);
   }, []);
 
-  const isFormValid = nickname && gender && agreed && countryCode;
+  // 주의: 한글과 영문/숫자의 차지하는 너비가 다르므로 가중치(1.6배)를 주어 글자수를 계산합니다.
+  const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNickname(val);
+
+    // 주의: 정규식으로 특수문자, 이모지, 공백이 포함되었는지 검사합니다.
+    const hasSpecialChar = /[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9]/.test(val);
+
+    let length = 0;
+    for (let i = 0; i < val.length; i++) {
+      if (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(val[i])) {
+        length += 1.6; // 영문 16자 기준으로 한글 10자는 1.6의 가중치를 가짐
+      } else {
+        length += 1;
+      }
+    }
+
+    if (hasSpecialChar) {
+      setNicknameError("닉네임은 한글, 영문, 숫자만 입력 가능합니다.");
+    } else if (length > 16) {
+      setNicknameError("닉네임은 한글 10자, 영문/숫자 16자 이내로 입력해주세요.");
+    } else {
+      setNicknameError("");
+    }
+  };
+
+  // 에러가 없을 때만 폼이 유효하도록 조건 추가
+  const isFormValid = nickname && !nicknameError && gender && agreed && countryCode;
 
   const handleComplete = async () => {
     try {
@@ -56,6 +84,15 @@ export default function ProfilePage() {
       console.error("Profile Update Failed:", error);
       alert("프로필 저장에 실패했습니다.");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("profile_picture");
+    localStorage.removeItem("user_name");
+    localStorage.removeItem("user_email");
+    router.replace("/signup");
   };
 
   return (
@@ -107,10 +144,17 @@ export default function ProfilePage() {
               <input
                 type="text"
                 value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                onChange={handleNicknameChange}
                 placeholder="How should we call you?"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all placeholder:text-gray-300 placeholder:font-normal"
+                // 에러 발생 시 테두리 색상 등을 붉은색으로 변경하여 시각적 피드백 제공
+                className={`w-full bg-white border rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-all placeholder:text-gray-300 placeholder:font-normal ${nicknameError
+                  ? "border-red-500 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
+                  : "border-gray-200 text-gray-900 focus:border-black focus:ring-1 focus:ring-black/10"
+                  }`}
               />
+              {nicknameError && (
+                <p className="text-xs text-red-500 mt-1 pl-1">{nicknameError}</p>
+              )}
             </div>
 
             {/* Gender */}
@@ -203,8 +247,15 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <div className="text-center mt-8">
-          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors">
+        <div className="text-center mt-8 flex flex-col items-center gap-4">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <LogOut size={14} />
+            다른 구글 계정으로 로그인하기
+          </button>
+          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors hidden cursor-default">
             Skip setup (Demo only)
           </button>
         </div>

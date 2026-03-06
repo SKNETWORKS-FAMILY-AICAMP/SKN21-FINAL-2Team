@@ -6,9 +6,26 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useGoogleLogin } from "@react-oauth/google";
 import { Logo } from "@/components/Logo";
+import { useState, useEffect } from "react";
+
+const BACKGROUND_IMAGES = [
+  "https://images.unsplash.com/photo-1448523183439-d2ac62aca997?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1602479185195-32f5cd203559?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1538485399081-7191377e8241?q=80&w=674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1546672136-49179bf19b4e?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+];
 
 export default function SignUpPage() {
   const router = useRouter();
+
+  const [bgImage, setBgImage] = useState("");
+
+  useEffect(() => {
+    // 주의: Next.js 환경에서 서버 렌더링 결과와 불일치하는 것을 막기 위해 (Hydration 에러 방지)
+    // 랜덤 이미지는 항상 클라이언트 사이드인 useEffect 내에서 설정합니다.
+    const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    setBgImage(BACKGROUND_IMAGES[randomIndex]);
+  }, []);
 
   const handleSignUp = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -63,20 +80,18 @@ export default function SignUpPage() {
     router.push("/");
   };
 
-  const handleLoginClick = () => {
-    router.push("/signup");
-  };
-
   return (
     <div className="min-h-screen w-full flex bg-white">
       {/* Left Side - Image & Brand */}
       <div className="hidden lg:flex w-[45%] bg-black relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1760539618919-5516b979bab4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxLLXBvcCUyMHN0eWxlJTIwY29uY2VydCUyMGNyb3dkJTIwbGlnaHRzdGljayUyMGFlc3RoZXRpY3xlbnwxfHx8fDE3NzE0ODE4MjZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-            alt="K-Pop Energy"
-            className="w-full h-full object-cover opacity-70"
-          />
+        <div className="absolute inset-0 z-0 bg-black">
+          {bgImage && (
+            <img
+              src={bgImage}
+              alt="Travel Background"
+              className="w-full h-full object-cover opacity-70 transition-opacity duration-1000 ease-in-out"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-purple-900/10 to-black/30" />
         </div>
 
@@ -121,7 +136,7 @@ export default function SignUpPage() {
         >
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
-              Create your account
+              Welcome to Triver
             </h1>
             <p className="text-[13px] text-gray-500 font-normal">
               Join Triver for personalized travel planning
@@ -140,13 +155,8 @@ export default function SignUpPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              Sign up with Google
+              Continue with Google
             </Button>
-          </div>
-
-          <div className="mt-6 text-[11px] text-gray-400">
-            Already have an account?{" "}
-            <Button variant="ghost" onClick={handleLoginClick} className="font-bold text-black p-0 h-auto text-[11px]">Log in</Button>
           </div>
 
           <div className="mt-8 pt-8 border-t border-gray-100">

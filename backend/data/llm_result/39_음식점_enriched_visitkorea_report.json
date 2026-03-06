@@ -1,0 +1,292 @@
+{
+  "summary": {
+    "total": 1405,
+    "target_missing": 256,
+    "processed_targets": 256,
+    "filled": 226,
+    "skipped_existing": 1149,
+    "no_attraction": 24,
+    "low_similarity": 6,
+    "no_image": 0,
+    "request_error": 0,
+    "parse_error": 0
+  },
+  "failures": [
+    {
+      "contentid": "2642895",
+      "title": "고봉삼계탕",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2360783",
+      "title": "대장금",
+      "reason": "low_similarity:0.6000",
+      "top_candidates": [
+        {
+          "title": "용인 대장금파크",
+          "cotid": "c8e33dab-4f7e-4f78-8aff-7f12518e1663",
+          "score": 0.6
+        },
+        {
+          "title": "대장금찜한정식",
+          "cotid": "fd621a1d-fb3e-448c-b52a-926cf40ea3b2",
+          "score": 0.6
+        },
+        {
+          "title": "황새울가든",
+          "cotid": "cdb9bed5-bced-4c64-9d5e-54a48ba7d27c",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "contentid": "2669960",
+      "title": "더버스스탑",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "3446219",
+      "title": "더웍",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653697",
+      "title": "도깨비불고기",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653706",
+      "title": "동대문본가가마솥설렁탕",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2642979",
+      "title": "만족오향족발 시청",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2685447",
+      "title": "매화반점",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2685572",
+      "title": "봉산옥",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "402970",
+      "title": "산촌",
+      "reason": "low_similarity:0.5000",
+      "top_candidates": [
+        {
+          "title": "조동산촌마을",
+          "cotid": "91c37494-46f4-41b6-b26f-86aba2fbed2d",
+          "score": 0.5
+        },
+        {
+          "title": "인제산촌민속박물관",
+          "cotid": "51c87abd-a23c-422e-9115-5a983534ea13",
+          "score": 0.3636
+        },
+        {
+          "title": "명달리산촌생태마을",
+          "cotid": "e36f1cc1-d346-4bcb-b0c3-36bf2af689a7",
+          "score": 0.3636
+        }
+      ]
+    },
+    {
+      "contentid": "2642972",
+      "title": "삼겹살전문점대통령",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653730",
+      "title": "새마을식당 동대문",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653657",
+      "title": "순미네행복게장 동대문",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "1060809",
+      "title": "아리랑",
+      "reason": "low_similarity:0.6000",
+      "top_candidates": [
+        {
+          "title": "진도아리랑마을",
+          "cotid": "e9297c43-f656-42d0-bfb4-68156ab9e3aa",
+          "score": 0.6
+        },
+        {
+          "title": "정선아리랑 전수관",
+          "cotid": "8eed82ac-d23f-4cc8-b385-9f0f6b454988",
+          "score": 0.5455
+        },
+        {
+          "title": "돈암동아리랑고개",
+          "cotid": "d3acfd8f-d061-483e-a8f4-1629438b3258",
+          "score": 0.5455
+        }
+      ]
+    },
+    {
+      "contentid": "835739",
+      "title": "안동국시소람",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2689418",
+      "title": "원조호수삼계탕",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2643043",
+      "title": "일미리금계찜닭 명동",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653394",
+      "title": "잘빠진메밀 서촌",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653395",
+      "title": "잘빠진메밀 익선",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "732321",
+      "title": "졍동국시",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2653718",
+      "title": "체부동잔치집돼지갈비",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2807695",
+      "title": "초승달",
+      "reason": "low_similarity:0.0000",
+      "top_candidates": [
+        {
+          "title": "자작도해변",
+          "cotid": "a9c08346-b320-45e6-821b-ee2b5d638409",
+          "score": 0.0
+        },
+        {
+          "title": "블루오션 리조트",
+          "cotid": "67835ce9-89ea-4faa-a7e2-551319a4f066",
+          "score": 0.0
+        },
+        {
+          "title": "물건해수욕장",
+          "cotid": "2c7bda85-9358-4539-b358-860e1bffa610",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "contentid": "2943506",
+      "title": "콘래드서울 제스트",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2643066",
+      "title": "하남돼지집 동대문",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "1874704",
+      "title": "하모",
+      "reason": "low_similarity:0.4444",
+      "top_candidates": [
+        {
+          "title": "당머리하모거리",
+          "cotid": "7a47ba1d-ad83-473f-8b18-377d7340cb69",
+          "score": 0.4444
+        },
+        {
+          "title": "당머리첫집 하모샤브샤브",
+          "cotid": "57529bef-bb41-4adc-9235-6b37010e1fc4",
+          "score": 0.3077
+        },
+        {
+          "title": "거북선횟집 하모샤브샤브",
+          "cotid": "fc6400ea-c337-40d5-aff0-75749a2bf246",
+          "score": 0.3077
+        }
+      ]
+    },
+    {
+      "contentid": "2689427",
+      "title": "한일관 광화문",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2689425",
+      "title": "한정식대문",
+      "reason": "low_similarity:0.6000",
+      "top_candidates": [
+        {
+          "title": "대문한정식",
+          "cotid": "81439bcd-45de-46cd-b9ee-d0c053a7f625",
+          "score": 0.6
+        },
+        {
+          "title": "거목한정식",
+          "cotid": "f77f3a3b-be3f-44c7-a36d-75d170c24245",
+          "score": 0.6
+        },
+        {
+          "title": "열두대문 계절밥상",
+          "cotid": "d8ee1dcf-218d-42e8-9e18-bf3d82cba0d0",
+          "score": 0.3077
+        }
+      ]
+    },
+    {
+      "contentid": "857735",
+      "title": "홍콩반점0410(명동점)",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2642557",
+      "title": "황금목장 명동성당",
+      "reason": "no_attraction",
+      "top_candidates": []
+    },
+    {
+      "contentid": "2679018",
+      "title": "흑돈가 삼성",
+      "reason": "no_attraction",
+      "top_candidates": []
+    }
+  ]
+}
