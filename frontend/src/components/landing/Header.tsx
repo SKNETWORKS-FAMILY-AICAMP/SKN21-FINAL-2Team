@@ -40,7 +40,7 @@ export function Header() {
         if (token) {
             router.push("/explore");
         } else {
-            router.push("/login");
+            router.push("/signup");
         }
     };
 

@@ -86,6 +86,10 @@ export function ChatHome() {
     // Re-run initialization or room switch when roomIdParam changes
     useEffect(() => {
         const initializeChat = async () => {
+            // 주의: 이미 보고 있는 방이라면 (방 생성 직후 라우팅으로 인한) 불필요한 전체 초기화를 막습니다.
+            const paramId = roomIdParam ? parseInt(roomIdParam, 10) : null;
+            if (paramId && paramId === currentRoomId) return;
+
             setIsInitializing(true);
             try {
                 // 토큰 유효성 검증 (만료 시 자동 refresh 시도)
@@ -96,7 +100,7 @@ export function ChatHome() {
                         return;
                     }
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -105,7 +109,7 @@ export function ChatHome() {
                     const data = await fetchCurrentUser();
                     setUserProfile(data);
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -154,6 +158,10 @@ export function ChatHome() {
     const handleCreateNewRoom = async () => {
         try {
             const newRoom = await createRoom("새로운 여행 계획");
+
+            // 주의: 빈 방 생성 시 기본 인사말 스트림을 띄우기 위해 로컬스토리지에 미리 세팅
+            localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
+
             setRooms((prev) => [newRoom, ...prev]);
             setCurrentRoomId(newRoom.id);
             setMessages([]);
@@ -170,12 +178,9 @@ export function ChatHome() {
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            setRooms((prev) => [newRoom, ...prev]);
-            setCurrentRoomId(newRoom.id);
-            setMessages([]);
 
-            // 주의: fromDestination 경로로 온 경우 pendingDestination을 챗봇 autostart 형식으로 변환
-            // autostart는 triver:selected-places:${roomId} 키를 읽어 장소 기반 추천을 시작합니다
+            // 주의: 상태(setCurrentRoomId)를 변경하기 전에 로컬 스토리지에 컨텍스트를 먼저 세팅해야,
+            // 렌더링 후 실행되는 Autostart useEffect가 데이터를 문제없이 읽을 수 있습니다.
             const pendingRaw = localStorage.getItem("pendingDestination");
             if (pendingRaw) {
                 try {
@@ -183,7 +188,7 @@ export function ChatHome() {
                     // Destination 타입 → SelectedPlaceSeed 배열로 변환
                     const seedPlaces = [{
                         name: place.name,
-                        adress: place.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: place.address || place.adress, // API 응답에 따라 address 또는 adress 일 수 있음
                         place_id: typeof place.id === "number" ? place.id : 0,
                     }];
                     localStorage.setItem(`triver:selected-places:${newRoom.id}`, JSON.stringify(seedPlaces));
@@ -202,6 +207,11 @@ export function ChatHome() {
             } else {
                 localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
             }
+
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(newRoom.id);
+            setMessages([]);
+
             setShowTripModal(false);
             setIsTripLoading(false);
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
@@ -506,7 +516,6 @@ export function ChatHome() {
 
     useEffect(() => {
         if (!currentRoomId || isInitializing || isStreaming) return;
-        if (messages.length > 0) return;
         if (autoStartedRoomsRef.current.has(currentRoomId)) return;
 
         const contextKey = `triver:trip-context:${currentRoomId}`;
@@ -550,6 +559,12 @@ export function ChatHome() {
 
         const hasContext = !!context;
         const hasSelectedPlaces = selectedPlaces.length > 0;
+
+        // 주의: 만약 이미 메시지가 리스트에 있는데 넘겨줄(context/places) 데이터가 아무것도 없다면, 진짜 빈 일반 방이므로 실행 무시
+        if (messages.length > 0 && !hasContext && !hasSelectedPlaces) {
+            return;
+        }
+
         if (!hasContext && !hasSelectedPlaces && !shouldGreeting) return;
 
         autoStartedRoomsRef.current.add(currentRoomId);

@@ -93,7 +93,7 @@ export const handleApiError = (error: ApiError): "retry" | "redirect" | "throw" 
             // 세션 완전 만료 → 로그인 페이지로 이동
             clearAuth();
             if (typeof window !== "undefined") {
-                window.location.href = "/login";
+                window.location.href = "/signup";
             }
             return "redirect";
 

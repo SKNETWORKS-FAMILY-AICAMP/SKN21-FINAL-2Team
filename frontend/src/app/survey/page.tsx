@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
 
@@ -64,8 +64,14 @@ export default function PersonaSurveyPage() {
                 }
             });
             setQuestions(loadedQuestions);
-        }).catch(err => console.error("Failed to fetch prefers:", err));
-    }, []);
+        }).catch(err => {
+            console.error("Failed to fetch prefers:", err);
+            if (err.message === 'Unauthorized' || err.message === 'Session expired') {
+                alert("로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요.");
+                router.push("/login"); // 로그인 페이지로 이동
+            }
+        });
+    }, [router]);
 
     const handleSelect = async (optionValue: string, optionType: string) => {
         const newAnswers = { ...answers, [optionType]: optionValue };
@@ -77,7 +83,14 @@ export default function PersonaSurveyPage() {
         } else {
             try {
                 await submitSurvey(newAnswers);
-                router.push("/explore");
+
+                // 주의: Destinations에서 챗봇 플로우를 위해 선택된 장소가 있다면 그곳으로 넘깁니다.
+                const pending = localStorage.getItem("pendingDestination");
+                if (pending) {
+                    router.push("/chatbot?fromDestination=1");
+                } else {
+                    router.push("/explore");
+                }
             } catch (e) {
                 console.error("Failed to submit survey:", e);
                 alert("Failed to save preferences.");
@@ -85,14 +98,34 @@ export default function PersonaSurveyPage() {
         }
     };
 
+    const handlePrevious = () => {
+        if (currentQuestionIndex > 0) {
+            setDirection(-1);
+            setCurrentQuestionIndex((prev) => prev - 1);
+        }
+    };
+
+
     if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
     const currentQuestion = questions[currentQuestionIndex];
 
     return (
         <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Back Button */}
+            {currentQuestionIndex > 0 && (
+                <button
+                    onClick={handlePrevious}
+                    // 주의: 절대 위치(absolute)를 사용해 프로그레스 바 영역과 겹치지 않게 왼쪽 상단에 배치합니다.
+                    className="absolute top-8 left-2 md:top-8 md:left-6 lg:left-12 z-30 p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-full transition-all"
+                    aria-label="이전 문항으로 돌아가기"
+                >
+                    <ArrowLeft size={24} />
+                </button>
+            )}
+
             {/* Progress Bar */}
-            <div className="absolute top-10 left-0 w-full px-8 md:px-20 lg:px-40 flex gap-2 z-20">
+            <div className="absolute top-10 left-0 w-full px-14 md:px-24 lg:px-40 flex gap-2 z-20">
                 {questions.map((_, idx) => (
                     <div key={idx} className="h-1 flex-1 bg-gray-100 rounded-full overflow-hidden">
                         <motion.div
