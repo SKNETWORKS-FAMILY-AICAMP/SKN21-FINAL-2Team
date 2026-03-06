@@ -26,7 +26,7 @@ const BACKGROUND_IMAGES = [
 export default function SignUpPage() {
   const router = useRouter();
 
-  const [bgImage, setBgImage] = useState(BACKGROUND_IMAGES[0]);
+  const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
     // 주의: Next.js 환경에서 서버 렌더링 결과와 불일치하는 것을 막기 위해 (Hydration 에러 방지)
@@ -92,12 +92,14 @@ export default function SignUpPage() {
     <div className="min-h-screen w-full flex bg-white">
       {/* Left Side - Image & Brand */}
       <div className="hidden lg:flex w-[45%] bg-black relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={bgImage}
-            alt="Travel Background"
-            className="w-full h-full object-cover opacity-70"
-          />
+        <div className="absolute inset-0 z-0 bg-black">
+          {bgImage && (
+            <img
+              src={bgImage}
+              alt="Travel Background"
+              className="w-full h-full object-cover opacity-70 transition-opacity duration-1000 ease-in-out"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-purple-900/10 to-black/30" />
         </div>
 
