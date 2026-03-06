@@ -38,7 +38,7 @@ export default function ProfilePage() {
       const token = localStorage.getItem("access_token");
       if (!token) {
         alert("로그인이 필요합니다.");
-        router.push("/login");
+        router.push("/signup");
         return;
       }
 

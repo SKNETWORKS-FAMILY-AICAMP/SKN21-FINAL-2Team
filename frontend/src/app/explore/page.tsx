@@ -136,7 +136,7 @@ export default function ExplorePage() {
             } catch (error) {
                 if (isAuthFailureError(error)) {
                     clearAuth();
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
                 console.error("Failed to fetch explore data:", error);

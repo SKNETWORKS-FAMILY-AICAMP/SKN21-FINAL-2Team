@@ -55,7 +55,7 @@ export function Destinations() {
         if (e) e.stopPropagation();
         if (!isLoggedIn) {
             localStorage.setItem("pendingDestination", JSON.stringify(place));
-            router.push("/login");
+            router.push("/signup");
         } else {
             setPendingPlace(place);
             setShowTripModal(true);
@@ -71,7 +71,7 @@ export function Destinations() {
                     `triver:selected-places:${newRoom.id}`,
                     JSON.stringify([{
                         name: pendingPlace.name,
-                        adress: pendingPlace.address,
+                        adress: pendingPlace.address || (pendingPlace as any).adress, // API 응답에 따라 필드명이 다를 수 있음
                         place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
                     }])
                 );
@@ -114,7 +114,10 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`
+                    // 주의: image_url이 있을 때만 경로를 생성, 없으면 빈 문자열(placeholder용)
+                    image: p.image_url && p.image_url.trim() !== ""
+                        ? (p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`)
+                        : ""
                 }));
 
                 // 2. 관광지 매핑
@@ -122,7 +125,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url
+                    image: p.image_url || ""
                 }));
 
                 // 3. 음식점 매핑
@@ -130,7 +133,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url
+                    image: p.image_url || ""
                 }));
 
                 // 현재 탭에 맞는 데이터로 즉시 업데이트
@@ -203,9 +206,10 @@ export function Destinations() {
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
                                         <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
-                                            {place.image ? (
+                                            {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
+                                            {place.image && place.image.trim() !== "" ? (
                                                 <img
                                                     src={place.image}
                                                     alt={place.name}
