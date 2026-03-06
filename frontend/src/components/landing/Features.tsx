@@ -8,22 +8,22 @@ import { cn } from "../../../utils";
 const features = [
     {
         title: "Hyper personalized",
-        shortTitle: "Personalized",
-        description: "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 여행지를 추천합니다.",
+        shortTitle: "당신의 취향을 반영한 여행",
+        description: "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 \n맞춤 여행지를 추천합니다.",
         icon: Sparkles,
         mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Dashboard/User page mock
     },
     {
         title: "Smart itinerary",
-        shortTitle: "Smart Route",
-        description: "가고 싶은 장소들을 선택하면,\n 최적의 루트로 동선을 계획합니다.\nTriever와 함께 스마트한 \n여행 코스를 만들어보세요.",
+        shortTitle: "최적의 코스로 스마트한 여행",
+        description: "가고 싶은 장소들을 선택만 해도,\n 최적의 루트로 동선을 계획해요.\nTriever와 함께 간편하게 \n여행 코스를 만들어보세요.",
         icon: Calendar,
         mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Chatbot/Search mock
     },
     {
         title: "Integrated booking",
-        shortTitle: "Booking",
-        description: "여행 준비도, 관리도 간편하게.\n여러 곳에서 예약한 티켓을 \n한 번에 모아서 확인할 수 있어요.",
+        shortTitle: "준비도, 관리도 간편한 여행",
+        description: "여기저기 흩어져 있던 예약 일정과 티켓들.\n일일이 사이트와 앱을 켜서\n확인하는 건 이제 그만.\n모두 모아서 한번에 확인할 수 있어요.",
         icon: MapPin,
         mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop", // Calendar/Schedule mock
     },
@@ -35,17 +35,17 @@ export function Features() {
     const activeFeature = features[activeIndex];
 
     return (
-        <section id="features" className="py-24 bg-gray-50 overflow-hidden relative">
+        <section id="features" className="py-16 bg-gray-50 overflow-hidden relative">
             <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col items-center">
 
                 {/* 1단 (상단): 헤더 영역 */}
-                <div className="text-center mb-10">
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Travel Redefined</h2>
-                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">Cutting-edge technology meets the art of exploration.</p>
+                <div className="text-center mb-[47px]">
+                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">With  Triever</h2>
+                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">Cutting-Edge Technology Meets Traveling</p>
                 </div>
 
                 {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) 통합 영역 */}
-                <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+                <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10">
 
                     {/* 이미지 영역 (좌측) */}
                     <div className="w-full lg:w-3/5 relative perspective-[1000px]">
@@ -56,7 +56,7 @@ export function Features() {
                                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
                                 exit={{ opacity: 0, x: 30, rotateY: -5 }}
                                 transition={{ duration: 0.5, ease: "easeOut" }}
-                                className="w-full aspect-[4/3] sm:aspect-[16/9] lg:aspect-[4/3] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
+                                className="w-full aspect-[16/10] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
                             >
                                 <img
                                     src={activeFeature.mockupImage}
@@ -69,7 +69,7 @@ export function Features() {
                     </div>
 
                     {/* 텍스트 및 네비게이션 영역 (우측) */}
-                    <div className="w-full lg:w-2/5 flex flex-col items-start min-h-[400px]">
+                    <div className="w-full lg:w-2/5 flex flex-col items-start min-h-[300px]">
 
                         {/* 네비게이션 탭 (아이콘 + 텍스트) */}
                         <div className="flex flex-col gap-6 w-full pr-4">
