@@ -107,6 +107,15 @@ export function Destinations() {
         }
     };
 
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
+        }
+    };
+
     const handleModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
