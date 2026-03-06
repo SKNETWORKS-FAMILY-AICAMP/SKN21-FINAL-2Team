@@ -11,7 +11,7 @@ export function CTA() {
         if (token) {
             router.push("/explore");
         } else {
-            router.push("/login");
+            router.push("/signup");
         }
     };
 

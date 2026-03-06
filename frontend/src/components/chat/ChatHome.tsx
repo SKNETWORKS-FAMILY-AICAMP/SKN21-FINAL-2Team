@@ -80,7 +80,7 @@ export function ChatHome() {
                         return;
                     }
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -89,7 +89,7 @@ export function ChatHome() {
                     const data = await fetchCurrentUser();
                     setUserProfile(data);
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -167,7 +167,7 @@ export function ChatHome() {
                     // Destination 타입 → SelectedPlaceSeed 배열로 변환
                     const seedPlaces = [{
                         name: place.name,
-                        adress: place.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: place.address || place.adress, // API 응답에 따라 address 또는 adress 일 수 있음
                         place_id: typeof place.id === "number" ? place.id : 0,
                     }];
                     localStorage.setItem(`triver:selected-places:${newRoom.id}`, JSON.stringify(seedPlaces));
