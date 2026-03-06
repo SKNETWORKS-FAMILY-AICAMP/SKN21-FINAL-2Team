@@ -129,6 +129,17 @@ export default function ExplorePage() {
             setIsLoading(true);
             try {
                 const payload = await getExploreDataOnce();
+
+                // 주의: 가입(is_join)이나 설문(is_prefer)을 완료하지 않고 /explore 등 정상 서비스 페이지로 이탈한 경우 다시 돌려보냅니다.
+                if (!payload.user.is_join) {
+                    window.location.href = "/signup/profile";
+                    return;
+                }
+                if (!payload.user.is_prefer) {
+                    window.location.href = "/survey";
+                    return;
+                }
+
                 setUserProfile(payload.user);
                 setYourChoices(payload.choices);
                 setHotPlaces(payload.hotPlaces);

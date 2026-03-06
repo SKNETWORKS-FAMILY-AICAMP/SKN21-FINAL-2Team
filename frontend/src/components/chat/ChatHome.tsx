@@ -107,6 +107,17 @@ export function ChatHome() {
                 // Load user profile
                 try {
                     const data = await fetchCurrentUser();
+
+                    // 주의: 가입(is_join)이나 설문(is_prefer)을 완료하지 않고 챗봇 페이지로 억지로 진입한 경우 방어
+                    if (!data.is_join) {
+                        window.location.href = "/signup/profile";
+                        return;
+                    }
+                    if (!data.is_prefer) {
+                        window.location.href = "/survey";
+                        return;
+                    }
+
                     setUserProfile(data);
                 } catch {
                     window.location.href = "/signup";
