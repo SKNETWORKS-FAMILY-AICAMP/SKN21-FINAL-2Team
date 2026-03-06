@@ -64,19 +64,14 @@ export default function PersonaSurveyPage() {
                 }
             });
             setQuestions(loadedQuestions);
-<<<<<<< HEAD
-        }).catch(err => console.error("Failed to fetch prefers:", err));
-    }, []);
-=======
         }).catch(err => {
             console.error("Failed to fetch prefers:", err);
             if (err.message === 'Unauthorized' || err.message === 'Session expired') {
                 alert("로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요.");
-                router.push("/signup"); // 로그인 페이지로 이동
+                router.push("/login"); // 로그인 페이지로 이동
             }
         });
     }, [router]);
->>>>>>> 9a23800 (Login 폴더 signup 통합)
 
     const handleSelect = async (optionValue: string, optionType: string) => {
         const newAnswers = { ...answers, [optionType]: optionValue };
