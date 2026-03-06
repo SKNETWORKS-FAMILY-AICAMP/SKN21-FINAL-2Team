@@ -357,6 +357,7 @@ export const sendChatMessageStream = async (
     location?: string | null,
     options?: {
         saveUserMessage?: boolean;
+        signal?: AbortSignal;
     }
 ): Promise<void> => {
     const body = buildChatRequestBody({
@@ -378,6 +379,7 @@ export const sendChatMessageStream = async (
             method: 'POST',
             headers,
             credentials: 'include',
+            signal: options?.signal,
             body: JSON.stringify(body),
         });
     };

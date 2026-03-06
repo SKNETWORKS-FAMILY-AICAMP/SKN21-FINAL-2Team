@@ -78,7 +78,7 @@ Table chat_messages {
   room_id integer
   message text
   role role_type [default: 'human'] // 정의한 Enum 사용
-  image_path text
+  image_path longtext
   created_at timestamp [default: `now()` ]
   longitude float
   latitude float
