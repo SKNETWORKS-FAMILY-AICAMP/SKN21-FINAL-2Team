@@ -64,7 +64,7 @@ export function Destinations() {
             // 주의: 로그인 후 챗봇 연결을 위해 선택한 장소를 localStorage에 임시 저장
             // 로그인 완료 후 login/page.tsx에서 이 값을 읽어 TripContextModal을 띄웁니다
             localStorage.setItem("pendingDestination", JSON.stringify(place));
-            router.push("/login");
+            router.push("/signup");
         } else {
             // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
             setPendingPlace(place);
@@ -85,7 +85,7 @@ export function Destinations() {
                     `triver:selected-places:${newRoom.id}`,
                     JSON.stringify([{
                         name: pendingPlace.name,
-                        adress: pendingPlace.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: pendingPlace.address || (pendingPlace as any).adress, // API 응답에 따라 필드명이 다를 수 있음
                         place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
                     }])
                 );

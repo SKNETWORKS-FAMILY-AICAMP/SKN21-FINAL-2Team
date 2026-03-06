@@ -26,20 +26,26 @@ export default function SignUpPage() {
         }
 
         const data = await res.json();
-        const { access_token, is_join, profile_picture, name, email } = data;
+        const { access_token, refresh_token, profile_picture, name, email } = data;
 
         // 토큰 및 프로필 정보 저장
         localStorage.setItem("access_token", access_token);
+        if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
         if (profile_picture) localStorage.setItem("profile_picture", profile_picture);
         if (name) localStorage.setItem("user_name", name);
         if (email) localStorage.setItem("user_email", email);
 
-        // is_join 기반 라우팅
-        if (is_join) {
-          router.push("/chatbot");          // 기존 사용자 → 채팅
-        } else {
-          router.push("/signup/profile");   // 신규 사용자 → 추가정보 입력
-        }
+        // API로 사용자 정보 조회 후 동적 라우팅 결정
+        const user = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/users/me`, {
+          headers: { "Authorization": `Bearer ${access_token}` }
+        }).then(r => r.json());
+
+        const { getPostLoginPath } = await import("@/services/api");
+        const targetPath = getPostLoginPath(user);
+
+        // 주의: pendingDestination이 있으면 getPostLoginPath가 "/chatbot?fromDestination=1"을 반환합니다.
+        // 챗봇 페이지에서 pendingDestination을 읽어 TripContextModal을 표시합니다.
+        router.push(targetPath);
 
       } catch (error) {
         console.error("SignUp Failed:", error);
@@ -58,7 +64,7 @@ export default function SignUpPage() {
   };
 
   const handleLoginClick = () => {
-    router.push("/login");
+    router.push("/signup");
   };
 
   return (
