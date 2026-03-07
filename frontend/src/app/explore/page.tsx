@@ -65,25 +65,15 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
     const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
 
-    // 1. 카테고리 검색 기반 데이터 (팝업스토어, 다양한 활동 등)
-    // 2. 통합 랜덤 데이터 (핫플레이스, 관광지, 음식점)
-    const [categoryData, randomData] = await Promise.all([
+    const [categoryData, randomData, hotPlaces] = await Promise.all([
         fetchCategoryPlaces(userPrefs),
         fetchRandomExplorePlaces(),
+        fetchHotPlaces(3),
     ]);
 
     return {
         user,
-        hotPlaces: (randomData["hot_places"] || []).map((p: CategoryPlaceItem & { tag1?: string; tag2?: string }) => ({
-            id: Number(p.contentid),
-            name: p.title,
-            adress: p.address,
-            // 백엔드가 랜덤 핫플에서는 image_url로 주도록 바뀌었음 (explore.py 참조)
-            image_path: p.image_url,
-            feature: p.description,
-            tag1: p.tag1,
-            tag2: p.tag2
-        })) as unknown as HotPlace[],
+        hotPlaces,
         popupStores: categoryData["팝업스토어"] || [],
         choices: {
             // random_places 엔드포인트에서 넘어오는 key 이름 매칭 (tourist_spots)
@@ -298,12 +288,8 @@ export default function ExplorePage() {
                                             className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
                                         >
                                             <img
-<<<<<<< HEAD
                                                 // 핫플레이스는 상대경로일 수도 있고 절대경로(http)일 수도 있으므로 분기처리
                                                 src={place.image_path?.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
-=======
-                                                src={place.image_path || ""}
->>>>>>> dev
                                                 alt={place.name}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
                                             />

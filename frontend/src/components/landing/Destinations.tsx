@@ -37,18 +37,11 @@ const staticDestinations: Record<string, Destination[]> = {
     ],
 };
 
-<<<<<<< HEAD
-=======
-// ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
 // fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
-export interface Destination {
-    id: number | string;   // hot_place: id(number) | attractions·restaurants: contentid(string)
-    name: string;          // 세 API 모두 동일
-    image: string;         // API 응답 이미지 URL
-    address: string;       // hot_place: adress(오타) | 나머지: address 로 통일
-}
-
->>>>>>> dev
+// hot_place: id(number) | attractions·restaurants: contentid(string)
+// name: 세 API 모두 동일
+// image: API 응답 이미지 URL
+// address: hot_place: adress(오타) | 나머지: address 로 통일
 export function Destinations() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("hot-places");
@@ -153,41 +146,11 @@ export function Destinations() {
 
     // ✅ 탭이 바뀔 때마다 서버에서 새로운 랜덤 데이터를 가져옵니다.
     useEffect(() => {
-<<<<<<< HEAD
         const fetchCurrentTabRandom = async () => {
             setIsLoading(true);
             try {
                 const raw = await fetchRandomExplorePlaces();
                 const mappedData: Record<string, Destination[]> = {};
-=======
-        if (activeTab === "hot-places") {
-            // 🌐 /api/hot-places → { id, name, adress, image_path } 반환
-            const fetch_ = async () => {
-                try {
-                    const res = await fetch("/api/hot-places?limit=3");
-                    if (!res.ok) throw new Error("Hot Places fetch 실패");
-                    type HotPlaceApiItem = {
-                        id: number;
-                        name: string;
-                        adress?: string | null;
-                        image_path?: string | null;
-                    };
-                    const raw: HotPlaceApiItem[] = await res.json();
-                    // 주의: hot_place API는 adress(오타), image_path(상대경로)를 사용하므로 변환
-                    const mapped: Destination[] = raw.map((p) => ({
-                        id: p.id,
-                        name: p.name,
-                        address: p.adress || "",
-                        image: p.image_path || "",
-                    }));
-                    setDisplayItems(mapped);
-                } catch (error) {
-                    console.error("[hot-places] API 호출 에러:", error);
-                    setDisplayItems([]);
-                }
-            };
-            fetch_();
->>>>>>> dev
 
                 // 1. 핫플레이스 매핑
                 mappedData["hot-places"] = (raw["hot_places"] || []).map(p => ({
