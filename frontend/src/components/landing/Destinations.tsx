@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { createRoom, fetchCurrentUser } from "@/services/api";
 import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
+import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
@@ -111,23 +112,23 @@ export function Destinations() {
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            // 주의: autostart는 triver:selected-places:${roomId} 키를 읽습니다 (bookmark와 동일한 방식)
-            // selectedForChat(범용 키)이 아닌 방별 키로 저장해야 챗봇에서 장소 정보가 출력됩니다
-            if (pendingPlace) {
-                localStorage.setItem(
-                    `triver:selected-places:${newRoom.id}`,
-                    JSON.stringify([{
-                        name: pendingPlace.name,
-                        adress: pendingPlace.address || (pendingPlace as any).adress, // API 응답에 따라 필드명이 다를 수 있음
-                        place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
-                    }])
-                );
-            }
+            const selectedPlaces = pendingPlace ? [{
+                name: pendingPlace.name,
+                adress: pendingPlace.address || (pendingPlace as any).adress,
+                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+            }] : [];
+
             if ((context.travelDuration || "").trim()) {
-                localStorage.setItem(
-                    `triver:trip-context:${newRoom.id}`,
-                    JSON.stringify(context)
-                );
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: selectedPlaces.length > 0 ? "combined" : "trip_context",
+                    tripContext: context,
+                    selectedPlaces,
+                });
+            } else if (selectedPlaces.length > 0) {
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: "selected_places",
+                    selectedPlaces,
+                });
             }
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch (e) {

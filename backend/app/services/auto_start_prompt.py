@@ -41,13 +41,19 @@ AUTO_START_COMBINED_PROMPT = """
 요구사항:
 1) 사용자에게 먼저 친근하게 인사한다.
 2) 여행 기간/인원 조건을 반영해 일정안을 제안한다.
-3) 선택 장소를 중심으로 동선을 고려해 구성한다.
+3) 선택 장소를 중심으로 가까운 동선을 고려해 구성한다.
 4) 각 장소를 추천하는 이유를 짧게 설명한다.
 5) 필요 시 마지막에 한 가지 확인 질문만 덧붙인다.
 """
 
 AUTO_START_GREETING_PROMPT = """
-새 여행 채팅을 시작한다. 아무정보가 없으므로 간단한 인사를 전한다.
+사용자는 새 여행 채팅을 시작했습니다.
+사용자 취향({prefs_info})을 기반으로 간단한 인사와 함께 한국 여행 정보에 대한 대화를 시작한다.
+
+요구사항:
+1) 사용자에게 먼저 친근하게 인사한다.
+2) 일정은 제안하지 않고 한국 여행 정보에대한 대화로 시작한다.
+3) 어떤 도움이 필요한지 다양하게 질문하는 방법으로 묻는다.
 """
 
 
@@ -108,5 +114,5 @@ def render_auto_start_combined_prompt(
     ).strip()
 
 
-def render_auto_start_greeting_prompt() -> str:
-    return AUTO_START_GREETING_PROMPT.strip()
+def render_auto_start_greeting_prompt(prefs_info: str) -> str:
+    return AUTO_START_GREETING_PROMPT.format(prefs_info=prefs_info).strip()

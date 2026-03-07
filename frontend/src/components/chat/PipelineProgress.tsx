@@ -10,6 +10,7 @@ const PIPELINE_STEPS = [
     { key: "retriever", label: "장소 검색" },
     { key: "executor", label: "답변 생성" },
     { key: "executor_missing", label: "추가 정보 확인" },
+    { key: "executor_general", label: "일반 답변 생성" },
 ] as const;
 
 export type StepStatus = "pending" | "running" | "done";
@@ -89,5 +90,7 @@ export function createInitialPipelineSteps(): PipelineSteps {
         planner: "pending",
         retriever: "pending",
         executor: "pending",
+        executor_missing: "pending",
+        executor_general: "pending",
     };
 }

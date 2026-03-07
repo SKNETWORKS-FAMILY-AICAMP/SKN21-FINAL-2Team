@@ -30,13 +30,13 @@ class CategoryType(str, Enum):
     RESTAURANT = "음식점"
 
 class PlannerNeedType(str, Enum): # 계획 필수 타입 
-    DURATION = "여행 기간"
+    DATES = "여행 날짜"
     PARTY_SIZE = "여행 인원"
 
 
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
-    location: Optional[str] = Field(default=None, description="여행지 (도시 | 지역)")
+    location: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
     category: Optional[CategoryType] = Field(default=None, description="사용자 입력에서 추출된 카테고리")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")

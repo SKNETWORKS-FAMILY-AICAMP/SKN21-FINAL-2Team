@@ -142,11 +142,28 @@ export interface AutoStartChatRoomRequestPayload {
 }
 
 type StreamCallbacks = {
-    onToken: (token: string) => void;
-    onStep: (step: string, status: string) => void;
-    onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void;
-    onRoomTitle?: (roomTitle: string) => void;
-    onError?: (error: string) => void;
+    onToken: (token: string) => void | Promise<void>;
+    onStep: (step: string, status: string) => void | Promise<void>;
+    onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void | Promise<void>;
+    onRoomTitle?: (roomTitle: string) => void | Promise<void>;
+    onBufferingChange?: (reason: string | null) => void | Promise<void>;
+    onError?: (error: string) => void | Promise<void>;
+};
+
+export const resolveStreamApiBaseUrl = (
+    runtimeLocation?: Pick<Location, "hostname" | "protocol">
+): string => {
+    const streamApiUrl = process.env.NEXT_PUBLIC_STREAM_API_URL;
+    if (streamApiUrl) return streamApiUrl;
+    if (typeof window === "undefined") return API_URL;
+    if (API_URL !== "/api") return API_URL;
+
+    const { hostname, protocol } = runtimeLocation ?? window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return `${protocol}//${hostname}:8000/api`;
+    }
+
+    return API_URL;
 };
 
 const refreshAccessToken = async () => {
@@ -366,6 +383,7 @@ export const sendChatMessageStream = async (
         location,
         saveUserMessage: options?.saveUserMessage ?? true,
     });
+    const streamApiBaseUrl = resolveStreamApiBaseUrl();
 
     const streamFetch = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -374,7 +392,7 @@ export const sendChatMessageStream = async (
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
-        return fetch(`${API_URL}/chat/rooms/${roomId}/ask/stream`, {
+        return fetch(`${streamApiBaseUrl}/chat/rooms/${roomId}/ask/stream`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -388,6 +406,11 @@ const streamSseRequest = async (
     streamFetch: () => Promise<Response>,
     callbacks: StreamCallbacks
 ): Promise<void> => {
+    const yieldToUI = async () => {
+        if (typeof window === "undefined") return;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
+    };
+
     let response = await streamFetch();
     if (!response.ok) {
         const apiError = await parseApiError(response);
@@ -398,20 +421,20 @@ const streamSseRequest = async (
                 await refreshAccessToken();
                 response = await streamFetch();
             } catch {
-                callbacks.onError?.('Session expired');
+                await callbacks.onError?.('Session expired');
                 return;
             }
         } else if (action === 'redirect') {
-            callbacks.onError?.('Session expired');
+            await callbacks.onError?.('Session expired');
             return;
         } else {
-            callbacks.onError?.(apiError.message || response.statusText);
+            await callbacks.onError?.(apiError.message || response.statusText);
             return;
         }
     }
 
     if (!response.ok) {
-        callbacks.onError?.(response.statusText);
+        await callbacks.onError?.(response.statusText);
         return;
     }
 
@@ -426,7 +449,7 @@ const streamSseRequest = async (
     let lastCreatedAt = '';
     let lastRoomTitle: string | undefined;
     let lastPlaces: ChatPlaceItem[] | undefined;
-    const handleEvent = (rawEvent: string) => {
+    const handleEvent = async (rawEvent: string) => {
         const lines = rawEvent
             .split('\n')
             .filter((line) => line.startsWith('data: '))
@@ -436,11 +459,15 @@ const streamSseRequest = async (
         try {
             const data = JSON.parse(payload);
             if (data.token) {
-                callbacks.onToken(data.token);
+                await callbacks.onToken(data.token);
+                await yieldToUI();
             } else if (data.step) {
-                callbacks.onStep(data.step, data.status);
+                await callbacks.onStep(data.step, data.status);
+                await yieldToUI();
+            } else if ("buffering" in data) {
+                await callbacks.onBufferingChange?.(data.buffering ?? null);
             } else if (data.room_title && !data.done) {
-                callbacks.onRoomTitle?.(data.room_title);
+                await callbacks.onRoomTitle?.(data.room_title);
             } else if (data.done) {
                 receivedDone = true;
                 lastFullMessage = data.full_message || '';
@@ -448,7 +475,7 @@ const streamSseRequest = async (
                 lastCreatedAt = data.created_at || '';
                 lastRoomTitle = data.room_title;
                 lastPlaces = data.places;
-                callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+                await callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
             }
         } catch {
             // JSON 파싱 실패 무시
@@ -466,17 +493,17 @@ const streamSseRequest = async (
         buffer = events.pop() || '';
 
         for (const rawEvent of events) {
-            handleEvent(rawEvent);
+            await handleEvent(rawEvent);
         }
     }
 
     if (buffer.trim()) {
-        handleEvent(buffer);
+        await handleEvent(buffer);
     }
 
     // 네트워크 경계로 done 이벤트가 누락/파싱 실패한 경우를 대비한 최종 보정
     if (!receivedDone && (lastFullMessage || lastMessageId > 0)) {
-        callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+        await callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
     }
 };
 
@@ -489,6 +516,7 @@ export const sendAutoStartChatRoomStream = async (
         ...payload,
         save_user_message: payload.save_user_message ?? false,
     };
+    const streamApiBaseUrl = resolveStreamApiBaseUrl();
 
     const streamFetch = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -496,7 +524,7 @@ export const sendAutoStartChatRoomStream = async (
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
-        return fetch(`${API_URL}/chat/rooms/${roomId}/autostart/stream`, {
+        return fetch(`${streamApiBaseUrl}/chat/rooms/${roomId}/autostart/stream`, {
             method: 'POST',
             headers,
             credentials: 'include',

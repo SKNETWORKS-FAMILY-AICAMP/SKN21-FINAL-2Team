@@ -8,6 +8,7 @@ import { Suspense, useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
+import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 interface SidebarUserProfile {
     name: string;
@@ -234,12 +235,12 @@ function SidebarContent() {
                 return next;
             });
             if ((context.travelDuration || "").trim()) {
-                localStorage.setItem(
-                    `triver:trip-context:${newRoom.id}`,
-                    JSON.stringify(context)
-                );
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: "trip_context",
+                    tripContext: context,
+                });
             } else {
-                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
+                setPendingAutoStartMeta(newRoom.id, { mode: "greeting" });
             }
             setShowTripModal(false);
             setIsTripLoading(false);

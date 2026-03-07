@@ -13,6 +13,7 @@ from app.agents.models.output import IntentType
 from app.services.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
+from app.utils.llm_streaming import collect_streamed_text
 
 
 def _normalize_text(value: str) -> str:
@@ -188,7 +189,7 @@ def _build_missing_context(missing_slots: List[str]) -> str:
     
     return "\n".join(lines)
 
-async def executor_node(state: TravelState):
+async def executor_node(state: TravelState, config=None):
     """
     여행 계획을 최종적으로 확정하는 노드
     - 검증: 영업시간, 예약 필요 여부 확인
@@ -279,11 +280,8 @@ async def executor_node(state: TravelState):
         "data_notice": data_notice,
     })
 
-    # astream을 사용하여 토큰 단위 스트리밍 (astream_events가 자동 캡처)
-    full_content = ""
-    async for chunk in llm.astream(prompt_value):
-        if chunk.content:
-            full_content += chunk.content
+    # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
+    full_content = await collect_streamed_text(llm, prompt_value, config=config)
 
     # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
     selected_ids = []
@@ -326,7 +324,7 @@ async def executor_node(state: TravelState):
     return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
 
 
-async def executor_missing_node(state: TravelState):
+async def executor_missing_node(state: TravelState, config=None):
     """
     여행 계획에서 부족한 정보를 재질문하는 node
     """
@@ -334,6 +332,11 @@ async def executor_missing_node(state: TravelState):
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
+    user_input = state.get("user_input", "")
+    messages = state.get("messages", [])[-10:]
+    prefs_info = state.get("prefs_info", "")
+    slots = state.get("slots")
+    follow_up_questions = state.get("follow_up_questions", [])
 
     print(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
@@ -348,25 +351,15 @@ async def executor_missing_node(state: TravelState):
 
     llm = LLMFactory.get_llm(temperature=0.5)
     prompt_value = prompt.invoke({
-        "messages": state.get("messages")[-10:],
-        "user_input": state.get("user_input"),
-        "slots_info": state.get("slots"),
-        "prefs_info": state.get("prefs_info", ""),
+        "messages": messages,
+        "user_input": user_input,
+        "slots_info": slots,
+        "prefs_info": prefs_info,
         "missing_info": missing_context,
+        "follow_up_questions": follow_up_questions,
     })
 
-    # executor_missing도 토큰 스트리밍 이벤트가 발생하도록 astream 사용
-    full_content = ""
-    async for chunk in llm.astream(prompt_value):
-        if hasattr(chunk, "content") and chunk.content:
-            if isinstance(chunk.content, str):
-                full_content += chunk.content
-            elif isinstance(chunk.content, list):
-                for part in chunk.content:
-                    if isinstance(part, dict) and part.get("text"):
-                        full_content += str(part["text"])
-                    elif isinstance(part, str):
-                        full_content += part
+    full_content = await collect_streamed_text(llm, prompt_value, config=config)
 
     answer = full_content.strip()
     print(f"[Executor] Answer generated (length={len(answer)})")
@@ -374,7 +367,7 @@ async def executor_missing_node(state: TravelState):
     return {"messages": AIMessage(content=answer), "answer": answer}
 
 
-async def executor_general_node(state: TravelState):
+async def executor_general_node(state: TravelState, config=None):
     """
     일상 대화 node
     """
@@ -406,10 +399,7 @@ async def executor_general_node(state: TravelState):
         "follow_up_questions": follow_up_questions,
     })
 
-    full_content = ""
-    async for chunk in llm.astream(prompt_value):
-        if chunk.content:
-            full_content += chunk.content
+    full_content = await collect_streamed_text(llm, prompt_value, config=config)
 
     answer = full_content.strip()
     print(f"[Executor General] Answer generated (length={len(answer)})")

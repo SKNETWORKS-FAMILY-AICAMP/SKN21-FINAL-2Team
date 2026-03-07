@@ -36,6 +36,7 @@ from app.services.auto_start_prompt import (
     render_auto_start_combined_prompt,
     render_auto_start_greeting_prompt,
 )
+from app.utils.llm_streaming import compute_visible_delta, extract_text_from_chunk
 
 from langchain_core.messages import HumanMessage
 
@@ -64,6 +65,15 @@ class TodayRecommendationItem(BaseModel):
     prompt: str
 
 
+def _encode_sse(payload: dict) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _encode_sse_padding() -> str:
+    # 브라우저가 작은 초기 chunk를 늦게 flush하는 경우를 줄이기 위한 프리앰블 패딩
+    return f": {' ' * 2048}\n\n"
+
+
 def _clean_history_text(value: str) -> str:
     clean = re.sub(r"\s+", " ", (value or "")).strip()
     return clean
@@ -86,7 +96,7 @@ def _make_room_title(text: str) -> str:
 
 def _should_update_room_title(db: Session, room_id: int) -> bool:
     count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
-    return int(count) <= 2
+    return int(count) <= 20
 
 
 def _can_overwrite_room_title(room: ChatRoom) -> bool:
@@ -453,11 +463,10 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
         
         if should_update_title and _can_overwrite_room_title(room):
-            # 방 제목 자동 설정 (메시지 2개 이하일 때만)
+            # 방 제목 자동 설정 (LLM이 제목을 생성했을 때만)
             title = result.get("summary_title")
-            fallback_message = message_in.message
-            next_title = title if title else fallback_message
-            _save_room_title(db, room, next_title)
+            if title:
+                _save_room_title(db, room, title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
         import traceback
@@ -491,53 +500,14 @@ def _build_streaming_response(
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
     async def event_generator():
+        yield _encode_sse_padding()
         full_answer = ""
         streamed_visible_text = ""
+        buffering_reason = None
         in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
         selected_ids = []
         candidates = []
 
-        def _chunk_to_text(chunk) -> str:
-            if chunk is None:
-                return ""
-            if isinstance(chunk, dict):
-                text = chunk.get("text")
-                if isinstance(text, str):
-                    return text
-                content = chunk.get("content")
-                if isinstance(content, str):
-                    return content
-                if isinstance(content, list):
-                    texts = []
-                    for part in content:
-                        if isinstance(part, dict):
-                            t = part.get("text")
-                            if t:
-                                texts.append(str(t))
-                        elif isinstance(part, str):
-                            texts.append(part)
-                    return "".join(texts)
-            if hasattr(chunk, "content"):
-                content = getattr(chunk, "content")
-                if isinstance(content, str):
-                    return content
-                if isinstance(content, list):
-                    texts = []
-                    for part in content:
-                        if isinstance(part, dict):
-                            t = part.get("text")
-                            if t:
-                                texts.append(str(t))
-                        elif isinstance(part, str):
-                            texts.append(part)
-                    return "".join(texts)
-            if hasattr(chunk, "text"):
-                text = getattr(chunk, "text")
-                if isinstance(text, str):
-                    return text
-            if isinstance(chunk, str):
-                return chunk
-            return ""
         try:
             graph_app = await get_graph_app()
             # 그래프에서 노드 이름을 동적으로 가져옴 (__start__, __end__ 등 내부 노드 제외)
@@ -548,11 +518,11 @@ def _build_streaming_response(
 
                 # 노드 시작/종료 이벤트
                 if kind == "on_chain_start" and name in graph_nodes:
-                    yield f"data: {json.dumps({'step': name, 'status': 'start'})}\n\n"
+                    yield _encode_sse({"step": name, "status": "start"})
                     if name in ("executor", "executor_missing", "executor_general"):
                         in_executor = True
                 elif kind == "on_chain_end" and name in graph_nodes:
-                    yield f"data: {json.dumps({'step': name, 'status': 'done'})}\n\n"
+                    yield _encode_sse({"step": name, "status": "done"})
                     
                     output = event.get("data", {}).get("output", {})
                     print(f"[SSE] Node '{name}' finished. Output keys: {list(output.keys())}")
@@ -578,34 +548,27 @@ def _build_streaming_response(
                         output = event.get("data", {}).get("output")
                         if should_update_title and output and _can_overwrite_room_title(room):
                             summary_title = output.get("summary_title")
-                            fallback_message = message_in.message
-                            next_title = summary_title if summary_title else fallback_message
-                            if _save_room_title(db, room, next_title):
-                                print(f"[ChatAPI] Room title updated to: {room.title}")
-                                # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
-                                yield f"data: {json.dumps({'room_title': room.title})}\n\n"
+                            if summary_title:
+                                if _save_room_title(db, room, summary_title):
+                                    print(f"[ChatAPI] Room title updated to: {room.title}")
+                                    # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
+                                    yield _encode_sse({"room_title": room.title})
 
                 # LLM 토큰 스트리밍 (executor 노드의 LLM만)
                 elif kind in ("on_chat_model_stream", "on_llm_stream") and in_executor:
-                    chunk = event.get("data", {}).get("chunk")
-                    token_text = _chunk_to_text(chunk)
-                    if token_text:
+                    # executor 계열 노드는 custom token event를 표준 경로로 사용한다.
+                    # raw LLM stream 이벤트까지 함께 처리하면 중복 토큰이 발생할 수 있다.
+                    continue
+                elif kind == "on_custom_event" and name == "token" and in_executor:
+                    token_text = event.get("data", {}).get("token", "")
+                    if isinstance(token_text, str) and token_text:
                         full_answer += token_text
-
-                        # [IDs: ...] 태그(완성/미완성)를 모두 숨긴 가시 텍스트 계산
-                        visible_text = re.sub(r"\[IDs:\s*.*?\]", "", full_answer, flags=re.DOTALL)
-                        partial_tag_start = visible_text.rfind("[IDs:")
-                        if partial_tag_start != -1:
-                            visible_text = visible_text[:partial_tag_start]
-
-                        if len(visible_text) > len(streamed_visible_text):
-                            delta = visible_text[len(streamed_visible_text):]
-                            streamed_visible_text = visible_text
-                            if delta:
-                                yield f"data: {json.dumps({'token': delta})}\n\n"
-                        else:
-                            # 태그 완성 시 텍스트 길이가 줄어들 수 있으므로 기준만 동기화
-                            streamed_visible_text = visible_text
+                        streamed_visible_text, delta, next_buffering_reason = compute_visible_delta(full_answer, streamed_visible_text)
+                        if next_buffering_reason != buffering_reason:
+                            buffering_reason = next_buffering_reason
+                            yield _encode_sse({"buffering": buffering_reason})
+                        if delta:
+                            yield _encode_sse({"token": delta})
 
 
         except asyncio.CancelledError:
@@ -619,7 +582,7 @@ def _build_streaming_response(
             db.rollback()
             if not full_answer:
                 full_answer = "죄송합니다. 오류가 발생했습니다."
-                yield f"data: {json.dumps({'token': full_answer})}\n\n"
+                yield _encode_sse({"token": full_answer})
 
         # AI 메시지 DB 저장
         if not full_answer:
@@ -718,9 +681,24 @@ def _build_streaming_response(
         ]
         
         print(f"[SSE] Sending 'done' event with {len(places_data)} places")
-        yield f"data: {json.dumps({'done': True, 'full_message': full_answer, 'message_id': ai_message.id, 'created_at': ai_message.created_at.isoformat(), 'room_title': room.title, 'places': places_data})}\n\n"
+        yield _encode_sse({
+            "done": True,
+            "full_message": full_answer,
+            "message_id": ai_message.id,
+            "created_at": ai_message.created_at.isoformat(),
+            "room_title": room.title,
+            "places": places_data,
+        })
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # 대화하기 — SSE 스트리밍
@@ -768,7 +746,9 @@ async def auto_start_chat_room_stream(
             selected_places=auto_start_in.selected_places,
         )
     elif auto_start_in.mode == "greeting":
-        prompt = render_auto_start_greeting_prompt()
+        prompt = render_auto_start_greeting_prompt(
+            prefs_info=current_user.build_preferences,
+        )
     else:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported auto start mode", 400)
 

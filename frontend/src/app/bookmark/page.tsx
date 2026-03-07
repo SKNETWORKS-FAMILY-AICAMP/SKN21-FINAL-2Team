@@ -6,6 +6,7 @@ import { MessageSquare, MapPin, ArrowRight, Check, Bookmark as BookmarkIcon, Loa
 import { Sidebar } from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { BookmarkedPlaceItem, BookmarkedRoomItem, createRoom, fetchBookmarkedPlaces, fetchBookmarkedRooms } from "@/services/api";
+import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
@@ -75,19 +76,17 @@ export default function BookmarkPage() {
 
             const newRoom = await createRoom(roomTitle);
 
-            localStorage.setItem(
-                `triver:selected-places:${newRoom.id}`,
-                JSON.stringify(
-                    selectedPlaceItems.map((place) => ({
-                        id: place.id,
-                        place_id: place.place_id,
-                        name: place.name,
-                        adress: place.adress,
-                        image_path: place.image_path,
-                        room_id: place.room_id,
-                    }))
-                )
-            );
+            setPendingAutoStartMeta(newRoom.id, {
+                mode: "selected_places",
+                selectedPlaces: selectedPlaceItems.map((place) => ({
+                    id: place.id,
+                    place_id: place.place_id,
+                    name: place.name,
+                    adress: place.adress,
+                    image_path: place.image_path,
+                    room_id: place.room_id,
+                })),
+            });
 
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
             router.push(`/chatbot?roomId=${newRoom.id}`);

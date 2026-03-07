@@ -3,13 +3,14 @@ load_dotenv()
 import os                                               # 추가
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.api import auth, users, chat, prefer, common, explore, reservations
 from app.api import hot_place as hot_place_api
 # 모델 등록 (Base.metadata에 포함되도록 import)
@@ -102,13 +103,36 @@ app.include_router(hot_place_api.router)
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start = time.time()
-    response = await call_next(request)
-    duration_ms = (time.time() - start) * 1000
-    logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms:.1f} ms)")
-    return response
+class RequestLoggingMiddleware:
+    """SSE와 충돌하지 않도록 BaseHTTPMiddleware를 피하는 ASGI 로깅 미들웨어."""
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        start = time.time()
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+        status_code = 500
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message["status"])
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration_ms = (time.time() - start) * 1000
+            logger.info(f"{method} {path} -> {status_code} ({duration_ms:.1f} ms)")
+
+
+app.add_middleware(RequestLoggingMiddleware)
 
 
 @app.get("/")
