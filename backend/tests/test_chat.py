@@ -3,6 +3,8 @@ from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage
 from unittest.mock import patch, AsyncMock
 from app.models.enums import RoleType
+from app.api.chat import _build_graph_inputs
+from app.schemas.chat import ChatMessageCreate
 
 def get_auth_headers(email="chat@example.com"):
     token = create_access_token(email)
@@ -161,3 +163,25 @@ def test_ask_does_not_update_room_title_after_two_messages(client, db):
 
     db.refresh(room)
     assert room.title == "유지 제목"
+
+
+def test_build_graph_inputs_resets_retrieval_state_each_turn(db):
+    user = User(email="chat-inputs@test.com", name="Input User")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    room = ChatRoom(user_id=user.id, title="입력 테스트", history="이전 대화")
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+
+    message_in = ChatMessageCreate(room_id=room.id, message="새 요청", role="human")
+
+    inputs = _build_graph_inputs(user, room, message_in)
+
+    assert inputs["candidates"] == []
+    assert inputs["candidate_pool"] == []
+    assert inputs["retrieval_diagnostics"] == {}
+    assert inputs["selected_ids"] == []
+    assert inputs["answer"] == ""

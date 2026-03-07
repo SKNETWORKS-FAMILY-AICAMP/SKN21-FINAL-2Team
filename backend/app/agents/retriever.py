@@ -290,29 +290,29 @@ async def retriever_node(state: TravelState):
         candidate_pool.extend(trip_candidates)
 
     # pool 기준 dedup + 점수 정렬
-    unique_by_id: Dict[str, Dict[str, Any]] = {}
+    candidate_dict: Dict[str, Dict[str, Any]] = {}
     for c in candidate_pool:
         cid = _candidate_id(c)
         if not cid:
             continue
-        if cid not in unique_by_id or _candidate_score(c) > _candidate_score(unique_by_id[cid]):
-            unique_by_id[cid] = c
+        if cid not in candidate_dict or _candidate_score(c) > _candidate_score(candidate_dict[cid]):
+            candidate_dict[cid] = c
 
-    dedup_pool = sorted(unique_by_id.values(), key=_candidate_score, reverse=True)[:candidate_k]
+    candidates = sorted(candidate_dict.values(), key=_candidate_score, reverse=True)[:candidate_k]
 
     exposed_candidates = _pick_candidates(
-        dedup_pool,
+        candidates,
         final_k=final_k,
         top_pool=min(candidate_k, 30),
         selection_mode=selection_mode,
         seed=selection_seed,
     )
 
-    diagnostics = _build_retrieval_diagnostics(dedup_pool)
+    diagnostics = _build_retrieval_diagnostics(candidate_pool)
 
     return {
-        "candidate_pool": dedup_pool,
-        "candidates": exposed_candidates,
+        "candidate_pool": candidate_pool,
+        "candidates": candidates,
         "retrieval_diagnostics": diagnostics,
         "selection_mode": selection_mode,
     }

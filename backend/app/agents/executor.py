@@ -143,7 +143,7 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeo
                     web_lines.append(f"- {r.get('content', '')[:200]}")
                 else:
                     web_lines.append(f"- {str(r)[:200]}")
-            web_context = "\n".join(web_lines)
+            web_context = "".join(web_lines)
             print(f"[Executor] Tavily fallback results: {len(web_results)}")
     except concurrent.futures.TimeoutError:
         print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
@@ -198,8 +198,8 @@ async def executor_node(state: TravelState, config=None):
     """
     print("--- Executor Agent ---")
 
-    candidates = state.get("candidates", [])
-    candidate_pool = state.get("candidate_pool", candidates) or []
+    candidates = state.get("candidates")
+    candidate_pool = state.get("candidate_pool")
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
@@ -208,19 +208,23 @@ async def executor_node(state: TravelState, config=None):
     image_path = state.get("image_path") # 이미지 경로 가져오기
     follow_up_questions = state.get("follow_up_questions", [])
 
-    if primary_intent == IntentType.GENERAL:
-        return Send('executor_general', state)
+    if not candidate_pool:
+        candidate_pool = candidates
 
-    # 컨텍스트 구성
-    place_context = _build_place_context(candidates)
-    # print(f"[Executor] Place context: {place_context}")
-    itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
-
-    # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = None
-    if len(candidates) == 0:
+    place_context = None
+    itinerary_context = None
+    if not candidates:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
+    else:
+        print(f"candidate_pool : {len(candidate_pool)}")
+        print(f"candidates : {len(candidates)}")
+
+        # 컨텍스트 구성
+        place_context = _build_place_context(candidates)
+        # print(f"[Executor] Place context: {place_context}")
+        itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
 
     # 슬롯 정보 텍스트
     slots_info = ""
@@ -230,54 +234,51 @@ async def executor_node(state: TravelState, config=None):
 
     # candidates 부족 시 안내 메시지 추가
     data_notice = ""
-    if candidates is None and web_context is None:
+    if not candidates and not web_context:
         data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
     elif candidates is not None and len(candidates) < 3:
         data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
 
     # 최종 답변 생성
-    context_block = "\n\n".join(filter(None, [place_context, itinerary_context, web_context]))
+    context_block = "\n\n".join(filter(None, [place_context, itinerary_context]))
 
     llm = LLMFactory.get_llm(temperature=0.5)
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
     
-    # 텍스트 추가
-    if user_input:
-        content_blocks.append({"type": "text", "text": f"사용자 입력: {user_input}"})
-    else:
-        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
-        if image_path:
-             content_blocks.append({"type": "text", "text": "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."})
-
-    # 이미지 추가
     if image_path:
+        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
+        if len(user_input) == 0:
+            user_input = "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."
+        content_blocks.append({"type": "text", "text": user_input})
+
         image_url = _get_image_data_url(image_path)
         content_blocks.append({
             "type": "image_url",
             "image_url": {"url": image_url}
         })
+    else:
+        content_blocks.append({"type": "text", "text": f"{user_input}"})
     
     # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
-    human_message = HumanMessage(content=content_blocks)
-
     prompt = ChatPromptTemplate.from_messages([
         ("system", EXECUTOR_PROMPT),
         MessagesPlaceholder(variable_name="messages"),
-        human_message
+        ("human", "{content_blocks}")
     ])
 
     prompt_value = prompt.invoke({
         "messages": messages,
-        "user_input": user_input,
+        "content_blocks": content_blocks,
+        "data_notice": data_notice,
         "slots_info": slots_info,
         "prefs_info": prefs_info,
+        "web_context": web_context,
         "context_block": context_block,
-        "data_notice": data_notice,
     })
 
     # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)

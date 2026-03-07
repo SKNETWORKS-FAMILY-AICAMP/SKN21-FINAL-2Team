@@ -246,8 +246,8 @@ next-env.d.ts
 backend/data/prefer/*
 backend/evaluation/result
 backend/tmp
-backend/tests/
+# backend/tests/
 
-frontend/tests/
+# frontend/tests/
 
 .gemini

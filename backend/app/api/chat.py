@@ -191,6 +191,11 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
+        candidates=[],
+        candidate_pool=[],
+        retrieval_diagnostics={},
+        selected_ids=[],
+        answer="",
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")
     return inputs
@@ -747,7 +752,7 @@ async def auto_start_chat_room_stream(
         )
     elif auto_start_in.mode == "greeting":
         prompt = render_auto_start_greeting_prompt(
-            prefs_info=current_user.build_preferences,
+            prefs_info=current_user.build_preferences(),
         )
     else:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported auto start mode", 400)

@@ -99,6 +99,18 @@ class PlaceRetriever:
         normalized = self.CATEGORY_NORMALIZATION_MAP.get(str(category).strip())
         return normalized
 
+    def _get_category_candidates(self, category: str | None) -> list[str]:
+        raw = str(category or "").strip()
+        if not raw:
+            return []
+
+        normalized = self.normalize_category(raw)
+        candidates: list[str] = []
+        for value in (normalized, raw):
+            if value and value not in candidates:
+                candidates.append(value)
+        return candidates
+
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
         port = os.getenv('QDRANT_PORT', 6333)
@@ -117,13 +129,16 @@ class PlaceRetriever:
         """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
         must_conditions = []
         must_not_conditions = []
-        normalized_category = self.normalize_category(category)
+        category_values = self._get_category_candidates(category)
 
-        if normalized_category:
-            # DB에 '관광지', '음식점' 등으로 저장되어 있음
-            if normalized_category != category:
-                print(f"[INFO] category normalized: '{category}' -> '{normalized_category}'")
-            must_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=normalized_category)))
+        if category_values:
+            if len(category_values) == 2:
+                print(f"[INFO] category normalized: '{category}' -> '{category_values[0]}' (fallback='{category_values[1]}')")
+            should_conditions = []
+            for value in category_values:
+                should_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=value)))
+                should_conditions.append(FieldCondition(key="category", match=MatchValue(value=value)))
+            must_conditions.append(Filter(should=should_conditions))
             
         if has_image:
             # 'image' 필드가 비어있지 않은 것만 필터링
@@ -133,10 +148,12 @@ class PlaceRetriever:
         if not must_conditions and not must_not_conditions:
             return None
             
-        return Filter(
-            must=must_conditions if must_conditions else None,
-            must_not=must_not_conditions if must_not_conditions else None
-        )
+        return None
+        # return Filter(
+        #     should=must_conditions if must_conditions else None,
+        #     # must=must_conditions if must_conditions else None,
+        #     must_not=must_not_conditions if must_not_conditions else None
+        # )
 
     def search_text(self, query: str, limit: int = 5, category: str = None, has_image: bool = False):
         """
@@ -236,10 +253,15 @@ class PlaceRetriever:
         return float(1 - math.exp(-score))
 
     def _payload_matches_category(self, payload: dict, normalized_category: str | None) -> bool:
-        if not normalized_category:
+        category_values = self._get_category_candidates(normalized_category)
+        if not category_values:
             return True
-        value = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
-        return value == normalized_category
+        payload_values = {
+            str(payload.get("contenttypeid") or "").strip(),
+            str(payload.get("category") or "").strip(),
+        }
+        payload_values.discard("")
+        return any(value in payload_values for value in category_values)
 
     def _keyword_match_bonus(self, query: str, payload: dict) -> float:
         if not query or not payload:

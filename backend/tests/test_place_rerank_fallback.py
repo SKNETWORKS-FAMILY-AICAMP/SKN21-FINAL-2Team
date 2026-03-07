@@ -1,6 +1,8 @@
 import asyncio
 from types import SimpleNamespace
 
+from qdrant_client.models import FieldCondition, Filter
+
 from app.retrieval.place import PlaceRetriever, _build_compact_text
 from app.utils.config import get_retrieval_params
 
@@ -73,6 +75,50 @@ def test_bm25_lexical_scores_only_given_candidates():
 
     assert len(out) >= 1
     assert out[0]["id"] == 1
+
+
+def test_build_category_filter_uses_normalized_and_raw_category_with_or_matching():
+    retriever = object.__new__(PlaceRetriever)
+
+    query_filter = retriever._build_category_filter("맛집")
+
+    assert isinstance(query_filter, Filter)
+    assert len(query_filter.must) == 1
+    category_filter = query_filter.must[0]
+    assert isinstance(category_filter, Filter)
+    assert len(category_filter.should) == 4
+
+    condition_pairs = {(item.key, item.match.value) for item in category_filter.should if isinstance(item, FieldCondition)}
+    assert ("contenttypeid", "음식점") in condition_pairs
+    assert ("category", "음식점") in condition_pairs
+    assert ("contenttypeid", "맛집") in condition_pairs
+    assert ("category", "맛집") in condition_pairs
+
+
+def test_build_category_filter_falls_back_to_raw_category_when_not_normalized():
+    retriever = object.__new__(PlaceRetriever)
+
+    query_filter = retriever._build_category_filter("브런치")
+
+    assert isinstance(query_filter, Filter)
+    assert len(query_filter.must) == 1
+    category_filter = query_filter.must[0]
+    assert isinstance(category_filter, Filter)
+
+    condition_pairs = {(item.key, item.match.value) for item in category_filter.should if isinstance(item, FieldCondition)}
+    assert condition_pairs == {
+        ("contenttypeid", "브런치"),
+        ("category", "브런치"),
+    }
+
+
+def test_payload_matches_category_accepts_raw_category_field_fallback():
+    retriever = object.__new__(PlaceRetriever)
+
+    assert retriever._payload_matches_category({"category": "브런치"}, "브런치") is True
+    assert retriever._payload_matches_category({"contenttypeid": "브런치"}, "브런치") is True
+    assert retriever._payload_matches_category({"contenttypeid": "음식점"}, "맛집") is True
+    assert retriever._payload_matches_category({"category": "카페"}, "맛집") is False
 
 
 def test_search_hybrid_caps_rerank_top_k_to_serving_profile():
