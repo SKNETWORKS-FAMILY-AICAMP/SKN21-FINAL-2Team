@@ -25,7 +25,9 @@ from app.schemas.chat import (
 )
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
+from app.utils.common import to_client_image_url
 from app.agents.graph import workflow
+from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
 from app.models.chat import ChatPlace
 from app.services.auto_start_prompt import (
@@ -165,17 +167,23 @@ def _save_human_message_if_needed(db: Session, room_id: int, message_in: ChatMes
     db.commit()
 
 
-def _build_graph_inputs(room_id: int, user_id: int, message_in: ChatMessageCreate, prefs_info: str):
-    return {
-        "user_input": message_in.message,
-        "user_id": user_id,
-        "room_id": room_id,
-        "latitude": message_in.latitude,
-        "longitude": message_in.longitude,
-        "image_path": message_in.image_path,
-        "prefs_info": prefs_info,
-        "messages": [HumanMessage(content=message_in.message)],
-    }
+def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreate) -> TravelState:
+    print(f"[BuildInputs] User({user.id}) Raw - Plan: '{user.plan_prefer}', Vibe: '{user.vibe_prefer}', Places: '{user.places_prefer}', Extras: '{user.extra_prefer1}', '{user.extra_prefer2}', '{user.extra_prefer3}'")
+    
+    inputs = TravelState(
+        user_input=message_in.message,
+        user_id=user.id,
+        room_id=room.id,
+        latitude=message_in.latitude,
+        longitude=message_in.longitude,
+        image_path=message_in.image_path,
+        prefs_info=user.build_preferences(),
+        messages=[HumanMessage(content=message_in.message)],
+        summary_title=room.title,
+        summary_message=room.history,
+    )
+    print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")
+    return inputs
 
 # 채팅방 목록 조회
 @router.get("/rooms", response_model=List[ChatRoomResponse])
@@ -288,6 +296,11 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
         raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
+    for message in room.messages:
+        if message.image_path:
+            message.image_path = to_client_image_url(message.image_path)
+        for place in message.places:
+            place.image_path = to_client_image_url(place.image_path)
     return room
 
 
@@ -346,6 +359,7 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
     db.add(place)
     db.commit()
     db.refresh(place)
+    place.image_path = to_client_image_url(place.image_path)
     return place
 
 
@@ -406,7 +420,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "place_id": _normalize_int_or_zero(place.place_id),
             "name": place.name,
             "adress": place.adress,
-            "image_path": place.image_path,
+            "image_path": to_client_image_url(place.image_path),
             "longitude": _normalize_float_or_zero(place.longitude),
             "latitude": _normalize_float_or_zero(place.latitude),
             "bookmark_yn": place.bookmark_yn,
@@ -426,12 +440,8 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
 
-    # Backend에서 사용자 선호도 조회 후 LLM에 전달
-    prefs_info = current_user.build_preferences()
-
     # 그래프 입력 상태 구성 (대화 이력은 checkpointer가 자동 관리)
-    inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
-
+    inputs = _build_graph_inputs(current_user, room, message_in)
     
     # 그래프 실행 (Global Cache)
     try:
@@ -444,9 +454,9 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         
         if should_update_title and _can_overwrite_room_title(room):
             # 방 제목 자동 설정 (메시지 2개 이하일 때만)
-            summary_query = result.get("summary_query")
+            title = result.get("summary_title")
             fallback_message = message_in.message
-            next_title = summary_query if summary_query else fallback_message
+            next_title = title if title else fallback_message
             _save_room_title(db, room, next_title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
@@ -477,8 +487,7 @@ def _build_streaming_response(
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
-    prefs_info = current_user.build_preferences()
-    inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
+    inputs = _build_graph_inputs(current_user, room, message_in)
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
     async def event_generator():
@@ -564,13 +573,13 @@ def _build_streaming_response(
                             candidates = output["candidates"]
                             print(f"[SSE] Captured {len(candidates)} candidates")
                     
-                    # Intent 노드 종료 시점에 summary_query로 제목 즉시 업데이트
+                    # Intent 노드 종료 시점에 summary_title 제목 즉시 업데이트
                     if name == "intent":
                         output = event.get("data", {}).get("output")
                         if should_update_title and output and _can_overwrite_room_title(room):
-                            summary_query = output.get("summary_query")
+                            summary_title = output.get("summary_title")
                             fallback_message = message_in.message
-                            next_title = summary_query if summary_query else fallback_message
+                            next_title = summary_title if summary_title else fallback_message
                             if _save_room_title(db, room, next_title):
                                 print(f"[ChatAPI] Room title updated to: {room.title}")
                                 # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
@@ -701,7 +710,7 @@ def _build_streaming_response(
                 "place_id": _normalize_int_or_zero(p.place_id),
                 "name": p.name,
                 "adress": p.adress,
-                "image_path": p.image_path,
+                "image_path": to_client_image_url(p.image_path),
                 "longitude": _normalize_float_or_zero(p.longitude),
                 "latitude": _normalize_float_or_zero(p.latitude),
                 "bookmark_yn": p.bookmark_yn

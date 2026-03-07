@@ -5,6 +5,7 @@ import random
 
 from app.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
+from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue, IsEmptyCondition, PayloadField
 from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
@@ -142,7 +143,7 @@ def get_random_places(db: Session = Depends(db_manager.get_db)):
                             contentid=str(sp.id),
                             title=payload.get("title", "Unknown"),
                             address=payload.get("addr") or payload.get("address") or "주소 정보 없음",
-                            image_url=img_url,
+                            image_url=to_client_image_url(image_url),
                             description=payload.get("description", "")[:200]
                         )
                     )
@@ -269,7 +270,7 @@ async def get_category_places(request: CategoryPlacesRequest):
                 score = res.score
                 
                 # 여러 이미지 필드 후보 확인 및 유효성 검사
-                img_url = payload.get("image") or payload.get("firstimage") or payload.get("firstimage2") or ""
+                img_url = to_client_image_url(payload.get("image", payload.get("firstimage", "")))
                 
                 if not is_valid_image(img_url):
                     continue
@@ -301,5 +302,4 @@ async def get_category_places(request: CategoryPlacesRequest):
             results[cat] = []
 
     return results
-
 

@@ -3,6 +3,7 @@ import numpy as np
 import asyncio
 import math
 import re
+from typing import Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Filter, FieldCondition, MatchValue
@@ -11,7 +12,9 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
-    TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE
+    TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
+    BM25_POOL_LIMIT, BM25_ENABLE_THRESHOLD, BM25_ENABLE_SCORE_THRESHOLD,
+    get_retrieval_params,
 )
 from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
@@ -35,6 +38,24 @@ def _extract_place_id(point, source_collection: str):
     if source_collection == PHOTOS_COLLECTION:
         return _normalize_place_id(payload.get("contentid") or payload.get("place_id"))
     return _normalize_place_id(point.id)
+
+
+def _normalize_match_text(text: str) -> str:
+    return re.sub(r"[^0-9a-z가-힣]+", "", str(text or "").lower())
+
+
+def _district_stem(token: str) -> str:
+    token = str(token or "").strip()
+    if token.endswith(("구", "군", "시", "동", "읍", "면", "리")) and len(token) > 1:
+        return token[:-1]
+    return token
+
+
+def _build_compact_text(payload: dict[str, Any]) -> str:
+    title = str(payload.get("title") or payload.get("name") or "").strip()
+    category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
+    addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "").strip()
+    return " ".join([part for part in (title, category, addr) if part]).strip()
 
 
 class PlaceRetriever:
@@ -188,18 +209,11 @@ class PlaceRetriever:
     def _tokenize(self, text: str) -> list[str]:
         return re.findall(r"[가-힣A-Za-z0-9]+", text or "")
 
-    def _candidate_to_text(self, payload: dict) -> str:
-        title = str(payload.get("title") or payload.get("name") or "")
-        category = str(payload.get("contenttypeid") or payload.get("category") or "")
-        addr = str(payload.get("addr") or payload.get("address") or "")
-        desc = str(payload.get("description") or payload.get("llm_text") or "")
-        return " ".join([title, category, addr, desc]).strip()
-
     def _bm25_like_score(self, query: str, payload: dict) -> float:
         tokens = self._tokenize(query)
         if not tokens:
             return 0.0
-        doc_text = self._candidate_to_text(payload)
+        doc_text = _build_compact_text(payload)
         doc_tokens = self._tokenize(doc_text)
         if not doc_tokens:
             return 0.0
@@ -227,25 +241,55 @@ class PlaceRetriever:
         value = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
         return value == normalized_category
 
-    async def _search_bm25_lexical(self, query: str, category: str | None, candidate_k: int) -> list[dict]:
+    def _keyword_match_bonus(self, query: str, payload: dict) -> float:
+        if not query or not payload:
+            return 0.0
+
+        title = str(payload.get("title") or payload.get("name") or "")
+        addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "")
+        if not title and not addr:
+            return 0.0
+
+        query_norm = _normalize_match_text(query)
+        title_norm = _normalize_match_text(title)
+        bonus = 0.0
+
+        if title_norm:
+            if len(title_norm) >= 3 and title_norm in query_norm:
+                bonus += 0.18
+            else:
+                # 제목 토큰이 2개 이상 질의에 겹치면 소폭 부스트
+                query_tokens = set(self._tokenize(query))
+                title_tokens = {t for t in self._tokenize(title) if len(t) >= 2}
+                overlap = len(query_tokens & title_tokens)
+                if overlap > 0:
+                    bonus += min(0.12, 0.04 * overlap)
+
+        # 질의 내 지역 토큰(예: 성북동, 강남구)이 주소에 있으면 소폭 부스트
+        district_tokens = set(re.findall(r"[가-힣A-Za-z0-9]+(?:구|군|시|동|읍|면|리)", query))
+        if district_tokens and addr:
+            addr_norm = _normalize_match_text(addr)
+            normalized_districts = {_normalize_match_text(tok) for tok in district_tokens}
+            stemmed_districts = {_normalize_match_text(_district_stem(tok)) for tok in district_tokens}
+            if any(tok and tok in addr_norm for tok in normalized_districts):
+                bonus += 0.06
+            elif any(stem and stem in addr_norm for stem in stemmed_districts):
+                bonus += 0.06
+
+        return min(0.25, bonus)
+
+    async def _search_bm25_lexical(
+        self,
+        query: str,
+        category: str | None,
+        candidate_points: list,
+        candidate_k: int,
+        pool_limit: int = BM25_POOL_LIMIT,
+    ) -> list[dict]:
         normalized_category = self.normalize_category(category)
-        all_points = []
-        offset = None
-        while True:
-            points, offset = await asyncio.to_thread(
-                self.client.scroll,
-                collection_name=PLACES_COLLECTION,
-                limit=200,
-                with_payload=True,
-                with_vectors=False,
-                offset=offset,
-            )
-            all_points.extend(points)
-            if offset is None:
-                break
 
         scored = []
-        for p in all_points:
+        for p in list(candidate_points)[: max(int(pool_limit or 0), 1)]:
             payload = p.payload or {}
             if not self._payload_matches_category(payload, normalized_category):
                 continue
@@ -286,7 +330,7 @@ class PlaceRetriever:
         pairs = []
         for c in candidates:
             payload = c.get("payload", {})
-            pairs.append((query, self._candidate_to_text(payload)))
+            pairs.append((query, _build_compact_text(payload)))
 
         try:
             scores = await asyncio.to_thread(self._reranker.predict, pairs)
@@ -310,23 +354,35 @@ class PlaceRetriever:
         limit: int = 5,
         category: str = None,
         emotional_text: str = None,
-        candidate_k: int = 30,
+        candidate_k: int | None = None,
         enable_bm25: bool = True,
         enable_rerank: bool = True,
-        rerank_top_k: int = 30,
+        rerank_top_k: int | None = None,
+        search_scope: str = "auto",
     ):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
         1. Text Input -> BGE-M3 (Text DB) + CLIP Text (Image DB)
         2. Image Input -> CLIP Vision (Image DB) + Emotional Extraction (Text DB)
         """
-        print(f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'}")
+        scope = (search_scope or "auto").strip().lower()
+        if scope not in {"auto", "place_only", "photo_only"}:
+            scope = "auto"
+        print(
+            f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'} "
+            f"scope={scope}"
+        )
         
+        defaults = get_retrieval_params()
         query_filter = self._build_category_filter(category)
-        candidate_k = max(int(candidate_k or 0), int(limit or 0), 1)
-        rerank_top_k = max(int(rerank_top_k or 0), int(limit or 0), 1)
+        candidate_k = max(int(candidate_k or defaults["candidate_k"]), int(limit or 0), 1)
+        rerank_top_k = min(
+            max(int(rerank_top_k or defaults["top_k"]), int(limit or 0), 1),
+            min(defaults["rerank_max_k"], candidate_k),
+        )
         candidates_limit = max(candidate_k * 5, 30)
         score_map = {}  # place_id -> {score, payload, matches}
+        place_vector_points = []
         rrf_k = 60
 
         def collect_hits(hits, weight, match_type, source_collection):
@@ -346,7 +402,7 @@ class PlaceRetriever:
                 score_map[pid]["matches"].add(match_type)
 
         # --- A. Text Search Channel ---
-        if query and query.strip():
+        if query and query.strip() and scope in {"auto", "place_only"}:
             # 1. Scenario: Semantic Text Search (BGE-M3)
             text_emb = await asyncio.to_thread(self.text_model.encode, query)
             text_emb = np.asarray(text_emb, dtype=np.float32)
@@ -358,8 +414,10 @@ class PlaceRetriever:
                 with_payload=True,
                 query_filter=query_filter,
             )
+            place_vector_points.extend(t_t_resp.points)
             collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
+        if query and query.strip() and scope in {"auto", "photo_only"}:
             # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
             clip_text_emb = await asyncio.to_thread(self.vision_model.encode, query)
             clip_text_emb = np.asarray(clip_text_emb, dtype=np.float32)
@@ -374,7 +432,7 @@ class PlaceRetriever:
             collect_hits(t_i_resp.points, 0.5, "text_to_image", PHOTOS_COLLECTION)
 
         # --- B. Image Search Channel ---
-        if image_url:
+        if image_url and scope in {"auto", "photo_only"}:
             img = await asyncio.to_thread(download_image, image_url)
             if img:
                 # 3. Scenario: Visual Similarity (CLIP Vision)
@@ -390,50 +448,99 @@ class PlaceRetriever:
                 )
                 collect_hits(i_i_resp.points, 1.0, "image_visual", PHOTOS_COLLECTION)
 
-                # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
-                if not emotional_text:
-                    emotional_text = await describe_image(image_url)
-                
-                if emotional_text:
-                    emo_emb = await asyncio.to_thread(self.text_model.encode, emotional_text)
-                    emo_emb = np.asarray(emo_emb, dtype=np.float32)
-                    i_e_resp = await asyncio.to_thread(
-                        self.client.query_points,
-                        collection_name=PLACES_COLLECTION,
-                        query=emo_emb.tolist(),
-                        limit=candidates_limit,
-                        with_payload=True,
-                        query_filter=query_filter,
-                    )
-                    collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
+        if image_url and scope == "auto":
+            # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
+            if not emotional_text:
+                emotional_text = await describe_image(image_url)
 
-        if enable_bm25 and query and query.strip():
+            if emotional_text:
+                emo_emb = await asyncio.to_thread(self.text_model.encode, emotional_text)
+                emo_emb = np.asarray(emo_emb, dtype=np.float32)
+                i_e_resp = await asyncio.to_thread(
+                    self.client.query_points,
+                    collection_name=PLACES_COLLECTION,
+                    query=emo_emb.tolist(),
+                    limit=candidates_limit,
+                    with_payload=True,
+                    query_filter=query_filter,
+                )
+                place_vector_points.extend(i_e_resp.points)
+                collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
+
+        if enable_bm25 and query and query.strip() and scope in {"auto", "place_only"}:
             try:
-                lexical_hits = await self._search_bm25_lexical(query=query, category=category, candidate_k=candidates_limit)
-                for rank, item in enumerate(lexical_hits, start=1):
-                    pid = _normalize_place_id(item.get("id"))
+                unique_points = {}
+                for point in place_vector_points:
+                    pid = _extract_place_id(point, PLACES_COLLECTION)
                     if pid is None:
                         continue
-                    payload = item.get("payload") or {}
-                    if pid not in score_map:
-                        score_map[pid] = {"score": 0.0, "payload": payload, "matches": set()}
-                    elif payload and not score_map[pid].get("payload"):
-                        score_map[pid]["payload"] = payload
-                    score_map[pid]["score"] += 0.7 * (1.0 / (rrf_k + rank))
-                    score_map[pid]["matches"].add("bm25_lexical")
+                    unique_points[pid] = point
+
+                point_pool = list(unique_points.values())
+                top_vector_score = 0.0
+                if point_pool:
+                    try:
+                        top_vector_score = max(float(getattr(p, "score", 0.0) or 0.0) for p in point_pool)
+                    except Exception:
+                        top_vector_score = 0.0
+
+                bm25_needed = (
+                    len(point_pool) < BM25_ENABLE_THRESHOLD
+                    or top_vector_score < BM25_ENABLE_SCORE_THRESHOLD
+                )
+
+                if bm25_needed and point_pool:
+                    lexical_hits = await self._search_bm25_lexical(
+                        query=query,
+                        category=category,
+                        candidate_points=point_pool,
+                        candidate_k=candidates_limit,
+                        pool_limit=BM25_POOL_LIMIT,
+                    )
+                    for rank, item in enumerate(lexical_hits, start=1):
+                        pid = _normalize_place_id(item.get("id"))
+                        if pid is None:
+                            continue
+                        payload = item.get("payload") or {}
+                        if pid not in score_map:
+                            score_map[pid] = {"score": 0.0, "payload": payload, "matches": set()}
+                        elif payload and not score_map[pid].get("payload"):
+                            score_map[pid]["payload"] = payload
+                        score_map[pid]["score"] += 0.7 * (1.0 / (rrf_k + rank))
+                        score_map[pid]["matches"].add("bm25_lexical")
+                else:
+                    print(
+                        f"[INFO] bm25 skipped vector_pool={len(point_pool)} "
+                        f"top_vector_score={top_vector_score:.4f}"
+                    )
             except Exception as e:
                 print(f"[WARN] bm25 lexical channel failed: {e}")
 
         # --- C. Fusion & Boosting ---
         results = []
-        for idx, (pid, data) in enumerate(sorted(score_map.items(), key=lambda x: x[1]["score"], reverse=True), start=1):
+        fused = []
+        for pid, data in score_map.items():
+            payload = data.get("payload") or {}
+            boost = self._keyword_match_bonus(query=query or "", payload=payload)
+            fused.append(
+                (
+                    pid,
+                    data,
+                    float(data.get("score", 0.0)) + boost,
+                    boost,
+                )
+            )
+
+        fused.sort(key=lambda x: x[2], reverse=True)
+        for idx, (pid, data, final_score, boost) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
-                "score": data["score"],
+                "score": final_score,
                 "first_stage_score": data["score"],
                 "first_stage_rank": idx,
                 "payload": data["payload"],
-                "match_types": sorted(list(data["matches"]))
+                "match_types": sorted(list(data["matches"])),
+                "keyword_match_boost": boost,
             })
 
         first_stage_results = results[:candidate_k]

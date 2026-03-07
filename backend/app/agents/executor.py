@@ -3,17 +3,16 @@ import os
 import base64
 import mimetypes
 import concurrent.futures
-import time
 import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
 from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
 from app.utils.llm_factory import LLMFactory
-from app.utils.common import parse_payload
+from app.utils.common import parse_payload, getattr_safe
 
 
 def _normalize_text(value: str) -> str:
@@ -129,7 +128,7 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeo
         
         search_query = query
         if slots:
-            location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
+            location = getattr_safe(slots, "location")
             if location:
                 search_query = f"{location} 여행 {query}"
         # Tavily 응답 지연 시 executor 전체 대기를 막기 위해 타임아웃 적용
@@ -197,30 +196,26 @@ async def executor_node(state: TravelState):
     - 최종 답변 생성
     """
     print("--- Executor Agent ---")
-    t0 = time.perf_counter()
 
     candidates = state.get("candidates", [])
     candidate_pool = state.get("candidate_pool", candidates) or []
     user_input = state.get("user_input", "")
     messages = state.get("messages", [])[-10:]
-    prefs_info = state.get("prefs_info", {})
+    prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
     image_path = state.get("image_path") # 이미지 경로 가져오기
 
     # 컨텍스트 구성
-    t_ctx0 = time.perf_counter()
     place_context = _build_place_context(candidates)
     # print(f"[Executor] Place context: {place_context}")
     itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
-    t_ctx1 = time.perf_counter()
 
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = None
     if len(candidates) == 0:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
-    t_web1 = time.perf_counter()
 
     # 슬롯 정보 텍스트
     slots_info = ""
@@ -281,12 +276,10 @@ async def executor_node(state: TravelState):
     })
 
     # astream을 사용하여 토큰 단위 스트리밍 (astream_events가 자동 캡처)
-    t_llm0 = time.perf_counter()
     full_content = ""
     async for chunk in llm.astream(prompt_value):
         if chunk.content:
             full_content += chunk.content
-    t_llm1 = time.perf_counter()
 
     # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
     selected_ids = []
@@ -325,13 +318,6 @@ async def executor_node(state: TravelState):
 
     print(f"[Executor] Selected IDs: {selected_ids}")
     print(f"[Executor] Answer length: {len(cleaned_answer)}")
-    print(
-        "[Executor][Timing] "
-        f"context_build={t_ctx1 - t_ctx0:.3f}s, "
-        f"fallback={t_web1 - t_ctx1:.3f}s, "
-        f"llm={t_llm1 - t_llm0:.3f}s, "
-        f"total={t_llm1 - t0:.3f}s"
-    )
 
     return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
 
@@ -356,12 +342,12 @@ async def executor_missing_node(state: TravelState):
         human_message
     ])
 
-    llm = LLMFactory.get_llm(temperature=0.3)
+    llm = LLMFactory.get_llm(temperature=0.5)
     prompt_value = prompt.invoke({
         "messages": state.get("messages")[-10:],
         "user_input": state.get("user_input"),
         "slots_info": state.get("slots"),
-        "prefs_info": state.get("prefs_info"),
+        "prefs_info": state.get("prefs_info", ""),
         "missing_info": missing_context,
     })
 

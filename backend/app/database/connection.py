@@ -50,11 +50,6 @@ class DBManager:
         """일반 스크립트용 세션 반환"""
         return self._session_factory()
 
-    def add_commit_refresh(self, db, model):
-        """공통적으로 자주 사용하는 DB 작업 헬퍼"""
-        db.add(model)
-        db.commit()
-        db.refresh(model)
 
 
 # 하위 호환성 유지 및 전역 사용을 위한 인스턴스/함수

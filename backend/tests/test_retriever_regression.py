@@ -5,6 +5,7 @@ import pytest
 from app.retrieval.place import (
     PHOTOS_COLLECTION,
     PLACES_COLLECTION,
+    PlaceRetriever,
     _extract_place_id,
     _fetch_photo_urls_by_contentids,
     retrieval_place,
@@ -51,3 +52,21 @@ async def test_fetch_photo_urls_by_contentids_batches_and_groups():
 
     assert photo_map["1"] == ["https://img/1-a.jpg", "https://img/1-b.jpg"]
     assert photo_map["2"] == ["https://img/2-a.jpg"]
+
+
+def test_keyword_match_bonus_boosts_when_title_in_query():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+    payload = {"title": "성수족발", "addr": "서울특별시 성동구 아차산로7길 7"}
+
+    bonus = retriever._keyword_match_bonus("성수족발 왜 유명해?", payload)
+
+    assert bonus >= 0.18
+
+
+def test_keyword_match_bonus_boosts_when_district_matches_address():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+    payload = {"title": "어떤카페", "addr": "서울특별시 성북구 성북로 10"}
+
+    bonus = retriever._keyword_match_bonus("성북동 조용한 카페 추천", payload)
+
+    assert bonus >= 0.06

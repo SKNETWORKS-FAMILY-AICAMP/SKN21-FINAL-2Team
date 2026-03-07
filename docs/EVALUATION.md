@@ -65,6 +65,8 @@
 운영 규칙:
 - 생성 평가는 기본 컨텍스트 `Top30` 권장.
 - 엔티티 존재성은 Recommendation 리포트와 분리해서 해석.
+- 검색 지연이 증가하면 BM25 조건부 실행 여부(`vector_pool_size`, `top_vector_score`)와 `RETRIEVAL_PROFILE`/rerank 상한 설정을 먼저 점검.
+- 평가 실행 시에는 `evaluation` 프로파일(후보/재정렬 확대)을 기본 사용하고, 필요하면 CLI로 오버라이드합니다.
 
 ## 실행 예시 (Docker 우선)
 
@@ -76,6 +78,15 @@ docker compose run --rm backend python evaluation/evaluate_ragas.py
 ### Retrieval + Rerank
 ```bash
 docker compose run --rm backend python evaluation/evaluate_retrieval.py --input-csv evaluation/evaluate_testdata.csv --stage all --top-k 30
+```
+
+평가용 검색 파라미터를 별도로 지정하려면:
+```bash
+docker compose run --rm backend python evaluation/evaluate_retrieval.py \
+  --data-file evaluation/rag_eval_data.json \
+  --mode all --top-k 10 \
+  --retriever-candidate-k 60 \
+  --retriever-rerank-max-k 30
 ```
 
 ### Recommendation
