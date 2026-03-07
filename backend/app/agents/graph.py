@@ -6,7 +6,7 @@ from app.agents.grapy_route import route_by_intent, route_by_missing
 from app.agents.intent import intent_node
 from app.agents.planner import planner_node
 from app.agents.retriever import retriever_node
-from app.agents.executor import executor_node, executor_missing_node
+from app.agents.executor import executor_node, executor_missing_node, executor_general_node
 
 
 def workflow():
@@ -19,6 +19,7 @@ def workflow():
     graph.add_node("retriever", retriever_node)
     graph.add_node("executor", executor_node)
     graph.add_node("executor_missing", executor_missing_node)
+    graph.add_node("executor_general", executor_general_node)
     
     # Define Edges (Linear Flow)
     # planner -> context -> retriever -> budget -> executor -> END
@@ -34,6 +35,7 @@ def workflow():
     graph.add_edge("retriever", "executor")
     graph.add_edge("executor", END)
     graph.add_edge("executor_missing", END)
+    graph.add_edge("executor_general", END)
     
     return graph
 

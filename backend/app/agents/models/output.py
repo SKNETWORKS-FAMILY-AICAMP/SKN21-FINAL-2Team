@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 # # Intent Output
 class IntentType(str, Enum):
+    GENERAL = "GENERAL" # 일반
     PLACE_INQUIRY = "PLACE_INQUIRY" # 장소 검색
     TRIP_PLANNING = "TRIP_PLANNING" # 여행 계획
     BOOKING = "BOOKING" # 예약

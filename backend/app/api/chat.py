@@ -549,7 +549,7 @@ def _build_streaming_response(
                 # 노드 시작/종료 이벤트
                 if kind == "on_chain_start" and name in graph_nodes:
                     yield f"data: {json.dumps({'step': name, 'status': 'start'})}\n\n"
-                    if name in ("executor", "executor_missing"):
+                    if name in ("executor", "executor_missing", "executor_general"):
                         in_executor = True
                 elif kind == "on_chain_end" and name in graph_nodes:
                     yield f"data: {json.dumps({'step': name, 'status': 'done'})}\n\n"
@@ -557,7 +557,7 @@ def _build_streaming_response(
                     output = event.get("data", {}).get("output", {})
                     print(f"[SSE] Node '{name}' finished. Output keys: {list(output.keys())}")
                     
-                    if name in ("executor", "executor_missing"):
+                    if name in ("executor", "executor_missing", "executor_general"):
                         in_executor = False
                         # executor 노드 종료 시 결과 캡처
                         output = event.get("data", {}).get("output", {})

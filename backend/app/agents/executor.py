@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
-from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
+from app.services.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
 
@@ -205,6 +205,10 @@ async def executor_node(state: TravelState):
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
     image_path = state.get("image_path") # 이미지 경로 가져오기
+    follow_up_questions = state.get("follow_up_questions", [])
+
+    if primary_intent == IntentType.GENERAL:
+        return Send('executor_general', state)
 
     # 컨텍스트 구성
     place_context = _build_place_context(candidates)
@@ -366,5 +370,48 @@ async def executor_missing_node(state: TravelState):
 
     answer = full_content.strip()
     print(f"[Executor] Answer generated (length={len(answer)})")
+
+    return {"messages": AIMessage(content=answer), "answer": answer}
+
+
+async def executor_general_node(state: TravelState):
+    """
+    일상 대화 node
+    """
+    print("--- Executor General Agent ---")
+
+    user_input = state.get("user_input", "")
+    messages = state.get("messages", [])[-10:]
+    prefs_info = state.get("prefs_info", "")
+    slots = state.get("slots")
+    follow_up_questions = state.get("follow_up_questions", [])
+
+    # 슬롯 정보 텍스트
+    slots_info = ""
+    if slots:
+        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
+        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
+
+    llm = LLMFactory.get_llm(temperature=0.7)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", EXECUTOR_GENERAL_PROMPT),
+    ])
+
+    prompt_value = prompt.invoke({
+        "messages": messages,
+        "user_input": user_input,
+        "slots_info": slots_info,
+        "prefs_info": prefs_info,
+        "follow_up_questions": follow_up_questions,
+    })
+
+    full_content = ""
+    async for chunk in llm.astream(prompt_value):
+        if chunk.content:
+            full_content += chunk.content
+
+    answer = full_content.strip()
+    print(f"[Executor General] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}

@@ -50,7 +50,7 @@ from app.utils.config import LLM_MODEL, TEXT_MODEL, PLACES_COLLECTION, get_retri
 from app.scripts.preprocess_data import ingest_data
 
 # ── EXECUTOR_PROMPT 참고 llm_text 생성 프롬프트 ────────────────────────────
-# app/services/prompts.py의 EXECUTOR_PROMPT 스타일을 따르는 문서 설명 생성 프롬프트
+# app/services/executor_prompt.py의 EXECUTOR_PROMPT 스타일을 따르는 문서 설명 생성 프롬프트
 DOCUMENT_DESCRIPTION_PROMPT = """\
 당신은 한국 여행 추천 에이전트입니다.
 아래 Context Information을 바탕으로, 이 장소를 추천하는 서술형 설명을 작성하세요.
