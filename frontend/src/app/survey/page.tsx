@@ -182,7 +182,7 @@ export default function PersonaSurveyPage() {
                             <Check size={40} />
                         </div>
                         <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
-                            You're all set!
+                            You&apos;re all set!
                         </h2>
                         <p className="text-gray-500 font-normal mb-12 text-lg">
                             회원가입 및 취향 분석이 완료되었습니다. <br className="hidden md:block" />

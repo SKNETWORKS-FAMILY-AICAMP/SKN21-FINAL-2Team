@@ -59,15 +59,15 @@ export function Logo({
                     <BrandMark tone={iconTone} size={Math.round(size * 0.72)} />
                 </div>
             ) : (
-                <div className="inline-flex items-center gap-2.5">
+                <div className="inline-flex items-center gap-3.5">
                     <div className={cn("inline-flex items-center justify-center rounded-[8px]", iconContainerClass)} style={{ width: size, height: size }}>
-                        <BrandMark tone={iconTone} size={Math.round(size * 0.68)} />
+                        <BrandMark tone={iconTone} size={Math.round(size * 0.62)} />
                     </div>
                     <img
                         src={resolveWordmarkSrc(tone)}
                         alt="Triver"
                         className="inline-block object-contain"
-                        style={{ height: Math.round(size * 0.64), width: "auto" }}
+                        style={{ height: Math.round(size * 1.02), width: "auto" }}
                     />
                 </div>
             )}

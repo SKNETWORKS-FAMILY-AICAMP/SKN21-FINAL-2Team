@@ -50,7 +50,18 @@ export const ChatMessageItem = memo(({
                 className="flex justify-end w-full px-2 lg:px-4 mb-2"
             >
                 <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[85%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
-                    <p className="text-[14px] leading-[1.5] whitespace-pre-wrap font-medium">{msg.message}</p>
+                    {!!msg.image_path && (
+                        <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
+                            <img
+                                src={msg.image_path}
+                                alt="Attached"
+                                className="w-full max-h-[220px] object-cover"
+                            />
+                        </div>
+                    )}
+                    {!!msg.message && (
+                        <p className="text-[14px] leading-[1.5] whitespace-pre-wrap font-medium">{msg.message}</p>
+                    )}
                     <div className="text-[9px] mt-1.5 font-medium text-slate-300 text-right uppercase tracking-wider">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
@@ -75,6 +86,17 @@ export const ChatMessageItem = memo(({
         shouldRenderWaitingBubble ||
         msg.message
     );
+    const shouldHideEmptyAiMessage = Boolean(
+        !isStreamingCurrentMessage &&
+        !(msg.message || "").trim() &&
+        (!msg.places || msg.places.length === 0) &&
+        !shouldRenderPipeline &&
+        !shouldRenderWaitingBubble
+    );
+
+    if (shouldHideEmptyAiMessage) {
+        return null;
+    }
 
     return (
         <div className="flex flex-col gap-3 mb-2 w-full px-4">
@@ -200,3 +222,5 @@ export const ChatMessageItem = memo(({
         </div>
     );
 });
+
+ChatMessageItem.displayName = "ChatMessageItem";

@@ -204,123 +204,121 @@ export function PlaceMapPanel({
   }
 
   return (
-    <div className={className}>
-      <div className="h-full flex flex-col">
-        {showHeader && (
-          <div className="flex-none px-4 py-3 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">Map</h3>
-            <p className="text-[11px] text-gray-500 mt-1">Recommended places from AI response</p>
-          </div>
-        )}
+    <div className={`flex flex-col h-full min-h-0 min-w-0 bg-white ${className}`}>
+      {showHeader && (
+        <div className="flex-none px-4 py-3 border-b border-gray-100 bg-white z-10">
+          <h3 className="text-sm font-semibold text-gray-900">Map</h3>
+          <p className="text-[11px] text-gray-500 mt-1">Recommended places from AI response</p>
+        </div>
+      )}
 
-        {status === "loading" && (
-          <div className="flex-1 flex items-center justify-center text-sm text-gray-500">Loading map...</div>
-        )}
+      {status === "loading" && (
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-500">Loading map...</div>
+      )}
 
-        {status === "error" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
-            <p className="text-sm text-gray-500">{error || "Failed to load map."}</p>
-            <button
-              type="button"
-              onClick={retry}
-              className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all inline-flex items-center gap-2"
-            >
-              <RefreshCw size={12} /> Retry
-            </button>
-          </div>
-        )}
+      {status === "error" && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="text-sm text-gray-500">{error || "Failed to load map."}</p>
+          <button
+            type="button"
+            onClick={retry}
+            className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all inline-flex items-center gap-2"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
 
-        {status === "ready" && (
-          <>
-            <div className="relative flex-1 min-h-[320px]">
-              <div ref={mapRef} className="h-full min-h-[320px] w-full" />
+      {status === "ready" && (
+        <div className="flex-1 flex flex-col min-h-0 relative">
+          <div className="flex-1 relative min-h-[320px]">
+            <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
-              {/* Floating Carousel at the bottom */}
-              <div className="absolute left-0 right-0 bottom-4 z-10 px-4 group/carousel">
-                {canScrollLeft && (
-                  <button
-                    type="button"
-                    onClick={() => scrollBy("left")}
-                    className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-                    aria-label="이전 장소 보기"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                )}
-
-                <div
-                  ref={scrollContainerRef}
-                  onScroll={checkScrollability}
-                  className="flex overflow-x-auto gap-3 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
+            {/* Floating Carousel at the bottom */}
+            <div className="absolute left-0 right-0 bottom-4 z-10 px-4 group/carousel">
+              {canScrollLeft && (
+                <button
+                  type="button"
+                  onClick={() => scrollBy("left")}
+                  className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                  aria-label="이전 장소 보기"
                 >
-                  {groupedPlaces.map((group) => (
-                    group.places.map((place) => {
-                      const isSelected = place.mapId === selectedMapPlaceId;
-                      const searchUrl = place.map_url || `https://map.naver.com/v5/search/${encodeURIComponent(place.name)}`;
-                      return (
-                        <div
-                          key={`${group.groupId}:${place.mapId}`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
+                  <ChevronLeft size={18} />
+                </button>
+              )}
+
+              <div
+                ref={scrollContainerRef}
+                onScroll={checkScrollability}
+                className="flex overflow-x-auto gap-3 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
+              >
+                {groupedPlaces.map((group) => (
+                  group.places.map((place) => {
+                    const isSelected = place.mapId === selectedMapPlaceId;
+                    const searchUrl = place.map_url || `https://map.naver.com/v5/search/${encodeURIComponent(place.name)}`;
+                    return (
+                      <div
+                        key={`${group.groupId}:${place.mapId}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          onSelectPlace(place.mapId);
+                          onMarkerClick(place.mapId);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
                             onSelectPlace(place.mapId);
                             onMarkerClick(place.mapId);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              onSelectPlace(place.mapId);
-                              onMarkerClick(place.mapId);
-                            }
-                          }}
-                          className={`group/card snap-center flex-shrink-0 w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
-                            ? "border-black bg-white/95 ring-2 ring-black/10"
-                            : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
-                            }`}
+                          }
+                        }}
+                        className={`group/card snap-center flex-shrink-0 w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
+                          ? "border-black bg-white/95 ring-2 ring-black/10"
+                          : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
+                          }`}
+                      >
+                        <a
+                          href={searchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-2.5 right-2.5 text-gray-400 hover:text-blue-500 transition-colors bg-white/50 hover:bg-white/80 rounded-full p-1 opacity-0 group-hover/card:opacity-100 focus:opacity-100"
+                          title="네이버 지도 객체 검색"
                         >
-                          <a
-                            href={searchUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute top-2.5 right-2.5 text-gray-400 hover:text-blue-500 transition-colors bg-white/50 hover:bg-white/80 rounded-full p-1 opacity-0 group-hover/card:opacity-100 focus:opacity-100"
-                            title="네이버 지도 객체 검색"
-                          >
-                            <ExternalLink size={14} />
-                          </a>
+                          <ExternalLink size={14} />
+                        </a>
 
-                          <div className="pr-4">
-                            <div className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">{place.name}</div>
-                            {!!place.adress && (
-                              <div className="text-[11px] font-medium text-gray-500 truncate">{place.adress}</div>
-                            )}
-                          </div>
+                        <div className="pr-4">
+                          <div className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">{place.name}</div>
+                          {!!place.adress && (
+                            <div className="text-[11px] font-medium text-gray-500 truncate">{place.adress}</div>
+                          )}
                         </div>
-                      );
-                    })
-                  ))}
-                  {!groupedPlaces.length && (
-                    <p className="text-xs text-center w-full text-gray-800 bg-white/80 backdrop-blur-md rounded-xl py-3 shadow-sm mx-auto">
-                      No places found for map overlay.
-                    </p>
-                  )}
-                </div>
-
-                {canScrollRight && (
-                  <button
-                    type="button"
-                    onClick={() => scrollBy("right")}
-                    className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-                    aria-label="다음 장소 보기"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                      </div>
+                    );
+                  })
+                ))}
+                {!groupedPlaces.length && (
+                  <p className="text-xs text-center w-full text-gray-800 bg-white/80 backdrop-blur-md rounded-xl py-3 shadow-sm mx-auto">
+                    No places found for map overlay.
+                  </p>
                 )}
               </div>
+
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollBy("right")}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                  aria-label="다음 장소 보기"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              )}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

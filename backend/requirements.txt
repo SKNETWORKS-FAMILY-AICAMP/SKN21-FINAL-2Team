@@ -18,6 +18,8 @@ passlib[bcrypt] # Password Hashing
 python-multipart # File Upload
 google-auth
 requests
+beautifulsoup4
+selenium
 qdrant-client
 sentence-transformers
 pillow

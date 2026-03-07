@@ -38,7 +38,7 @@ const YOUR_CHOICES = {
 // Contents 섹션은 API에서 팝업스토어 데이터를 가져옴
 
 import { Sidebar } from "@/components/Sidebar";
-import { fetchCategoryPlaces, fetchCurrentUser, fetchHotPlaces, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+import { fetchCategoryPlaces, fetchRandomExplorePlaces, fetchCurrentUser, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
 import { useEffect, useState } from "react";
@@ -64,22 +64,34 @@ const EXPLORE_DEDUPE_TTL_MS = 2000;
 const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
     const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
-    const [data, hotPlaces] = await Promise.all([
+
+    const [categoryData, randomData] = await Promise.all([
         fetchCategoryPlaces(userPrefs),
-        fetchHotPlaces(3),
+        fetchRandomExplorePlaces(),
     ]);
 
     return {
         user,
-        hotPlaces,
-        popupStores: data["팝업스토어"] || [],
+        hotPlaces: (randomData["hot_places"] || []).map((p: CategoryPlaceItem & { tag1?: string; tag2?: string }) => ({
+            id: Number(p.contentid),
+            name: p.title,
+            adress: p.address,
+            // 백엔드가 랜덤 핫플에서는 image_url로 주도록 바뀌었음 (explore.py 참조)
+            image_path: p.image_url,
+            feature: p.description,
+            tag1: p.tag1,
+            tag2: p.tag2
+        })) as unknown as HotPlace[],
+        popupStores: categoryData["팝업스토어"] || [],
         choices: {
-            restaurants: data["음식점"] || [],
-            tourist: data["문화시설"] || [],
-            activities: data["축제공연행사"] || [],
+            // random_places 엔드포인트에서 넘어오는 key 이름 매칭 (tourist_spots)
+            restaurants: randomData["restaurants"] || [],
+            tourist: randomData["tourist_spots"] || [],
+            activities: categoryData["축제공연행사"] || [],
         },
     };
 };
+
 
 const getExploreDataOnce = async (): Promise<ExploreInitPayload> => {
     const now = Date.now();
@@ -277,7 +289,6 @@ export default function ExplorePage() {
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                                 <div className="grid grid-cols-3 gap-3 pb-2 h-full">
-                                    {/* API에서 불러온 핫플레이스 렌더링 */}
                                     {hotPlaces.map((place) => (
                                         <motion.div
                                             key={place.id}
@@ -285,7 +296,8 @@ export default function ExplorePage() {
                                             className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
                                         >
                                             <img
-                                                src={place.image_path || ""}
+                                                // 핫플레이스는 상대경로일 수도 있고 절대경로(http)일 수도 있으므로 분기처리
+                                                src={place.image_path?.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
                                                 alt={place.name}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
                                             />

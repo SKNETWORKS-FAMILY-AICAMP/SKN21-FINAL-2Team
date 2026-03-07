@@ -204,7 +204,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
 
                             <button
                                 onClick={() => {
-                                    onConfirm({ travelDuration: "", adultCount: 1, childCount: 0 });
+                                    onConfirm({ travelDuration: "", adultCount: 0, childCount: 0 });
                                     resetState();
                                 }}
                                 className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"

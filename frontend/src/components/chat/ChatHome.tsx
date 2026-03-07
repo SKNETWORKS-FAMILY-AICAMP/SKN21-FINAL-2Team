@@ -52,8 +52,16 @@ export function ChatHome() {
     const [roomTripContext, setRoomTripContext] = useState<TripContext | null>(null);
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
+    const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
+    const [mapPanelWidth, setMapPanelWidth] = useState(34);
+    const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
+    const [attachedFileName, setAttachedFileName] = useState<string>("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const placeCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const streamAbortControllerRef = useRef<AbortController | null>(null);
+    const stopRequestedRef = useRef(false);
     const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
         inputText,
         setInputText
@@ -168,6 +176,16 @@ export function ChatHome() {
             return [...nextMessages, placeholder];
         });
     }, []);
+
+    // useEffect(() => {
+    //     const textarea = inputTextareaRef.current;
+    //     if (!textarea) return;
+    //     const maxHeight = 180;
+    //     textarea.style.height = "auto";
+    //     const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    //     textarea.style.height = `${nextHeight}px`;
+    //     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    // }, [inputText]);
 
     // Re-run initialization or room switch when roomIdParam changes
     useEffect(() => {
@@ -381,14 +399,19 @@ export function ChatHome() {
         message,
         saveUserMessage,
         optimisticUserText,
+        imageDataUrl,
     }: {
         roomId: number;
         message: string;
         saveUserMessage: boolean;
         optimisticUserText?: string;
+        imageDataUrl?: string | null;
     }) => {
         if (isSendingRef.current) return;
         isSendingRef.current = true;
+        stopRequestedRef.current = false;
+        const abortController = new AbortController();
+        streamAbortControllerRef.current = abortController;
 
         if (optimisticUserText) {
             const optimisticUserMsg: ChatMessage = {
@@ -396,6 +419,7 @@ export function ChatHome() {
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
+                image_path: imageDataUrl ?? null,
                 created_at: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, optimisticUserMsg]);
@@ -487,16 +511,27 @@ export function ChatHome() {
                     }
                     setStreamingMsgId(null);
                 },
-            }, null, null, { saveUserMessage });
+            }, imageDataUrl ?? null, null, { saveUserMessage, signal: abortController.signal });
         } catch (error) {
-            console.error("Failed to send streamed message", error);
-            setStreamBufferingReason(null);
-            if (activeStreamRef.current?.placeholderId === streamingId) {
-                activeStreamRef.current = null;
+            const isAbort =
+                stopRequestedRef.current ||
+                ((error as { name?: string })?.name === "AbortError");
+            if (!isAbort) {
+                console.error("Failed to send streamed message", error);
+                setStreamBufferingReason(null);
+                if (activeStreamRef.current?.placeholderId === streamingId) {
+                    activeStreamRef.current = null;
+                }
+            } else {
+                setMessages((prev) =>
+                    prev.filter((m) => !(m.id === streamingId && !(m.message || "").trim()))
+                );
             }
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
+            setShowPipeline(false);
+            setStreamingMsgId(null);
             isSendingRef.current = false;
         }
     }, [clearStreamTokenBuffer, hidePipeline, queueStreamToken, updatePipelineStep, updateRoomTitle]);
@@ -717,16 +752,29 @@ export function ChatHome() {
     }, [currentRoomId, isInitializing, isStreaming, loadedRoomMessageCount, roomLoadStatus, runAutoStarterStream]);
 
     const handleSendMessage = async () => {
-        if (!inputText.trim() || !currentRoomId) return;
+        if (!currentRoomId) return;
+        const userText = inputText.trim();
+        if (!userText && !attachedImageDataUrl) return;
 
-        const userText = inputText;
+        const messageToSend = userText || "첨부한 이미지를 분석해줘.";
+        const optimisticText = userText || (attachedFileName ? `[이미지 첨부] ${attachedFileName}` : "[이미지 첨부]");
+        const currentAttachment = attachedImageDataUrl;
         setInputText("");
+        setAttachedImageDataUrl(null);
+        setAttachedFileName("");
         await streamMessageToRoom({
             roomId: currentRoomId,
-            message: userText,
+            message: messageToSend,
             saveUserMessage: true,
-            optimisticUserText: userText,
+            optimisticUserText: optimisticText,
+            imageDataUrl: currentAttachment,
         });
+    };
+
+    const handleStopMessage = () => {
+        if (!isStreaming) return;
+        stopRequestedRef.current = true;
+        streamAbortControllerRef.current?.abort();
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -736,6 +784,28 @@ export function ChatHome() {
             e.preventDefault();
             handleSendMessage();
         }
+    };
+
+    const handleAttachClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleAttachFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            window.alert("이미지 파일만 첨부할 수 있어요.");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = typeof reader.result === "string" ? reader.result : null;
+            setAttachedImageDataUrl(dataUrl);
+            setAttachedFileName(file.name);
+        };
+        reader.readAsDataURL(file);
+        e.target.value = "";
     };
 
     const displayName = userProfile?.nickname || userProfile?.name || "User";
@@ -853,8 +923,42 @@ export function ChatHome() {
             });
         }
 
+        // This part of the snippet seems to be from a different context or a partial change.
+        // The original code returns `groups`, not `sorted`.
+        // I will insert the new `useEffect` and drag handlers after this `useMemo`.
+        // if (sorted.length > 0 && !isSendingRef.current && !isMapPanelOpen && !fromDestinationParam) {
+        //     // Only auto-open map panel if we just received messages with places
+        //     // To prevent flickering, we just set true if closed.
+        // }
         return groups;
     }, [messages, mapPlaces, toMapId]);
+
+    // 지도 데이터가 생기면 자동으로 패널 열기 (단, 최초 로드 제외)
+    useEffect(() => {
+        if (mapPlaces.length > 0 && messages.length > 0) {
+            setIsMapPanelOpen(true);
+        } else if (mapPlaces.length === 0) {
+            setIsMapPanelOpen(false);
+        }
+    }, [mapPlaces.length, messages.length]);
+
+    const handleMapResizeDrag = useCallback((e: MouseEvent) => {
+        const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+        setMapPanelWidth(Math.min(Math.max(newWidth, 20), 50));
+    }, []);
+
+    const stopMapResizeDrag = useCallback(() => {
+        document.removeEventListener("mousemove", handleMapResizeDrag);
+        document.removeEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "default";
+    }, [handleMapResizeDrag]);
+
+    const startMapResizeDrag = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        document.addEventListener("mousemove", handleMapResizeDrag);
+        document.addEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "col-resize";
+    }, [handleMapResizeDrag, stopMapResizeDrag]);
 
     useEffect(() => {
         if (!mapPlaces.length) {
@@ -917,10 +1021,22 @@ export function ChatHome() {
                             title="채팅방 북마크 토글"
                             disabled={!currentRoomId}
                         >
-                            <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                            <Bookmark size={16} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} className="opacity-80" />
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3">
+                        {/* Desktop Map Toggle */}
+                        {mapPlaces.length > 0 && (
+                            <button
+                                onClick={() => setIsMapPanelOpen(!isMapPanelOpen)}
+                                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${isMapPanelOpen ? 'bg-black text-white border-black' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+                                title={isMapPanelOpen ? "지도 닫기" : "지도 열기"}
+                            >
+                                <MapIcon size={14} className={isMapPanelOpen ? "text-white" : "text-slate-500"} />
+                                {isMapPanelOpen ? "Map On" : "Map Off"}
+                            </button>
+                        )}
                         <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Online
@@ -939,7 +1055,7 @@ export function ChatHome() {
                     </div>
                 </header>
 
-                {roomTripContext && isRouteRoomSynced && (
+                {isRouteRoomSynced && roomTripContext && roomTripContext.travelDuration && (
                     <div className="flex-none px-6 pb-2 bg-white">
                         <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
                             {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
@@ -979,62 +1095,112 @@ export function ChatHome() {
 
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-4 px-4 z-20 pointer-events-none">
                     <div className="w-full mx-auto relative px-2 pointer-events-auto max-w-4xl">
-                        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
-                            <button
-                                type="button"
-                                className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
-                                title="첨부 파일 (준비 중)"
-                                disabled
-                            >
-                                <Paperclip size={18} />
-                            </button>
-
-                            <textarea
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                onKeyDown={handleKeyPress}
-                                placeholder="어디로 떠나고 싶으신가요?"
-                                className="flex-1 bg-transparent border-none outline-none resize-none py-2.5 max-h-[120px] text-[15px] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar mt-[2px]"
-                                rows={1}
-                                style={{ minHeight: "44px" }}
+                        <div className="bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAttachFileChange}
                             />
 
-                            <button
-                                type="button"
-                                onClick={() => setIsMapSheetOpen(true)}
-                                className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
-                                title="지도 보기"
-                            >
-                                <MapIcon size={18} />
-                            </button>
+                            {attachedFileName && (
+                                <div className="px-3 pt-2 pb-1">
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white text-xs pl-1.5 pr-2 py-1.5 max-w-[340px]">
+                                        {attachedImageDataUrl && (
+                                            <img
+                                                src={attachedImageDataUrl}
+                                                alt="첨부 이미지"
+                                                className="w-6 h-6 rounded-full object-cover border border-white/20"
+                                            />
+                                        )}
+                                        <span className="truncate">{attachedFileName}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAttachedImageDataUrl(null);
+                                                setAttachedFileName("");
+                                            }}
+                                            className="text-white/80 hover:text-white transition-colors"
+                                            aria-label="첨부 파일 제거"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                            <button
-                                onClick={handleToggleListening}
-                                className={`p-2.5 rounded-full transition-all duration-300 relative ${micButtonClass}`}
-                                title={micButtonTitle}
-                                disabled={sttPermission === "unsupported"}
-                            >
-                                {isListening ? (
-                                    <>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAttachClick}
+                                    className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
+                                    title="이미지 첨부"
+                                >
+                                    <Paperclip size={18} />
+                                </button>
+
+                                <textarea
+                                    ref={inputTextareaRef}
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    placeholder="어디로 떠나고 싶으신가요?"
+                                    className="flex-1 bg-transparent border-none outline-none resize-none text-[15px] leading-[1.5] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar py-2"
+                                    rows={1}
+                                    style={{ minHeight: "44px", maxHeight: "180px" }}
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMapSheetOpen(true)}
+                                    className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
+                                    title="지도 보기"
+                                >
+                                    <MapIcon size={18} />
+                                </button>
+
+                                <button
+                                    onClick={handleToggleListening}
+                                    className={`p-2.5 rounded-full transition-all duration-300 relative ${micButtonClass}`}
+                                    title={micButtonTitle}
+                                    disabled={sttPermission === "unsupported"}
+                                >
+                                    {isListening ? (
+                                        <>
+                                            <Square size={16} fill="currentColor" strokeWidth={0} />
+                                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50" />
+                                        </>
+                                    ) : sttPermission === "denied" ? (
+                                        <MicOff size={18} strokeWidth={1.5} />
+                                    ) : (
+                                        <Mic size={18} strokeWidth={1.5} />
+                                    )}
+                                </button>
+
+                                {isStreaming ? (
+                                    <motion.button
+                                        initial={false}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        onClick={handleStopMessage}
+                                        className="p-2.5 rounded-full transition-all duration-300 shadow-md bg-red-500 text-white shadow-red-500/20 hover:shadow-red-500/40 hover:-translate-y-0.5"
+                                        title="중지"
+                                    >
                                         <Square size={16} fill="currentColor" strokeWidth={0} />
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50" />
-                                    </>
-                                ) : sttPermission === "denied" ? (
-                                    <MicOff size={18} strokeWidth={1.5} />
+                                    </motion.button>
                                 ) : (
-                                    <Mic size={18} strokeWidth={1.5} />
+                                    <motion.button
+                                        initial={false}
+                                        animate={{ scale: (inputText.trim() || attachedImageDataUrl) ? 1 : 0.9, opacity: (inputText.trim() || attachedImageDataUrl) ? 1 : 0.7 }}
+                                        onClick={handleSendMessage}
+                                        disabled={!inputText.trim() && !attachedImageDataUrl}
+                                        className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${(inputText.trim() || attachedImageDataUrl) ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
+                                        title="전송"
+                                    >
+                                        <Send size={18} />
+                                    </motion.button>
                                 )}
-                            </button>
-
-                            <motion.button
-                                initial={false}
-                                animate={{ scale: inputText.trim() && !isTyping ? 1 : 0.9, opacity: inputText.trim() && !isTyping ? 1 : 0.7 }}
-                                onClick={handleSendMessage}
-                                disabled={!inputText.trim() || isTyping}
-                                className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
-                            >
-                                <Send size={18} />
-                            </motion.button>
+                            </div>
                         </div>
 
                         <p className="text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide">
@@ -1044,16 +1210,29 @@ export function ChatHome() {
                 </div>
             </div>
 
-            <aside className="hidden lg:block w-[34%] min-w-[320px] max-w-[460px] border-l border-gray-100 bg-white">
-                <PlaceMapPanel
-                    className="h-full"
-                    places={mapPlaces}
-                    groups={mapPlaceGroups}
-                    selectedMapPlaceId={selectedMapPlaceId}
-                    onSelectPlace={handleSelectMapPlace}
-                    onMarkerClick={focusPlaceCardFromMap}
-                />
-            </aside>
+            {/* Desktop Map Panel with Resizer */}
+            {isMapPanelOpen && mapPlaces.length > 0 && (
+                <>
+                    {/* Resizer Handle */}
+                    <div
+                        onMouseDown={startMapResizeDrag}
+                        className="hidden lg:block w-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-20"
+                    />
+                    <aside
+                        style={{ width: `${mapPanelWidth}%` }}
+                        className="hidden lg:block min-w-[320px] max-w-[800px] border-l border-gray-100 bg-white z-10"
+                    >
+                        <PlaceMapPanel
+                            className="h-full"
+                            places={mapPlaces}
+                            groups={mapPlaceGroups}
+                            selectedMapPlaceId={selectedMapPlaceId}
+                            onSelectPlace={handleSelectMapPlace}
+                            onMarkerClick={focusPlaceCardFromMap}
+                        />
+                    </aside>
+                </>
+            )}
 
             <PlaceMapSheet
                 open={isMapSheetOpen}

@@ -5,13 +5,13 @@ import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { useRouter } from "next/navigation";
-import { fetchCurrentUser } from "@/services/api";
+import { fetchCurrentUser, type UserProfile } from "@/services/api";
 import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
 
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
-    const [userProfile, setUserProfile] = useState<any>(null); // To store full user info for navigation guard
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // To store full user info for navigation guard
     const [profilePicture, setProfilePicture] = useState<string | null>(null);
     const [userInitial, setUserInitial] = useState<string>("?");
     const [imgError, setImgError] = useState(false);
