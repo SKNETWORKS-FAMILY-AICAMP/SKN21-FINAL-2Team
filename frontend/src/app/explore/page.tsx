@@ -38,7 +38,7 @@ const YOUR_CHOICES = {
 // Contents 섹션은 API에서 팝업스토어 데이터를 가져옴
 
 import { Sidebar } from "@/components/Sidebar";
-import { fetchCategoryPlaces, fetchRandomExplorePlaces, fetchCurrentUser, fetchHotPlaces, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+import { fetchCategoryPlaces, fetchRandomExplorePlaces, fetchCurrentUser, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
 import { useEffect, useState } from "react";
@@ -65,15 +65,23 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
     const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
 
-    const [categoryData, randomData, hotPlaces] = await Promise.all([
+    const [categoryData, randomData] = await Promise.all([
         fetchCategoryPlaces(userPrefs),
         fetchRandomExplorePlaces(),
-        fetchHotPlaces(3),
     ]);
 
     return {
         user,
-        hotPlaces,
+        hotPlaces: (randomData["hot_places"] || []).map((p: CategoryPlaceItem & { tag1?: string; tag2?: string }) => ({
+            id: Number(p.contentid),
+            name: p.title,
+            adress: p.address,
+            // 백엔드가 랜덤 핫플에서는 image_url로 주도록 바뀌었음 (explore.py 참조)
+            image_path: p.image_url,
+            feature: p.description,
+            tag1: p.tag1,
+            tag2: p.tag2
+        })) as unknown as HotPlace[],
         popupStores: categoryData["팝업스토어"] || [],
         choices: {
             // random_places 엔드포인트에서 넘어오는 key 이름 매칭 (tourist_spots)
