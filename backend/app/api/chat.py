@@ -37,6 +37,7 @@ from app.services.auto_start_prompt import (
     render_auto_start_greeting_prompt,
 )
 from app.utils.llm_streaming import compute_visible_delta, extract_text_from_chunk
+from app.utils.place_id import get_place_id
 
 from langchain_core.messages import HumanMessage
 
@@ -608,11 +609,6 @@ def _build_streaming_response(
         if candidates:
             def _normalize_text(value: str) -> str:
                 return re.sub(r"\s+", "", (value or "")).lower()
-
-            def _candidate_id(candidate: dict) -> str:
-                payload = candidate.get("payload", {}) or {}
-                return str(payload.get("contentid") or candidate.get("id") or "").strip()
-
             def _infer_candidates_from_answer(answer_text: str):
                 if not answer_text:
                     return []
@@ -639,7 +635,7 @@ def _build_streaming_response(
             ordered_candidates = []
             if selected_ids:
                 for cid in selected_ids:
-                    candidate = next((c for c in candidates if _candidate_id(c) == str(cid).strip()), None)
+                    candidate = next((c for c in candidates if get_place_id(c) == str(cid).strip()), None)
                     if candidate and candidate not in ordered_candidates:
                         ordered_candidates.append(candidate)
 
@@ -649,7 +645,7 @@ def _build_streaming_response(
 
             for candidate in ordered_candidates[:3]:
                 payload = candidate.get("payload", {})
-                candidate_pid = _candidate_id(candidate)
+                candidate_pid = get_place_id(candidate)
                 new_place = ChatPlace(
                     messages_id=ai_message.id,
                     place_id=int(candidate_pid) if candidate_pid.isdigit() else 0,

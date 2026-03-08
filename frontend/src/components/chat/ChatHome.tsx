@@ -89,12 +89,10 @@ export function ChatHome() {
 
     const updatePipelineStep = useCallback((step: string, status: string) => {
         const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
-        flushSync(() => {
-            setPipelineSteps((prev) => ({
-                ...prev,
-                [step]: mappedStatus,
-            }));
-        });
+        setPipelineSteps((prev) => ({
+            ...prev,
+            [step]: mappedStatus,
+        }));
     }, []);
 
     const flushBufferedToken = useCallback((streamingId: number, roomId: number) => {

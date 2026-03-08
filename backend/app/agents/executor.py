@@ -6,7 +6,7 @@ import concurrent.futures
 import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from app.agents.models.state import TravelState
 from app.agents.models.output import IntentType
@@ -14,6 +14,7 @@ from app.services.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_
 from app.utils.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
 from app.utils.llm_streaming import collect_streamed_text
+from app.utils.place_id import get_place_id
 
 
 def _normalize_text(value: str) -> str:
@@ -37,7 +38,7 @@ def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str,
                 continue
             candidate_key = _normalize_text(candidate_name)
             if name_key and (name_key in candidate_key or candidate_key in name_key):
-                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                cid = get_place_id(c)
                 if cid and cid not in inferred_ids:
                     inferred_ids.append(cid)
                 break
@@ -50,7 +51,7 @@ def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str,
             candidate_name = payload.get("title") or payload.get("name") or ""
             candidate_key = _normalize_text(candidate_name)
             if candidate_key and candidate_key in answer_key:
-                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                cid = get_place_id(c)
                 if cid and cid not in inferred_ids:
                     inferred_ids.append(cid)
 
@@ -69,7 +70,7 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
 
         # 네이버 지도 링크 생성
         title = payload.get("title") or payload.get("name") or "Unknown"
-        contentid = payload.get("contentid") or c.get("id") or "Unknown"
+        contentid = get_place_id(c) or "Unknown"
         
         if title:
             encoded = urllib.parse.quote(title)
@@ -265,24 +266,22 @@ async def executor_node(state: TravelState, config=None):
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", EXECUTOR_PROMPT),
-        MessagesPlaceholder(variable_name="messages"),
-        ("human", "{content_blocks}")
-    ])
+    system_prompt = EXECUTOR_PROMPT.format(
+        data_notice=data_notice,
+        slots_info=slots_info,
+        prefs_info=prefs_info,
+        web_context=web_context or "",
+        context_block=context_block or "",
+    )
 
-    prompt_value = prompt.invoke({
-        "messages": messages,
-        "content_blocks": content_blocks,
-        "data_notice": data_notice,
-        "slots_info": slots_info,
-        "prefs_info": prefs_info,
-        "web_context": web_context,
-        "context_block": context_block,
-    })
+    prompt_messages = [SystemMessage(content=system_prompt), *messages]
+    if image_path:
+        prompt_messages.append(HumanMessage(content=content_blocks))
+    else:
+        prompt_messages.append(HumanMessage(content=user_input))
 
     # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
-    full_content = await collect_streamed_text(llm, prompt_value, config=config)
+    full_content = await collect_streamed_text(llm, prompt_messages, config=config)
 
     # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
     selected_ids = []
@@ -304,7 +303,7 @@ async def executor_node(state: TravelState, config=None):
     valid_candidate_ids = set()
     for c in candidate_pool:
         payload = c.get("payload", {}) if isinstance(c, dict) else {}
-        cid = str(payload.get("contentid") or c.get("id") or "").strip()
+        cid = get_place_id(c)
         if cid:
             valid_candidate_ids.add(cid)
 

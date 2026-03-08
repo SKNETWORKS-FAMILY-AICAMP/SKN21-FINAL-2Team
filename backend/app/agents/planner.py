@@ -51,8 +51,8 @@ async def planner_node(state: TravelState):
 
         print(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")
 
-        # 일정을 dict 리스트로 변환
-        itinerary = [item.model_dump() for item in result.itinerary]
+        # Enum 값을 문자열로 직렬화하여 retriever 필터와 타입을 맞춘다.
+        itinerary = [item.model_dump(mode="json") for item in result.itinerary]
 
         # 부족한 정보가 있으면 LLM이 생성한 자연스러운 후속 질문 사용
         state_dict = {"itinerary": itinerary}

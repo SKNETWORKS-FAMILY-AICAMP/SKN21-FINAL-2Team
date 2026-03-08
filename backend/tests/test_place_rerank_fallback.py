@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
-from qdrant_client.models import FieldCondition, Filter
+from qdrant_client.models import FieldCondition, Filter, IsEmptyCondition
 
 from app.retrieval.place import PlaceRetriever, _build_compact_text
 from app.utils.config import get_retrieval_params
@@ -110,6 +110,17 @@ def test_build_category_filter_falls_back_to_raw_category_when_not_normalized():
         ("contenttypeid", "브런치"),
         ("category", "브런치"),
     }
+
+
+def test_build_category_filter_adds_must_not_when_has_image_true():
+    retriever = object.__new__(PlaceRetriever)
+
+    query_filter = retriever._build_category_filter("맛집", has_image=True)
+
+    assert isinstance(query_filter, Filter)
+    assert len(query_filter.must) == 1
+    assert len(query_filter.must_not) == 1
+    assert isinstance(query_filter.must_not[0], IsEmptyCondition)
 
 
 def test_payload_matches_category_accepts_raw_category_field_fallback():

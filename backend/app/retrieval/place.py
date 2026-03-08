@@ -6,7 +6,7 @@ import re
 from typing import Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue
+    Filter, FieldCondition, MatchValue, MatchAny
 )
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -20,24 +20,7 @@ from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image
 from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
-
-
-def _normalize_place_id(value):
-    if value is None:
-        return None
-    if isinstance(value, int):
-        return value
-    text = str(value).strip()
-    if text.isdigit():
-        return int(text)
-    return text
-
-
-def _extract_place_id(point, source_collection: str):
-    payload = point.payload or {}
-    if source_collection == PHOTOS_COLLECTION:
-        return _normalize_place_id(payload.get("contentid") or payload.get("place_id"))
-    return _normalize_place_id(point.id)
+from app.utils.place_id import get_place_id_from_point
 
 
 def _normalize_match_text(text: str) -> str:
@@ -56,6 +39,24 @@ def _build_compact_text(payload: dict[str, Any]) -> str:
     category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
     addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "").strip()
     return " ".join([part for part in (title, category, addr) if part]).strip()
+
+
+def _to_positive_int(value: Any) -> int | None:
+    if value in (None, "", 0, 0.0):
+        return None
+    try:
+        parsed = int(str(value).strip())
+        return parsed if parsed > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_place_id(point: Any, source_collection: str) -> int | None:
+    if source_collection == PHOTOS_COLLECTION:
+        cid = get_place_id_from_point(point, prefer_payload=True, fallback_to_point_id=False)
+    else:
+        cid = get_place_id_from_point(point, prefer_payload=False, fallback_to_point_id=True)
+    return _to_positive_int(cid)
 
 
 class PlaceRetriever:
@@ -96,11 +97,11 @@ class PlaceRetriever:
     def normalize_category(self, category: str | None) -> str | None:
         if not category:
             return None
-        normalized = self.CATEGORY_NORMALIZATION_MAP.get(str(category).strip())
+        normalized = self.CATEGORY_NORMALIZATION_MAP.get(self._category_to_str(category))
         return normalized
 
     def _get_category_candidates(self, category: str | None) -> list[str]:
-        raw = str(category or "").strip()
+        raw = self._category_to_str(category)
         if not raw:
             return []
 
@@ -110,6 +111,13 @@ class PlaceRetriever:
             if value and value not in candidates:
                 candidates.append(value)
         return candidates
+
+    @staticmethod
+    def _category_to_str(category: Any) -> str:
+        if category is None:
+            return ""
+        value = getattr(category, "value", category)
+        return str(value).strip()
 
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
@@ -126,7 +134,7 @@ class PlaceRetriever:
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
     def _build_category_filter(self, category: str = None, has_image: bool = False) -> Filter | None:
-        """카테고리 필터 생성 (데이터에 명칭이 저장되어 있으므로 명칭 그대로 필터링)"""
+        """카테고리 필터 생성 (contenttypeid 필드에 한글 명칭으로 저장됨)"""
         must_conditions = []
         must_not_conditions = []
         category_values = self._get_category_candidates(category)
@@ -134,26 +142,24 @@ class PlaceRetriever:
         if category_values:
             if len(category_values) == 2:
                 print(f"[INFO] category normalized: '{category}' -> '{category_values[0]}' (fallback='{category_values[1]}')")
-            should_conditions = []
-            for value in category_values:
-                should_conditions.append(FieldCondition(key="contenttypeid", match=MatchValue(value=value)))
-                should_conditions.append(FieldCondition(key="category", match=MatchValue(value=value)))
-            must_conditions.append(Filter(should=should_conditions))
-            
+            # MatchAny: contenttypeid가 후보값 중 하나와 일치하면 통과
+            must_conditions.append(
+                FieldCondition(key="contenttypeid", match=MatchAny(any=category_values))
+            )
+
         if has_image:
-            # 'image' 필드가 비어있지 않은 것만 필터링
             from qdrant_client.models import IsEmptyCondition, PayloadField
             must_not_conditions.append(IsEmptyCondition(is_empty=PayloadField(key="image")))
 
         if not must_conditions and not must_not_conditions:
             return None
-            
-        return None
-        # return Filter(
-        #     should=must_conditions if must_conditions else None,
-        #     # must=must_conditions if must_conditions else None,
-        #     must_not=must_not_conditions if must_not_conditions else None
-        # )
+
+        built = Filter(
+            must=must_conditions if must_conditions else None,
+            must_not=must_not_conditions if must_not_conditions else None
+        )
+        print(f"[INFO] category_filter built: category={category} values={category_values}")
+        return built
 
     def search_text(self, query: str, limit: int = 5, category: str = None, has_image: bool = False):
         """
@@ -320,7 +326,7 @@ class PlaceRetriever:
                 continue
             scored.append(
                 {
-                    "id": _normalize_place_id(p.id),
+                    "id": _extract_place_id(p, PLACES_COLLECTION),
                     "payload": payload,
                     "score": lexical_score,
                 }
@@ -437,6 +443,7 @@ class PlaceRetriever:
                 query_filter=query_filter,
             )
             place_vector_points.extend(t_t_resp.points)
+            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if query_filter else 'no'})")
             collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
         if query and query.strip() and scope in {"auto", "photo_only"}:
@@ -493,7 +500,7 @@ class PlaceRetriever:
             try:
                 unique_points = {}
                 for point in place_vector_points:
-                    pid = _extract_place_id(point, PLACES_COLLECTION)
+                    pid = point.id
                     if pid is None:
                         continue
                     unique_points[pid] = point
@@ -520,7 +527,7 @@ class PlaceRetriever:
                         pool_limit=BM25_POOL_LIMIT,
                     )
                     for rank, item in enumerate(lexical_hits, start=1):
-                        pid = _normalize_place_id(item.get("id"))
+                        pid = _to_positive_int(item.get("id"))
                         if pid is None:
                             continue
                         payload = item.get("payload") or {}
@@ -565,6 +572,8 @@ class PlaceRetriever:
                 "keyword_match_boost": boost,
             })
 
+        print(f"[INFO] fusion & boosting returning {len(results)} candidates")
+
         first_stage_results = results[:candidate_k]
         if enable_rerank:
             reranked = await self._rerank_candidates(query=query, candidates=first_stage_results, top_k=min(rerank_top_k, candidate_k))
@@ -575,7 +584,9 @@ class PlaceRetriever:
                 c["final_rank"] = idx
 
         # 기존 인터페이스 호환: limit 기준으로 반환
-        return reranked[: max(int(limit or 0), 1)]
+        final = reranked[: max(int(limit or 0), 1)]
+        print(f"[INFO] search_hybrid returning {len(final)} candidates (score_map={len(score_map)} reranked={len(reranked)})")
+        return final
         
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
         """
