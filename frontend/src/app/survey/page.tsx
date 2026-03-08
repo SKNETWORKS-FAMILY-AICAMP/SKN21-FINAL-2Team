@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, ArrowLeft, LogOut } from "lucide-react";
+import { ArrowRight, Check, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
 
@@ -127,15 +127,6 @@ export default function PersonaSurveyPage() {
         setCurrentQuestionIndex(idx);
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("profile_picture");
-        localStorage.removeItem("user_name");
-        localStorage.removeItem("user_email");
-        router.replace("/signup");
-    };
-
     if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
     const currentQuestion = questions[currentQuestionIndex];
@@ -191,10 +182,10 @@ export default function PersonaSurveyPage() {
 
                         <button
                             onClick={handleFinalizeSignup}
-                            // 주의: 사용자의 피드백에 맞춰 시각적으로 가입이 완료되는 느낌을 주기 위해 버튼명을 SignUp으로 설정했습니다.
-                            className="w-full sm:w-auto px-12 py-4 bg-black text-white text-lg font-semibold rounded-full hover:bg-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
+                            // 주의: 버튼의 좌우 사이즈를 줄이기 위해 px-12에서 px-8로 변경했습니다.
+                            className="w-full sm:w-auto px-8 py-4 bg-black text-white text-lg font-semibold rounded-full hover:bg-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
                         >
-                            Sign Up <ArrowRight size={20} />
+                            Start <ArrowRight size={20} />
                         </button>
                     </motion.div>
                 ) : (
@@ -263,19 +254,6 @@ export default function PersonaSurveyPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* 하단 로그아웃 버튼 영역 */}
-            {!isCompleted && (
-                <div className="absolute w-full bottom-8 flex justify-center z-10">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm"
-                    >
-                        <LogOut size={14} />
-                        다른 구글 계정으로 로그인하기
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
