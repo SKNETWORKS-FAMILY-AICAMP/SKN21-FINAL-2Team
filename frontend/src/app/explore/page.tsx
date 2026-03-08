@@ -63,12 +63,9 @@ const EXPLORE_DEDUPE_TTL_MS = 2000;
 
 const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
-    const userPrefs = user.name ? `${user.name}님이 좋아할만한 장소` : "서울의 핫플레이스와 맛집 추천";
 
-    const [categoryData, randomData] = await Promise.all([
-        fetchCategoryPlaces(userPrefs),
-        fetchRandomExplorePlaces(),
-    ]);
+    // 1번의 API 호출로 4가지 카테고리를 한번에 모두 가져옵니다 (통합)
+    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,팝업스토어", 3);
 
     return {
         user,
@@ -76,18 +73,17 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
             id: Number(p.contentid),
             name: p.title,
             adress: p.address,
-            // 백엔드가 랜덤 핫플에서는 image_url로 주도록 바뀌었음 (explore.py 참조)
             image_path: p.image_url,
             feature: p.description,
             tag1: p.tag1,
             tag2: p.tag2
         })) as unknown as HotPlace[],
-        popupStores: categoryData["팝업스토어"] || [],
+        popupStores: randomData["팝업스토어"] || [],
         choices: {
-            // random_places 엔드포인트에서 넘어오는 key 이름 매칭 (tourist_spots)
             restaurants: randomData["restaurants"] || [],
             tourist: randomData["tourist_spots"] || [],
-            activities: categoryData["축제공연행사"] || [],
+            // '축제공연행사' 대신 임시로 관광지 사용 (기존 동작 유지보수 위함)
+            activities: randomData["tourist_spots"] || [],
         },
     };
 };

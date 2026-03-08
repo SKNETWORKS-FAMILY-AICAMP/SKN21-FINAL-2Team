@@ -645,8 +645,20 @@ export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<str
     return response.json();
 };
 
-export const fetchRandomExplorePlaces = async (): Promise<Record<string, CategoryPlaceItem[]>> => {
-    const response = await fetchWithAuth(`${API_URL}/explore/random-places`);
+export const fetchRandomExplorePlaces = async (
+    categories?: string,
+    limit?: number
+): Promise<Record<string, CategoryPlaceItem[]>> => {
+    let url = `${API_URL}/explore/random-places`;
+    const params = new URLSearchParams();
+    if (categories) params.append("categories", categories);
+    if (limit) params.append("limit", limit.toString());
+
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+
+    const response = await fetchWithAuth(url);
     return response.json();
 };
 

@@ -71,10 +71,10 @@ export function Header() {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-6 h-16 relative flex items-center justify-between">
                 <Logo />
 
-                <nav className="hidden md:flex items-center gap-8">
+                <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
                     {["Features", "Destinations", "Reviews"].map((item) => (
                         <a
                             key={item}
