@@ -1,12 +1,12 @@
 "use client";
 
 import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare } from "lucide-react";
-import { cn } from "../../utils";
-import { Logo } from "@/components/Logo";
+import { cn } from "@/lib/utils";
+import { Logo } from "@/components/common/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
-import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
+import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 

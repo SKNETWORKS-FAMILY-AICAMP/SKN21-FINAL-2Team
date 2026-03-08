@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { TripSummary, ChatTranscriptMessage } from "../_types";
+import type { TripSummary, ChatTranscriptMessage } from "../types";
 
 export function JourneyDetailModal({
     open,

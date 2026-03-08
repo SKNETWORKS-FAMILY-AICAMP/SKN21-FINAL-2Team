@@ -3,10 +3,10 @@
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@/components/common/Logo";
 import { useRouter } from "next/navigation";
 import { fetchCurrentUser, type UserProfile } from "@/services/api";
-import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
+import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);

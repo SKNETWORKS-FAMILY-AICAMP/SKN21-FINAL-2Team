@@ -3,11 +3,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Search, CalendarPlus } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { cn } from "../../../utils";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
+import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile } from "@/services/api";
-import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
+import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 const categories = [

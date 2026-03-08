@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MapPin, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { NaverInfoWindow, NaverMapInstance, NaverMarker, useNaverMap } from "./useNaverMap";
+import { NaverInfoWindow, NaverMapInstance, NaverMarker, useNaverMap } from "../hooks/useNaverMap";
 
 export type ChatMapPlace = {
   mapId: string;

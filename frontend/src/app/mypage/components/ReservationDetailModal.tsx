@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import type { ReservationItem } from "../_types";
+import type { ReservationItem } from "../types";
 
 export function ReservationDetailModal({
     open,

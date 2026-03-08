@@ -74,7 +74,8 @@ export const ChatMessageItem = memo(({
     const shouldRenderPipeline = Boolean(
         isStreamingCurrentMessage &&
         showPipeline &&
-        hasVisiblePipelineSteps(pipelineSteps)
+        hasVisiblePipelineSteps(pipelineSteps) &&
+        !msg.message // 답변 텍스트(msg.message)가 오기 시작하면 파이프라인(생성 중...)을 바로 숨깁니다!
     );
     const shouldRenderWaitingBubble = Boolean(
         isStreamingCurrentMessage &&
@@ -119,7 +120,7 @@ export const ChatMessageItem = memo(({
                         >
                             {shouldRenderPipeline && (
                                 <div className={msg.message ? "mb-3" : ""}>
-                                    <PipelineProgress steps={pipelineSteps} visible={true} />
+                                    <PipelineProgress steps={pipelineSteps || {}} visible={true} />
                                 </div>
                             )}
 
