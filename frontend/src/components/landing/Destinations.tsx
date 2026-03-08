@@ -152,7 +152,7 @@ export function Destinations() {
         const fetchCurrentTabRandom = async () => {
             setIsLoading(true);
             try {
-                const raw = await fetchRandomExplorePlaces();
+                const raw = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants", 3);
                 const mappedData: Record<string, Destination[]> = {};
 
                 // 1. 핫플레이스 매핑
