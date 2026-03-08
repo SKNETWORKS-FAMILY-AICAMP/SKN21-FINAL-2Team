@@ -143,7 +143,7 @@ def get_random_places(db: Session = Depends(db_manager.get_db)):
                             contentid=str(sp.id),
                             title=payload.get("title", "Unknown"),
                             address=payload.get("addr") or payload.get("address") or "주소 정보 없음",
-                            image_url=to_client_image_url(image_url),
+                            image_url=to_client_image_url(img_url),
                             description=payload.get("description", "")[:200]
                         )
                     )
