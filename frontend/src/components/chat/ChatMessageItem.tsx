@@ -119,7 +119,7 @@ export const ChatMessageItem = memo(({
                         >
                             {shouldRenderPipeline && (
                                 <div className={msg.message ? "mb-3" : ""}>
-                                    <PipelineProgress steps={pipelineSteps} visible={true} />
+                                    <PipelineProgress steps={pipelineSteps ?? {}} visible={true} />
                                 </div>
                             )}
 

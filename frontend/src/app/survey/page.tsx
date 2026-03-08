@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, ArrowLeft, LogOut } from "lucide-react";
+import { ArrowRight, Check, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
 
@@ -125,15 +125,6 @@ export default function PersonaSurveyPage() {
 
         setDirection(idx > currentQuestionIndex ? 1 : -1);
         setCurrentQuestionIndex(idx);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("profile_picture");
-        localStorage.removeItem("user_name");
-        localStorage.removeItem("user_email");
-        router.replace("/signup");
     };
 
     if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -263,19 +254,6 @@ export default function PersonaSurveyPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* 하단 로그아웃 버튼 영역 */}
-            {!isCompleted && (
-                <div className="absolute w-full bottom-8 flex justify-center z-10">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm"
-                    >
-                        <LogOut size={14} />
-                        다른 구글 계정으로 로그인하기
-                    </button>
-                </div>
-            )}
         </div>
     );
 }

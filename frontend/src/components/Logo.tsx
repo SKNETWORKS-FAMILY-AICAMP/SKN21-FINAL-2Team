@@ -2,7 +2,6 @@
 
 import { cn } from "../../utils";
 import { useRouter } from "next/navigation";
-import { Fraunces } from "next/font/google";
 
 // 로고 컴포넌트 (타입 지정, 색상 모드 종류 지정)
 interface LogoProps {
@@ -17,12 +16,6 @@ interface BrandMarkProps {
     tone?: "dark" | "light";
     size?: number;
 }
-
-// 워드 마크 전용 속성 지정 (폰트, 서체, 크기 등)
-const wordmarkFont = Fraunces({
-    subsets: ["latin"],
-    weight: ["700"],
-});
 
 // icon 전용 함수
 // 톤에 따라 파일 선택
@@ -57,7 +50,7 @@ export function Logo({
                 <div className="inline-flex items-center gap-2.5">  {/* 아이콘과 워드마크 표시 */}
                     <BrandMark tone={tone} size={size} />
                     <span
-                        className={cn(wordmarkFont.className, tone === "light" ? "text-white" : "text-black")}
+                        className={cn("font-brand-serif", tone === "light" ? "text-white" : "text-black")}
                         style={{
                             fontSize: Math.round(size * 0.8),
                             fontWeight: 700,

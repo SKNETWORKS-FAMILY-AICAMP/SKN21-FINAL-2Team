@@ -65,7 +65,7 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
 
     // 1번의 API 호출로 4가지 카테고리를 한번에 모두 가져옵니다 (통합)
-    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,팝업스토어", 3);
+    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,팝업스토어,activities", 3);
 
     return {
         user,
@@ -82,8 +82,7 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
         choices: {
             restaurants: randomData["restaurants"] || [],
             tourist: randomData["tourist_spots"] || [],
-            // '축제공연행사' 대신 임시로 관광지 사용 (기존 동작 유지보수 위함)
-            activities: randomData["tourist_spots"] || [],
+            activities: randomData["activities"] || [],
         },
     };
 };
