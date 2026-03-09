@@ -1,11 +1,11 @@
 "use client";
 
-import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X } from "lucide-react";
+import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/common/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom } from "@/services/api";
+import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUserProfile, logoutApi, createRoom, deleteRoom } from "@/services/api";
 import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
@@ -134,6 +134,8 @@ function SidebarContent() {
     const [language, setLanguage] = useState<AppLanguage>("en");
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
+    const [pendingDeleteRoom, setPendingDeleteRoom] = useState<ChatRoom | null>(null);
+    const [isDeletingRoom, setIsDeletingRoom] = useState(false);
 
     const canCollapse = isDesktop;
     const actuallyCollapsed = isDesktop ? isCollapsed : false;
@@ -295,6 +297,30 @@ function SidebarContent() {
         router.push("/");
     };
 
+    const handleDeleteRoom = async (roomId: number) => {
+        try {
+            setIsDeletingRoom(true);
+            await deleteRoom(roomId);
+
+            const nextRooms = rooms.filter((room) => room.id !== roomId);
+            setRooms(nextRooms);
+            sidebarCache.rooms = nextRooms;
+            sidebarCache.loaded = true;
+            window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
+            setPendingDeleteRoom(null);
+
+            if (pathname === "/chatbot" && activeRoomId === roomId) {
+                const fallbackRoom = nextRooms[0];
+                router.push(fallbackRoom ? `/chatbot?roomId=${fallbackRoom.id}` : "/chatbot");
+            }
+        } catch (error) {
+            console.error("Failed to delete room", error);
+            window.alert("채팅방 삭제에 실패했습니다.");
+        } finally {
+            setIsDeletingRoom(false);
+        }
+    };
+
     const displayName = userProfile?.nickname || userProfile?.name || "User";
     const displayImage = userProfile?.profile_picture || "";
 
@@ -427,18 +453,39 @@ function SidebarContent() {
                             {rooms.map((room) => {
                                 const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
                                 return (
-                                    <button
+                                    <div
                                         key={room.id}
-                                        onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
                                         className={cn(
-                                            "w-full flex items-center px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 truncate",
-                                            isActiveRoom
-                                                ? "bg-gray-100 text-black"
-                                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                            "group/item w-full flex items-center gap-2 px-2 py-1 rounded-xl transition-all duration-300",
+                                            isActiveRoom ? "bg-gray-100" : "hover:bg-gray-50"
                                         )}
                                     >
-                                        <span className="truncate">{room.title}</span>
-                                    </button>
+                                        <button
+                                            onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
+                                            className={cn(
+                                                "flex-1 min-w-0 text-left px-2 py-1.5 rounded-lg text-[13px] font-medium transition-colors truncate",
+                                                isActiveRoom ? "text-black" : "text-gray-500 group-hover/item:text-gray-900"
+                                            )}
+                                        >
+                                            <span className="truncate block">{room.title}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                setPendingDeleteRoom(room);
+                                            }}
+                                            className={cn(
+                                                "flex h-8 w-8 flex-none items-center justify-center rounded-full text-gray-300 transition-all",
+                                                "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
+                                                isActiveRoom && "group-focus-within/item:opacity-100"
+                                            )}
+                                            aria-label={`${room.title} 삭제`}
+                                            title="채팅방 삭제"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </nav>
@@ -531,6 +578,45 @@ function SidebarContent() {
                     if (!isTripLoading) setShowTripModal(false);
                 }}
             />
+            {pendingDeleteRoom && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <button
+                        type="button"
+                        aria-label="Delete room modal overlay"
+                        className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
+                        onClick={() => {
+                            if (!isDeletingRoom) setPendingDeleteRoom(null);
+                        }}
+                    />
+                    <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl">
+                        <div className="mb-5">
+                            <h3 className="text-lg font-semibold tracking-tight text-gray-900">채팅방 삭제</h3>
+                            <p className="mt-2 text-sm leading-6 text-gray-500">
+                                <span className="font-medium text-gray-700">"{pendingDeleteRoom.title || "새 채팅"}"</span>을 삭제할까요?
+                                삭제하면 대화 내용과 추천 장소 기록도 함께 사라집니다.
+                            </p>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPendingDeleteRoom(null)}
+                                disabled={isDeletingRoom}
+                                className="h-10 rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void handleDeleteRoom(pendingDeleteRoom.id)}
+                                disabled={isDeletingRoom}
+                                className="h-10 rounded-full bg-red-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isDeletingRoom ? "삭제 중..." : "삭제"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             </aside>
         </>
     );

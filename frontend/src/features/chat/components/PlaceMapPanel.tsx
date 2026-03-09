@@ -27,6 +27,9 @@ type PlaceMapPanelProps = {
   onMarkerClick: (mapId: string) => void;
   className?: string;
   showHeader?: boolean;
+  isPanelOpen?: boolean;
+  panelWidth?: number;
+  isResizing?: boolean;
 };
 
 const SEOUL_BOUNDS = {
@@ -53,6 +56,9 @@ export function PlaceMapPanel({
   onMarkerClick,
   className,
   showHeader = true,
+  isPanelOpen = true,
+  panelWidth,
+  isResizing = false,
 }: PlaceMapPanelProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
   const { status, error, naver, retry } = useNaverMap(clientId);
@@ -91,6 +97,24 @@ export function PlaceMapPanel({
     window.addEventListener("resize", checkScrollability);
     return () => window.removeEventListener("resize", checkScrollability);
   }, [checkScrollability, groupedPlaces]);
+
+  useEffect(() => {
+    if (!isPanelOpen || status !== "ready" || !naver?.maps || !mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+    const currentCenter = map.getCenter();
+
+    const rafId = window.requestAnimationFrame(() => {
+      naver.maps.Event.trigger(map, "resize");
+      if (currentCenter) {
+        map.setCenter(currentCenter);
+      }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [isPanelOpen, panelWidth, isResizing, naver, status]);
 
   const scrollBy = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {

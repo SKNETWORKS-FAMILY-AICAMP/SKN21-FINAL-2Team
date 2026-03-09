@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { ChatMapPlace, ChatMapPlaceGroup } from "@/features/chat/components/PlaceMapPanel";
 
@@ -14,7 +14,10 @@ export function useChatMap({
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
     const [isMapPanelOpen, setIsMapPanelOpenRaw] = useState(false);
+    const [isMapResizing, setIsMapResizing] = useState(false);
     const [mapPanelWidth, setMapPanelWidth] = useState(DEFAULT_MAP_PANEL_WIDTH);
+    const resizeStartXRef = useRef(0);
+    const resizeStartWidthRef = useRef(DEFAULT_MAP_PANEL_WIDTH);
 
     const toMapId = useCallback((place: ChatPlaceItem) => {
         if (typeof place.place_id === "number" && Number.isFinite(place.place_id) && place.place_id > 0) {
@@ -112,8 +115,18 @@ export function useChatMap({
     }, [mapPlaces]);
 
     const handleMapResizeDrag = useCallback((e: MouseEvent) => {
-        const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
-        setMapPanelWidth(Math.min(Math.max(newWidth, 20), 50));
+        const deltaX = e.clientX - resizeStartXRef.current;
+        const nextWidth = resizeStartWidthRef.current - (deltaX / window.innerWidth) * 100;
+        const clampedWidth = Math.min(Math.max(nextWidth, 20), 50);
+
+        if (typeof window !== "undefined" && "requestAnimationFrame" in window) {
+            window.requestAnimationFrame(() => {
+                setMapPanelWidth(clampedWidth);
+            });
+            return;
+        }
+
+        setMapPanelWidth(clampedWidth);
     }, []);
 
     const setIsMapPanelOpen = useCallback((open: boolean) => {
@@ -124,17 +137,23 @@ export function useChatMap({
     }, []);
 
     const stopMapResizeDrag = useCallback(() => {
+        setIsMapResizing(false);
         document.removeEventListener("mousemove", handleMapResizeDrag);
         document.removeEventListener("mouseup", stopMapResizeDrag);
         document.body.style.cursor = "default";
+        document.body.style.userSelect = "";
     }, [handleMapResizeDrag]);
 
     const startMapResizeDrag = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
+        setIsMapResizing(true);
+        resizeStartXRef.current = e.clientX;
+        resizeStartWidthRef.current = mapPanelWidth;
         document.addEventListener("mousemove", handleMapResizeDrag);
         document.addEventListener("mouseup", stopMapResizeDrag);
         document.body.style.cursor = "col-resize";
-    }, [handleMapResizeDrag, stopMapResizeDrag]);
+        document.body.style.userSelect = "none";
+    }, [handleMapResizeDrag, mapPanelWidth, stopMapResizeDrag]);
 
     const focusPlaceCardFromMap = useCallback((mapId: string) => {
         const target = placeCardRefs.current[mapId];
@@ -153,6 +172,7 @@ export function useChatMap({
         setIsMapSheetOpen,
         isMapPanelOpen,
         setIsMapPanelOpen,
+        isMapResizing,
         mapPanelWidth,
         mapPlaces,
         mapPlaceGroups,

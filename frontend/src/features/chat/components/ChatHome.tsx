@@ -28,6 +28,8 @@ type RoomDraft = {
     text: string;
     imageDataUrl: string | null;
     fileName: string;
+    location: string | null;
+    locationLabel: string;
 };
 
 export function ChatHome() {
@@ -42,6 +44,9 @@ export function ChatHome() {
     const [isTripLoading, setIsTripLoading] = useState(false);
     const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
     const [attachedFileName, setAttachedFileName] = useState<string>("");
+    const [attachedLocation, setAttachedLocation] = useState<string | null>(null);
+    const [attachedLocationLabel, setAttachedLocationLabel] = useState<string>("");
+    const [isLocating, setIsLocating] = useState(false);
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
 
@@ -129,6 +134,7 @@ export function ChatHome() {
         setIsMapSheetOpen,
         isMapPanelOpen,
         setIsMapPanelOpen,
+        isMapResizing,
         mapPanelWidth,
         mapPlaces,
         mapPlaceGroups,
@@ -180,6 +186,8 @@ export function ChatHome() {
                 text: inputText,
                 imageDataUrl: attachedImageDataUrl,
                 fileName: attachedFileName,
+                location: attachedLocation,
+                locationLabel: attachedLocationLabel,
             };
         }
 
@@ -190,6 +198,8 @@ export function ChatHome() {
         setInputText(nextDraft?.text ?? "");
         setAttachedImageDataUrl(nextDraft?.imageDataUrl ?? null);
         setAttachedFileName(nextDraft?.fileName ?? "");
+        setAttachedLocation(nextDraft?.location ?? null);
+        setAttachedLocationLabel(nextDraft?.locationLabel ?? "");
         previousRoomIdRef.current = currentRoomId;
     }, [currentRoomId]);
 
@@ -364,19 +374,28 @@ export function ChatHome() {
     const handleSendMessageWrapper = async () => {
         if (!currentRoomId) return;
         const userText = inputText.trim();
-        if (!userText && !attachedImageDataUrl) return;
+        if (!userText && !attachedImageDataUrl && !attachedLocation) return;
 
-        const messageToSend = userText || "첨부한 이미지를 분석해줘.";
-        const optimisticText = userText || (attachedFileName ? `[이미지 첨부] ${attachedFileName}` : "[이미지 첨부]");
+        const fallbackParts = [
+            attachedFileName ? `[이미지 첨부] ${attachedFileName}` : attachedImageDataUrl ? "[이미지 첨부]" : "",
+            attachedLocationLabel ? `[위치 첨부] ${attachedLocationLabel}` : attachedLocation ? "[위치 첨부]" : "",
+        ].filter(Boolean);
+        const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ") } 분석해줘.` : "메시지를 분석해줘.");
+        const optimisticText = userText || fallbackParts.join(" ");
         const currentAttachment = attachedImageDataUrl;
+        const currentLocation = attachedLocation;
 
         setInputText("");
         setAttachedImageDataUrl(null);
         setAttachedFileName("");
+        setAttachedLocation(null);
+        setAttachedLocationLabel("");
         roomDraftsRef.current[currentRoomId] = {
             text: "",
             imageDataUrl: null,
             fileName: "",
+            location: null,
+            locationLabel: "",
         };
 
         await streamMessageToRoom({
@@ -385,8 +404,37 @@ export function ChatHome() {
             saveUserMessage: true,
             optimisticUserText: optimisticText,
             imageDataUrl: currentAttachment,
+            location: currentLocation,
         });
     };
+
+    const handleAttachLocation = useCallback(async () => {
+        if (typeof window === "undefined" || !("geolocation" in navigator)) {
+            window.alert("이 브라우저에서는 위치 첨부를 지원하지 않습니다.");
+            return;
+        }
+
+        setIsLocating(true);
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000,
+                });
+            });
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            setAttachedLocation(`${latitude}, ${longitude}`);
+            setAttachedLocationLabel("현재 위치");
+        } catch (error) {
+            console.error("Failed to get current location", error);
+            window.alert("현재 위치를 가져오지 못했습니다. 위치 권한을 확인해주세요.");
+        } finally {
+            setIsLocating(false);
+        }
+    }, []);
 
     if (isInitializing) {
         return (
@@ -457,11 +505,14 @@ export function ChatHome() {
                     handleStopMessage={handleStopMessage}
                     isStreaming={isStreaming}
                     isListening={isListening}
+                    isLocating={isLocating}
                     sttPermission={sttPermission}
                     handleToggleListening={handleToggleListening}
                     setIsMapSheetOpen={setIsMapSheetOpen}
                     attachedImageDataUrl={attachedImageDataUrl}
                     attachedFileName={attachedFileName}
+                    attachedLocationLabel={attachedLocationLabel}
+                    handleAttachLocation={handleAttachLocation}
                     handleAttachFileChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -481,6 +532,10 @@ export function ChatHome() {
                     }}
                     setAttachedImageDataUrl={setAttachedImageDataUrl}
                     setAttachedFileName={setAttachedFileName}
+                    clearAttachedLocation={() => {
+                        setAttachedLocation(null);
+                        setAttachedLocationLabel("");
+                    }}
                 />
             </div>
 
@@ -490,7 +545,7 @@ export function ChatHome() {
                     <div
                         onMouseDown={startMapResizeDrag}
                         className={cn(
-                            "hidden lg:block w-1.5 transition-all duration-200 z-20",
+                            "hidden lg:block w-1.5 z-20",
                             isMapPanelOpen
                                 ? "cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 opacity-100"
                                 : "pointer-events-none opacity-0"
@@ -499,13 +554,15 @@ export function ChatHome() {
                     <aside
                         style={{ width: isMapPanelOpen ? `${mapPanelWidth}%` : "0px" }}
                         className={cn(
-                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden transition-[width] duration-200 ease-out",
+                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden",
+                            isMapResizing ? "transition-none" : "transition-[width] duration-200 ease-out",
                             isMapPanelOpen ? "border-l border-gray-100" : "border-l-0"
                         )}
                     >
                         <div
                             className={cn(
-                                "h-full min-w-[320px] transition-transform duration-200 ease-out",
+                                "h-full min-w-[320px]",
+                                isMapResizing ? "transition-none" : "transition-transform duration-200 ease-out",
                                 isMapPanelOpen ? "translate-x-0" : "translate-x-full"
                             )}
                         >
@@ -516,6 +573,9 @@ export function ChatHome() {
                                 selectedMapPlaceId={selectedMapPlaceId}
                                 onSelectPlace={handleSelectMapPlace}
                                 onMarkerClick={focusPlaceCardFromMap}
+                                isPanelOpen={isMapPanelOpen}
+                                panelWidth={mapPanelWidth}
+                                isResizing={isMapResizing}
                             />
                         </div>
                     </aside>

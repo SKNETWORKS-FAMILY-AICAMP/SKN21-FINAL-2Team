@@ -173,18 +173,20 @@ export const ChatMessageItem = memo(({
                                 Recommended Places
                             </h5>
                             <div className={cn(
-                                "flex overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar -mx-1 px-1 sm:-mx-2 sm:px-2",
-                                compactPlaces ? "gap-2.5 sm:gap-3" : "gap-3 sm:gap-4"
+                                "flex overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar",
+                                compactPlaces
+                                    ? "gap-2 px-0"
+                                    : "gap-3 sm:gap-4 -mx-1 px-1 sm:-mx-2 sm:px-2"
                             )}>
                                 {msg.places.map((place) => {
                                     const mapId = toMapId(place);
                                     const isMapSelected = selectedMapPlaceId === mapId;
                                     return (
                                         <div
-                                            key={place.id}
-                                            ref={(element) => {
-                                                placeCardRefs.current[mapId] = element;
-                                            }}
+                                                key={place.id}
+                                                ref={(element) => {
+                                                    placeCardRefs.current[mapId] = element;
+                                                }}
                                             onMouseEnter={() => handleSelectMapPlace(mapId)}
                                             onClick={() => handleSelectMapPlace(mapId)}
                                             className={cn(
@@ -192,6 +194,7 @@ export const ChatMessageItem = memo(({
                                                 compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",
                                                 isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
                                             )}
+                                            style={compactPlaces ? { width: "min(15rem, calc((100% - 1rem) / 3))", minWidth: "8.75rem" } : undefined}
                                         >
                                             <div className={cn(
                                                 "relative bg-slate-100 overflow-hidden",

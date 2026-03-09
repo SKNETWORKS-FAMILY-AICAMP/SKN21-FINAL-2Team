@@ -12,7 +12,7 @@ const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539
 
 export function BookmarkPage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<"sessions" | "places">("sessions");
+    const [activeTab, setActiveTab] = useState<"sessions" | "places">("places");
     const [selectedPlaces, setSelectedPlaces] = useState<number[]>([]);
     const [sessions, setSessions] = useState<BookmarkedRoomItem[]>([]);
     const [places, setPlaces] = useState<BookmarkedPlaceItem[]>([]);

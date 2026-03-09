@@ -123,12 +123,14 @@ export function useChatMessages({
         saveUserMessage,
         optimisticUserText,
         imageDataUrl,
+        location,
     }: {
         roomId: number;
         message: string;
         saveUserMessage: boolean;
         optimisticUserText?: string;
         imageDataUrl?: string | null;
+        location?: string | null;
     }) => {
         if (isSendingRef.current) return;
         isSendingRef.current = true;
@@ -234,7 +236,7 @@ export function useChatMessages({
                     }
                     setStreamingMsgId(null);
                 },
-            }, imageDataUrl ?? null, null, { saveUserMessage, signal: abortController.signal });
+            }, imageDataUrl ?? null, location ?? null, { saveUserMessage, signal: abortController.signal });
         } catch (error) {
             const isAbort =
                 stopRequestedRef.current ||

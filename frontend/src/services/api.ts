@@ -120,6 +120,11 @@ export interface TodayRecommendationItem {
     prompt: string;
 }
 
+export interface DeleteChatRoomResult {
+    ok: boolean;
+    room_id: number;
+}
+
 export type AutoStartChatMode = "trip_context" | "selected_places" | "combined" | "greeting";
 
 export interface AutoStartTripContextPayload {
@@ -329,6 +334,13 @@ export const fetchRooms = async (): Promise<ChatRoom[]> => {
 
 export const fetchRoom = async (roomId: number): Promise<ChatRoom> => {
     const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}`);
+    return response.json();
+};
+
+export const deleteRoom = async (roomId: number): Promise<DeleteChatRoomResult> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}`, {
+        method: "DELETE",
+    });
     return response.json();
 };
 
@@ -606,8 +618,117 @@ export type ReservationPayload = {
     image_path?: string | null;
 };
 
+export interface DiaryLinkedRoom {
+    id: number;
+    title: string;
+    created_at: string;
+}
+
+export interface DiaryLinkedPlace {
+    id: number;
+    chat_place_id?: number | null;
+    place_id?: number | null;
+    name?: string | null;
+    adress?: string | null;
+    image_path?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
+    created_at?: string | null;
+}
+
+export interface DiaryLinkedPlaceInput {
+    name?: string | null;
+    adress: string;
+    image_path?: string | null;
+    longitude: number;
+    latitude: number;
+    place_id?: number | null;
+    chat_place_id?: number | null;
+}
+
+export interface DiaryListItem {
+    id: number;
+    title: string;
+    content: string;
+    entry_date: string;
+    cover_image_path?: string | null;
+    linked_places_count: number;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
+
+export interface DiaryDetail extends DiaryListItem {
+    user_id: number;
+    linked_chat_room?: DiaryLinkedRoom | null;
+    linked_places: DiaryLinkedPlace[];
+}
+
+export type DiaryPayload = {
+    title: string;
+    content: string;
+    entry_date: string;
+    cover_image_path?: string | null;
+    linked_places?: DiaryLinkedPlaceInput[];
+};
+
+export interface DiaryPlaceSearchResult {
+    name?: string | null;
+    adress: string;
+    latitude: number;
+    longitude: number;
+}
+
 export const fetchReservations = async (): Promise<ReservationRecord[]> => {
     const response = await fetchWithAuth(`${API_URL}/reservations`);
+    return response.json();
+};
+
+export const fetchDiaries = async (params?: {
+    query?: string;
+    date_from?: string;
+    date_to?: string;
+}): Promise<DiaryListItem[]> => {
+    const qs = new URLSearchParams();
+    if (params?.query) qs.set("query", params.query);
+    if (params?.date_from) qs.set("date_from", params.date_from);
+    if (params?.date_to) qs.set("date_to", params.date_to);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const response = await fetchWithAuth(`${API_URL}/diaries${suffix}`);
+    return response.json();
+};
+
+export const fetchDiary = async (diaryId: number): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`);
+    return response.json();
+};
+
+export const createDiary = async (payload: DiaryPayload): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries`, { method: "POST", body: payload });
+    return response.json();
+};
+
+export const updateDiary = async (diaryId: number, payload: Partial<DiaryPayload>): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "PATCH", body: payload });
+    return response.json();
+};
+
+export const deleteDiary = async (diaryId: number): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "DELETE" });
+    return response.json();
+};
+
+export const searchDiaryPlaces = async (query: string): Promise<DiaryPlaceSearchResult[]> => {
+    const qs = new URLSearchParams({ query });
+    const response = await fetchWithAuth(`${API_URL}/diaries/place-search?${qs.toString()}`);
+    return response.json();
+};
+
+export const reverseGeocodeDiaryPlace = async (latitude: number, longitude: number): Promise<DiaryPlaceSearchResult> => {
+    const qs = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+    });
+    const response = await fetchWithAuth(`${API_URL}/diaries/reverse-geocode?${qs.toString()}`);
     return response.json();
 };
 

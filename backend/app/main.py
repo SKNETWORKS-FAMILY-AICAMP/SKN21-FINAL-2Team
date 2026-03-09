@@ -11,9 +11,9 @@ from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
-from app.api import auth, users, chat, prefer, common, explore, reservations
+from app.api import auth, users, chat, prefer, common, explore, reservations, diaries
 # 모델 등록 (Base.metadata에 포함되도록 import)
-from app.models import user, chat as chat_model, country, hot_place, reservation
+from app.models import user, chat as chat_model, country, hot_place, reservation, diary
 from app.retrieval.place import PlaceRetriever
 from app.utils.llm_factory import LLMFactory
 from app.utils.error_handler import (
@@ -30,6 +30,12 @@ from app.database.connection import Base, get_engine
 async def lifespan(app: FastAPI):
     # 서버 시작 시 실행될 로직
     print("[INFO] Starting up: Loading models...")
+    try:
+        Base.metadata.create_all(bind=get_engine())
+        print("[INFO] Database tables ensured.")
+    except Exception as e:
+        print(f"[ERROR] Failed to ensure database tables: {e}")
+
     try:
         # CLIP 모델 로드 (PlaceRetriever 초기화)
         PlaceRetriever.get_instance()
@@ -56,10 +62,6 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(Exception, internal_exception_handler)
 
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=get_engine())
-
 # CORS 설정 (프론트엔드 3000번 포트 허용)
 origins = [
     "http://localhost:3000",
@@ -84,7 +86,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    reservations
+    reservations, diaries
 )
 
 # Register Routers
@@ -95,6 +97,7 @@ app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
 app.include_router(reservations.router)
+app.include_router(diaries.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)
@@ -134,4 +137,3 @@ app.add_middleware(RequestLoggingMiddleware)
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
-

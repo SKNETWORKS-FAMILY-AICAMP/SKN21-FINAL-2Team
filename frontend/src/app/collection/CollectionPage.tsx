@@ -1,129 +1,311 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Camera, MapPin, Grid } from "lucide-react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+
 import { Sidebar } from "@/components/navigation/Sidebar";
-
-const MOCK_COLLECTION = [
-    { id: 1, src: "https://images.unsplash.com/photo-1767168157604-dc1ccfbe3602?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBtdXNldW0lMjBpbnRlcmlvciUyMGxpZ2h0JTIwY29uY3JldGV8ZW58MXx8fHwxNzcxNDc5NTg5fDA&ixlib=rb-4.1.0&q=80&w=1080", location: "Museum San, Wonju" },
-    { id: 2, src: "https://images.unsplash.com/photo-1670823927806-5cc785754a4b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGhhbm9rJTIwdmlsbGFnZSUyMGtvcmVhJTIwYXV0dW1ufGVufDF8fHx8MTc3MTQ3OTU4OXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Bukchon Hanok Village" },
-    { id: 3, src: "https://images.unsplash.com/photo-1766244953579-e829796849cc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxqZWp1JTIwaXNsYW5kJTIwY29hc3QlMjBjbGlmZiUyMG9jZWFufGVufDF8fHx8MTc3MTQ3OTU4OXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Seopjikoji, Jeju" },
-    { id: 4, src: "https://images.unsplash.com/photo-1687777504692-e825e3cb0e01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZW91bCUyMG4lMjB0b3dlciUyMG5pZ2h0JTIwdmlld3xlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Namsan Tower" },
-    { id: 5, src: "https://images.unsplash.com/photo-1762440775708-7dbfe9e10842?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNhbiUyMGdhbWNoZW9uJTIwY3VsdHVyZSUyMHZpbGxhZ2UlMjBjb2xvcmZ1bHxlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Gamcheon Culture Village" },
-    { id: 6, src: "https://images.unsplash.com/photo-1767294274414-5e1e6c3974e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYXJ0JTIwZ2FsbGVyeSUyMGV4aGliaXRpb258ZW58MXx8fHwxNzcxNDAzNDUxfDA&ixlib=rb-4.1.0&q=80&w=1080", location: "Leeum Museum" },
-    { id: 7, src: "https://images.unsplash.com/photo-1734828813144-7ac7ad69120f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxneWVvbmdib2tndW5nJTIwcGFsYWNlJTIwd2ludGVyJTIwc25vd3xlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Gyeongbokgung Palace" },
-    { id: 8, src: "https://images.unsplash.com/photo-1739918559783-ed40311fc814?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHlsaXNoJTIwY29mZmVlJTIwc2hvcCUyMGludGVyaW9yJTIwd29vZHxlbnwxfHx8fDE3NzE0Nzk1OTB8MA&ixlib=rb-4.1.0&q=80&w=1080", location: "Seongsu Cafe Street" },
-    // { id: 9, src: "https://images.unsplash.com/photo-1770530436084-7be1789ecc5a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYW1ib28lMjBmb3Jlc3QlMjBreW90byUyMHRyYW5xdWlsfGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Damyang Bamboo Forest" },
-    // { id: 10, src: "https://images.unsplash.com/photo-1771218829768-16501433f7d1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBob3RlbCUyMHJvb2Z0b3AlMjBwb29sJTIwc3Vuc2V0fGVufDF8fHx8MTc3MTQ3OTU5MXww&ixlib=rb-4.1.0&q=80&w=1080", location: "Signiel Seoul" },
-];
-
-type CollectionItem = (typeof MOCK_COLLECTION)[0];
+import { SimpleModal } from "@/app/mypage/components/SimpleModal";
+import {
+    DiaryDetail,
+    DiaryListItem,
+    DiaryPayload,
+    createDiary,
+    fetchDiary,
+    fetchDiaries,
+    DiaryPlaceSearchResult,
+    updateDiary,
+    uploadImageDataUrl,
+} from "@/services/api";
+import { CollectionHeader } from "./components/CollectionHeader";
+import { DiaryEditorModal } from "./components/DiaryEditorModal";
+import { DiaryGallery } from "./components/DiaryGallery";
+import { DiaryLocationPickerModal } from "./components/DiaryLocationPickerModal";
+import { EmptyDiaryState } from "./components/EmptyDiaryState";
+import { EditorState } from "./types";
+import { emptyEditorState, readFileAsDataUrl } from "./utils";
 
 export function CollectionPage() {
-    const [selectedImage, setSelectedImage] = useState<CollectionItem | null>(null);
-    const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    const uploadInputRef = useRef<HTMLInputElement | null>(null);
+    const modalImageInputRef = useRef<HTMLInputElement | null>(null);
 
-    const handleClose = () => setSelectedImage(null);
+    const [diaries, setDiaries] = useState<DiaryListItem[]>([]);
+    const [selectedDiaryId, setSelectedDiaryId] = useState<number | null>(null);
+    const [editor, setEditor] = useState<EditorState>(emptyEditorState);
+    const [query, setQuery] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
+    const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
 
-    const handleUploadMock = () => {
-        setUploadedImage("https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80");
+    const loadDiaries = async (nextQuery = "") => {
+        setLoading(true);
+        setError(null);
+        try {
+            const items = await fetchDiaries(nextQuery.trim() ? { query: nextQuery.trim() } : undefined);
+            setDiaries(Array.isArray(items) ? items : []);
+        } catch {
+            setError("일기 목록을 불러오지 못했습니다.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadInitial = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const diaryItems = await fetchDiaries();
+                if (cancelled) return;
+                setDiaries(Array.isArray(diaryItems) ? diaryItems : []);
+            } catch {
+                if (!cancelled) setError("일기장을 불러오지 못했습니다.");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        void loadInitial();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            void loadDiaries(query);
+        }, 250);
+        return () => window.clearTimeout(timer);
+    }, [query]);
+
+    const selectedDiarySummary = useMemo(
+        () => diaries.find((item) => item.id === selectedDiaryId) ?? null,
+        [diaries, selectedDiaryId]
+    );
+
+    const hydrateEditor = (detail: DiaryDetail) => {
+        setEditor({
+            id: detail.id,
+            title: detail.title,
+            content: detail.content,
+            entry_date: detail.entry_date,
+            cover_image_path: detail.cover_image_path ?? null,
+            linked_places: detail.linked_places.map((place) => ({
+                name: place.name ?? null,
+                adress: place.adress ?? "",
+                image_path: place.image_path ?? null,
+                longitude: place.longitude ?? 0,
+                latitude: place.latitude ?? 0,
+                place_id: place.place_id ?? null,
+                chat_place_id: place.chat_place_id ?? null,
+            })).filter((place) => Boolean(place.adress)),
+        });
+    };
+
+    const openCreateModal = (coverImagePath?: string | null) => {
+        setSelectedDiaryId(null);
+        setEditor({
+            ...emptyEditorState(),
+            cover_image_path: coverImagePath ?? null,
+        });
+        setError(null);
+        setIsModalOpen(true);
+    };
+
+    const openDiaryModal = async (diaryId: number) => {
+        setSelectedDiaryId(diaryId);
+        setIsModalOpen(true);
+        setDetailLoading(true);
+        setError(null);
+        try {
+            const detail = await fetchDiary(diaryId);
+            hydrateEditor(detail);
+        } catch {
+            setError("일기 상세 정보를 불러오지 못했습니다.");
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const handleSelectImage = async (event: ChangeEvent<HTMLInputElement>, target: "create" | "replace") => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            const dataUrl = await readFileAsDataUrl(file);
+            if (target === "create" && !isModalOpen) {
+                openCreateModal(dataUrl);
+            } else {
+                setEditor((prev) => ({ ...prev, cover_image_path: dataUrl }));
+                setIsModalOpen(true);
+            }
+        } catch {
+            setError("이미지를 읽지 못했습니다.");
+        } finally {
+            event.target.value = "";
+        }
+    };
+
+    const buildPayload = async (): Promise<DiaryPayload> => {
+        const uploadedCover = editor.cover_image_path
+            ? await uploadImageDataUrl(editor.cover_image_path, "diary")
+            : null;
+
+        return {
+            title: editor.title.trim(),
+            content: editor.content.trim(),
+            entry_date: editor.entry_date,
+            cover_image_path: uploadedCover,
+            linked_places: editor.linked_places,
+        };
+    };
+
+    const handleSave = async () => {
+        if (!editor.title.trim() || !editor.content.trim() || !editor.entry_date) {
+            setError("제목, 날짜, 본문은 필수입니다.");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setError(null);
+            const payload = await buildPayload();
+            const detail = editor.id === null
+                ? await createDiary(payload)
+                : await updateDiary(editor.id, payload);
+
+            await loadDiaries(query);
+            hydrateEditor(detail);
+            setSelectedDiaryId(detail.id);
+            setIsModalOpen(true);
+        } catch {
+            setError("일기 저장에 실패했습니다.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleRequestClose = () => {
+        if (saving) return;
+        setIsCloseConfirmOpen(true);
+    };
+
+    const handleConfirmClose = () => {
+        setIsCloseConfirmOpen(false);
+        setIsModalOpen(false);
+        setError(null);
+        if (selectedDiaryId === null) {
+            setEditor(emptyEditorState());
+        }
+    };
+
+    const handlePickLocation = (place: DiaryPlaceSearchResult) => {
+        setEditor((prev) => ({
+            ...prev,
+            linked_places: [{
+                name: place.name ?? null,
+                adress: place.adress,
+                latitude: place.latitude,
+                longitude: place.longitude,
+                image_path: null,
+                place_id: null,
+                chat_place_id: null,
+            }],
+        }));
+        setIsLocationPickerOpen(false);
     };
 
     return (
-        <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
-            <div className="flex-none h-full">
+        <div className="flex w-full min-h-screen flex-col bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row lg:overflow-hidden">
+            <div className="flex-none lg:h-full">
                 <Sidebar />
             </div>
-            <main className="flex-1 h-full min-w-0 bg-white rounded-lg flex flex-col overflow-hidden">
-                <header className="flex-none p-6 pb-4 border-b border-gray-100 flex items-end justify-between">
-                    <div>
-                        <h1 className="page-title text-gray-900 mb-1 flex items-center gap-2">
-                            My gallery <Grid size={16} className="text-gray-400" />
-                        </h1>
-                        <p className="page-subtitle">Inspirations & Moments</p>
-                    </div>
-                </header>
 
-                <div className="flex-1 overflow-y-auto p-6">
-                    <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-                        {MOCK_COLLECTION.map((image) => (
-                            <div
-                                key={image.id}
-                                className="relative group cursor-zoom-in overflow-hidden break-inside-avoid rounded-lg shadow-sm hover:shadow-lg transition-shadow mb-4"
-                                onClick={() => { setSelectedImage(image); setUploadedImage(null); }}
-                            >
-                                <img src={image.src} alt={image.location} className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-                                <div className="absolute bottom-0 left-0 w-full p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black/80 to-transparent">
-                                    <p className="text-white text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                                        <MapPin size={10} /> {image.location}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-white p-4 sm:p-6 lg:h-full">
+                <CollectionHeader
+                    query={query}
+                    onQueryChange={setQuery}
+                    uploadInputRef={uploadInputRef}
+                />
+                <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => void handleSelectImage(event, "create")}
+                />
+
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="flex h-full items-center justify-center text-gray-400">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                    ) : diaries.length === 0 ? (
+                        <EmptyDiaryState onCreate={() => openCreateModal()} />
+                    ) : (
+                        <DiaryGallery
+                            diaries={diaries}
+                            selectedDiaryId={selectedDiaryId}
+                            onSelect={(diaryId) => void openDiaryModal(diaryId)}
+                        />
+                    )}
+                </div>
+            </main>
+
+            <DiaryEditorModal
+                isOpen={isModalOpen}
+                detailLoading={detailLoading}
+                saving={saving}
+                error={error}
+                editor={editor}
+                selectedDiarySummary={selectedDiarySummary}
+                modalImageInputRef={modalImageInputRef}
+                onClose={handleRequestClose}
+                onImageChange={(event) => void handleSelectImage(event, "replace")}
+                onEditorChange={(updater) => setEditor(updater)}
+                onOpenLocationPicker={() => setIsLocationPickerOpen(true)}
+                onClearLinkedPlace={() => setEditor((prev) => ({ ...prev, linked_places: [] }))}
+                onSave={() => void handleSave()}
+            />
+            <DiaryLocationPickerModal
+                isOpen={isLocationPickerOpen}
+                initialPlace={editor.linked_places[0] ?? null}
+                onClose={() => setIsLocationPickerOpen(false)}
+                onConfirm={handlePickLocation}
+            />
+            <SimpleModal
+                open={isCloseConfirmOpen}
+                title="Unsaved Diary"
+                onClose={() => setIsCloseConfirmOpen(false)}
+            >
+                <div className="space-y-4">
+                    <p className="text-sm leading-6 text-gray-600">
+                        지금 창을 닫으면, 내용이 저장되지 않습니다.
+                        <br />
+                        <span className="font-semibold text-gray-900">Save</span> 버튼을 눌러 내용을 저장해주세요.
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setIsCloseConfirmOpen(false)}
+                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                        >
+                            back
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleConfirmClose}
+                            className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                        >
+                            Close
+                        </button>
                     </div>
                 </div>
-
-                <AnimatePresence>
-                    {selectedImage && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-md p-4 md:p-8"
-                            onClick={handleClose}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.95, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.95, opacity: 0 }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="bg-black w-full max-w-5xl h-[85vh] rounded-xl overflow-hidden flex flex-col shadow-2xl border border-zinc-800"
-                            >
-                                <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-900 bg-zinc-950">
-                                    <div>
-                                        <h2 className="text-lg font-serif italic text-white">Verification Mode</h2>
-                                        <p className="text-zinc-500 text-xs uppercase tracking-widest">Compare & Verify</p>
-                                    </div>
-                                    <button onClick={handleClose} className="w-8 h-8 rounded-md border border-zinc-800 hover:bg-zinc-900 flex items-center justify-center text-zinc-400 hover:text-white transition-colors">
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                <div className="flex-1 flex flex-col md:flex-row gap-0.5 bg-zinc-900">
-                                    <div className="flex-1 relative overflow-hidden bg-black group">
-                                        <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest border border-white/10">Reference</div>
-                                        <img src={selectedImage.src} alt="Reference" className="w-full h-full object-cover opacity-90" />
-                                        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent">
-                                            <p className="text-white text-2xl font-serif italic">{selectedImage.location}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 relative overflow-hidden bg-zinc-950 flex items-center justify-center group">
-                                        <div className="absolute top-4 left-4 z-10 bg-white/10 backdrop-blur-sm text-white px-3 py-1.5 rounded-sm text-[9px] font-bold uppercase tracking-widest border border-white/5">Your Shot</div>
-                                        {uploadedImage ? (
-                                            <div className="relative w-full h-full">
-                                                <img src={uploadedImage} alt="User Upload" className="w-full h-full object-cover" />
-                                                <button onClick={() => setUploadedImage(null)} className="absolute bottom-6 right-6 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-colors shadow-lg">Remove</button>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center p-8">
-                                                <div className="w-16 h-16 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center mx-auto mb-6">
-                                                    <Camera size={24} className="text-zinc-500 group-hover:text-white transition-colors" />
-                                                </div>
-                                                <h3 className="text-white font-medium text-sm mb-2 uppercase tracking-wide">Upload Photo</h3>
-                                                <p className="text-zinc-600 text-xs max-w-xs mx-auto mb-8 font-medium">Drag and drop your photo here to compare.</p>
-                                                <button onClick={handleUploadMock} className="bg-white text-black px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-colors flex items-center gap-2 mx-auto">
-                                                    <Upload size={14} /> Select File
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </main>
+            </SimpleModal>
         </div>
     );
 }

@@ -13,6 +13,7 @@ export type NaverMapInstance = {
 export type NaverMarker = {
   getPosition: () => NaverLatLng;
   setMap: (map: NaverMapInstance | null) => void;
+  setPosition: (latLng: NaverLatLng) => void;
 };
 export type NaverInfoWindow = {
   setContent: (content: string) => void;
@@ -32,8 +33,22 @@ export type NaverMapsNamespace = {
     LatLngBounds: new () => NaverLatLngBounds;
     Size: new (width: number, height: number) => unknown;
     Point: new (x: number, y: number) => unknown;
+    Service: {
+      Status: {
+        OK: number;
+        ERROR: number;
+      };
+      geocode: (
+        options: { address: string },
+        callback: (status: number, response?: any) => void
+      ) => void;
+      reverseGeocode: (
+        options: { location: NaverLatLng },
+        callback: (status: number, response?: any) => void
+      ) => void;
+    };
     Event: {
-      addListener: (target: unknown, eventName: string, listener: () => void) => void;
+      addListener: (target: unknown, eventName: string, listener: (...args: any[]) => void) => void;
       trigger: (target: unknown, eventName: string) => void;
     };
   };
@@ -41,8 +56,9 @@ export type NaverMapsNamespace = {
 
 const NAVER_MAP_SCRIPT_ID = "triver-naver-map-sdk";
 
-export function useNaverMap(clientId?: string) {
+export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boolean }) {
   const normalizedClientId = clientId?.trim() || "";
+  const requireGeocoder = options?.requireGeocoder ?? false;
   const [status, setStatus] = useState<NaverMapStatus>("idle");
   const [error, setError] = useState<string>("");
   const [retryCount, setRetryCount] = useState(0);
@@ -103,7 +119,7 @@ export function useNaverMap(clientId?: string) {
 
     const script = document.createElement("script");
     script.id = NAVER_MAP_SCRIPT_ID;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(normalizedClientId)}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(normalizedClientId)}${requireGeocoder ? "&submodules=geocoder" : ""}`;
     script.async = true;
 
     script.onload = () => {
@@ -123,7 +139,7 @@ export function useNaverMap(clientId?: string) {
     };
 
     document.head.appendChild(script);
-  }, [normalizedClientId, retryCount]);
+  }, [normalizedClientId, requireGeocoder, retryCount]);
 
   const naver = useMemo<NaverMapsNamespace | null>(() => {
     if (typeof window === "undefined") return null;
