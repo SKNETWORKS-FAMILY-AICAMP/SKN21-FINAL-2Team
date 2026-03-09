@@ -846,12 +846,35 @@ export function MyPagePage() {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
+
+
+              const supportedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
+              const lowerName = (file.name || "").toLowerCase();
+              const supportedByExt =
+                lowerName.endsWith(".jpg")
+                || lowerName.endsWith(".jpeg")
+                || lowerName.endsWith(".png")
+                || lowerName.endsWith(".webp")
+                || lowerName.endsWith(".gif");
+              const isSupported = supportedMimeTypes.has(file.type) || supportedByExt;
+
+              if (!isSupported) {
+                setAddReservationImage("");
+                setAddReservationError("Only supported image formats can be uploaded: JPG, PNG, WEBP, GIF.");
+                e.currentTarget.value = "";
+                return;
+              }
+
               const reader = new FileReader();
               reader.onload = () => {
                 const next = typeof reader.result === "string" ? reader.result : "";
                 if (!next) return;
                 setAddReservationImage(next);
                 setAddReservationError("");
+              };
+              reader.onerror = () => {
+                setAddReservationImage("");
+                setAddReservationError("Failed to read this image file. Please try a different image.");
               };
               reader.readAsDataURL(file);
               e.currentTarget.value = "";
