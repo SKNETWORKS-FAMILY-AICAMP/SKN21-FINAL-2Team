@@ -143,14 +143,14 @@ export function BookmarkPage() {
                                         </div>
                                     ) : (
                                         sessions.map((session) => (
-                                            <div key={session.id} className="group rounded-md bg-gray-50 border border-gray-200 rounded-lg p-5 hover:border-black transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md group-hover:bg-black group-hover:text-white cursor-pointer">
-                                                <div className="flex items-start gap-4">
-                                                    <div className="w-10 h-10 flex items-center justify-center text-gray-900 transition-colors">
+                                            <div key={session.id} className="group rounded-md bg-gray-50 border border-gray-200 rounded-lg p-5 hover:border-black transition-all duration-200 flex items-center justify-between gap-3 shadow-sm hover:shadow-md group-hover:bg-black group-hover:text-white cursor-pointer min-w-0 overflow-hidden">
+                                                <div className="flex items-start gap-4 min-w-0 flex-1">
+                                                    <div className="w-10 h-10 flex items-center justify-center text-gray-900 transition-colors flex-none">
                                                         <MessageSquare size={16} strokeWidth={1.5} />
                                                     </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-sm text-gray-900 mb-0.5">{session.title}</h3>
-                                                        <p className="text-xs text-gray-500 mb-2 line-clamp-1">
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-bold text-sm text-gray-900 mb-0.5 truncate">{session.title}</h3>
+                                                        <p className="text-xs text-gray-500 mb-2 truncate">
                                                             {session.latest_message_preview || "대화 내역이 없습니다."}
                                                         </p>
                                                         <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
@@ -160,7 +160,7 @@ export function BookmarkPage() {
                                                 </div>
                                                 <button
                                                     onClick={() => router.push(`/chatbot?roomId=${session.id}`)}
-                                                    className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 text-black p-2 hover:bg-gray-100 rounded-md"
+                                                    className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 text-black p-2 hover:bg-gray-100 rounded-md flex-none shrink-0"
                                                 >
                                                     <ArrowRight size={16} />
                                                 </button>
@@ -196,11 +196,12 @@ export function BookmarkPage() {
                                                         )}
                                                     </div>
                                                     <div className="absolute bottom-0 left-0 w-full p-5">
-                                                        <h3 className="text-white font-medium text-xl mb-1 leading-none line-clamp-1">
+                                                        <h3 className="text-white font-medium text-xl mb-1 leading-none truncate">
                                                             {place.name || "Unnamed place"}
                                                         </h3>
-                                                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 line-clamp-1">
-                                                            <MapPin size={10} /> {place.adress || place.room_title}
+                                                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 min-w-0">
+                                                            <MapPin size={10} className="flex-none" />
+                                                            <span className="truncate">{place.adress || place.room_title}</span>
                                                         </p>
                                                     </div>
                                                 </div>
