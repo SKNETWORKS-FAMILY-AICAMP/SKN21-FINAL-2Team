@@ -7,17 +7,17 @@ import { Loader2 } from "lucide-react";
 
 export function ChatbotPage() {
   return (
-    <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
+    <div className="flex w-full min-h-screen flex-col bg-gray-100 p-3 sm:p-4 gap-3 lg:h-screen lg:flex-row lg:gap-4 lg:overflow-hidden">
       <Suspense
         fallback={
           <div className="flex-none h-full w-[280px] rounded-lg bg-white border border-gray-200 animate-pulse" />
         }
       >
-        <div className="flex-none h-full">
+        <div className="flex-none lg:h-full">
           <Sidebar />
         </div>
       </Suspense>
-      <main className="flex-1 h-full relative min-w-0 bg-white border-r border-gray-200 rounded-lg overflow-hidden">
+      <main className="flex-1 relative min-w-0 rounded-[24px] bg-white border-r border-gray-200 overflow-hidden min-h-[calc(100dvh-1.5rem)] lg:min-h-0 lg:h-full lg:rounded-lg">
         <Suspense
           fallback={
             <div className="flex w-full h-full items-center justify-center">

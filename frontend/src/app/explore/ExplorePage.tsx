@@ -124,15 +124,15 @@ export function ExplorePage() {
     }, []);
 
     return (
-        <div className="flex w-full h-screen bg-gray-100 p-4 gap-4 overflow-hidden">
+        <div className="flex w-full min-h-screen flex-col bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row lg:overflow-hidden">
             {/* Sidebar */}
-            <div className="flex-none h-full">
+            <div className="flex-none lg:h-full">
                 <Sidebar />
             </div>
 
             {/* Main Content Area */}
-            <main className="flex-1 h-full py-2 px-2 md:px-6 overflow-hidden rounded-lg bg-white border-r border-gray-200">
-                <div className="flex flex-col xl:flex-row h-full w-full gap-6">
+            <main className="flex-1 min-w-0 rounded-lg bg-white border-r border-gray-200 p-2 md:p-6 lg:h-full lg:overflow-hidden">
+                <div className="flex flex-col gap-6 w-full lg:h-full xl:flex-row">
 
                     {/* LEFT COLUMN: Your Choices (Largest) */}
                     <div className="flex-1 xl:flex-[2] flex flex-col gap-6 min-h-0">
@@ -251,7 +251,7 @@ export function ExplorePage() {
 
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                                <div className="grid grid-cols-3 gap-3 pb-2 h-full">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2 h-full">
                                     {hotPlaces.map((place) => (
                                         <motion.div
                                             key={place.id}

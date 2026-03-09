@@ -75,8 +75,8 @@ export function ChatInputArea({
                 : "음성으로 입력";
 
     return (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-4 px-4 z-20 pointer-events-none">
-            <div className="w-full mx-auto relative px-2 pointer-events-auto max-w-4xl">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] px-3 sm:px-4 z-20 pointer-events-none">
+            <div className="w-full mx-auto relative pointer-events-auto max-w-4xl">
                 <div className="bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
                     <input
                         ref={fileInputRef}
@@ -112,11 +112,11 @@ export function ChatInputArea({
                         </div>
                     )}
 
-                    <div className="flex items-end gap-2 mb-0.5">
+                    <div className="flex items-end gap-1.5 sm:gap-2 mb-0.5">
                         <button
                             type="button"
                             onClick={handleAttachClick}
-                            className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
+                            className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-0.5"
                             title="이미지 첨부"
                         >
                             <Paperclip size={18} />
@@ -133,7 +133,7 @@ export function ChatInputArea({
                             style={{ minHeight: "40px", maxHeight: "130px" }}
                         />
 
-                        <div className="flex items-center gap-2 pl-2 pr-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 pr-0.5 sm:pr-1">
                             <button
                                 type="button"
                                 onClick={() => setIsMapSheetOpen(true)}
@@ -187,7 +187,7 @@ export function ChatInputArea({
                     </div>
                 </div>
 
-                <p className="text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide">
+                <p className="text-[10px] sm:text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide px-2">
                     Triver AI can make mistakes. Please check important info.
                 </p>
             </div>

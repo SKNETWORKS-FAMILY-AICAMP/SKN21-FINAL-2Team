@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { ChatMapPlace, ChatMapPlaceGroup } from "@/features/chat/components/PlaceMapPanel";
 
+const DEFAULT_MAP_PANEL_WIDTH = 34;
+
 export function useChatMap({
     messages,
     placeCardRefs
@@ -11,8 +13,8 @@ export function useChatMap({
 }) {
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
-    const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
-    const [mapPanelWidth, setMapPanelWidth] = useState(34);
+    const [isMapPanelOpen, setIsMapPanelOpenRaw] = useState(false);
+    const [mapPanelWidth, setMapPanelWidth] = useState(DEFAULT_MAP_PANEL_WIDTH);
 
     const toMapId = useCallback((place: ChatPlaceItem) => {
         if (typeof place.place_id === "number" && Number.isFinite(place.place_id) && place.place_id > 0) {
@@ -92,9 +94,9 @@ export function useChatMap({
 
     useEffect(() => {
         if (mapPlaces.length > 0 && messages.length > 0) {
-            setIsMapPanelOpen(true);
+            setIsMapPanelOpenRaw(true);
         } else if (mapPlaces.length === 0) {
-            setIsMapPanelOpen(false);
+            setIsMapPanelOpenRaw(false);
         }
     }, [mapPlaces.length, messages.length]);
 
@@ -112,6 +114,13 @@ export function useChatMap({
     const handleMapResizeDrag = useCallback((e: MouseEvent) => {
         const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
         setMapPanelWidth(Math.min(Math.max(newWidth, 20), 50));
+    }, []);
+
+    const setIsMapPanelOpen = useCallback((open: boolean) => {
+        if (open) {
+            setMapPanelWidth(DEFAULT_MAP_PANEL_WIDTH);
+        }
+        setIsMapPanelOpenRaw(open);
     }, []);
 
     const stopMapResizeDrag = useCallback(() => {

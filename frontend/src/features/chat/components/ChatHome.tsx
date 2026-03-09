@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile } from "@/services/api";
 import { TripContextModal } from "@/features/chat/components/TripContextModal";
@@ -23,6 +24,12 @@ import {
     readPendingAutoStartMeta,
 } from "@/services/autoStart";
 
+type RoomDraft = {
+    text: string;
+    imageDataUrl: string | null;
+    fileName: string;
+};
+
 export function ChatHome() {
     const searchParams = useSearchParams();
     const roomIdParam = searchParams.get("roomId");
@@ -41,6 +48,21 @@ export function ChatHome() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const placeCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const autoStartedRoomsRef = useRef<Set<number>>(new Set());
+    const roomDraftsRef = useRef<Record<number, RoomDraft>>({});
+    const previousRoomIdRef = useRef<number | null>(null);
+    const scrollStateRef = useRef<{
+        roomId: number | null;
+        messageCount: number;
+        lastMessageId: number | null;
+        lastMessageTextLength: number;
+        wasStreaming: boolean;
+    }>({
+        roomId: null,
+        messageCount: 0,
+        lastMessageId: null,
+        lastMessageTextLength: 0,
+        wasStreaming: false,
+    });
 
     const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
         inputText,
@@ -125,8 +147,51 @@ export function ChatHome() {
     );
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, isTyping]);
+        const lastMessage = visibleMessages[visibleMessages.length - 1];
+        const nextState = {
+            roomId: currentRoomId,
+            messageCount: visibleMessages.length,
+            lastMessageId: lastMessage?.id ?? null,
+            lastMessageTextLength: (lastMessage?.message || "").length,
+            wasStreaming: isStreaming,
+        };
+        const prevState = scrollStateRef.current;
+        const shouldScroll = Boolean(
+            nextState.roomId !== prevState.roomId ||
+            nextState.messageCount !== prevState.messageCount ||
+            (isStreaming && (
+                nextState.lastMessageId !== prevState.lastMessageId ||
+                nextState.lastMessageTextLength !== prevState.lastMessageTextLength ||
+                !prevState.wasStreaming
+            ))
+        );
+
+        if (shouldScroll) {
+            scrollToBottom();
+        }
+
+        scrollStateRef.current = nextState;
+    }, [currentRoomId, isStreaming, visibleMessages]);
+
+    useEffect(() => {
+        const previousRoomId = previousRoomIdRef.current;
+        if (previousRoomId != null) {
+            roomDraftsRef.current[previousRoomId] = {
+                text: inputText,
+                imageDataUrl: attachedImageDataUrl,
+                fileName: attachedFileName,
+            };
+        }
+
+        const nextDraft = currentRoomId != null
+            ? roomDraftsRef.current[currentRoomId]
+            : undefined;
+
+        setInputText(nextDraft?.text ?? "");
+        setAttachedImageDataUrl(nextDraft?.imageDataUrl ?? null);
+        setAttachedFileName(nextDraft?.fileName ?? "");
+        previousRoomIdRef.current = currentRoomId;
+    }, [currentRoomId]);
 
     // 초기화 과정
     useEffect(() => {
@@ -308,6 +373,11 @@ export function ChatHome() {
         setInputText("");
         setAttachedImageDataUrl(null);
         setAttachedFileName("");
+        roomDraftsRef.current[currentRoomId] = {
+            text: "",
+            imageDataUrl: null,
+            fileName: "",
+        };
 
         await streamMessageToRoom({
             roomId: currentRoomId,
@@ -327,7 +397,10 @@ export function ChatHome() {
     }
 
     return (
-        <div className="flex h-full min-h-0 bg-white relative rounded-[32px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+        <div className={cn(
+            "flex h-full min-h-0 bg-white relative rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100",
+            isMapPanelOpen ? "lg:rounded-l-[32px] lg:rounded-r-none" : "lg:rounded-[32px]"
+        )}>
             <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-slate-50/30">
                 <ChatHeader
                     currentRoom={currentRoom}
@@ -339,15 +412,15 @@ export function ChatHome() {
                 />
 
                 {isRouteRoomSynced && roomTripContext && roomTripContext.travelDuration && (
-                    <div className="flex-none px-6 pb-2 bg-white">
+                    <div className="flex-none px-3 pb-2 sm:px-4 lg:px-6 bg-white">
                         <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
                             {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
                         </div>
                     </div>
                 )}
 
-                <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar">
-                    <div className="w-full min-h-full flex flex-col px-4 lg:px-6 pt-4 space-y-6">
+                <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-48 sm:pb-44 custom-scrollbar">
+                    <div className="w-full min-h-full flex flex-col px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 space-y-5 sm:space-y-6">
                         {visibleMessages.length === 0 && !isTyping && (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                 <Sparkles className="w-8 h-8 mb-4 opacity-40 text-slate-300" />
@@ -369,6 +442,7 @@ export function ChatHome() {
                                 handleSelectMapPlace={handleSelectMapPlace}
                                 handleTogglePlaceBookmark={handleTogglePlaceBookmark}
                                 placeCardRefs={placeCardRefs}
+                                compactPlaces={isMapPanelOpen}
                             />
                         ))}
 
@@ -411,24 +485,39 @@ export function ChatHome() {
             </div>
 
             {/* Desktop Map Panel with Resizer */}
-            {isMapPanelOpen && mapPlaces.length > 0 && (
+            {mapPlaces.length > 0 && (
                 <>
                     <div
                         onMouseDown={startMapResizeDrag}
-                        className="hidden lg:block w-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-20"
+                        className={cn(
+                            "hidden lg:block w-1.5 transition-all duration-200 z-20",
+                            isMapPanelOpen
+                                ? "cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 opacity-100"
+                                : "pointer-events-none opacity-0"
+                        )}
                     />
                     <aside
-                        style={{ width: `${mapPanelWidth}%` }}
-                        className="hidden lg:block min-w-[320px] max-w-[800px] border-l border-gray-100 bg-white z-10"
+                        style={{ width: isMapPanelOpen ? `${mapPanelWidth}%` : "0px" }}
+                        className={cn(
+                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden transition-[width] duration-200 ease-out",
+                            isMapPanelOpen ? "border-l border-gray-100" : "border-l-0"
+                        )}
                     >
-                        <PlaceMapPanel
-                            className="h-full"
-                            places={mapPlaces}
-                            groups={mapPlaceGroups}
-                            selectedMapPlaceId={selectedMapPlaceId}
-                            onSelectPlace={handleSelectMapPlace}
-                            onMarkerClick={focusPlaceCardFromMap}
-                        />
+                        <div
+                            className={cn(
+                                "h-full min-w-[320px] transition-transform duration-200 ease-out",
+                                isMapPanelOpen ? "translate-x-0" : "translate-x-full"
+                            )}
+                        >
+                            <PlaceMapPanel
+                                className="h-full"
+                                places={mapPlaces}
+                                groups={mapPlaceGroups}
+                                selectedMapPlaceId={selectedMapPlaceId}
+                                onSelectPlace={handleSelectMapPlace}
+                                onMarkerClick={focusPlaceCardFromMap}
+                            />
+                        </div>
                     </aside>
                 </>
             )}

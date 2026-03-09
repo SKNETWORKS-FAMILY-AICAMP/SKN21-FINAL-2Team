@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
@@ -24,6 +25,7 @@ interface ChatMessageItemProps {
     handleSelectMapPlace: (mapId: string) => void;
     handleTogglePlaceBookmark: (messageId: number, placeId: number, currentStatus: boolean) => void;
     placeCardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+    compactPlaces?: boolean;
 }
 
 export const ChatMessageItem = memo(({
@@ -36,7 +38,8 @@ export const ChatMessageItem = memo(({
     toMapId,
     handleSelectMapPlace,
     handleTogglePlaceBookmark,
-    placeCardRefs
+    placeCardRefs,
+    compactPlaces = false,
 }: ChatMessageItemProps) => {
     const isStreamingCurrentMessage = Boolean(msg.id === streamingMsgId);
 
@@ -47,9 +50,9 @@ export const ChatMessageItem = memo(({
                 initial={{ opacity: 0, scale: 0.95, y: 10, transformOrigin: 'bottom right' }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="flex justify-end w-full px-2 lg:px-4 mb-2"
+                className="flex justify-end w-full px-1 sm:px-2 lg:px-4 mb-2"
             >
-                <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[85%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
+                <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[90%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
                     {!!msg.image_path && (
                         <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
                             <img
@@ -100,7 +103,7 @@ export const ChatMessageItem = memo(({
     }
 
     return (
-        <div className="flex flex-col gap-3 mb-2 w-full px-4">
+        <div className="flex flex-col gap-3 mb-2 w-full px-1 sm:px-3 lg:px-4">
             <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -116,7 +119,7 @@ export const ChatMessageItem = memo(({
                     {shouldRenderAiBubble && (
                         <div
                             data-testid={`ai-bubble-${msg.id}`}
-                            className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
+                            className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-4 sm:px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
                         >
                             {shouldRenderPipeline && (
                                 <div className={msg.message ? "mb-3" : ""}>
@@ -169,7 +172,10 @@ export const ChatMessageItem = memo(({
                                 <MapIcon size={12} />
                                 Recommended Places
                             </h5>
-                            <div className="flex overflow-x-auto pb-4 pt-1 gap-4 snap-x custom-scrollbar -mx-2 px-2">
+                            <div className={cn(
+                                "flex overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar -mx-1 px-1 sm:-mx-2 sm:px-2",
+                                compactPlaces ? "gap-2.5 sm:gap-3" : "gap-3 sm:gap-4"
+                            )}>
                                 {msg.places.map((place) => {
                                     const mapId = toMapId(place);
                                     const isMapSelected = selectedMapPlaceId === mapId;
@@ -181,10 +187,16 @@ export const ChatMessageItem = memo(({
                                             }}
                                             onMouseEnter={() => handleSelectMapPlace(mapId)}
                                             onClick={() => handleSelectMapPlace(mapId)}
-                                            className={`snap-start flex-shrink-0 relative w-[180px] bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1 ${isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
-                                                }`}
+                                            className={cn(
+                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
+                                                compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",
+                                                isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
+                                            )}
                                         >
-                                            <div className="relative h-[120px] bg-slate-100 overflow-hidden">
+                                            <div className={cn(
+                                                "relative bg-slate-100 overflow-hidden",
+                                                compactPlaces ? "h-[104px] sm:h-[112px]" : "h-[120px]"
+                                            )}>
                                                 <img
                                                     src={place.image_path || DEFAULT_PLACEHOLDER}
                                                     alt={place.name || "Place image"}
@@ -201,11 +213,17 @@ export const ChatMessageItem = memo(({
                                                     <Bookmark size={14} fill={place.bookmark_yn ? "currentColor" : "none"} />
                                                 </button>
                                             </div>
-                                            <div className="p-3.5 bg-white">
-                                                <h4 className="font-semibold text-slate-800 leading-tight line-clamp-1 text-[13px] group-hover:text-black transition-colors">
+                                            <div className={cn("bg-white", compactPlaces ? "p-3" : "p-3.5")}>
+                                                <h4 className={cn(
+                                                    "font-semibold text-slate-800 leading-tight line-clamp-1 group-hover:text-black transition-colors",
+                                                    compactPlaces ? "text-[12px]" : "text-[13px]"
+                                                )}>
                                                     {place.name}
                                                 </h4>
-                                                <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-1 font-medium">{place.adress}</p>
+                                                <p className={cn(
+                                                    "text-slate-500 mt-1.5 line-clamp-1 font-medium",
+                                                    compactPlaces ? "text-[10px]" : "text-[11px]"
+                                                )}>{place.adress}</p>
                                             </div>
                                         </div>
                                     );

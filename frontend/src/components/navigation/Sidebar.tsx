@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare } from "lucide-react";
+import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/common/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -129,12 +129,14 @@ function SidebarContent() {
     const [userProfile, setUserProfile] = useState<SidebarUserProfile | null>(() => sidebarCache.userProfile);
     const [rooms, setRooms] = useState<ChatRoom[]>(() => sidebarCache.rooms);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [language, setLanguage] = useState<AppLanguage>("en");
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
-    const canCollapse = true;
-    const actuallyCollapsed = isCollapsed;
+    const canCollapse = isDesktop;
+    const actuallyCollapsed = isDesktop ? isCollapsed : false;
 
     const activeRoomIdParam = searchParams.get("roomId");
     const parsedActiveRoomId = activeRoomIdParam ? Number(activeRoomIdParam) : NaN;
@@ -151,6 +153,14 @@ function SidebarContent() {
     useEffect(() => {
         let cancelled = false;
 
+        const mediaQuery = window.matchMedia("(min-width: 1024px)");
+        const applyViewportState = (matches: boolean) => {
+            setIsDesktop(matches);
+            setIsCollapsed((prev) => (matches ? prev : false));
+            setIsMobileOpen(false);
+        };
+        applyViewportState(mediaQuery.matches);
+
         const applyLanguage = () => {
             const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
             if (raw === "en" || raw === "ko" || raw === "ja") {
@@ -160,6 +170,11 @@ function SidebarContent() {
             }
         };
         applyLanguage();
+
+        const onViewportChange = (event: MediaQueryListEvent) => {
+            applyViewportState(event.matches);
+        };
+        mediaQuery.addEventListener("change", onViewportChange);
 
         const onLang = () => applyLanguage();
         window.addEventListener("triver:language", onLang);
@@ -208,11 +223,28 @@ function SidebarContent() {
 
         return () => {
             cancelled = true;
+            mediaQuery.removeEventListener("change", onViewportChange);
             window.removeEventListener("triver:language", onLang);
             window.removeEventListener("triver:rooms-updated", onRoomsUpdated);
             window.removeEventListener("triver:profile-updated", onProfileUpdated);
         };
     }, []);
+
+    useEffect(() => {
+        setIsMobileOpen(false);
+    }, [pathname, activeRoomId]);
+
+    useEffect(() => {
+        if (isDesktop || !isMobileOpen) {
+            document.body.style.overflow = "";
+            return;
+        }
+
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [isDesktop, isMobileOpen]);
 
     const dict = SIDEBAR_I18N[language] ?? SIDEBAR_I18N.en;
 
@@ -267,10 +299,47 @@ function SidebarContent() {
     const displayImage = userProfile?.profile_picture || "";
 
     return (
-        <aside className={cn(
-            "h-full bg-white flex flex-col border-r border-gray-200 rounded-lg transition-all duration-300 relative",
-            actuallyCollapsed ? "w-[80px]" : "w-64"
-        )}>
+        <>
+            {!isDesktop && (
+                <>
+                    <button
+                        onClick={() => setIsMobileOpen(true)}
+                        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
+                        aria-label="Open sidebar"
+                    >
+                        <Menu size={18} />
+                    </button>
+                    {isMobileOpen && (
+                        <button
+                            type="button"
+                            aria-label="Close sidebar overlay"
+                            onClick={() => setIsMobileOpen(false)}
+                            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
+                        />
+                    )}
+                </>
+            )}
+            <aside className={cn(
+                "bg-white flex flex-col border-r border-gray-200 relative",
+                isDesktop
+                    ? cn(
+                        "h-full rounded-lg transition-[width] duration-200 ease-out will-change-[width]",
+                        actuallyCollapsed ? "w-[80px]" : "w-64"
+                    )
+                    : cn(
+                        "fixed inset-y-0 left-0 z-50 w-[280px] max-w-[calc(100vw-2rem)] rounded-none rounded-r-3xl shadow-xl transition-transform duration-200 ease-out lg:hidden",
+                        isMobileOpen ? "translate-x-0" : "-translate-x-[110%]"
+                    )
+            )}>
+            {!isDesktop && (
+                <button
+                    onClick={() => setIsMobileOpen(false)}
+                    className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-black lg:hidden"
+                    aria-label="Close sidebar"
+                >
+                    <X size={16} />
+                </button>
+            )}
             {/* Collapse Toggle Button - Only visible if we can collapse */}
             {canCollapse && (
                 <button
@@ -288,7 +357,7 @@ function SidebarContent() {
                 {!actuallyCollapsed ? (
                     <Logo />
                 ) : (
-                    <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center text-white font-bold text-xl cursor-pointer">P</div>
+                    <Logo variant="icon" size={36} />
                 )}
             </div>
 
@@ -362,19 +431,12 @@ function SidebarContent() {
                                         key={room.id}
                                         onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
                                         className={cn(
-                                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 truncate",
+                                            "w-full flex items-center px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 truncate",
                                             isActiveRoom
                                                 ? "bg-gray-100 text-black"
                                                 : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                                         )}
                                     >
-                                        <MessageSquare
-                                            size={14}
-                                            className={cn(
-                                                "flex-shrink-0",
-                                                isActiveRoom ? "text-black opacity-100" : "opacity-50"
-                                            )}
-                                        />
                                         <span className="truncate">{room.title}</span>
                                     </button>
                                 );
@@ -469,7 +531,8 @@ function SidebarContent() {
                     if (!isTripLoading) setShowTripModal(false);
                 }}
             />
-        </aside>
+            </aside>
+        </>
     );
 }
 

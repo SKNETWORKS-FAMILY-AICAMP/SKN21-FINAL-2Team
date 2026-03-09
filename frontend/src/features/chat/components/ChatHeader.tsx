@@ -19,7 +19,7 @@ export function ChatHeader({
     setIsMapPanelOpen,
 }: ChatHeaderProps) {
     return (
-        <header className="h-14 flex items-center justify-between px-6 bg-white/70 backdrop-blur-md z-10 sticky top-0 border-b border-white/50">
+        <header className="h-14 flex items-center justify-between pl-16 pr-3 sm:px-4 lg:px-6 bg-white/70 backdrop-blur-md z-10 sticky top-0 border-b border-white/50">
             <div className="flex items-center gap-2 min-w-0">
                 <Sparkles size={16} className="text-slate-900 flex-none" />
                 <span className="font-semibold text-[17px] tracking-tight text-slate-900 truncate">
@@ -37,7 +37,7 @@ export function ChatHeader({
                 </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
                 {/* Desktop Map Toggle */}
                 {mapPlacesLength > 0 && (
                     <button

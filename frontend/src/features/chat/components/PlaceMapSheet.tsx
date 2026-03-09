@@ -40,13 +40,13 @@ export function PlaceMapSheet({
           />
 
           <motion.div
-            className="absolute bottom-0 left-0 right-0 h-[62vh] rounded-t-3xl bg-white shadow-2xl overflow-hidden"
+            className="absolute bottom-0 left-0 right-0 h-[72dvh] max-h-[calc(100dvh-5rem)] rounded-t-[28px] bg-white shadow-2xl overflow-hidden"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 34 }}
           >
-            <div className="h-12 px-4 flex items-center justify-between border-b border-gray-100">
+            <div className="h-14 px-4 flex items-center justify-between border-b border-gray-100">
               <div className="text-sm font-semibold text-gray-900">Map</div>
               <button
                 type="button"
@@ -59,7 +59,7 @@ export function PlaceMapSheet({
             </div>
 
             <PlaceMapPanel
-              className="h-[calc(62vh-48px)]"
+              className="h-[calc(72dvh-56px)] max-h-[calc(100dvh-8.5rem)]"
               places={places}
               groups={groups}
               selectedMapPlaceId={selectedMapPlaceId}

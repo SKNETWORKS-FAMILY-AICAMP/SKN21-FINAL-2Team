@@ -235,12 +235,12 @@ export function PlaceMapPanel({
             <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
             {/* Floating Carousel at the bottom */}
-            <div className="absolute left-0 right-0 bottom-4 z-10 px-4 group/carousel">
+            <div className="absolute left-0 right-0 bottom-3 sm:bottom-4 z-10 px-3 sm:px-4 group/carousel">
               {canScrollLeft && (
                 <button
                   type="button"
                   onClick={() => scrollBy("left")}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                  className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
                   aria-label="이전 장소 보기"
                 >
                   <ChevronLeft size={18} />
@@ -250,7 +250,7 @@ export function PlaceMapPanel({
               <div
                 ref={scrollContainerRef}
                 onScroll={checkScrollability}
-                className="flex overflow-x-auto gap-3 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
+                className="flex overflow-x-auto gap-2.5 sm:gap-3 pt-2 pb-2 pr-2 snap-x custom-scrollbar relative scroll-smooth"
               >
                 {groupedPlaces.map((group) => (
                   group.places.map((place) => {
@@ -272,7 +272,7 @@ export function PlaceMapPanel({
                             onMarkerClick(place.mapId);
                           }
                         }}
-                        className={`group/card snap-center flex-shrink-0 w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
+                        className={`group/card snap-center flex-shrink-0 w-[min(76vw,220px)] sm:w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
                           ? "border-black bg-white/95 ring-2 ring-black/10"
                           : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
                           }`}
@@ -309,7 +309,7 @@ export function PlaceMapPanel({
                 <button
                   type="button"
                   onClick={() => scrollBy("right")}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
+                  className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
                   aria-label="다음 장소 보기"
                 >
                   <ChevronRight size={18} />

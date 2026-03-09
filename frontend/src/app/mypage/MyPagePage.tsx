@@ -379,7 +379,7 @@ export function MyPagePage() {
       <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900">
         <div className="p-4 sm:p-6">
           <header className="mb-6">
-            <h1 className="page-title text-gray-900 mb-2">MyPage</h1>
+            <h1 className="page-title text-gray-900 mb-2">My Page</h1>
             <p className="page-subtitle">Traveler Profile</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
