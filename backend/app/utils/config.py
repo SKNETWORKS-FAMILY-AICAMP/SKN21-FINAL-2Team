@@ -1,3 +1,4 @@
+import os
 import torch
 
 # Model
@@ -18,3 +19,42 @@ VECTOR_SIZE = 768 # Standardizing to vision size for now or keep for legacy refe
 # Qdrant
 PLACES_COLLECTION = "places"
 PHOTOS_COLLECTION = "photos"
+
+# Agent
+RETRIEVAL_PROFILE = os.getenv("RETRIEVAL_PROFILE", "serving").lower()
+
+SERVING_RETRIEVER_CANDIDATE_K = int(os.getenv("SERVING_RETRIEVER_CANDIDATE_K", "20"))
+SERVING_RETRIEVER_TOP_K = int(os.getenv("SERVING_RETRIEVER_TOP_K", "5"))
+SERVING_RETRIEVER_RERANK_MAX_K = int(os.getenv("SERVING_RETRIEVER_RERANK_MAX_K", "8"))
+
+EVAL_RETRIEVER_CANDIDATE_K = int(os.getenv("EVAL_RETRIEVER_CANDIDATE_K", "60"))
+EVAL_RETRIEVER_TOP_K = int(os.getenv("EVAL_RETRIEVER_TOP_K", "10"))
+EVAL_RETRIEVER_RERANK_MAX_K = int(os.getenv("EVAL_RETRIEVER_RERANK_MAX_K", "30"))
+
+
+def get_retrieval_params(profile: str | None = None) -> dict[str, int]:
+    effective = (profile or RETRIEVAL_PROFILE or "serving").lower()
+    if effective == "evaluation":
+        return {
+            "candidate_k": max(EVAL_RETRIEVER_CANDIDATE_K, 1),
+            "top_k": max(EVAL_RETRIEVER_TOP_K, 1),
+            "rerank_max_k": max(EVAL_RETRIEVER_RERANK_MAX_K, 1),
+        }
+    # fallback 포함 serving 기본
+    return {
+        "candidate_k": max(SERVING_RETRIEVER_CANDIDATE_K, 1),
+        "top_k": max(SERVING_RETRIEVER_TOP_K, 1),
+        "rerank_max_k": max(SERVING_RETRIEVER_RERANK_MAX_K, 1),
+    }
+
+
+# 하위 호환 alias
+_retrieval_defaults = get_retrieval_params(RETRIEVAL_PROFILE)
+RETRIEVER_CANDIDATE_K = _retrieval_defaults["candidate_k"]
+RETRIEVER_TOP_K = _retrieval_defaults["top_k"]
+RETRIEVER_RERANK_MAX_K = _retrieval_defaults["rerank_max_k"]
+
+# BM25 최적화
+BM25_POOL_LIMIT = 100
+BM25_ENABLE_THRESHOLD = 20
+BM25_ENABLE_SCORE_THRESHOLD = 0.22

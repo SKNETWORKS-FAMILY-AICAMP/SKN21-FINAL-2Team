@@ -4,14 +4,21 @@ import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
+import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
+const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
+    if (!steps) return false;
+    return Object.values(steps).some((status) => status === "running" || status === "done");
+};
 
 interface ChatMessageItemProps {
     msg: ChatMessage;
     isStreaming?: boolean;
     streamingMsgId?: number | null;
     showPipeline?: boolean;
+    pipelineSteps?: PipelineSteps;
+    streamBufferingReason?: string | null;
     selectedMapPlaceId: string | null;
     toMapId: (place: ChatPlaceItem) => string;
     handleSelectMapPlace: (mapId: string) => void;
@@ -21,24 +28,17 @@ interface ChatMessageItemProps {
 
 export const ChatMessageItem = memo(({
     msg,
-    isStreaming,
     streamingMsgId,
     showPipeline,
+    pipelineSteps,
+    streamBufferingReason,
     selectedMapPlaceId,
     toMapId,
     handleSelectMapPlace,
     handleTogglePlaceBookmark,
     placeCardRefs
 }: ChatMessageItemProps) => {
-
-    // 스트리밍 중이면서 메시지가 비어있고 파이프라인 진행 상태라면 렌더링하지 않음
-    if (isStreaming && msg.id === streamingMsgId && !msg.message && showPipeline) {
-        return null;
-    }
-    // 스트리밍 중이면서 메시지가 비어있어도 대기 상태라면 렌더링을 막음 (파이프라인 여부와 무관하게)
-    if (isStreaming && msg.id === streamingMsgId && !msg.message) {
-        return null;
-    }
+    const isStreamingCurrentMessage = Boolean(msg.id === streamingMsgId);
 
     // 유저 메시지 처리
     if (msg.role === "human") {
@@ -50,7 +50,18 @@ export const ChatMessageItem = memo(({
                 className="flex justify-end w-full px-2 lg:px-4 mb-2"
             >
                 <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[85%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
-                    <p className="text-[14px] leading-[1.5] whitespace-pre-wrap font-medium">{msg.message}</p>
+                    {!!msg.image_path && (
+                        <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
+                            <img
+                                src={msg.image_path}
+                                alt="Attached"
+                                className="w-full max-h-[220px] object-cover"
+                            />
+                        </div>
+                    )}
+                    {!!msg.message && (
+                        <p className="text-[14px] leading-[1.5] whitespace-pre-wrap font-medium">{msg.message}</p>
+                    )}
                     <div className="text-[9px] mt-1.5 font-medium text-slate-300 text-right uppercase tracking-wider">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
@@ -60,6 +71,33 @@ export const ChatMessageItem = memo(({
     }
 
     // AI 메시지 처리
+    const shouldRenderPipeline = Boolean(
+        isStreamingCurrentMessage &&
+        showPipeline &&
+        hasVisiblePipelineSteps(pipelineSteps)
+    );
+    const shouldRenderWaitingBubble = Boolean(
+        isStreamingCurrentMessage &&
+        !msg.message &&
+        !shouldRenderPipeline
+    );
+    const shouldRenderAiBubble = Boolean(
+        shouldRenderPipeline ||
+        shouldRenderWaitingBubble ||
+        msg.message
+    );
+    const shouldHideEmptyAiMessage = Boolean(
+        !isStreamingCurrentMessage &&
+        !(msg.message || "").trim() &&
+        (!msg.places || msg.places.length === 0) &&
+        !shouldRenderPipeline &&
+        !shouldRenderWaitingBubble
+    );
+
+    if (shouldHideEmptyAiMessage) {
+        return null;
+    }
+
     return (
         <div className="flex flex-col gap-3 mb-2 w-full px-4">
             <motion.div
@@ -74,25 +112,52 @@ export const ChatMessageItem = memo(({
                 </div>
 
                 <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[70%]">
-                    {/* 메시지 내용 (Markdown 렌더링) */}
-                    {!!msg.message && (
-                        <div className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl">
-                            <div className="prose prose-sm max-w-none text-slate-700 prose-p:my-2 prose-p:leading-[1.6] prose-p:text-[14px] prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-pre:rounded-xl">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                        a: (props) => (
-                                            <a
-                                                {...props}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            />
-                                        ),
-                                    }}
-                                >
-                                    {msg.message}
-                                </ReactMarkdown>
-                            </div>
+                    {shouldRenderAiBubble && (
+                        <div
+                            data-testid={`ai-bubble-${msg.id}`}
+                            className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
+                        >
+                            {shouldRenderPipeline && (
+                                <div className={msg.message ? "mb-3" : ""}>
+                                    <PipelineProgress steps={pipelineSteps} visible={true} />
+                                </div>
+                            )}
+
+                            {shouldRenderWaitingBubble && (
+                                <div className="inline-flex items-center gap-2 text-slate-400">
+                                    <span className="inline-flex gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:120ms]" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:240ms]" />
+                                    </span>
+                                    <span className="text-[12px] font-medium tracking-wide">응답 준비 중...</span>
+                                </div>
+                            )}
+
+                            {!!msg.message && (
+                                <div className="prose prose-sm max-w-none text-slate-700 prose-p:my-2 prose-p:leading-[1.6] prose-p:text-[14px] prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-pre:rounded-xl">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            a: (props) => (
+                                                <a
+                                                    {...props}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                />
+                                            ),
+                                        }}
+                                    >
+                                        {msg.message}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {isStreamingCurrentMessage && streamBufferingReason === "link" && (
+                        <div className="mb-2 ml-1 text-[11px] font-medium tracking-wide text-slate-400">
+                            링크 정리 중...
                         </div>
                     )}
 
@@ -157,3 +222,5 @@ export const ChatMessageItem = memo(({
         </div>
     );
 });
+
+ChatMessageItem.displayName = "ChatMessageItem";

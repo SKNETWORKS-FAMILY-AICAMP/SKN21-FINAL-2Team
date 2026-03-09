@@ -6,7 +6,9 @@ import React, { useState, useEffect } from "react";
 import { cn } from "../../../utils";
 import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
-import { createRoom, fetchRandomExplorePlaces } from "@/services/api";
+import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile } from "@/services/api";
+import { IncompleteSignupModal } from "@/components/landing/IncompleteSignupModal";
+import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 const categories = [
     { id: "hot-places", label: "Hot Places" },
@@ -36,51 +38,95 @@ const staticDestinations: Record<string, Destination[]> = {
     ],
 };
 
+// fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
+// hot_place: id(number) | attractions·restaurants: contentid(string)
+// name: 세 API 모두 동일
+// image: API 응답 이미지 URL
+// address: hot_place: adress(오타) | 나머지: address 로 통일
 export function Destinations() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    // 트립 컨텍스트 모달 상태
     const [showTripModal, setShowTripModal] = useState(false);
     const [pendingPlace, setPendingPlace] = useState<Destination | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
     const [allRandomData, setAllRandomData] = useState<Record<string, Destination[]>>({});
 
+    // 가입/설문 미완료 시 경고 모달 상태
+    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [warningStep, setWarningStep] = useState<"profile" | "survey" | null>(null);
+
     useEffect(() => {
         const token = localStorage.getItem("access_token");
         setIsLoggedIn(!!token);
+        if (token) {
+            fetchCurrentUser()
+                .then(user => setUserProfile(user))
+                .catch(() => console.warn("Failed to fetch user profile in Destinations"));
+        }
     }, []);
 
     const handlePlanTripClick = (place: Destination, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         if (!isLoggedIn) {
             localStorage.setItem("pendingDestination", JSON.stringify(place));
-            router.push("/login");
+            router.push("/signup");
         } else {
+            // 주의: 로그인 후 정보나 설문 기입이 덜 끝났다면 즉시 이동하지 않고 모달 표시
+            if (userProfile && !userProfile.is_join) {
+                // 사용자가 챗봇 목적지로 향하려 했다는 의도를 남겨두기 위해 세팅
+                localStorage.setItem("pendingDestination", JSON.stringify(place));
+                setWarningStep("profile");
+                setIsWarningModalOpen(true);
+                return;
+            }
+            if (userProfile && !userProfile.is_prefer) {
+                localStorage.setItem("pendingDestination", JSON.stringify(place));
+                setWarningStep("survey");
+                setIsWarningModalOpen(true);
+                return;
+            }
+
+            // 주의: 장소를 pendingPlace에 저장하고 모달을 먼저 표시
             setPendingPlace(place);
             setShowTripModal(true);
         }
     };
 
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
+        }
+    };
+
+    // 모달 확인 후 실행: 방 생성 + 컨텍스트 저장 + 이동
     const handleModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            if (pendingPlace) {
-                localStorage.setItem(
-                    `triver:selected-places:${newRoom.id}`,
-                    JSON.stringify([{
-                        name: pendingPlace.name,
-                        adress: pendingPlace.address,
-                        place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
-                    }])
-                );
-            }
+            const selectedPlaces = pendingPlace ? [{
+                name: pendingPlace.name,
+                adress: pendingPlace.address || (pendingPlace as Destination & { adress?: string }).adress,
+                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+            }] : [];
+
             if ((context.travelDuration || "").trim()) {
-                localStorage.setItem(
-                    `triver:trip-context:${newRoom.id}`,
-                    JSON.stringify(context)
-                );
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: selectedPlaces.length > 0 ? "combined" : "trip_context",
+                    tripContext: context,
+                    selectedPlaces,
+                });
+            } else if (selectedPlaces.length > 0) {
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: "selected_places",
+                    selectedPlaces,
+                });
             }
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch (e) {
@@ -106,7 +152,7 @@ export function Destinations() {
         const fetchCurrentTabRandom = async () => {
             setIsLoading(true);
             try {
-                const raw = await fetchRandomExplorePlaces();
+                const raw = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants", 3);
                 const mappedData: Record<string, Destination[]> = {};
 
                 // 1. 핫플레이스 매핑
@@ -114,7 +160,10 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`
+                    // 주의: image_url이 있을 때만 경로를 생성, 없으면 빈 문자열(placeholder용)
+                    image: p.image_url && p.image_url.trim() !== ""
+                        ? (p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`)
+                        : ""
                 }));
 
                 // 2. 관광지 매핑
@@ -122,7 +171,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url
+                    image: p.image_url || ""
                 }));
 
                 // 3. 음식점 매핑
@@ -130,7 +179,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
-                    image: p.image_url
+                    image: p.image_url || ""
                 }));
 
                 // 현재 탭에 맞는 데이터로 즉시 업데이트
@@ -203,9 +252,10 @@ export function Destinations() {
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
                                         <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
-                                            {place.image ? (
+                                            {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
+                                            {place.image && place.image.trim() !== "" ? (
                                                 <img
                                                     src={place.image}
                                                     alt={place.name}
@@ -278,6 +328,13 @@ export function Destinations() {
                         setPendingPlace(null);
                     }
                 }}
+            />
+            {/* 미가입/미설문 경고 모달 */}
+            <IncompleteSignupModal
+                isOpen={isWarningModalOpen}
+                missingStep={warningStep}
+                onClose={() => setIsWarningModalOpen(false)}
+                onConfirm={confirmWarning}
             />
         </>
     );

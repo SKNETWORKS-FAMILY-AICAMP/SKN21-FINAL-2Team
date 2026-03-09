@@ -56,6 +56,8 @@ jest.mock("../src/services/api", () => ({
     id: 1,
     email: "test@example.com",
     name: "Test User",
+    is_join: true,
+    is_prefer: true,
   })),
   verifyAndRefreshToken: jest.fn(async () => ({ valid: true })),
 }));
@@ -89,7 +91,7 @@ describe("ChatHome STT permission behavior", () => {
 
   const waitUntilChatReady = async () => {
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Ask Triver regarding your next destination...")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("어디로 떠나고 싶으신가요?")).toBeInTheDocument();
     });
   };
 
@@ -109,6 +111,11 @@ describe("ChatHome STT permission behavior", () => {
       value: MockSpeechRecognition,
     });
     Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      writable: true,
+      value: jest.fn(),
+    });
+    Object.defineProperty(window, "alert", {
       configurable: true,
       writable: true,
       value: jest.fn(),
@@ -171,7 +178,7 @@ describe("ChatHome STT permission behavior", () => {
     });
   });
 
-  it("retries recognition start when denied button is clicked", async () => {
+  it("shows alert and does not start recognition when denied button is clicked", async () => {
     const permissionStatus: MockPermissionStatus = { state: "denied", onchange: null };
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
@@ -185,7 +192,8 @@ describe("ChatHome STT permission behavior", () => {
     fireEvent.click(deniedButton);
 
     await waitFor(() => {
-      expect(mockRecognitionStart).toHaveBeenCalled();
+      expect(window.alert).toHaveBeenCalled();
+      expect(mockRecognitionStart).not.toHaveBeenCalled();
     });
   });
 });

@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database.connection import get_db, Base
+from app.database.connection import Base, db_manager
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage, ChatPlace
 from app.utils.security import create_access_token
@@ -48,7 +48,7 @@ def override_db(db):
         finally:
             pass
 
-    app.dependency_overrides[get_db] = _override
+    app.dependency_overrides[db_manager.get_db] = _override
     yield db
     app.dependency_overrides.clear()
 
@@ -80,7 +80,7 @@ async def _mock_astream_events(*args, **kwargs):
     yield {
         "event": "on_chain_end",
         "name": "intent",
-        "data": {"output": {"summary_query": "요약된 제목", "summary_message": "요약 메시지 제목"}},
+        "data": {"output": {"summary_title": "요약된 제목", "summary_message": "요약 메시지 제목"}},
     }
 
     # retriever 노드
@@ -90,11 +90,9 @@ async def _mock_astream_events(*args, **kwargs):
     # executor 노드
     yield {"event": "on_chain_start", "name": "executor", "data": {}}
 
-    # LLM 토큰 스트리밍
+    # executor custom token 스트리밍
     for token_text in ["안녕", "하세요", "! 여행을 ", "도와드릴게요."]:
-        chunk = MagicMock()
-        chunk.content = token_text
-        yield {"event": "on_chat_model_stream", "name": "ChatOpenAI", "data": {"chunk": chunk}}
+        yield {"event": "on_custom_event", "name": "token", "data": {"token": token_text}}
 
     yield {"event": "on_chain_end", "name": "executor", "data": {"output": {"answer": "추천 답변입니다.", "selected_ids": ["123"]}}}
 
@@ -104,6 +102,20 @@ def _get_mock_graph_app():
     mock_app.astream_events = _mock_astream_events
     mock_app.nodes = {"intent": None, "planner": None, "retriever": None, "executor": None, "executor_missing": None}
     return mock_app
+
+
+def _extract_data_payloads(response_text: str) -> list[dict]:
+    payloads: list[dict] = []
+    for raw_event in response_text.strip().split("\n\n"):
+        data_lines = [
+            line[6:]
+            for line in raw_event.split("\n")
+            if line.startswith("data: ")
+        ]
+        if not data_lines:
+            continue
+        payloads.append(json.loads("\n".join(data_lines)))
+    return payloads
 
 
 # ---------- 테스트 ----------
@@ -124,10 +136,9 @@ async def test_sse_event_format(user_and_room):
             assert response.status_code == 200
             assert response.headers["content-type"].startswith("text/event-stream")
 
-            lines = response.text.strip().split("\n\n")
-            for line in lines:
-                assert line.startswith("data: "), f"Expected 'data: ' prefix, got: {line}"
-                payload = json.loads(line[6:])
+            payloads = _extract_data_payloads(response.text)
+            assert payloads, "Expected at least one SSE data payload"
+            for payload in payloads:
                 assert isinstance(payload, dict)
 
 
@@ -146,8 +157,7 @@ async def test_step_events_order(user_and_room):
             )
 
             step_events = []
-            for line in response.text.strip().split("\n\n"):
-                data = json.loads(line[6:])
+            for data in _extract_data_payloads(response.text):
                 if "step" in data:
                     step_events.append((data["step"], data["status"]))
 
@@ -171,8 +181,7 @@ async def test_token_streaming(user_and_room):
             )
 
             token_events = []
-            for line in response.text.strip().split("\n\n"):
-                data = json.loads(line[6:])
+            for data in _extract_data_payloads(response.text):
                 if "token" in data:
                     token_events.append(data["token"])
 
@@ -205,7 +214,7 @@ async def test_done_event_with_message_id(user_and_room):
 
 @pytest.mark.asyncio
 async def test_room_title_updated_to_summary(user_and_room):
-    """초기 2개 메시지 구간에서는 summary_query로 제목을 갱신한다."""
+    """초기 2개 메시지 구간에서는 summary_title로 제목을 갱신한다."""
     user, room, token, db = user_and_room
     # 초기 제목 설정
     room.title = "새로운 여행 계획"

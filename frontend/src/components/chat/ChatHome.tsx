@@ -3,11 +3,20 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Mic, MicOff, Square, User, Sparkles, Loader2, Bookmark, Paperclip, Map as MapIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { flushSync } from "react-dom";
 import { createRoom, fetchRoom, fetchRooms, sendAutoStartChatRoomStream, sendChatMessageStream, UserProfile, ChatRoom, ChatMessage, ChatPlaceItem, fetchCurrentUser, verifyAndRefreshToken, updatePlaceBookmark, updateRoomBookmark } from "@/services/api";
-import { PipelineProgress, PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
+import { PipelineSteps, StepStatus, createInitialPipelineSteps } from "./PipelineProgress";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/components/chat/TripContextModal";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import {
+    clearPendingAutoStartMeta,
+    hasAutoStartStarted,
+    markAutoStartStarted,
+    readPendingAutoStartMeta,
+    setPendingAutoStartMeta,
+    type StoredSelectedPlaceSeed,
+} from "@/services/autoStart";
 import { PlaceMapPanel, type ChatMapPlace, type ChatMapPlaceGroup } from "./PlaceMapPanel";
 import { PlaceMapSheet } from "./PlaceMapSheet";
 import { ChatMessageItem } from "./ChatMessageItem";
@@ -16,19 +25,10 @@ import { BrandMark } from "@/components/Logo";
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
 export function ChatHome() {
-    type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
-    type SelectedPlaceSeed = {
-        id?: number;
-        place_id?: number | null;
-        name?: string | null;
-        adress?: string | null;
-        image_path?: string | null;
-        room_id?: number;
-    };
-
     const searchParams = useSearchParams();
     const router = useRouter();
     const roomIdParam = searchParams.get("roomId");
+    const parsedRouteRoomId = roomIdParam ? parseInt(roomIdParam, 10) : null;
     // 주의: Destinations에서 비로그인 Plan Trip → 로그인 → 여기로 오는 경우
     // pendingDestination이 localStorage에 있으면 모달을 먼저 표시합니다
     const fromDestinationParam = searchParams.get("fromDestination");
@@ -41,16 +41,27 @@ export function ChatHome() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [showPipeline, setShowPipeline] = useState(false);
     const [pipelineSteps, setPipelineSteps] = useState<PipelineSteps>(createInitialPipelineSteps());
+    const [streamBufferingReason, setStreamBufferingReason] = useState<string | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isInitializing, setIsInitializing] = useState(true);
+    const [roomLoadStatus, setRoomLoadStatus] = useState<"idle" | "loading" | "loaded">("idle");
+    const [loadedRoomMessageCount, setLoadedRoomMessageCount] = useState<number | null>(null);
     const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
     const [roomTripContext, setRoomTripContext] = useState<TripContext | null>(null);
     const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
+    const [isMapPanelOpen, setIsMapPanelOpen] = useState(false);
+    const [mapPanelWidth, setMapPanelWidth] = useState(34);
+    const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
+    const [attachedFileName, setAttachedFileName] = useState<string>("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const placeCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const streamAbortControllerRef = useRef<AbortController | null>(null);
+    const stopRequestedRef = useRef(false);
     const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
         inputText,
         setInputText
@@ -58,19 +69,134 @@ export function ChatHome() {
 
     const isSendingRef = useRef(false);
     const autoStartedRoomsRef = useRef<Set<number>>(new Set());
+    const isPipelineVisibleRef = useRef(false);
+    const streamTokenBufferRef = useRef<Record<number, string>>({});
+    const streamTokenFrameRef = useRef<Record<number, number>>({});
+    const currentRoomIdRef = useRef<number | null>(null);
+    const roomLoadStatusRef = useRef<"idle" | "loading" | "loaded">("idle");
+    const latestRoomRequestRef = useRef<{ roomId: number | null; requestId: number }>({ roomId: null, requestId: 0 });
+    const activeStreamRef = useRef<{ roomId: number; placeholderId: number } | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    const hidePipeline = useCallback(() => {
+        if (!isPipelineVisibleRef.current) return;
+        isPipelineVisibleRef.current = false;
+        setShowPipeline(false);
+    }, []);
+
+    const updatePipelineStep = useCallback((step: string, status: string) => {
+        const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
+        setPipelineSteps((prev) => ({
+            ...prev,
+            [step]: mappedStatus,
+        }));
+    }, []);
+
+    const flushBufferedToken = useCallback((streamingId: number, roomId: number) => {
+        const buffered = streamTokenBufferRef.current[streamingId];
+        if (!buffered) return;
+
+        delete streamTokenBufferRef.current[streamingId];
+        delete streamTokenFrameRef.current[streamingId];
+
+        setMessages((prev) => {
+            let found = false;
+            const next = prev.map((m) => {
+                if (m.id !== streamingId) return m;
+                found = true;
+                return { ...m, message: (m.message || "") + buffered };
+            });
+
+            if (!found) {
+                next.push({
+                    id: streamingId,
+                    room_id: roomId,
+                    message: buffered,
+                    role: "ai",
+                    created_at: new Date().toISOString(),
+                });
+            }
+
+            return next;
+        });
+    }, []);
+
+    const queueStreamToken = useCallback((streamingId: number, roomId: number, token: string) => {
+        streamTokenBufferRef.current[streamingId] = (streamTokenBufferRef.current[streamingId] || "") + token;
+        if (streamTokenFrameRef.current[streamingId] != null) return;
+
+        streamTokenFrameRef.current[streamingId] = window.setTimeout(() => {
+            flushBufferedToken(streamingId, roomId);
+        }, 16);
+    }, [flushBufferedToken]);
+
+    const clearStreamTokenBuffer = useCallback((streamingId: number, roomId: number) => {
+        const frameId = streamTokenFrameRef.current[streamingId];
+        if (frameId != null) {
+            window.clearTimeout(frameId);
+            delete streamTokenFrameRef.current[streamingId];
+        }
+        flushBufferedToken(streamingId, roomId);
+    }, [flushBufferedToken]);
+
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping]);
 
+    useEffect(() => {
+        currentRoomIdRef.current = currentRoomId;
+    }, [currentRoomId]);
+
+    useEffect(() => {
+        roomLoadStatusRef.current = roomLoadStatus;
+    }, [roomLoadStatus]);
+
+    const mergeHydratedMessages = useCallback((roomId: number, nextMessages: ChatMessage[]) => {
+        setMessages((prev) => {
+            const activeStream = activeStreamRef.current;
+            if (!activeStream || activeStream.roomId !== roomId) {
+                return nextMessages;
+            }
+
+            const placeholder = prev.find((message) => message.id === activeStream.placeholderId);
+            if (!placeholder) {
+                return nextMessages;
+            }
+
+            const alreadyHydrated = nextMessages.some((message) => message.id === placeholder.id);
+            if (alreadyHydrated) {
+                return nextMessages;
+            }
+
+            return [...nextMessages, placeholder];
+        });
+    }, []);
+
+    // useEffect(() => {
+    //     const textarea = inputTextareaRef.current;
+    //     if (!textarea) return;
+    //     const maxHeight = 180;
+    //     textarea.style.height = "auto";
+    //     const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    //     textarea.style.height = `${nextHeight}px`;
+    //     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    // }, [inputText]);
+
     // Re-run initialization or room switch when roomIdParam changes
     useEffect(() => {
         const initializeChat = async () => {
+            // 주의: 이미 보고 있는 방이라면 (방 생성 직후 라우팅으로 인한) 불필요한 전체 초기화를 막습니다.
+            const paramId = parsedRouteRoomId;
+            if (paramId && paramId === currentRoomIdRef.current && roomLoadStatusRef.current === "loaded") return;
+
             setIsInitializing(true);
+            setRoomTripContext(null);
+            setMessages([]);
+            setRoomLoadStatus("loading");
+            setLoadedRoomMessageCount(null);
             try {
                 // 토큰 유효성 검증 (만료 시 자동 refresh 시도)
                 try {
@@ -80,16 +206,27 @@ export function ChatHome() {
                         return;
                     }
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
                 // Load user profile
                 try {
                     const data = await fetchCurrentUser();
+
+                    // 주의: 가입(is_join)이나 설문(is_prefer)을 완료하지 않고 챗봇 페이지로 억지로 진입한 경우 방어
+                    if (!data.is_join) {
+                        window.location.href = "/signup/profile";
+                        return;
+                    }
+                    if (!data.is_prefer) {
+                        window.location.href = "/survey";
+                        return;
+                    }
+
                     setUserProfile(data);
                 } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/signup";
                     return;
                 }
 
@@ -104,16 +241,22 @@ export function ChatHome() {
                 } else if (roomIdParam) {
                     const parsedRoomId = parseInt(roomIdParam, 10);
                     setCurrentRoomId(parsedRoomId);
+                    currentRoomIdRef.current = parsedRoomId;
                     await loadRoomMessages(parsedRoomId);
                 } else if (fetchedRooms.length > 0) {
                     // Load the most recent room
                     const latestRoomId = fetchedRooms[0].id;
                     setCurrentRoomId(latestRoomId);
+                    currentRoomIdRef.current = latestRoomId;
                     await loadRoomMessages(latestRoomId);
                     // Update URL without refreshing the page
                     router.replace(`/chatbot?roomId=${latestRoomId}`);
                 } else {
                     // 방이 없을 때(첫 방문) → 여행 컨텍스트 모달을 먼저 표시
+                    setCurrentRoomId(null);
+                    currentRoomIdRef.current = null;
+                    setRoomLoadStatus("idle");
+                    setLoadedRoomMessageCount(null);
                     setShowTripModal(true);
                 }
             } catch (error) {
@@ -124,53 +267,86 @@ export function ChatHome() {
         };
 
         initializeChat();
-    }, [roomIdParam, router]);
+    }, [fromDestinationParam, parsedRouteRoomId, roomIdParam]);
 
-    const loadRoomMessages = async (roomId: number) => {
+    const loadRoomMessages = useCallback(async (roomId: number) => {
+        const requestId = latestRoomRequestRef.current.requestId + 1;
+        latestRoomRequestRef.current = { roomId, requestId };
+
         try {
             const roomData = await fetchRoom(roomId);
-            setMessages(roomData.messages || []);
+            const nextMessages = roomData.messages || [];
+            if (
+                latestRoomRequestRef.current.roomId !== roomId ||
+                latestRoomRequestRef.current.requestId !== requestId ||
+                currentRoomIdRef.current !== roomId
+            ) {
+                return;
+            }
+
+            mergeHydratedMessages(roomId, nextMessages);
+            setLoadedRoomMessageCount(nextMessages.length);
         } catch (error) {
             console.error("Failed to load room messages", error);
+            if (
+                latestRoomRequestRef.current.roomId !== roomId ||
+                latestRoomRequestRef.current.requestId !== requestId ||
+                currentRoomIdRef.current !== roomId
+            ) {
+                return;
+            }
+            setMessages([]);
+            setLoadedRoomMessageCount(null);
+        } finally {
+            if (
+                latestRoomRequestRef.current.roomId === roomId &&
+                latestRoomRequestRef.current.requestId === requestId &&
+                currentRoomIdRef.current === roomId
+            ) {
+                setRoomLoadStatus("loaded");
+            }
         }
-    };
+    }, [mergeHydratedMessages]);
 
-    const handleCreateNewRoom = async () => {
+    const handleCreateNewRoom = useCallback(async () => {
         try {
             const newRoom = await createRoom("새로운 여행 계획");
+
+            setPendingAutoStartMeta(newRoom.id, { mode: "greeting" });
+
             setRooms((prev) => [newRoom, ...prev]);
-            setCurrentRoomId(newRoom.id);
+            setCurrentRoomId(null);
+            currentRoomIdRef.current = null;
             setMessages([]);
+            setRoomLoadStatus("loading");
+            setLoadedRoomMessageCount(null);
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
             router.replace(`/chatbot?roomId=${newRoom.id}`);
         } catch (error) {
             console.error("Failed to create a new room", error);
         }
-    };
+    }, [router]);
 
     // 모달에서 컨텍스트 확인 후 방 생성 (첫 방문 또는 Destinations에서 온 경우)
-    const handleCreateRoomWithContext = async (context: TripContext) => {
+    const handleCreateRoomWithContext = useCallback(async (context: TripContext) => {
         // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → router.replace 시 자연 unmount
         setIsTripLoading(true);
         try {
             const newRoom = await createRoom("새로운 여행 계획");
-            setRooms((prev) => [newRoom, ...prev]);
-            setCurrentRoomId(newRoom.id);
-            setMessages([]);
+            let selectedPlaces: StoredSelectedPlaceSeed[] = [];
 
-            // 주의: fromDestination 경로로 온 경우 pendingDestination을 챗봇 autostart 형식으로 변환
-            // autostart는 triver:selected-places:${roomId} 키를 읽어 장소 기반 추천을 시작합니다
+            // 주의: 상태(setCurrentRoomId)를 변경하기 전에 로컬 스토리지에 컨텍스트를 먼저 세팅해야,
+            // 렌더링 후 실행되는 Autostart useEffect가 데이터를 문제없이 읽을 수 있습니다.
             const pendingRaw = localStorage.getItem("pendingDestination");
             if (pendingRaw) {
                 try {
                     const place = JSON.parse(pendingRaw);
                     // Destination 타입 → SelectedPlaceSeed 배열로 변환
-                    const seedPlaces = [{
+                    selectedPlaces = [{
                         name: place.name,
-                        adress: place.address, // 주의: autostart API는 adress(오타) 필드를 사용합니다
+                        adress: place.address || place.adress, // API 응답에 따라 address 또는 adress 일 수 있음
                         place_id: typeof place.id === "number" ? place.id : 0,
                     }];
-                    localStorage.setItem(`triver:selected-places:${newRoom.id}`, JSON.stringify(seedPlaces));
                 } catch {
                     // 파싱 실패 시 무시
                 } finally {
@@ -179,13 +355,25 @@ export function ChatHome() {
             }
 
             if ((context.travelDuration || "").trim()) {
-                localStorage.setItem(
-                    `triver:trip-context:${newRoom.id}`,
-                    JSON.stringify(context)
-                );
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: selectedPlaces.length > 0 ? "combined" : "trip_context",
+                    tripContext: context,
+                    selectedPlaces,
+                });
             } else {
-                localStorage.setItem(`triver:auto-start-greeting:${newRoom.id}`, "1");
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: selectedPlaces.length > 0 ? "selected_places" : "greeting",
+                    selectedPlaces,
+                });
             }
+
+            setRooms((prev) => [newRoom, ...prev]);
+            setCurrentRoomId(null);
+            currentRoomIdRef.current = null;
+            setMessages([]);
+            setRoomLoadStatus("loading");
+            setLoadedRoomMessageCount(null);
+
             setShowTripModal(false);
             setIsTripLoading(false);
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
@@ -195,9 +383,9 @@ export function ChatHome() {
             setIsTripLoading(false);
             setShowTripModal(false);
             // 에러 시 컨텍스트 없이 기본 방 생성
-            handleCreateNewRoom();
+            void handleCreateNewRoom();
         }
-    };
+    }, [handleCreateNewRoom, router]);
 
     const updateRoomTitle = useCallback((roomId: number, roomTitle: string) => {
         setRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, title: roomTitle } : r)));
@@ -209,14 +397,19 @@ export function ChatHome() {
         message,
         saveUserMessage,
         optimisticUserText,
+        imageDataUrl,
     }: {
         roomId: number;
         message: string;
         saveUserMessage: boolean;
         optimisticUserText?: string;
+        imageDataUrl?: string | null;
     }) => {
         if (isSendingRef.current) return;
         isSendingRef.current = true;
+        stopRequestedRef.current = false;
+        const abortController = new AbortController();
+        streamAbortControllerRef.current = abortController;
 
         if (optimisticUserText) {
             const optimisticUserMsg: ChatMessage = {
@@ -224,6 +417,7 @@ export function ChatHome() {
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
+                image_path: imageDataUrl ?? null,
                 created_at: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, optimisticUserMsg]);
@@ -231,11 +425,14 @@ export function ChatHome() {
 
         setIsTyping(true);
         setIsStreaming(true);
+        setStreamBufferingReason(null);
+        isPipelineVisibleRef.current = true;
         setShowPipeline(true);
         setPipelineSteps(createInitialPipelineSteps());
 
         const streamingId = Date.now() + 1;
         setStreamingMsgId(streamingId);
+        activeStreamRef.current = { roomId, placeholderId: streamingId };
         const placeholderAiMsg: ChatMessage = {
             id: streamingId,
             room_id: roomId,
@@ -248,37 +445,19 @@ export function ChatHome() {
         try {
             await sendChatMessageStream(roomId, message, {
                 onToken: (token) => {
-                    setShowPipeline(false);
-                    setMessages((prev) => {
-                        let found = false;
-                        const next = prev.map((m) => {
-                            if (m.id !== streamingId) return m;
-                            found = true;
-                            return { ...m, message: (m.message || "") + token };
-                        });
-
-                        if (!found) {
-                            next.push({
-                                id: streamingId,
-                                room_id: roomId,
-                                message: token,
-                                role: "ai",
-                                created_at: new Date().toISOString(),
-                            });
-                        }
-                        return next;
-                    });
+                    queueStreamToken(streamingId, roomId, token);
                 },
                 onStep: (step, status) => {
-                    if ((step === "executor" || step === "executor_missing") && status === "done") return;
-                    const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
-                    setPipelineSteps((prev) => ({
-                        ...prev,
-                        [step]: mappedStatus,
-                    }));
+                    updatePipelineStep(step, status);
+                },
+                onBufferingChange: (reason) => {
+                    setStreamBufferingReason(reason);
                 },
                 onDone: (fullMessage, messageId, createdAt, _roomTitle, places) => {
-                    setShowPipeline(false);
+                    clearPendingAutoStartMeta(roomId);
+                    hidePipeline();
+                    setStreamBufferingReason(null);
+                    clearStreamTokenBuffer(streamingId, roomId);
                     const finalMessage = (fullMessage || "").trim() || "추천 결과를 준비했어요.";
                     setMessages((prev) => {
                         let found = false;
@@ -306,6 +485,9 @@ export function ChatHome() {
                         }
                         return next;
                     });
+                    if (activeStreamRef.current?.placeholderId === streamingId) {
+                        activeStreamRef.current = null;
+                    }
                     setStreamingMsgId(null);
                 },
                 onRoomTitle: (roomTitle) => {
@@ -313,6 +495,8 @@ export function ChatHome() {
                 },
                 onError: (err) => {
                     console.error("Stream error", err);
+                    hidePipeline();
+                    setStreamBufferingReason(null);
                     setMessages((prev) =>
                         prev.map((m) =>
                             m.id === streamingId
@@ -320,16 +504,35 @@ export function ChatHome() {
                                 : m
                         )
                     );
+                    if (activeStreamRef.current?.placeholderId === streamingId) {
+                        activeStreamRef.current = null;
+                    }
+                    setStreamingMsgId(null);
                 },
-            }, null, null, { saveUserMessage });
+            }, imageDataUrl ?? null, null, { saveUserMessage, signal: abortController.signal });
         } catch (error) {
-            console.error("Failed to send streamed message", error);
+            const isAbort =
+                stopRequestedRef.current ||
+                ((error as { name?: string })?.name === "AbortError");
+            if (!isAbort) {
+                console.error("Failed to send streamed message", error);
+                setStreamBufferingReason(null);
+                if (activeStreamRef.current?.placeholderId === streamingId) {
+                    activeStreamRef.current = null;
+                }
+            } else {
+                setMessages((prev) =>
+                    prev.filter((m) => !(m.id === streamingId && !(m.message || "").trim()))
+                );
+            }
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
+            setShowPipeline(false);
+            setStreamingMsgId(null);
             isSendingRef.current = false;
         }
-    }, [updateRoomTitle]);
+    }, [clearStreamTokenBuffer, hidePipeline, queueStreamToken, updatePipelineStep, updateRoomTitle]);
 
     const runAutoStarterStream = useCallback(async ({
         roomId,
@@ -347,11 +550,14 @@ export function ChatHome() {
         isSendingRef.current = true;
         setIsTyping(true);
         setIsStreaming(true);
+        setStreamBufferingReason(null);
+        isPipelineVisibleRef.current = true;
         setShowPipeline(true);
         setPipelineSteps(createInitialPipelineSteps());
 
         const streamingId = Date.now() + 1;
         setStreamingMsgId(streamingId);
+        activeStreamRef.current = { roomId, placeholderId: streamingId };
         setMessages((prev) => [
             ...prev,
             {
@@ -366,33 +572,18 @@ export function ChatHome() {
         try {
             await sendAutoStartChatRoomStream(roomId, payload, {
                 onToken: (token) => {
-                    setShowPipeline(false);
-                    setMessages((prev) => {
-                        let found = false;
-                        const next = prev.map((m) => {
-                            if (m.id !== streamingId) return m;
-                            found = true;
-                            return { ...m, message: (m.message || "") + token };
-                        });
-                        if (!found) {
-                            next.push({
-                                id: streamingId,
-                                room_id: roomId,
-                                message: token,
-                                role: "ai",
-                                created_at: new Date().toISOString(),
-                            });
-                        }
-                        return next;
-                    });
+                    queueStreamToken(streamingId, roomId, token);
                 },
                 onStep: (step, status) => {
-                    if ((step === "executor" || step === "executor_missing") && status === "done") return;
-                    const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
-                    setPipelineSteps((prev) => ({ ...prev, [step]: mappedStatus }));
+                    updatePipelineStep(step, status);
+                },
+                onBufferingChange: (reason) => {
+                    setStreamBufferingReason(reason);
                 },
                 onDone: (fullMessage, messageId, createdAt, _roomTitle, places) => {
-                    setShowPipeline(false);
+                    hidePipeline();
+                    setStreamBufferingReason(null);
+                    clearStreamTokenBuffer(streamingId, roomId);
                     const finalMessage = (fullMessage || "").trim() || "추천 결과를 준비했어요.";
                     setMessages((prev) => {
                         let found = false;
@@ -419,26 +610,39 @@ export function ChatHome() {
                         }
                         return next;
                     });
+                    if (activeStreamRef.current?.placeholderId === streamingId) {
+                        activeStreamRef.current = null;
+                    }
                     setStreamingMsgId(null);
                 },
                 onRoomTitle: (roomTitle) => updateRoomTitle(roomId, roomTitle),
                 onError: (err) => {
                     console.error("Auto start stream error", err);
+                    hidePipeline();
+                    setStreamBufferingReason(null);
                     setMessages((prev) =>
                         prev.map((m) =>
                             m.id === streamingId ? { ...m, message: "죄송합니다. 오류가 발생했습니다." } : m
                         )
                     );
+                    if (activeStreamRef.current?.placeholderId === streamingId) {
+                        activeStreamRef.current = null;
+                    }
+                    setStreamingMsgId(null);
                 },
             });
         } catch (error) {
             console.error("Failed to run auto start stream", error);
+            setStreamBufferingReason(null);
+            if (activeStreamRef.current?.placeholderId === streamingId) {
+                activeStreamRef.current = null;
+            }
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
             isSendingRef.current = false;
         }
-    }, [updateRoomTitle]);
+    }, [clearStreamTokenBuffer, hidePipeline, queueStreamToken, updatePipelineStep, updateRoomTitle]);
 
     useEffect(() => {
         if (!currentRoomId) {
@@ -461,67 +665,37 @@ export function ChatHome() {
     }, [currentRoomId]);
 
     useEffect(() => {
-        if (!currentRoomId || isInitializing || isStreaming) return;
-        if (messages.length > 0) return;
+        if (!currentRoomId || isInitializing || isStreaming || roomLoadStatus !== "loaded") return;
         if (autoStartedRoomsRef.current.has(currentRoomId)) return;
 
-        const contextKey = `triver:trip-context:${currentRoomId}`;
-        const selectedKey = `triver:selected-places:${currentRoomId}`;
-        const greetingKey = `triver:auto-start-greeting:${currentRoomId}`;
-        const startedKey = `triver:auto-start-started:${currentRoomId}`;
-        const legacyTripStartedKey = `triver:trip-context-started:${currentRoomId}`;
-        const legacySelectedStartedKey = `triver:selected-places-started:${currentRoomId}`;
+        const pendingMeta = readPendingAutoStartMeta(currentRoomId);
+        if (!pendingMeta.mode) return;
 
-        if (
-            localStorage.getItem(startedKey) === "1" ||
-            localStorage.getItem(legacyTripStartedKey) === "1" ||
-            localStorage.getItem(legacySelectedStartedKey) === "1"
-        ) {
-            localStorage.setItem(startedKey, "1");
+        if (hasAutoStartStarted(currentRoomId)) {
+            autoStartedRoomsRef.current.add(currentRoomId);
             return;
         }
 
-        const contextRaw = localStorage.getItem(contextKey);
-        const selectedRaw = localStorage.getItem(selectedKey);
-        const shouldGreeting = localStorage.getItem(greetingKey) === "1";
-
-        let context: TripContext | null = null;
-        if (contextRaw) {
-            try {
-                context = JSON.parse(contextRaw) as TripContext;
-            } catch (error) {
-                console.error("Invalid trip context payload", error);
-            }
+        if (loadedRoomMessageCount == null) return;
+        if (loadedRoomMessageCount > 0) {
+            clearPendingAutoStartMeta(currentRoomId);
+            return;
         }
-
-        let selectedPlaces: SelectedPlaceSeed[] = [];
-        if (selectedRaw) {
-            try {
-                const parsed = JSON.parse(selectedRaw) as SelectedPlaceSeed[];
-                if (Array.isArray(parsed)) selectedPlaces = parsed;
-            } catch (error) {
-                console.error("Invalid selected places payload", error);
-            }
-        }
-
-        const hasContext = !!context;
-        const hasSelectedPlaces = selectedPlaces.length > 0;
-        if (!hasContext && !hasSelectedPlaces && !shouldGreeting) return;
 
         autoStartedRoomsRef.current.add(currentRoomId);
-        localStorage.setItem(startedKey, "1");
+        markAutoStartStarted(currentRoomId);
 
-        if (hasContext && hasSelectedPlaces) {
+        if (pendingMeta.mode === "combined" && pendingMeta.tripContext && pendingMeta.selectedPlaces.length > 0) {
             void runAutoStarterStream({
                 roomId: currentRoomId,
                 payload: {
                     mode: "combined",
                     trip_context: {
-                        travel_duration: context?.travelDuration || "",
-                        adult_count: context?.adultCount ?? 0,
-                        child_count: context?.childCount ?? 0,
+                        travel_duration: pendingMeta.tripContext.travelDuration,
+                        adult_count: pendingMeta.tripContext.adultCount,
+                        child_count: pendingMeta.tripContext.childCount,
                     },
-                    selected_places: selectedPlaces.map((p) => ({
+                    selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
                         place_id: p.place_id ?? 0,
@@ -532,12 +706,12 @@ export function ChatHome() {
             return;
         }
 
-        if (hasSelectedPlaces) {
+        if (pendingMeta.mode === "selected_places" && pendingMeta.selectedPlaces.length > 0) {
             void runAutoStarterStream({
                 roomId: currentRoomId,
                 payload: {
                     mode: "selected_places",
-                    selected_places: selectedPlaces.map((p) => ({
+                    selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
                         place_id: p.place_id ?? 0,
@@ -548,15 +722,15 @@ export function ChatHome() {
             return;
         }
 
-        if (hasContext) {
+        if (pendingMeta.mode === "trip_context" && pendingMeta.tripContext) {
             void runAutoStarterStream({
                 roomId: currentRoomId,
                 payload: {
                     mode: "trip_context",
                     trip_context: {
-                        travel_duration: context?.travelDuration || "",
-                        adult_count: context?.adultCount ?? 0,
-                        child_count: context?.childCount ?? 0,
+                        travel_duration: pendingMeta.tripContext.travelDuration,
+                        adult_count: pendingMeta.tripContext.adultCount,
+                        child_count: pendingMeta.tripContext.childCount,
                     },
                     save_user_message: false,
                 },
@@ -564,7 +738,7 @@ export function ChatHome() {
             return;
         }
 
-        if (shouldGreeting) {
+        if (pendingMeta.mode === "greeting") {
             void runAutoStarterStream({
                 roomId: currentRoomId,
                 payload: {
@@ -573,19 +747,32 @@ export function ChatHome() {
                 },
             });
         }
-    }, [currentRoomId, isInitializing, isStreaming, messages, runAutoStarterStream]);
+    }, [currentRoomId, isInitializing, isStreaming, loadedRoomMessageCount, roomLoadStatus, runAutoStarterStream]);
 
     const handleSendMessage = async () => {
-        if (!inputText.trim() || !currentRoomId) return;
+        if (!currentRoomId) return;
+        const userText = inputText.trim();
+        if (!userText && !attachedImageDataUrl) return;
 
-        const userText = inputText;
+        const messageToSend = userText || "첨부한 이미지를 분석해줘.";
+        const optimisticText = userText || (attachedFileName ? `[이미지 첨부] ${attachedFileName}` : "[이미지 첨부]");
+        const currentAttachment = attachedImageDataUrl;
         setInputText("");
+        setAttachedImageDataUrl(null);
+        setAttachedFileName("");
         await streamMessageToRoom({
             roomId: currentRoomId,
-            message: userText,
+            message: messageToSend,
             saveUserMessage: true,
-            optimisticUserText: userText,
+            optimisticUserText: optimisticText,
+            imageDataUrl: currentAttachment,
         });
+    };
+
+    const handleStopMessage = () => {
+        if (!isStreaming) return;
+        stopRequestedRef.current = true;
+        streamAbortControllerRef.current?.abort();
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -597,9 +784,36 @@ export function ChatHome() {
         }
     };
 
+    const handleAttachClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleAttachFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            window.alert("이미지 파일만 첨부할 수 있어요.");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = typeof reader.result === "string" ? reader.result : null;
+            setAttachedImageDataUrl(dataUrl);
+            setAttachedFileName(file.name);
+        };
+        reader.readAsDataURL(file);
+        e.target.value = "";
+    };
+
     const displayName = userProfile?.nickname || userProfile?.name || "User";
     const displayImage = userProfile?.profile_picture || "";
     const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null;
+    const isRouteRoomSynced = parsedRouteRoomId == null || currentRoomId === parsedRouteRoomId;
+    const visibleMessages = useMemo(
+        () => currentRoomId == null ? [] : messages.filter((msg) => msg.room_id === currentRoomId),
+        [currentRoomId, messages]
+    );
 
     const handleToggleRoomBookmark = async () => {
         if (!currentRoomId || !currentRoom) return;
@@ -707,8 +921,42 @@ export function ChatHome() {
             });
         }
 
+        // This part of the snippet seems to be from a different context or a partial change.
+        // The original code returns `groups`, not `sorted`.
+        // I will insert the new `useEffect` and drag handlers after this `useMemo`.
+        // if (sorted.length > 0 && !isSendingRef.current && !isMapPanelOpen && !fromDestinationParam) {
+        //     // Only auto-open map panel if we just received messages with places
+        //     // To prevent flickering, we just set true if closed.
+        // }
         return groups;
     }, [messages, mapPlaces, toMapId]);
+
+    // 지도 데이터가 생기면 자동으로 패널 열기 (단, 최초 로드 제외)
+    useEffect(() => {
+        if (mapPlaces.length > 0 && messages.length > 0) {
+            setIsMapPanelOpen(true);
+        } else if (mapPlaces.length === 0) {
+            setIsMapPanelOpen(false);
+        }
+    }, [mapPlaces.length, messages.length]);
+
+    const handleMapResizeDrag = useCallback((e: MouseEvent) => {
+        const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+        setMapPanelWidth(Math.min(Math.max(newWidth, 20), 50));
+    }, []);
+
+    const stopMapResizeDrag = useCallback(() => {
+        document.removeEventListener("mousemove", handleMapResizeDrag);
+        document.removeEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "default";
+    }, [handleMapResizeDrag]);
+
+    const startMapResizeDrag = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        document.addEventListener("mousemove", handleMapResizeDrag);
+        document.addEventListener("mouseup", stopMapResizeDrag);
+        document.body.style.cursor = "col-resize";
+    }, [handleMapResizeDrag, stopMapResizeDrag]);
 
     useEffect(() => {
         if (!mapPlaces.length) {
@@ -771,10 +1019,22 @@ export function ChatHome() {
                             title="채팅방 북마크 토글"
                             disabled={!currentRoomId}
                         >
-                            <Bookmark size={13} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} />
+                            <Bookmark size={16} fill={currentRoom?.bookmark_yn ? "currentColor" : "none"} className="opacity-80" />
                         </button>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3">
+                        {/* Desktop Map Toggle */}
+                        {mapPlaces.length > 0 && (
+                            <button
+                                onClick={() => setIsMapPanelOpen(!isMapPanelOpen)}
+                                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${isMapPanelOpen ? 'bg-black text-white border-black' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+                                title={isMapPanelOpen ? "지도 닫기" : "지도 열기"}
+                            >
+                                <MapIcon size={14} className={isMapPanelOpen ? "text-white" : "text-slate-500"} />
+                                {isMapPanelOpen ? "Map On" : "Map Off"}
+                            </button>
+                        )}
                         <span className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Online
@@ -793,7 +1053,7 @@ export function ChatHome() {
                     </div>
                 </header>
 
-                {roomTripContext && (
+                {isRouteRoomSynced && roomTripContext && roomTripContext.travelDuration && (
                     <div className="flex-none px-6 pb-2 bg-white">
                         <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
                             {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
@@ -803,20 +1063,22 @@ export function ChatHome() {
 
                 <div className="flex-1 min-h-0 overflow-y-auto p-0 pb-44 custom-scrollbar">
                     <div className="w-full min-h-full flex flex-col px-4 lg:px-6 pt-4 space-y-6">
-                        {messages.length === 0 && !isTyping && (
+                        {visibleMessages.length === 0 && !isTyping && (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                 <Sparkles className="w-8 h-8 mb-4 opacity-40 text-slate-300" />
                                 <p className="text-sm font-medium tracking-tight">채팅을 시작해보세요!</p>
                             </div>
                         )}
 
-                        {messages.map((msg) => (
+                        {visibleMessages.map((msg) => (
                             <ChatMessageItem
                                 key={msg.id}
                                 msg={msg}
                                 isStreaming={isStreaming}
                                 streamingMsgId={streamingMsgId}
                                 showPipeline={showPipeline}
+                                pipelineSteps={pipelineSteps}
+                                streamBufferingReason={streamBufferingReason}
                                 selectedMapPlaceId={selectedMapPlaceId}
                                 toMapId={toMapId}
                                 handleSelectMapPlace={handleSelectMapPlace}
@@ -825,82 +1087,118 @@ export function ChatHome() {
                             />
                         ))}
 
-                        {showPipeline && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0 }}
-                                className="flex items-start gap-3"
-                            >
-                                <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-black text-white shadow-sm">
-                                    <BrandMark tone="light" size={14} />
-                                </div>
-                                <PipelineProgress steps={pipelineSteps} visible={true} />
-                            </motion.div>
-                        )}
-
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-4 px-4 z-20 pointer-events-none">
                     <div className="w-full mx-auto relative px-2 pointer-events-auto max-w-4xl">
-                        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
-                            <button
-                                type="button"
-                                className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
-                                title="첨부 파일 (준비 중)"
-                                disabled
-                            >
-                                <Paperclip size={18} />
-                            </button>
-
-                            <textarea
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                onKeyDown={handleKeyPress}
-                                placeholder="어디로 떠나고 싶으신가요?"
-                                className="flex-1 bg-transparent border-none outline-none resize-none py-2.5 max-h-[120px] text-[15px] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar mt-[2px]"
-                                rows={1}
-                                style={{ minHeight: "44px" }}
+                        <div className="bg-white/60 backdrop-blur-xl border border-slate-200/60 rounded-[28px] p-1.5 pr-1.5 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.08)] focus-within:ring-4 focus-within:ring-slate-900/5 focus-within:border-slate-300 focus-within:bg-white/90 transition-all duration-300">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleAttachFileChange}
                             />
 
-                            <button
-                                type="button"
-                                onClick={() => setIsMapSheetOpen(true)}
-                                className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
-                                title="지도 보기"
-                            >
-                                <MapIcon size={18} />
-                            </button>
+                            {attachedFileName && (
+                                <div className="px-3 pt-2 pb-1">
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white text-xs pl-1.5 pr-2 py-1.5 max-w-[340px]">
+                                        {attachedImageDataUrl && (
+                                            <img
+                                                src={attachedImageDataUrl}
+                                                alt="첨부 이미지"
+                                                className="w-6 h-6 rounded-full object-cover border border-white/20"
+                                            />
+                                        )}
+                                        <span className="truncate">{attachedFileName}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAttachedImageDataUrl(null);
+                                                setAttachedFileName("");
+                                            }}
+                                            className="text-white/80 hover:text-white transition-colors"
+                                            aria-label="첨부 파일 제거"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
-                            <button
-                                onClick={handleToggleListening}
-                                className={`p-2.5 rounded-full transition-all duration-300 relative ${micButtonClass}`}
-                                title={micButtonTitle}
-                                disabled={sttPermission === "unsupported"}
-                            >
-                                {isListening ? (
-                                    <>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAttachClick}
+                                    className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors ml-1"
+                                    title="이미지 첨부"
+                                >
+                                    <Paperclip size={18} />
+                                </button>
+
+                                <textarea
+                                    ref={inputTextareaRef}
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    onKeyDown={handleKeyPress}
+                                    placeholder="어디로 떠나고 싶으신가요?"
+                                    className="flex-1 bg-transparent border-none outline-none resize-none text-[15px] leading-[1.5] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar py-2"
+                                    rows={1}
+                                    style={{ minHeight: "44px", maxHeight: "180px" }}
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMapSheetOpen(true)}
+                                    className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
+                                    title="지도 보기"
+                                >
+                                    <MapIcon size={18} />
+                                </button>
+
+                                <button
+                                    onClick={handleToggleListening}
+                                    className={`p-2.5 rounded-full transition-all duration-300 relative ${micButtonClass}`}
+                                    title={micButtonTitle}
+                                    disabled={sttPermission === "unsupported"}
+                                >
+                                    {isListening ? (
+                                        <>
+                                            <Square size={16} fill="currentColor" strokeWidth={0} />
+                                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50" />
+                                        </>
+                                    ) : sttPermission === "denied" ? (
+                                        <MicOff size={18} strokeWidth={1.5} />
+                                    ) : (
+                                        <Mic size={18} strokeWidth={1.5} />
+                                    )}
+                                </button>
+
+                                {isStreaming ? (
+                                    <motion.button
+                                        initial={false}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        onClick={handleStopMessage}
+                                        className="p-2.5 rounded-full transition-all duration-300 shadow-md bg-red-500 text-white shadow-red-500/20 hover:shadow-red-500/40 hover:-translate-y-0.5"
+                                        title="중지"
+                                    >
                                         <Square size={16} fill="currentColor" strokeWidth={0} />
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse shadow-sm shadow-red-500/50" />
-                                    </>
-                                ) : sttPermission === "denied" ? (
-                                    <MicOff size={18} strokeWidth={1.5} />
+                                    </motion.button>
                                 ) : (
-                                    <Mic size={18} strokeWidth={1.5} />
+                                    <motion.button
+                                        initial={false}
+                                        animate={{ scale: (inputText.trim() || attachedImageDataUrl) ? 1 : 0.9, opacity: (inputText.trim() || attachedImageDataUrl) ? 1 : 0.7 }}
+                                        onClick={handleSendMessage}
+                                        disabled={!inputText.trim() && !attachedImageDataUrl}
+                                        className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${(inputText.trim() || attachedImageDataUrl) ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
+                                        title="전송"
+                                    >
+                                        <Send size={18} />
+                                    </motion.button>
                                 )}
-                            </button>
-
-                            <motion.button
-                                initial={false}
-                                animate={{ scale: inputText.trim() && !isTyping ? 1 : 0.9, opacity: inputText.trim() && !isTyping ? 1 : 0.7 }}
-                                onClick={handleSendMessage}
-                                disabled={!inputText.trim() || isTyping}
-                                className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${inputText.trim() && !isTyping ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
-                            >
-                                <Send size={18} />
-                            </motion.button>
+                            </div>
                         </div>
 
                         <p className="text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide">
@@ -910,16 +1208,29 @@ export function ChatHome() {
                 </div>
             </div>
 
-            <aside className="hidden lg:block w-[34%] min-w-[320px] max-w-[460px] border-l border-gray-100 bg-white">
-                <PlaceMapPanel
-                    className="h-full"
-                    places={mapPlaces}
-                    groups={mapPlaceGroups}
-                    selectedMapPlaceId={selectedMapPlaceId}
-                    onSelectPlace={handleSelectMapPlace}
-                    onMarkerClick={focusPlaceCardFromMap}
-                />
-            </aside>
+            {/* Desktop Map Panel with Resizer */}
+            {isMapPanelOpen && mapPlaces.length > 0 && (
+                <>
+                    {/* Resizer Handle */}
+                    <div
+                        onMouseDown={startMapResizeDrag}
+                        className="hidden lg:block w-1.5 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-20"
+                    />
+                    <aside
+                        style={{ width: `${mapPanelWidth}%` }}
+                        className="hidden lg:block min-w-[320px] max-w-[800px] border-l border-gray-100 bg-white z-10"
+                    >
+                        <PlaceMapPanel
+                            className="h-full"
+                            places={mapPlaces}
+                            groups={mapPlaceGroups}
+                            selectedMapPlaceId={selectedMapPlaceId}
+                            onSelectPlace={handleSelectMapPlace}
+                            onMarkerClick={focusPlaceCardFromMap}
+                        />
+                    </aside>
+                </>
+            )}
 
             <PlaceMapSheet
                 open={isMapSheetOpen}

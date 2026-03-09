@@ -244,5 +244,12 @@ next-env.d.ts
 
 
 backend/data/prefer/*
-backend/evaluation/result/*
+backend/evaluation/result
+backend/tmp
+# backend/tests/
+
+# frontend/tests/
+
+.claude/
+CLAUDE.md
 .gemini
