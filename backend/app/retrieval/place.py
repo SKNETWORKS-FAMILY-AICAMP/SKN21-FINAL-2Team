@@ -6,7 +6,7 @@ import re
 from typing import Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue, MatchAny
+    Filter, FieldCondition, MatchValue, MatchAny, SparseVector
 )
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -14,10 +14,13 @@ from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
     BM25_POOL_LIMIT, BM25_ENABLE_THRESHOLD, BM25_ENABLE_SCORE_THRESHOLD,
+    ENABLE_SPARSE, ENABLE_GEO_FILTER,
+    ENABLE_QDRANT_SPARSE,
+    SPARSE_ADDR_EXACT_WEIGHT, SPARSE_ADDR_STEM_WEIGHT, SPARSE_ADDR_MAX_BOOST,
     get_retrieval_params,
 )
 from app.schemas.chat import ChatMessageCreate
-from app.scripts.preprocess_data import download_image
+from app.scripts.preprocess_data import download_image, build_addr_tokens, build_sparse_vector
 from app.utils.geocoder import GeoCoder
 from app.services.vision import describe_image
 from app.utils.place_id import get_place_id_from_point
@@ -30,6 +33,13 @@ def _normalize_match_text(text: str) -> str:
 def _district_stem(token: str) -> str:
     token = str(token or "").strip()
     if token.endswith(("구", "군", "시", "동", "읍", "면", "리")) and len(token) > 1:
+        return token[:-1]
+    return token
+
+
+def _addr_token_stem(token: str) -> str:
+    token = str(token or "").strip()
+    if token.endswith(("구", "군", "시", "동", "읍", "면", "리", "로", "길")) and len(token) > 1:
         return token[:-1]
     return token
 
@@ -262,6 +272,64 @@ class PlaceRetriever:
     def _tokenize(self, text: str) -> list[str]:
         return re.findall(r"[가-힣A-Za-z0-9]+", text or "")
 
+    def _extract_query_addr_tokens(self, text: str) -> list[str]:
+        if not text:
+            return []
+        raw_tokens = re.findall(r"[가-힣A-Za-z0-9]+(?:구|군|시|동|읍|면|리|로|길)?|\d+-\d+", text)
+        tokens: list[str] = []
+        for token in raw_tokens:
+            token = str(token).strip().lower()
+            if not token:
+                continue
+            if len(token) == 1 and not token.isdigit():
+                continue
+            tokens.append(token)
+            stem = _addr_token_stem(token)
+            if stem != token and stem:
+                tokens.append(stem)
+
+        deduped: list[str] = []
+        for token in tokens:
+            if token not in deduped:
+                deduped.append(token)
+        return deduped
+
+    def _payload_addr_tokens(self, payload: dict[str, Any]) -> list[str]:
+        if not payload:
+            return []
+        raw = payload.get("addr_tokens")
+        if isinstance(raw, list):
+            normalized = [str(token).strip().lower() for token in raw if str(token).strip()]
+            return normalized
+
+        # 하위 호환: 적재 데이터에 addr_tokens가 없으면 런타임 보강
+        return build_addr_tokens(payload)
+
+    def _addr_sparse_bonus(
+        self,
+        query_addr_tokens: list[str],
+        payload_addr_tokens: list[str],
+        max_boost: float = SPARSE_ADDR_MAX_BOOST,
+        exact_weight: float = SPARSE_ADDR_EXACT_WEIGHT,
+        stem_weight: float = SPARSE_ADDR_STEM_WEIGHT,
+    ) -> float:
+        if not query_addr_tokens or not payload_addr_tokens:
+            return 0.0
+
+        payload_token_set = set(payload_addr_tokens)
+        payload_stem_set = {_addr_token_stem(token) for token in payload_token_set}
+        bonus = 0.0
+
+        for token in query_addr_tokens:
+            if token in payload_token_set:
+                bonus += exact_weight
+                continue
+            stem = _addr_token_stem(token)
+            if stem and stem in payload_stem_set:
+                bonus += stem_weight
+
+        return min(max_boost, bonus)
+
     def _bm25_like_score(self, query: str, payload: dict) -> float:
         tokens = self._tokenize(query)
         if not tokens:
@@ -339,6 +407,14 @@ class PlaceRetriever:
     def _payload_coordinates(self, payload: dict[str, Any]) -> tuple[float | None, float | None]:
         if not payload:
             return None, None
+
+        geo = payload.get("geo")
+        if isinstance(geo, dict):
+            geo_lat = _safe_float(geo.get("lat"))
+            geo_lng = _safe_float(geo.get("lon"))
+            if geo_lat is not None and geo_lng is not None:
+                if -90.0 <= geo_lat <= 90.0 and -180.0 <= geo_lng <= 180.0:
+                    return geo_lat, geo_lng
 
         lat_keys = ("lat", "mapy", "latitude")
         lng_keys = ("lng", "mapx", "longitude")
@@ -545,6 +621,25 @@ class PlaceRetriever:
             print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if query_filter else 'no'})")
             collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
+        if ENABLE_QDRANT_SPARSE and query and query.strip() and scope in {"auto", "place_only"}:
+            try:
+                sparse_indices, sparse_values = build_sparse_vector(query)
+                if sparse_indices and sparse_values:
+                    sparse_resp = await asyncio.to_thread(
+                        self.client.query_points,
+                        collection_name=PLACES_COLLECTION,
+                        query=SparseVector(indices=sparse_indices, values=sparse_values),
+                        using="text_sparse",
+                        limit=candidates_limit,
+                        with_payload=True,
+                        query_filter=query_filter,
+                    )
+                    place_vector_points.extend(sparse_resp.points)
+                    collect_hits(sparse_resp.points, 0.85, "qdrant_sparse", PLACES_COLLECTION)
+                    print(f"[INFO] qdrant_sparse hits={len(sparse_resp.points)}")
+            except Exception as e:
+                print(f"[WARN] qdrant sparse channel failed: {e}")
+
         if query and query.strip() and scope in {"auto", "photo_only"}:
             # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
             clip_text_emb = await asyncio.to_thread(self.vision_model.encode, query)
@@ -647,6 +742,14 @@ class PlaceRetriever:
         # --- C. Fusion & Boosting ---
         results = []
         fused = []
+        query_addr_tokens = self._extract_query_addr_tokens(query or "")
+        preferred_addr_tokens = self._extract_query_addr_tokens(preferred_location or "")
+        sparse_enabled = ENABLE_SPARSE and (
+            bool(category)
+            or bool(preferred_addr_tokens)
+            or bool(query_addr_tokens)
+        )
+
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
             keyword_boost = self._keyword_match_bonus(query=query or "", payload=payload)
@@ -656,7 +759,17 @@ class PlaceRetriever:
                 anchor_lat=user_latitude,
                 anchor_lng=user_longitude,
             )
-            boost = keyword_boost + location_text_boost + geo_proximity_boost
+            payload_addr_tokens = self._payload_addr_tokens(payload)
+            addr_sparse_boost = 0.0
+            if sparse_enabled:
+                addr_sparse_boost = self._addr_sparse_bonus(
+                    query_addr_tokens=query_addr_tokens + preferred_addr_tokens,
+                    payload_addr_tokens=payload_addr_tokens,
+                )
+                if addr_sparse_boost > 0.0:
+                    data["matches"].add("addr_sparse")
+
+            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost
             fused.append(
                 (
                     pid,
@@ -666,6 +779,7 @@ class PlaceRetriever:
                         "keyword": keyword_boost,
                         "location_text": location_text_boost,
                         "geo_proximity": geo_proximity_boost,
+                        "addr_sparse": addr_sparse_boost,
                         "total": boost,
                     },
                 )
@@ -683,6 +797,7 @@ class PlaceRetriever:
                 "keyword_match_boost": boost_detail["keyword"],
                 "location_text_boost": boost_detail["location_text"],
                 "geo_proximity_boost": boost_detail["geo_proximity"],
+                "addr_sparse_boost": boost_detail["addr_sparse"],
                 "score_boost_total": boost_detail["total"],
             })
 
@@ -705,50 +820,65 @@ class PlaceRetriever:
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
         """
         Search for places near a specific coordinate.
-        Since we don't have a Geo Index yet, we will fetch all (or many) and filter/sort in Python.
-        For 177 items, this is efficient enough.
+        GEO 인덱스 사용이 가능하면 반경 필터 기반으로 조회하고, 아니면 제한적 fallback scroll을 사용한다.
         """
         print(f"[INFO] search_nearby start lat={lat} lng={lng} limit={limit} radius_km={radius_km}")
-        # Fetch all places (scroll) - optimize this if data grows!
-        # For now, we scroll to get all points to calculate distance
-        all_points = []
-        offset = None
-        while True:
-            points, offset = self.client.scroll(
-                collection_name=PLACES_COLLECTION,
-                limit=100,
-                with_payload=True,
-                offset=offset,
-                with_vectors=False
-            )
-            all_points.extend(points)
-            if offset is None:
-                break
-        print(f"[DEBUG] search_nearby total_points_scrolled={len(all_points)}")
-        
-        # Calculate distance and filter
-        results = []
-        for p in all_points:
+        candidate_points = []
+        radius_m = max(float(radius_km), 0.1) * 1000.0
+        scan_limit = max(int(limit or 0) * 20, 50)
+
+        if ENABLE_GEO_FILTER:
             try:
-                p_lat = float(p.payload.get("lat", 0))
-                p_lng = float(p.payload.get("lng", 0))
-            except (ValueError, TypeError):
-                p_lat, p_lng = 0.0, 0.0
-            
-            if p_lat == 0 and p_lng == 0:
+                geo_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="geo",
+                            geo_radius={
+                                "center": {"lat": float(lat), "lon": float(lng)},
+                                "radius": radius_m,
+                            },
+                        )
+                    ]
+                )
+                points, _ = self.client.scroll(
+                    collection_name=PLACES_COLLECTION,
+                    scroll_filter=geo_filter,
+                    limit=scan_limit,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+                candidate_points = list(points)
+                print(f"[DEBUG] search_nearby geo-filter candidates={len(candidate_points)}")
+            except Exception as e:
+                print(f"[WARN] search_nearby geo filter failed, fallback scroll: {e}")
+
+        # fallback: legacy scroll (제한된 수량만 조회)
+        if not candidate_points:
+            points, _ = self.client.scroll(
+                collection_name=PLACES_COLLECTION,
+                limit=scan_limit,
+                with_payload=True,
+                with_vectors=False,
+            )
+            candidate_points = list(points)
+            print(f"[DEBUG] search_nearby fallback candidates={len(candidate_points)}")
+
+        results = []
+        for p in candidate_points:
+            payload = p.payload or {}
+            p_lat, p_lng = self._payload_coordinates(payload)
+            if p_lat is None or p_lng is None:
                 continue
-                
-            dist = self._haversine(lat, lng, p_lat, p_lng)
-            # radius 반경 내에 있는 장소만 추가
+
+            dist = self._haversine(float(lat), float(lng), p_lat, p_lng)
             if dist <= radius_km:
                 results.append({
                     "id": p.id,
-                    "payload": p.payload,
-                    "score": 1.0 / (dist + 0.1), # Score inversely proportional to distance
-                    "distance_km": dist
+                    "payload": payload,
+                    "score": 1.0 / (dist + 0.1),
+                    "distance_km": dist,
                 })
-        
-        # 거리가 가까운 순서대로 정렬
+
         results.sort(key=lambda x: x["distance_km"])
         trimmed = results[:limit]
         print(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")

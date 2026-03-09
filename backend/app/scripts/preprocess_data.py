@@ -2,6 +2,9 @@ import os
 import requests
 import io
 import json
+import re
+import hashlib
+from collections import Counter
 from PIL import Image
 from dotenv import load_dotenv
 
@@ -12,6 +15,10 @@ import base64
 from app.utils.geocoder import GeoCoder
 
 NONE_VALUES = [None, "", [], {}, 0, 0.0]
+ADDR_TOKEN_SUFFIXES = ("시", "군", "구", "동", "읍", "면", "리", "로", "길")
+ADDR_TOKEN_STOPWORDS = {"", "대한민국", "한국"}
+ADDR_TOKEN_MAX = 24
+SPARSE_TOKEN_PATTERN = re.compile(r"\d+-\d+|[0-9]+|[가-힣a-z]+")
 
 # download image from URL or Base64
 def download_image(url: str, timeout: int = 600) -> Image.Image | None:
@@ -39,6 +46,112 @@ def download_image(url: str, timeout: int = 600) -> Image.Image | None:
     except Exception as e:
         print(f"[WARN] download/decode failed: {url[:50]}... err={e}")
         return None
+
+
+def _safe_float(value):
+    try:
+        if value in (None, ""):
+            return None
+        parsed = float(value)
+        if parsed != parsed:
+            return None
+        return parsed
+    except (TypeError, ValueError):
+        return None
+
+
+def build_addr_tokens(payload: dict) -> list[str]:
+    source = (
+        str(payload.get("road_address") or "").strip()
+        or str(payload.get("old_address") or "").strip()
+        or str(payload.get("addr") or "").strip()
+    )
+    if not source:
+        return []
+
+    text = source.lower()
+    text = text.replace("(", " ").replace(")", " ")
+    text = re.sub(r"(?<!\d)-|-(?!\d)", " ", text)
+    text = re.sub(r"[,/]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    raw_tokens = re.findall(r"\d+-\d+|[가-힣a-z0-9]+", text)
+    tokens: list[str] = []
+    for token in raw_tokens:
+        if token in ADDR_TOKEN_STOPWORDS:
+            continue
+        if len(token) == 1 and not token.isdigit():
+            continue
+
+        tokens.append(token)
+        if len(token) > 1 and token.endswith(ADDR_TOKEN_SUFFIXES):
+            stem = token[:-1].strip()
+            if stem and stem not in ADDR_TOKEN_STOPWORDS:
+                if len(stem) > 1 or stem.isdigit():
+                    tokens.append(stem)
+
+    deduped: list[str] = []
+    for token in tokens:
+        if token not in deduped:
+            deduped.append(token)
+        if len(deduped) >= ADDR_TOKEN_MAX:
+            break
+    return deduped
+
+
+def build_sparse_text(payload: dict) -> str:
+    title = str(payload.get("title") or payload.get("name") or "").strip()
+    category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
+    address = (
+        str(payload.get("road_address") or "").strip()
+        or str(payload.get("old_address") or "").strip()
+        or str(payload.get("addr") or "").strip()
+    )
+    addr_tokens = payload.get("addr_tokens") if isinstance(payload.get("addr_tokens"), list) else build_addr_tokens(payload)
+    parts = [title, category, address, " ".join(addr_tokens)]
+    return " ".join(part for part in parts if part).strip()
+
+
+def build_sparse_vector(text: str) -> tuple[list[int], list[float]]:
+    text = str(text or "").lower().strip()
+    if not text:
+        return [], []
+
+    tokens = [tok for tok in SPARSE_TOKEN_PATTERN.findall(text) if tok]
+    if not tokens:
+        return [], []
+
+    counts = Counter(tokens)
+    items: list[tuple[int, float]] = []
+    for token, freq in counts.items():
+        digest = hashlib.md5(token.encode("utf-8")).hexdigest()
+        idx = int(digest[:8], 16)
+        items.append((idx, float(freq)))
+
+    items.sort(key=lambda x: x[0])
+    return [idx for idx, _ in items], [val for _, val in items]
+
+
+def enrich_payload_geo_and_addr_tokens(payload: dict) -> dict:
+    lat = _safe_float(payload.get("mapy"))
+    lng = _safe_float(payload.get("mapx"))
+
+    if lat is None:
+        lat = _safe_float(payload.get("lat"))
+    if lng is None:
+        lng = _safe_float(payload.get("lng"))
+
+    if (
+        lat is not None
+        and lng is not None
+        and -90.0 <= lat <= 90.0
+        and -180.0 <= lng <= 180.0
+        and not (abs(lat) < 1e-9 and abs(lng) < 1e-9)
+    ):
+        payload["geo"] = {"lat": lat, "lon": lng}
+
+    payload["addr_tokens"] = build_addr_tokens(payload)
+    return payload
 
 
 def ingest_data(data):
@@ -95,4 +208,4 @@ def ingest_data(data):
                     new_payload['old_address'] = latlng['jibun_address']
                     new_payload['addr'] = new_payload['road_address']
 
-        yield new_payload
+        yield enrich_payload_geo_and_addr_tokens(new_payload)

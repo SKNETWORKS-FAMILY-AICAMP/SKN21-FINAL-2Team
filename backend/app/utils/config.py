@@ -58,3 +58,11 @@ RETRIEVER_RERANK_MAX_K = _retrieval_defaults["rerank_max_k"]
 BM25_POOL_LIMIT = 100
 BM25_ENABLE_THRESHOLD = 20
 BM25_ENABLE_SCORE_THRESHOLD = 0.22
+
+# Sparse/Geo 보강 플래그
+ENABLE_SPARSE = os.getenv("ENABLE_SPARSE", "false").lower() in {"1", "true", "yes", "on"}
+ENABLE_GEO_FILTER = os.getenv("ENABLE_GEO_FILTER", "true").lower() in {"1", "true", "yes", "on"}
+ENABLE_QDRANT_SPARSE = os.getenv("ENABLE_QDRANT_SPARSE", "false").lower() in {"1", "true", "yes", "on"}
+SPARSE_ADDR_EXACT_WEIGHT = float(os.getenv("SPARSE_ADDR_EXACT_WEIGHT", "0.04"))
+SPARSE_ADDR_STEM_WEIGHT = float(os.getenv("SPARSE_ADDR_STEM_WEIGHT", "0.02"))
+SPARSE_ADDR_MAX_BOOST = float(os.getenv("SPARSE_ADDR_MAX_BOOST", "0.20"))

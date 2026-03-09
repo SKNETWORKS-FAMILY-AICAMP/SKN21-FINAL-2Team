@@ -10,10 +10,16 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
     PayloadSchemaType, HnswConfigDiff, OptimizersConfigDiff,
+    SparseVectorParams, SparseIndexParams, SparseVector,
 )
 from sentence_transformers import SentenceTransformer
 
-from app.scripts.preprocess_data import download_image
+from app.scripts.preprocess_data import (
+    download_image,
+    enrich_payload_geo_and_addr_tokens,
+    build_sparse_text,
+    build_sparse_vector,
+)
 
 from app.utils.config import *
 from app.scripts.preprocess_data import ingest_data
@@ -50,6 +56,11 @@ class QdrantClientDB:
         self.client.create_collection(
             collection_name=PLACES_COLLECTION,
             vectors_config=VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            sparse_vectors_config={
+                "text_sparse": SparseVectorParams(
+                    index=SparseIndexParams(on_disk=True)
+                )
+            },
             hnsw_config=HnswConfigDiff(
                 on_disk=True,
                 m=16,
@@ -61,6 +72,8 @@ class QdrantClientDB:
         )
         # 필터 자주 쓰면 인덱스
         self.client.create_payload_index(PLACES_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PLACES_COLLECTION, "geo", PayloadSchemaType.GEO)
+        self.client.create_payload_index(PLACES_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
         
         # 2) photos: image vector only
         if self.client.collection_exists(PHOTOS_COLLECTION):
@@ -85,6 +98,7 @@ class QdrantClientDB:
     # - description -> places.text_vec (BGE-M3)
     # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장 (CLIP Vision)
     def add_place(self, payload: dict):
+        payload = enrich_payload_geo_and_addr_tokens(dict(payload))
         llm_text = payload.pop('llm_text', '')
 
         contentid = int(payload['contentid'])
@@ -120,10 +134,16 @@ class QdrantClientDB:
         # [Text] : Place Collection ================================
         # 3) places upsert (named vectors)
         text_vec = self.text_model.encode(llm_text).astype(np.float32)
+        sparse_text = build_sparse_text(payload)
+        sparse_indices, sparse_values = build_sparse_vector(sparse_text)
+
+        vector_payload = {"": text_vec.tolist()}
+        if sparse_indices and sparse_values:
+            vector_payload["text_sparse"] = SparseVector(indices=sparse_indices, values=sparse_values)
 
         place_point = PointStruct(
             id=contentid,
-            vector=text_vec.tolist(),
+            vector=vector_payload,
             payload=payload,
         )
         self.client.upsert(collection_name=PLACES_COLLECTION, points=[place_point])

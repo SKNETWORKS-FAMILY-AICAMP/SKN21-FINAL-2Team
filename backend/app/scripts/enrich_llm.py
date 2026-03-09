@@ -86,7 +86,9 @@ def enrich_data_file(input_path: str, output_path: str, limit: int = None):
         for item in data:
             if limit is not None and actual_processed >= limit:
                 break
-                
+            
+            item.pop('llm_text')
+            print("LLM Text 제외한 keys: ", item.keys())
             contentid = str(item.get("contentid", ""))
             if contentid in processed_ids:
                 count += 1
