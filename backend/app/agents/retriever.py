@@ -2,7 +2,7 @@ import asyncio
 import random
 from typing import Dict, Any, List
 
-from app.agents.models.state import TravelState
+from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
 from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
@@ -183,7 +183,7 @@ async def _search_for_general(
     """일반 검색: 텍스트/이미지/위치 기반 하이브리드 후보 풀 검색."""
     retriever = PlaceRetriever.get_instance()
 
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     image_path = state.get("image_path")
     latitude = state.get("latitude")
     longitude = state.get("longitude")
@@ -204,7 +204,8 @@ async def _search_for_general(
 
     category = None
     if slots:
-        category = getattr_safe(slots, "category")
+        # 다중 카테고리(리스트) 우선, 없을 경우 단일 카테고리 사용
+        category = getattr_safe(slots, "categories") or getattr_safe(slots, "category")
 
     try:
         return await retriever.search_hybrid(
@@ -256,7 +257,7 @@ async def retriever_node(state: TravelState):
     print("--- Retriever Agent ---")
 
     serving_params = get_retrieval_params("serving")
-    user_input = state.get('user_input', "")
+    user_input = get_effective_user_input(state)
     candidate_k = int(state.get("candidate_k") or serving_params["candidate_k"])
     final_k = int(state.get("final_k") or serving_params["top_k"])
     rerank_max_k = int(state.get("rerank_max_k") or serving_params["rerank_max_k"])
@@ -267,7 +268,7 @@ async def retriever_node(state: TravelState):
     selection_seed = 42
 
     primary_intent = state.get("primary_intent")
-    print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(state.get('user_input', ''))}")
+    print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
     image_path = state.get("image_path")
     emotional_text = None
@@ -334,7 +335,7 @@ async def retriever_node(state: TravelState):
 
     return {
         "candidate_pool": candidate_pool,
-        "candidates": candidates,
+        "candidates": exposed_candidates,
         "retrieval_diagnostics": diagnostics,
         "selection_mode": selection_mode,
     }

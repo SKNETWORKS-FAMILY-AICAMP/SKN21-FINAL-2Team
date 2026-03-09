@@ -4,6 +4,7 @@ from app.agents.models.output import IntentOutput, IntentType, IntentSlots, Inpu
 from app.services.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
 from app.utils.llm_factory import LLMFactory
+from app.agents.models.output import CategoryType
 
 async def intent_node(state: TravelState):
     """
@@ -30,8 +31,12 @@ async def intent_node(state: TravelState):
                 "primary_intent": IntentType.IMAGE_SIMILAR,
                 "slots": IntentSlots(input_type=InputType.IMAGE),
                 "summary_title": "이미지 검색",
+                "summary_message": "이미지 기반 장소 검색 요청",
              }
-        return state
+        return {
+            "intents": [IntentType.GENERAL],
+            "primary_intent": IntentType.GENERAL,
+        }
 
     # 최근 10개 메시지만 사용
     messages = state.get("messages", [])[-10:]
@@ -53,6 +58,7 @@ async def intent_node(state: TravelState):
             "messages": messages, 
             "user_input": user_input, 
             "prefs_info": prefs_info,
+            "category_desc": CategoryType.description(),
             "summary_title": summary_title,
             "summary_message": summary_message
         })
@@ -64,10 +70,8 @@ async def intent_node(state: TravelState):
         "intents": result.intents,
         "primary_intent": result.primary_intent,
         "slots": result.slots,
+        "update_user_input": result.update_user_input,
         "summary_title": result.summary_title,
         "summary_message": result.summary_message,
         "prefs_info": prefs_info,
     }
-
-
-

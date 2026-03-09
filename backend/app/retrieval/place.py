@@ -112,7 +112,23 @@ class PlaceRetriever:
         normalized = self.CATEGORY_NORMALIZATION_MAP.get(self._category_to_str(category))
         return normalized
 
-    def _get_category_candidates(self, category: str | None) -> list[str]:
+    def _get_category_candidates(self, category: Any) -> list[str]:
+        if not category:
+            return []
+            
+        # 리스트인 경우 각 항목에 대해 후보군 추출
+        if isinstance(category, list):
+            all_candidates = []
+            for item in category:
+                item_candidates = self._get_category_candidates_single(item)
+                for c in item_candidates:
+                    if c not in all_candidates:
+                        all_candidates.append(c)
+            return all_candidates
+            
+        return self._get_category_candidates_single(category)
+
+    def _get_category_candidates_single(self, category: Any) -> list[str]:
         raw = self._category_to_str(category)
         if not raw:
             return []
@@ -128,8 +144,10 @@ class PlaceRetriever:
     def _category_to_str(category: Any) -> str:
         if category is None:
             return ""
-        value = getattr(category, "value", category)
-        return str(value).strip()
+        # Pydantic Enum 또는 일반 Enum 처리
+        if hasattr(category, "value"):
+            return str(category.value).strip()
+        return str(category).strip()
 
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
@@ -145,16 +163,16 @@ class PlaceRetriever:
         
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
-    def _build_category_filter(self, category: str = None, has_image: bool = False) -> Filter | None:
+    def _build_category_filter(self, category: Any = None, has_image: bool = False) -> Filter | None:
         """카테고리 필터 생성 (contenttypeid 필드에 한글 명칭으로 저장됨)"""
         must_conditions = []
         must_not_conditions = []
         category_values = self._get_category_candidates(category)
 
         if category_values:
-            if len(category_values) == 2:
-                print(f"[INFO] category normalized: '{category}' -> '{category_values[0]}' (fallback='{category_values[1]}')")
-            # MatchAny: contenttypeid가 후보값 중 하나와 일치하면 통과
+            if len(category_values) >= 2:
+                print(f"[INFO] category candidates built: {category_values}")
+            # MatchAny: contenttypeid가 후보값 중 하나와 일치하면 통과 (OR 조건)
             must_conditions.append(
                 FieldCondition(key="contenttypeid", match=MatchAny(any=category_values))
             )
@@ -173,7 +191,7 @@ class PlaceRetriever:
         print(f"[INFO] category_filter built: category={category} values={category_values}")
         return built
 
-    def search_text(self, query: str, limit: int = 5, category: str = None, has_image: bool = False):
+    def search_text(self, query: str, limit: int = 5, category: Any = None, has_image: bool = False):
         """
         Text-based search for places (Semantic).
         Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
@@ -193,7 +211,7 @@ class PlaceRetriever:
         print(f"[INFO] search_text hits={len(response.points)}")
         return response.points
 
-    def search_text_to_image(self, query: str, limit: int = 5, category: str = None):
+    def search_text_to_image(self, query: str, limit: int = 5, category: Any = None):
         """
         Text-to-Image cross-modal search.
         Uses CLIP Text Encoder to find images in 'img_vec_agg'.
@@ -214,7 +232,7 @@ class PlaceRetriever:
         )
         return response.points
 
-    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
+    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: Any = None):
         """
         Image-based search (Visual Similarity).
         Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
@@ -270,7 +288,7 @@ class PlaceRetriever:
             score += ((k1 + 1) * tf) / denom
         return float(1 - math.exp(-score))
 
-    def _payload_matches_category(self, payload: dict, normalized_category: str | None) -> bool:
+    def _payload_matches_category(self, payload: dict, normalized_category: Any) -> bool:
         category_values = self._get_category_candidates(normalized_category)
         if not category_values:
             return True
@@ -387,7 +405,7 @@ class PlaceRetriever:
     async def _search_bm25_lexical(
         self,
         query: str,
-        category: str | None,
+        category: Any,
         candidate_points: list,
         candidate_k: int,
         pool_limit: int = BM25_POOL_LIMIT,
@@ -458,7 +476,7 @@ class PlaceRetriever:
         query: str,
         image_url: str = None,
         limit: int = 5,
-        category: str = None,
+        category: Any = None,
         emotional_text: str = None,
         user_latitude: float | None = None,
         user_longitude: float | None = None,

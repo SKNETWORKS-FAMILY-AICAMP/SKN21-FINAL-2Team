@@ -96,11 +96,16 @@ export function ChatHome() {
     }, []);
 
     const flushBufferedToken = useCallback((streamingId: number, roomId: number) => {
+        // 타이머 참조 제거 (반드시 실행되어야 함)
+        if (streamTokenFrameRef.current[streamingId] != null) {
+            window.clearTimeout(streamTokenFrameRef.current[streamingId]);
+            delete streamTokenFrameRef.current[streamingId];
+        }
+
         const buffered = streamTokenBufferRef.current[streamingId];
         if (!buffered) return;
 
         delete streamTokenBufferRef.current[streamingId];
-        delete streamTokenFrameRef.current[streamingId];
 
         setMessages((prev) => {
             let found = false;
@@ -128,9 +133,10 @@ export function ChatHome() {
         streamTokenBufferRef.current[streamingId] = (streamTokenBufferRef.current[streamingId] || "") + token;
         if (streamTokenFrameRef.current[streamingId] != null) return;
 
+        // 32ms-48ms 정도로 적절히 조절하여 React가 렌더링을 처리할 여유를 줍니다.
         streamTokenFrameRef.current[streamingId] = window.setTimeout(() => {
             flushBufferedToken(streamingId, roomId);
-        }, 16);
+        }, 48);
     }, [flushBufferedToken]);
 
     const clearStreamTokenBuffer = useCallback((streamingId: number, roomId: number) => {
@@ -958,6 +964,9 @@ export function ChatHome() {
         document.body.style.cursor = "col-resize";
     }, [handleMapResizeDrag, stopMapResizeDrag]);
 
+    // mapPlaces의 '내용'이 바뀔 때만 선택 로직이 돌아가도록 의존성 안정화
+    const mapPlacesKey = mapPlaces.length > 0 ? mapPlaces.map(p => p.mapId).join(',') : "";
+
     useEffect(() => {
         if (!mapPlaces.length) {
             setSelectedMapPlaceId(null);
@@ -967,7 +976,7 @@ export function ChatHome() {
             if (prev && mapPlaces.some((p) => p.mapId === prev)) return prev;
             return mapPlaces[0].mapId;
         });
-    }, [mapPlaces]);
+    }, [mapPlacesKey]); // mapPlaces 제거, mapPlacesKey만 사용
 
     const focusPlaceCardFromMap = useCallback((mapId: string) => {
         const target = placeCardRefs.current[mapId];

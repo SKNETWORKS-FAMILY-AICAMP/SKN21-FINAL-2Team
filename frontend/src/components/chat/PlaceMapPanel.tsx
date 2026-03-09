@@ -86,11 +86,13 @@ export function PlaceMapPanel({
     }
   }, []);
 
+  const groupedPlacesKey = groupedPlaces.map(g => g.groupId + g.places.length).join('|');
+
   useEffect(() => {
     checkScrollability();
     window.addEventListener("resize", checkScrollability);
     return () => window.removeEventListener("resize", checkScrollability);
-  }, [checkScrollability, groupedPlaces]);
+  }, [checkScrollability, groupedPlacesKey]);
 
   const scrollBy = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {

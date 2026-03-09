@@ -29,6 +29,10 @@ class CategoryType(str, Enum):
     ACCOMMODATION = "숙박"
     RESTAURANT = "음식점"
 
+    @classmethod
+    def description(cls):
+        return ", ".join([f"{item.name}:{item.value}" for item in cls])
+
 class PlannerNeedType(str, Enum): # 계획 필수 타입 
     DATES = "여행 날짜"
     PARTY_SIZE = "여행 인원"
@@ -37,7 +41,7 @@ class PlannerNeedType(str, Enum): # 계획 필수 타입
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
     location: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
-    category: Optional[CategoryType] = Field(default=None, description="사용자 입력에서 추출된 카테고리")
+    categories: Optional[List[CategoryType]] = Field(default=None, description="사용자 입력에서 추출된 여러 카테고리 리스트")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")
     party_size: Optional[int] = Field(default=None, description="인원수")
@@ -49,6 +53,10 @@ class IntentOutput(BaseModel):
     intents: List[IntentType]
     primary_intent: IntentType
     slots: IntentSlots
+    update_user_input: Optional[str] = Field(
+        default=None,
+        description="사용자 입력이 단답이거나 의도가 불명확할 때, 직전 대화 맥락을 반영해 보강한 사용자 요청 문장",
+    )
     summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
     summary_message: str = Field(default="", description="대화 요약")
 
