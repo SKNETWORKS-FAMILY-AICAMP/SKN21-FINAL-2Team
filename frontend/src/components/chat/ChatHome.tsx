@@ -537,6 +537,10 @@ export function ChatHome() {
             setShowPipeline(false);
             setStreamingMsgId(null);
             isSendingRef.current = false;
+            if (streamAbortControllerRef.current === abortController) {
+                streamAbortControllerRef.current = null;
+            }
+            stopRequestedRef.current = false;
         }
     }, [clearStreamTokenBuffer, hidePipeline, queueStreamToken, updatePipelineStep, updateRoomTitle]);
 
