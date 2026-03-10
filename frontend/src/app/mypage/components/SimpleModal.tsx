@@ -10,14 +10,18 @@ export function SimpleModal({
     onClose,
     children,
     zIndex,
+    maxWidth,
 }: {
     open: boolean;
     title: string;
     onClose: () => void;
     children: React.ReactNode;
     zIndex?: number;
+    // [Feature] maxWidth 옵션 — "sm"(400px) | 기본 "xl"(576px) 으로 팝업 크기 조절
+    maxWidth?: "sm" | "xl";
 }) {
     const z = zIndex ?? 50;
+    const widthClass = maxWidth === "sm" ? "max-w-sm" : "max-w-xl";
 
     return (
         <AnimatePresence>
@@ -46,7 +50,7 @@ export function SimpleModal({
                         style={{ zIndex: z + 1 }}
                     >
                         <div
-                            className="relative w-full max-w-xl rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden pointer-events-auto"
+                            className={`relative w-full ${widthClass} rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden pointer-events-auto`}
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">

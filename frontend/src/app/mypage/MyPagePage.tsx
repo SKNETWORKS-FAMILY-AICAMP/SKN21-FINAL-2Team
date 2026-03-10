@@ -1146,16 +1146,22 @@ export function MyPagePage() {
         )}
       </SimpleModal>
 
-      {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 확인 */}
+      {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 경고 + 확인 */}
       <SimpleModal
         open={deactivateConfirmOpen}
-        title="확인"
+        title="회원 탈퇴 확인"
         onClose={handleCancelDeactivateConfirm}
         zIndex={60}
+        maxWidth="sm"
       >
         <div className="space-y-4">
           <p className="text-sm font-bold text-gray-900">정말 탈퇴하시겠습니까?</p>
-          <div className="flex justify-end gap-2">
+          <div className="text-xs text-gray-500 leading-relaxed space-y-1">
+            <p>• 탈퇴 즉시 모든 계정 정보가 삭제되며 <span className="font-semibold text-red-500">복구가 불가능</span>합니다.</p>
+            <p>• 저장된 여행 기록, 예약 내역, 선호도 데이터가 영구 삭제됩니다.</p>
+            <p>• 동일 계정으로 재가입하더라도 이전 데이터는 복원되지 않습니다.</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleCancelDeactivateConfirm}
@@ -1168,9 +1174,9 @@ export function MyPagePage() {
               type="button"
               onClick={handleConfirmDeactivateAccount}
               disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+              className="h-10 px-4 rounded-full border border-red-600 bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60 transition-all"
             >
-              {deactivateSubmitting ? "탈퇴 중..." : "네"}
+              {deactivateSubmitting ? "탈퇴 중..." : "탈퇴하기"}
             </button>
           </div>
         </div>
