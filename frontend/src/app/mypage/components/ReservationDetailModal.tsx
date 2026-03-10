@@ -19,7 +19,8 @@ export function ReservationDetailModal({
     onClose: () => void;
 }) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null>(null);
+    // undefined: unchanged, string: new image, null: removed
+    const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null | undefined>(undefined);
     const [previewOpen, setPreviewOpen] = useState(false);
     const initialPhotoUrl = (typeof photoUrl === "string" && photoUrl.trim().length
         ? photoUrl
@@ -27,7 +28,8 @@ export function ReservationDetailModal({
             ? reservation.reservationImageUrl
             : null));
 
-    const effectivePhotoUrl = (draftPhotoUrl ?? initialPhotoUrl) || undefined;
+    const effectivePhotoUrl = draftPhotoUrl === undefined ? initialPhotoUrl : draftPhotoUrl;
+    const previewPhotoUrl = effectivePhotoUrl || undefined;
 
     return (
         <AnimatePresence>
@@ -92,7 +94,7 @@ export function ReservationDetailModal({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (effectivePhotoUrl) {
+                                    if (previewPhotoUrl) {
                                         setPreviewOpen(true);
                                         return;
                                     }
@@ -101,9 +103,9 @@ export function ReservationDetailModal({
                                 className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
                                 aria-label="Upload reservation image"
                             >
-                                {effectivePhotoUrl ? (
+                                {previewPhotoUrl ? (
                                     <div className="h-[220px] bg-gray-100 flex items-center justify-center">
-                                        <img src={effectivePhotoUrl} alt="Reservation" className="w-full h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="Reservation" className="w-full h-full object-contain" />
                                     </div>
                                 ) : (
                                     <div className="h-[180px] flex flex-col items-center justify-center">
@@ -113,24 +115,37 @@ export function ReservationDetailModal({
                                 )}
                             </button>
 
-                            {!!effectivePhotoUrl && (
-                                <div className="mt-2 flex items-center justify-end">
+                            <div className="mt-2 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPreviewOpen(false);
+                                        fileInputRef.current?.click();
+                                    }}
+                                    className="text-[11px] font-semibold text-gray-600 hover:text-black"
+                                >
+                                    Change Image
+                                </button>
+                                {!!previewPhotoUrl && (
                                     <button
                                         type="button"
-                                        onClick={() => setDraftPhotoUrl(null)}
+                                        onClick={() => {
+                                            setPreviewOpen(false);
+                                            setDraftPhotoUrl(null);
+                                        }}
                                         className="text-[11px] font-semibold text-gray-600 hover:text-black"
                                     >
                                         Remove photo
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
                         <div className="px-6 pb-6">
                             <button
                                 type="button"
                                 onClick={async () => {
-                                    await onSavePhoto(draftPhotoUrl ?? initialPhotoUrl);
+                                    await onSavePhoto(effectivePhotoUrl ?? null);
                                     onClose();
                                 }}
                                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
@@ -169,7 +184,7 @@ export function ReservationDetailModal({
                                         <X size={14} />
                                     </button>
                                     <div className="w-full h-[80vh] max-h-[80vh] flex items-center justify-center">
-                                        <img src={effectivePhotoUrl} alt="Original reservation" className="max-w-full max-h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="Original reservation" className="max-w-full max-h-full object-contain" />
                                     </div>
                                 </motion.div>
                             </motion.div>

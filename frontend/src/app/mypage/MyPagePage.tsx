@@ -38,10 +38,13 @@ import {
   updateReservation,
   uploadImageDataUrl,
   resetCurrentUserProfilePictureToGoogle,
+  deactivateCurrentUser,
+  logoutApi,
   type Country,
   type ReservationRecord,
   type TodayRecommendationItem,
 } from "@/services/api";
+import { clearAuth } from "@/services/errorHandler";
 
 function formatKstDate(dateLike?: string | null) {
   if (!dateLike) return "-";
@@ -120,6 +123,13 @@ export function MyPagePage() {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
   const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
+  const [settingsModalView, setSettingsModalView] = useState<"settings" | "deactivate">("settings");
+  const [deactivateGoogleConfirmed, setDeactivateGoogleConfirmed] = useState<boolean>(false);
+  const [deactivateAgreementConfirmed, setDeactivateAgreementConfirmed] = useState<boolean>(false);
+  const [deactivateSubmitAttempted, setDeactivateSubmitAttempted] = useState<boolean>(false);
+  const [deactivateSubmitting, setDeactivateSubmitting] = useState<boolean>(false);
+  const [deactivateError, setDeactivateError] = useState<string>("");
+  const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState<boolean>(false);
   const [countryOptions, setCountryOptions] = useState<Country[]>([]);
   const [settingsDraft, setSettingsDraft] = useState({
     nickname: "",
@@ -252,13 +262,79 @@ export function MyPagePage() {
     setReservationToDelete(null);
   };
 
+  const closeSettingsModal = () => {
+    setSettingsOpen(false);
+    setSettingsModalView("settings");
+    setDeactivateGoogleConfirmed(false);
+    setDeactivateAgreementConfirmed(false);
+    setDeactivateSubmitAttempted(false);
+    setDeactivateSubmitting(false);
+    setDeactivateError("");
+    setDeactivateConfirmOpen(false);
+  };
+
   const handleOpenSettings = () => {
     setSettingsDraft({
       nickname: userProfile.nickname,
       countryCode: userProfile.countryCode,
       profilePicture: userProfile.profile_picture,
     });
+    setSettingsModalView("settings");
+    setDeactivateGoogleConfirmed(false);
+    setDeactivateAgreementConfirmed(false);
+    setDeactivateSubmitAttempted(false);
+    setDeactivateSubmitting(false);
+    setDeactivateError("");
     setSettingsOpen(true);
+  };
+
+  const handleOpenDeactivateAccount = () => {
+    setSettingsModalView("deactivate");
+    setDeactivateGoogleConfirmed(false);
+    setDeactivateAgreementConfirmed(false);
+    setDeactivateSubmitAttempted(false);
+    setDeactivateSubmitting(false);
+    setDeactivateError("");
+    setDeactivateConfirmOpen(false);
+  };
+
+  const handleCancelDeactivateAccount = () => {
+    setSettingsModalView("settings");
+    setDeactivateGoogleConfirmed(false);
+    setDeactivateAgreementConfirmed(false);
+    setDeactivateSubmitAttempted(false);
+    setDeactivateSubmitting(false);
+    setDeactivateError("");
+    setDeactivateConfirmOpen(false);
+  };
+
+  const handleRequestDeactivateAccount = () => {
+    setDeactivateSubmitAttempted(true);
+    setDeactivateError("");
+    if (!deactivateGoogleConfirmed || !deactivateAgreementConfirmed) return;
+    setDeactivateConfirmOpen(true);
+  };
+
+  const handleCancelDeactivateConfirm = () => {
+    setDeactivateConfirmOpen(false);
+  };
+
+  const handleConfirmDeactivateAccount = async () => {
+    setDeactivateSubmitting(true);
+    setDeactivateError("");
+    try {
+      await deactivateCurrentUser();
+      await logoutApi();
+      clearAuth();
+      closeSettingsModal();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Failed to deactivate account", error);
+      setDeactivateError("Failed to deactivate account.");
+      setDeactivateConfirmOpen(false);
+    } finally {
+      setDeactivateSubmitting(false);
+    }
   };
 
   const handleSaveSettingsPopup = async () => {
@@ -770,12 +846,35 @@ export function MyPagePage() {
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
+
+
+              const supportedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
+              const lowerName = (file.name || "").toLowerCase();
+              const supportedByExt =
+                lowerName.endsWith(".jpg")
+                || lowerName.endsWith(".jpeg")
+                || lowerName.endsWith(".png")
+                || lowerName.endsWith(".webp")
+                || lowerName.endsWith(".gif");
+              const isSupported = supportedMimeTypes.has(file.type) || supportedByExt;
+
+              if (!isSupported) {
+                setAddReservationImage("");
+                setAddReservationError("Only supported image formats can be uploaded: JPG, PNG, WEBP, GIF.");
+                e.currentTarget.value = "";
+                return;
+              }
+
               const reader = new FileReader();
               reader.onload = () => {
                 const next = typeof reader.result === "string" ? reader.result : "";
                 if (!next) return;
                 setAddReservationImage(next);
                 setAddReservationError("");
+              };
+              reader.onerror = () => {
+                setAddReservationImage("");
+                setAddReservationError("Failed to read this image file. Please try a different image.");
               };
               reader.readAsDataURL(file);
               e.currentTarget.value = "";
@@ -834,100 +933,208 @@ export function MyPagePage() {
         </div>
       </SimpleModal>
 
-      <SimpleModal open={settingsOpen} title="Settings" onClose={() => setSettingsOpen(false)}>
-        <div className="space-y-5">
-          <input
-            ref={settingsPhotoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                const next = typeof reader.result === "string" ? reader.result : "";
-                if (!next) return;
-                setSettingsDraft((prev) => ({ ...prev, profilePicture: next }));
-              };
-              reader.readAsDataURL(file);
-              e.currentTarget.value = "";
-            }}
-          />
+      <SimpleModal
+        open={settingsOpen}
+        title={settingsModalView === "settings" ? "Settings" : "Deactivate Account"}
+        onClose={closeSettingsModal}
+      >
+        {settingsModalView === "settings" ? (
+          <div className="space-y-5">
+            <input
+              ref={settingsPhotoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const next = typeof reader.result === "string" ? reader.result : "";
+                  if (!next) return;
+                  setSettingsDraft((prev) => ({ ...prev, profilePicture: next }));
+                };
+                reader.readAsDataURL(file);
+                e.currentTarget.value = "";
+              }}
+            />
 
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-white flex items-center justify-center text-gray-400">
-                {settingsDraft.profilePicture ? (
-                  <img src={settingsDraft.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-semibold">No Image</span>
-                )}
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-white flex items-center justify-center text-gray-400">
+                  {settingsDraft.profilePicture ? (
+                    <img src={settingsDraft.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-semibold">No Image</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Profile Photo</p>
+                  <button
+                    type="button"
+                    onClick={() => settingsPhotoInputRef.current?.click()}
+                    className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    Change Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetProfilePhotoToGoogle}
+                    disabled={settingsResettingPhoto}
+                    className="h-9 ml-2 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
+                  >
+                    {settingsResettingPhoto ? "Restoring..." : "Use Google Photo"}
+                  </button>
+                </div>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Nickname</label>
+                <input
+                  value={settingsDraft.nickname}
+                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+                  placeholder="Nickname"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Country</label>
+                <select
+                  value={settingsDraft.countryCode}
+                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+                >
+                  <option value="">Select country</option>
+                  {countryOptions.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name} ({country.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-1 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleOpenDeactivateAccount}
+                  className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Deactivate Account
+                </button>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeSettingsModal}
+                  className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSettingsPopup}
+                  disabled={settingsSaving}
+                  className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+                >
+                  {settingsSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Profile Photo</p>
-                <button
-                  type="button"
-                  onClick={() => settingsPhotoInputRef.current?.click()}
-                  className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  Change Photo
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetProfilePhotoToGoogle}
-                  disabled={settingsResettingPhoto}
-                  className="h-9 ml-2 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-                >
-                  {settingsResettingPhoto ? "Restoring..." : "Use Google Photo"}
-                </button>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google Account Confirmation</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
+                  {userProfile.bio || "Unknown account"}
+                </p>
               </div>
+              <label className="flex items-start gap-2 text-sm text-gray-800">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={deactivateGoogleConfirmed}
+                  onChange={(e) => setDeactivateGoogleConfirmed(e.target.checked)}
+                />
+                <span>I confirm my Google account.</span>
+              </label>
+              {deactivateSubmitAttempted && !deactivateGoogleConfirmed && (
+                <div className="text-xs font-semibold text-red-600">Please confirm your Google account</div>
+              )}
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Nickname</label>
-              <input
-                value={settingsDraft.nickname}
-                onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-                placeholder="Nickname"
-              />
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Termination Agreement</p>
+                <p className="text-xs text-gray-500 mt-1">You must agree before proceeding.</p>
+              </div>
+              <label className="flex items-start gap-2 text-sm text-gray-800">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={deactivateAgreementConfirmed}
+                  onChange={(e) => setDeactivateAgreementConfirmed(e.target.checked)}
+                />
+                <span>I agree to the account termination agreement.</span>
+              </label>
+              {deactivateSubmitAttempted && !deactivateAgreementConfirmed && (
+                <div className="text-xs font-semibold text-red-600">Please confirm the account termination agreement</div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Country</label>
-              <select
-                value={settingsDraft.countryCode}
-                onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+            {!!deactivateError && <div className="text-xs font-semibold text-red-600">{deactivateError}</div>}
+
+            <div className="pt-1 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancelDeactivateAccount}
+                className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                <option value="">Select country</option>
-                {countryOptions.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name} ({country.code})
-                  </option>
-                ))}
-              </select>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRequestDeactivateAccount}
+                disabled={deactivateSubmitting}
+                className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+              >
+                Deactivate
+              </button>
             </div>
           </div>
+        )}
+      </SimpleModal>
 
-          <div className="pt-1 flex justify-end gap-2">
+      <SimpleModal
+        open={deactivateConfirmOpen}
+        title="Confirm"
+        onClose={handleCancelDeactivateConfirm}
+        zIndex={60}
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-bold text-gray-900">Are you sure?</p>
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setSettingsOpen(false)}
-              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+              onClick={handleCancelDeactivateConfirm}
+              disabled={deactivateSubmitting}
+              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
             >
-              Cancel
+              No
             </button>
             <button
               type="button"
-              onClick={handleSaveSettingsPopup}
-              disabled={settingsSaving}
+              onClick={handleConfirmDeactivateAccount}
+              disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
             >
-              {settingsSaving ? "Saving..." : "Save"}
+              {deactivateSubmitting ? "Deactivating..." : "Yes"}
             </button>
           </div>
         </div>

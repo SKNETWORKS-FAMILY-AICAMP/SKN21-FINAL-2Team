@@ -570,6 +570,15 @@ export const resetCurrentUserProfilePictureToGoogle = async (): Promise<UserProf
     return response.json();
 };
 
+export const deactivateCurrentUser = async (): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/users/me/deactivate`, { method: "POST" });
+    if (!response.ok) {
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.message || `Deactivate failed: ${apiError.error_code}`);
+    }
+    return response.json();
+};
+
 export const submitSurvey = async (answers: Record<string, string>): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/prefers`, { method: 'PATCH', body: answers });
     return response.json();
