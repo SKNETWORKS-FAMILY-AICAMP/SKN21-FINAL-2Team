@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 
-import { PipelineProgress } from "../src/components/chat/PipelineProgress";
+import { PipelineProgress } from "../src/features/chat/components/PipelineProgress";
 
 describe("PipelineProgress", () => {
   it("실제로 시작된 단계만 표시한다", () => {

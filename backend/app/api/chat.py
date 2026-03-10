@@ -66,6 +66,11 @@ class TodayRecommendationItem(BaseModel):
     prompt: str
 
 
+class ChatRoomDeleteResponse(BaseModel):
+    ok: bool
+    room_id: int
+
+
 def _encode_sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -318,6 +323,34 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
         for place in message.places:
             place.image_path = to_client_image_url(place.image_path)
     return room
+
+
+@router.delete("/rooms/{room_id}", response_model=ChatRoomDeleteResponse)
+def delete_room(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(db_manager.get_db),
+):
+    room = _get_owned_room_or_404(db, room_id, current_user.id)
+
+    try:
+        message_ids = [
+            message_id
+            for (message_id,) in db.query(ChatMessage.id).filter(ChatMessage.room_id == room_id).all()
+        ]
+
+        if message_ids:
+            db.query(ChatPlace).filter(ChatPlace.messages_id.in_(message_ids)).delete(synchronize_session=False)
+            db.query(ChatMessage).filter(ChatMessage.id.in_(message_ids)).delete(synchronize_session=False)
+
+        db.delete(room)
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"[ChatAPI] Room delete failed(room_id={room_id}): {e}")
+        raise AppException(ErrorCode.INTERNAL_ERROR, "Failed to delete room", 500)
+
+    return ChatRoomDeleteResponse(ok=True, room_id=room_id)
 
 
 @router.patch("/rooms/{room_id}/bookmark", response_model=ChatRoomResponse)

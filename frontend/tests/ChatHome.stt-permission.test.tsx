@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { ChatHome } from "../src/components/chat/ChatHome";
+import { ChatHome } from "../src/features/chat/components/ChatHome";
 import { ReactNode } from "react";
 
 const mockReplace = jest.fn();
@@ -23,7 +23,7 @@ jest.mock("remark-gfm", () => ({
   default: () => null,
 }));
 
-jest.mock("../src/components/chat/PipelineProgress", () => ({
+jest.mock("../src/features/chat/components/PipelineProgress", () => ({
   PipelineProgress: () => null,
   createInitialPipelineSteps: () => ({
     intent: "idle",
