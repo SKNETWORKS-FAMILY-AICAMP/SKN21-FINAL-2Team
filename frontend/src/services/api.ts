@@ -37,10 +37,7 @@ export interface PreferItem {
 export const getPostLoginPath = (user: UserProfile): string => {
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    // 주의: Destinations에서 비로그인으로 Plan Trip 클릭 시 장소 데이터가 여기 저장됨
-    // 이 값이 있으면 챗봇 페이지로 이동 후 TripContextModal을 표시합니다
-    const pending = safeLocalGet("pendingDestination");
-    if (pending) return "/chatbot?fromDestination=1";
+    // [Feature] 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
     return "/explore";
 };
 
