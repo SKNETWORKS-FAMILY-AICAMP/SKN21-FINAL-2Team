@@ -30,7 +30,7 @@ from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
 from app.models.chat import ChatPlace
-from app.services.auto_start_prompt import (
+from app.agents.prompts.auto_start_prompt import (
     render_auto_start_prompt,
     render_auto_start_place_prompt,
     render_auto_start_combined_prompt,

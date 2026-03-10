@@ -22,7 +22,7 @@ from app.utils.config import (
 from app.schemas.chat import ChatMessageCreate
 from app.scripts.preprocess_data import download_image, build_addr_tokens, build_sparse_vector
 from app.utils.geocoder import GeoCoder
-from app.services.vision import describe_image
+from app.utils.vision import describe_image
 from app.utils.place_id import get_place_id_from_point
 
 
