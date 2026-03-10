@@ -51,6 +51,18 @@ def _to_positive_int(value: Any) -> int | None:
         return None
 
 
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value in (None, ""):
+            return None
+        parsed = float(value)
+        if math.isnan(parsed) or math.isinf(parsed):
+            return None
+        return parsed
+    except (TypeError, ValueError):
+        return None
+
+
 def _extract_place_id(point: Any, source_collection: str) -> int | None:
     if source_collection == PHOTOS_COLLECTION:
         cid = get_place_id_from_point(point, prefer_payload=True, fallback_to_point_id=False)
@@ -306,6 +318,72 @@ class PlaceRetriever:
 
         return min(0.25, bonus)
 
+    def _payload_coordinates(self, payload: dict[str, Any]) -> tuple[float | None, float | None]:
+        if not payload:
+            return None, None
+
+        lat_keys = ("lat", "mapy", "latitude")
+        lng_keys = ("lng", "mapx", "longitude")
+
+        lat = next((_safe_float(payload.get(k)) for k in lat_keys if _safe_float(payload.get(k)) is not None), None)
+        lng = next((_safe_float(payload.get(k)) for k in lng_keys if _safe_float(payload.get(k)) is not None), None)
+
+        if lat is None or lng is None:
+            return None, None
+        if abs(lat) < 1e-9 and abs(lng) < 1e-9:
+            return None, None
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+            return None, None
+        return lat, lng
+
+    def _location_text_bonus(self, preferred_location: str | None, payload: dict) -> float:
+        if not preferred_location or not payload:
+            return 0.0
+
+        addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "")
+        title = str(payload.get("title") or payload.get("name") or "")
+        target_norm = _normalize_match_text(f"{addr} {title}")
+        if not target_norm:
+            return 0.0
+
+        location_tokens = {t for t in self._tokenize(preferred_location) if len(t) >= 2}
+        if not location_tokens:
+            return 0.0
+
+        hit_count = 0
+        for token in location_tokens:
+            token_norm = _normalize_match_text(token)
+            if token_norm and token_norm in target_norm:
+                hit_count += 1
+                continue
+            stem_norm = _normalize_match_text(_district_stem(token))
+            if stem_norm and stem_norm in target_norm:
+                hit_count += 1
+
+        return min(0.10, 0.03 * hit_count)
+
+    def _geo_proximity_bonus(
+        self,
+        payload: dict,
+        anchor_lat: float | None,
+        anchor_lng: float | None,
+        radius_km: float = 20.0,
+        max_boost: float = 0.20,
+    ) -> float:
+        if anchor_lat in (None, 0, 0.0) or anchor_lng in (None, 0, 0.0):
+            return 0.0
+
+        point_lat, point_lng = self._payload_coordinates(payload)
+        if point_lat is None or point_lng is None:
+            return 0.0
+
+        dist_km = self._haversine(anchor_lat, anchor_lng, point_lat, point_lng)
+        if dist_km > radius_km:
+            return 0.0
+
+        normalized = max(0.0, 1.0 - (dist_km / radius_km))
+        return max_boost * normalized
+
     async def _search_bm25_lexical(
         self,
         query: str,
@@ -382,6 +460,9 @@ class PlaceRetriever:
         limit: int = 5,
         category: str = None,
         emotional_text: str = None,
+        user_latitude: float | None = None,
+        user_longitude: float | None = None,
+        preferred_location: str | None = None,
         candidate_k: int | None = None,
         enable_bm25: bool = True,
         enable_rerank: bool = True,
@@ -550,18 +631,30 @@ class PlaceRetriever:
         fused = []
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
-            boost = self._keyword_match_bonus(query=query or "", payload=payload)
+            keyword_boost = self._keyword_match_bonus(query=query or "", payload=payload)
+            location_text_boost = self._location_text_bonus(preferred_location=preferred_location, payload=payload)
+            geo_proximity_boost = self._geo_proximity_bonus(
+                payload=payload,
+                anchor_lat=user_latitude,
+                anchor_lng=user_longitude,
+            )
+            boost = keyword_boost + location_text_boost + geo_proximity_boost
             fused.append(
                 (
                     pid,
                     data,
                     float(data.get("score", 0.0)) + boost,
-                    boost,
+                    {
+                        "keyword": keyword_boost,
+                        "location_text": location_text_boost,
+                        "geo_proximity": geo_proximity_boost,
+                        "total": boost,
+                    },
                 )
             )
 
         fused.sort(key=lambda x: x[2], reverse=True)
-        for idx, (pid, data, final_score, boost) in enumerate(fused, start=1):
+        for idx, (pid, data, final_score, boost_detail) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
                 "score": final_score,
@@ -569,7 +662,10 @@ class PlaceRetriever:
                 "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"])),
-                "keyword_match_boost": boost,
+                "keyword_match_boost": boost_detail["keyword"],
+                "location_text_boost": boost_detail["location_text"],
+                "geo_proximity_boost": boost_detail["geo_proximity"],
+                "score_boost_total": boost_detail["total"],
             })
 
         print(f"[INFO] fusion & boosting returning {len(results)} candidates")
@@ -694,7 +790,9 @@ async def retrieval_place(message_in: ChatMessageCreate):
         search_results = await retriever.search_hybrid(
             query=query,
             image_url=message_in.image_path,
-            limit=5
+            limit=5,
+            user_latitude=user_lat,
+            user_longitude=user_long,
         )
         print(f"[INFO] retrieval_place search_results_count={len(search_results) if search_results else 0}")
         
