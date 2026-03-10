@@ -68,6 +68,8 @@ export function ChatHome() {
         lastMessageTextLength: 0,
         wasStreaming: false,
     });
+    const initializingIdRef = useRef<string | number | null>(null);
+
 
     const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
         inputText,
@@ -207,7 +209,18 @@ export function ChatHome() {
     useEffect(() => {
         const initializeChat = async () => {
             const paramId = parsedRouteRoomId;
-            if (paramId && paramId === currentRoomIdRef.current && roomLoadStatusRef.current === "loaded") return;
+            const paramStr = roomIdParam;
+
+            // 이미 같은 ID로 초기화 중이거나 완료된 경우 중복 실행 방지
+            if (paramId != null) {
+                if (paramId === currentRoomIdRef.current && roomLoadStatusRef.current === "loaded") return;
+                if (paramId === initializingIdRef.current) return;
+            } else if (paramStr === null) {
+                // ID가 없는 경우(신규 진입) 이미 초기화 진행 중인지 체크
+                if (initializingIdRef.current === "NEW_SESSION") return;
+            }
+
+            initializingIdRef.current = paramId ?? "NEW_SESSION";
 
             setIsInitializing(true);
             setRoomTripContext(null);
@@ -277,6 +290,7 @@ export function ChatHome() {
             } catch (error) {
                 console.error("Failed to initialize chat", error);
             } finally {
+                initializingIdRef.current = null;
                 setIsInitializing(false);
             }
         };
@@ -380,7 +394,7 @@ export function ChatHome() {
             attachedFileName ? `[이미지 첨부] ${attachedFileName}` : attachedImageDataUrl ? "[이미지 첨부]" : "",
             attachedLocationLabel ? `[위치 첨부] ${attachedLocationLabel}` : attachedLocation ? "[위치 첨부]" : "",
         ].filter(Boolean);
-        const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ") } 분석해줘.` : "메시지를 분석해줘.");
+        const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ")} 분석해줘.` : "메시지를 분석해줘.");
         const optimisticText = userText || fallbackParts.join(" ");
         const currentAttachment = attachedImageDataUrl;
         const currentLocation = attachedLocation;
