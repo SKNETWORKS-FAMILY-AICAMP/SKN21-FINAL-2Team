@@ -4,17 +4,13 @@
 :root {
   --background: #f8fafc;
   --foreground: hsl(0, 0%, 9%);
-  --font-sans-stack: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
-  --font-mono-stack: "SF Mono", Consolas, monospace;
-  --font-serif-stack: "Iowan Old Style", "Nanum Myeongjo", serif;
-  --font-brand-stack: Georgia, "Iowan Old Style", serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans-stack);
-  --font-mono: var(--font-mono-stack);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 html {
@@ -24,15 +20,11 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans-stack);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 .font-serif-korean {
-  font-family: var(--font-serif-stack);
-}
-
-.font-brand-serif {
-  font-family: var(--font-brand-stack);
+  font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
 /* Utility tweaks to align with imported UI kit vibes */
@@ -41,7 +33,7 @@ body {
 }
 
 .page-title {
-  font-family: var(--font-serif-stack);
+  font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   font-size: 1.5rem;
   line-height: 2rem;
   font-style: italic;

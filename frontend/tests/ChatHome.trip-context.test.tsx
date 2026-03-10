@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { ReactNode } from "react";
-import { ChatHome } from "../src/components/chat/ChatHome";
+import { ChatHome } from "../src/features/chat/components/ChatHome";
 import { setPendingAutoStartMeta } from "../src/services/autoStart";
 
 const deferred = <T,>() => {
@@ -51,7 +51,7 @@ jest.mock("remark-gfm", () => ({
   default: () => null,
 }));
 
-jest.mock("../src/components/chat/PipelineProgress", () => ({
+jest.mock("../src/features/chat/components/PipelineProgress", () => ({
   PipelineProgress: () => null,
   createInitialPipelineSteps: () => ({
     intent: "idle",
@@ -62,7 +62,7 @@ jest.mock("../src/components/chat/PipelineProgress", () => ({
   }),
 }));
 
-jest.mock("../src/hooks/useSpeechRecognition", () => ({
+jest.mock("../src/hooks/common/useSpeechRecognition", () => ({
   useSpeechRecognition: () => ({
     isListening: false,
     sttPermission: "granted",
@@ -70,15 +70,15 @@ jest.mock("../src/hooks/useSpeechRecognition", () => ({
   }),
 }));
 
-jest.mock("../src/components/chat/PlaceMapPanel", () => ({
+jest.mock("../src/features/chat/components/PlaceMapPanel", () => ({
   PlaceMapPanel: () => null,
 }));
 
-jest.mock("../src/components/chat/PlaceMapSheet", () => ({
+jest.mock("../src/features/chat/components/PlaceMapSheet", () => ({
   PlaceMapSheet: () => null,
 }));
 
-jest.mock("../src/components/chat/ChatMessageItem", () => ({
+jest.mock("../src/features/chat/components/ChatMessageItem", () => ({
   ChatMessageItem: (props: unknown) => mockChatMessageItem(props),
 }));
 
