@@ -120,6 +120,8 @@ export function MyPagePage() {
   const [isEditingPreferences, setIsEditingPreferences] = useState<boolean>(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState<boolean>(false);
   const [draftExtraPreferences, setDraftExtraPreferences] = useState<string[]>([]);
+  // [Feature] 선호도 수정 확인 팝업 상태
+  const [showPreferenceSavedPopup, setShowPreferenceSavedPopup] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
   const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
@@ -421,6 +423,7 @@ export function MyPagePage() {
     });
   };
 
+  // [Feature] 선호도 수정 완료 시 확인 팝업 표시
   const handleTogglePreferenceEdit = async () => {
     if (!isEditingPreferences) {
       setDraftInsight(userInsight);
@@ -443,11 +446,19 @@ export function MyPagePage() {
       setUserInsight(draftInsight);
       setUserProfile((prev) => ({ ...prev, preferences: draftExtraPreferences }));
       setIsEditingPreferences(false);
+      setShowPreferenceSavedPopup(true);
     } catch (error) {
       console.error("Failed to update preferences", error);
     } finally {
       setIsSavingPreferences(false);
     }
+  };
+
+  // [Feature] 선호도 수정 Cancel — 편집 내용 폐기 후 뷰 모드로 복귀
+  const handleCancelPreferenceEdit = () => {
+    setDraftInsight(userInsight);
+    setDraftExtraPreferences(userProfile.preferences);
+    setIsEditingPreferences(false);
   };
 
   return (
@@ -520,17 +531,29 @@ export function MyPagePage() {
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
                       <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
-                      <button
-                        type="button"
-                        onClick={handleTogglePreferenceEdit}
-                        disabled={isSavingPreferences}
-                        className={`h-10 px-4 rounded-full border text-xs font-bold transition-all disabled:opacity-60 ${isEditingPreferences
-                          ? "border-gray-900 bg-black text-white hover:opacity-90"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          }`}
-                      >
-                        {isEditingPreferences ? (isSavingPreferences ? "Saving..." : "Done") : "Edit"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
+                        {isEditingPreferences && (
+                          <button
+                            type="button"
+                            onClick={handleCancelPreferenceEdit}
+                            className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleTogglePreferenceEdit}
+                          disabled={isSavingPreferences}
+                          className={`h-10 px-4 rounded-full border text-xs font-bold transition-all disabled:opacity-60 ${isEditingPreferences
+                            ? "border-gray-900 bg-black text-white hover:opacity-90"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                            }`}
+                        >
+                          {isEditingPreferences ? (isSavingPreferences ? "Saving..." : "Done") : "Edit"}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-gray-500">여행 계획에 반영되는 사용자님의 선호도를 설정해보세요!</p>
                   </div>
@@ -586,8 +609,9 @@ export function MyPagePage() {
                     </div>
                   </div>
 
+                  {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Extra Prefer</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Additional Preference</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
@@ -1147,6 +1171,27 @@ export function MyPagePage() {
               className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
             >
               {deactivateSubmitting ? "탈퇴 중..." : "네"}
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
+
+      {/* [Feature] 선호도 수정 완료 확인 팝업 — Done 클릭 후 저장 성공 시 표시 */}
+      <SimpleModal
+        open={showPreferenceSavedPopup}
+        title="선호도 저장 완료"
+        onClose={() => setShowPreferenceSavedPopup(false)}
+        zIndex={60}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">선호도가 성공적으로 수정되었습니다.</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowPreferenceSavedPopup(false)}
+              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
+            >
+              확인
             </button>
           </div>
         </div>
