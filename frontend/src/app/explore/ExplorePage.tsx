@@ -231,7 +231,6 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     🍽️ Local Eats
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
                                             {/* [Fix] 카드 높이 고정 — h-[220px]으로 새로고침 시 사이즈 변동 방지 */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -253,7 +252,6 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     📸 Must-Visit Spots
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tourist.map((item) => (
@@ -274,7 +272,6 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     🎨 Unique Experiences
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.activities.map((item) => (
