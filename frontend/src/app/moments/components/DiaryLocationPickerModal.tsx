@@ -39,6 +39,7 @@ export function DiaryLocationPickerModal({
 
   const [searchQuery, setSearchQuery] = useState(initialPlace?.adress ?? "");
   const [selectedPlace, setSelectedPlace] = useState<DiaryPlaceSearchResult | null>(initialPlace);
+  const [searchResults, setSearchResults] = useState<DiaryPlaceSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function DiaryLocationPickerModal({
     }
     setSearchQuery(initialPlace?.adress ?? "");
     setSelectedPlace(initialPlace);
+    setSearchResults([]);
     setError(null);
     setMapInitError(null);
   }, [initialPlace, isOpen]);
@@ -159,26 +161,30 @@ export function DiaryLocationPickerModal({
   const handleSearch = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
     const keyword = searchQuery.trim();
-    if (!keyword || !naver?.maps || !mapInstanceRef.current) return;
+    if (!keyword) return;
 
     try {
       setSearching(true);
       setError(null);
       const results = await searchDiaryPlaces(keyword);
-      const first = results[0];
-      if (!first) {
+      setSearchResults(Array.isArray(results) ? results : []);
+      if (!results[0]) {
         setError("검색 결과가 없습니다.");
         return;
       }
-
-      moveMarkerTo(new naver.maps.LatLng(first.latitude, first.longitude));
-      setSelectedPlace(first);
-      setSearchQuery(first.adress);
     } catch {
       setError("장소 검색에 실패했습니다.");
     } finally {
       setSearching(false);
     }
+  };
+
+  const handlePreviewPlace = (place: DiaryPlaceSearchResult) => {
+    setSelectedPlace(place);
+    setSearchQuery(place.adress);
+    setError(null);
+    if (!naver?.maps) return;
+    moveMarkerTo(new naver.maps.LatLng(place.latitude, place.longitude));
   };
 
   const handleSelectFromMap = async (location: { lat: () => number; lng: () => number }) => {
@@ -196,6 +202,7 @@ export function DiaryLocationPickerModal({
 
       setSelectedPlace(result);
       setSearchQuery(result.adress);
+      setSearchResults([]);
     } catch {
       setError("선택한 위치의 주소를 찾지 못했습니다.");
     } finally {
@@ -235,13 +242,13 @@ export function DiaryLocationPickerModal({
           <div className="border-b border-zinc-800 p-5 md:border-b-0 md:border-r">
             <form className="space-y-3" onSubmit={handleSearch}>
               <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
-                Search address
+                Search place or address
               </label>
               <div className="flex gap-2">
                 <input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="서울시청, 성수동, 제주공항"
+                  placeholder="Seoul City Hall, Seongsu, Jeju Airport"
                   className="h-11 flex-1 rounded-full border border-zinc-800 bg-zinc-950 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
                 />
                 <button
@@ -256,9 +263,55 @@ export function DiaryLocationPickerModal({
             </form>
 
             <p className="mt-4 text-xs leading-5 text-zinc-500">
-              검색으로 위치를 찾거나, 지도 위 원하는 지점을 클릭해 현재 일기에 연결할 수 있습니다.
-              {selectedPlace ? ` 현재 선택: ${selectedPlace.adress}` : ""}
+              Search first, choose one result, then confirm the location for this diary.
             </p>
+
+            {selectedPlace && (
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-3">
+                <div className="mt-0.5 rounded-full border border-zinc-800 bg-white/5 p-2 text-zinc-200">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Selected</p>
+                  <p className="mt-1 text-sm font-medium text-zinc-100">
+                    {selectedPlace.name?.trim() || "Pinned location"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">{selectedPlace.adress}</p>
+                </div>
+              </div>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+                  Search Results
+                </p>
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {searchResults.map((result, index) => {
+                    const isActive =
+                      selectedPlace?.adress === result.adress &&
+                      selectedPlace?.latitude === result.latitude &&
+                      selectedPlace?.longitude === result.longitude;
+
+                    return (
+                      <button
+                        key={`${result.adress}-${result.latitude}-${result.longitude}-${index}`}
+                        type="button"
+                        onClick={() => handlePreviewPlace(result)}
+                        className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                          isActive
+                            ? "border-white/30 bg-white/10"
+                            : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900"
+                        }`}
+                      >
+                        <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || "Search result"}</p>
+                        <p className="mt-1 text-xs leading-5 text-zinc-400">{result.adress}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {(error || mapError || mapInitError) && (
               <p className="mt-4 text-sm text-rose-400">{error || mapError || mapInitError}</p>

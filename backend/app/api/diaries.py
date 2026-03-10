@@ -162,19 +162,21 @@ def search_places(
     db: Session = Depends(db_manager.get_db),
 ):
     del current_user, db
-    result = GeoCoder().geocoder(query.strip())
-    if not result:
-        return []
-
-    address = result.get("road_address") or result.get("jibun_address") or query.strip()
-    return [
-        {
-            "name": query.strip(),
-            "adress": address,
-            "latitude": result.get("lat"),
-            "longitude": result.get("lng"),
-        }
-    ]
+    results = GeoCoder().search_places(query.strip())
+    serialized = []
+    for result in results:
+        address = result.get("road_address") or result.get("jibun_address") or query.strip()
+        if result.get("lat") is None or result.get("lng") is None:
+            continue
+        serialized.append(
+            {
+                "name": result.get("name") or query.strip(),
+                "adress": address,
+                "latitude": result.get("lat"),
+                "longitude": result.get("lng"),
+            }
+        )
+    return serialized
 
 
 @router.get("/reverse-geocode")
