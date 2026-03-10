@@ -15,6 +15,7 @@ class ChatRoom(BaseModel):
     history = Column(Text, nullable=True)
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
+    diary_entries = relationship("DiaryEntry", back_populates="linked_chat_room")
     adult_num = Column(Integer, nullable=True)
     child_num = Column(Integer, nullable=True)
     start_date = Column(Date, nullable=True)

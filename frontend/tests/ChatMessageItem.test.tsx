@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { ChatMessageItem } from "../src/components/chat/ChatMessageItem";
+import { ChatMessageItem } from "../src/features/chat/components/ChatMessageItem";
 
 jest.mock("react-markdown", () => ({
   __esModule: true,
