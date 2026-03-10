@@ -81,13 +81,8 @@ export function SurveyPage() {
     };
 
     const handleFinalizeSignup = () => {
-        // 완료 화면에서 'Signup' 버튼을 눌렀을 때의 동작
-        const pending = localStorage.getItem("pendingDestination");
-        if (pending) {
-            router.push("/chatbot?fromDestination=1");
-        } else {
-            router.push("/explore");
-        }
+        // [Feature] 설문 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
+        router.push("/explore");
     };
 
     const handlePrevious = () => {

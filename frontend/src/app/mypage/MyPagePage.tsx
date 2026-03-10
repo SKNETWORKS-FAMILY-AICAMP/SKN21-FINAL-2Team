@@ -288,6 +288,7 @@ export function MyPagePage() {
     setSettingsOpen(true);
   };
 
+  // [Feature] 회원탈퇴 — Settings 뷰에서 탈퇴 뷰로 전환
   const handleOpenDeactivateAccount = () => {
     setSettingsModalView("deactivate");
     setDeactivateGoogleConfirmed(false);
@@ -298,6 +299,7 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 탈퇴 뷰에서 취소하고 Settings 뷰로 복귀
   const handleCancelDeactivateAccount = () => {
     setSettingsModalView("settings");
     setDeactivateGoogleConfirmed(false);
@@ -308,6 +310,7 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 체크박스 검증 후 최종 확인 팝업 열기
   const handleRequestDeactivateAccount = () => {
     setDeactivateSubmitAttempted(true);
     setDeactivateError("");
@@ -315,10 +318,12 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(true);
   };
 
+  // [Feature] 회원탈퇴 — 최종 확인 팝업에서 "아니요" 클릭 시 팝업 닫기
   const handleCancelDeactivateConfirm = () => {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 최종 확인 후 서버 탈퇴 API 호출 → 로그아웃 → 랜딩페이지 이동
   const handleConfirmDeactivateAccount = async () => {
     setDeactivateSubmitting(true);
     setDeactivateError("");
@@ -330,7 +335,7 @@ export function MyPagePage() {
       window.location.href = "/";
     } catch (error) {
       console.error("Failed to deactivate account", error);
-      setDeactivateError("Failed to deactivate account.");
+      setDeactivateError("회원 탈퇴에 실패했습니다.");
       setDeactivateConfirmOpen(false);
     } finally {
       setDeactivateSubmitting(false);
@@ -935,7 +940,8 @@ export function MyPagePage() {
 
       <SimpleModal
         open={settingsOpen}
-        title={settingsModalView === "settings" ? "Settings" : "Deactivate Account"}
+        // [Feature] Settings 모달 타이틀 — 설정 뷰와 회원탈퇴 뷰를 구분
+        title={settingsModalView === "settings" ? "Settings" : "회원 탈퇴"}
         onClose={closeSettingsModal}
       >
         {settingsModalView === "settings" ? (
@@ -1024,7 +1030,7 @@ export function MyPagePage() {
                   onClick={handleOpenDeactivateAccount}
                   className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  Deactivate Account
+                  회원 탈퇴
                 </button>
               </div>
               <div className="flex justify-end gap-2">
@@ -1047,12 +1053,14 @@ export function MyPagePage() {
             </div>
           </div>
         ) : (
+          /* [Feature] 회원탈퇴 뷰 — Google 계정 확인 + 탈퇴 동의 체크 후 탈퇴 요청 */
           <div className="space-y-5">
+            {/* [Feature] Google 계정 확인 체크박스 — 본인 계정이 맞는지 확인 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google Account Confirmation</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google 계정 확인</p>
                 <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
-                  {userProfile.bio || "Unknown account"}
+                  {userProfile.bio || "알 수 없는 계정"}
                 </p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
@@ -1062,17 +1070,18 @@ export function MyPagePage() {
                   checked={deactivateGoogleConfirmed}
                   onChange={(e) => setDeactivateGoogleConfirmed(e.target.checked)}
                 />
-                <span>I confirm my Google account.</span>
+                <span>본인의 Google 계정이 맞음을 확인합니다.</span>
               </label>
               {deactivateSubmitAttempted && !deactivateGoogleConfirmed && (
-                <div className="text-xs font-semibold text-red-600">Please confirm your Google account</div>
+                <div className="text-xs font-semibold text-red-600">Google 계정을 확인해 주세요.</div>
               )}
             </div>
 
+            {/* [Feature] 탈퇴 약관 동의 체크박스 — 동의 없이는 탈퇴 진행 불가 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Termination Agreement</p>
-                <p className="text-xs text-gray-500 mt-1">You must agree before proceeding.</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">탈퇴 약관 동의</p>
+                <p className="text-xs text-gray-500 mt-1">탈퇴를 진행하기 전에 반드시 동의해 주세요.</p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
                 <input
@@ -1081,22 +1090,24 @@ export function MyPagePage() {
                   checked={deactivateAgreementConfirmed}
                   onChange={(e) => setDeactivateAgreementConfirmed(e.target.checked)}
                 />
-                <span>I agree to the account termination agreement.</span>
+                <span>회원 탈퇴 약관에 동의합니다.</span>
               </label>
               {deactivateSubmitAttempted && !deactivateAgreementConfirmed && (
-                <div className="text-xs font-semibold text-red-600">Please confirm the account termination agreement</div>
+                <div className="text-xs font-semibold text-red-600">탈퇴 약관에 동의해 주세요.</div>
               )}
             </div>
 
+            {/* [Feature] 탈퇴 실패 시 에러 메시지 표시 */}
             {!!deactivateError && <div className="text-xs font-semibold text-red-600">{deactivateError}</div>}
 
+            {/* [Feature] 취소 / 탈퇴하기 버튼 */}
             <div className="pt-1 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={handleCancelDeactivateAccount}
                 className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                Cancel
+                취소
               </button>
               <button
                 type="button"
@@ -1104,21 +1115,22 @@ export function MyPagePage() {
                 disabled={deactivateSubmitting}
                 className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
               >
-                Deactivate
+                탈퇴하기
               </button>
             </div>
           </div>
         )}
       </SimpleModal>
 
+      {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 확인 */}
       <SimpleModal
         open={deactivateConfirmOpen}
-        title="Confirm"
+        title="확인"
         onClose={handleCancelDeactivateConfirm}
         zIndex={60}
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-900">Are you sure?</p>
+          <p className="text-sm font-bold text-gray-900">정말 탈퇴하시겠습니까?</p>
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -1126,7 +1138,7 @@ export function MyPagePage() {
               disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
             >
-              No
+              아니요
             </button>
             <button
               type="button"
@@ -1134,7 +1146,7 @@ export function MyPagePage() {
               disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
             >
-              {deactivateSubmitting ? "Deactivating..." : "Yes"}
+              {deactivateSubmitting ? "탈퇴 중..." : "네"}
             </button>
           </div>
         </div>

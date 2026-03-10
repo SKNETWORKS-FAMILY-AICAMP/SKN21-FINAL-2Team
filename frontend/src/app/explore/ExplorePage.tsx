@@ -6,10 +6,14 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 // Contents 섹션은 API에서 데이터를 가져옵니다.
 
 import { Sidebar } from "@/components/navigation/Sidebar";
-import { fetchRandomExplorePlaces, fetchCurrentUser, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+import { fetchRandomExplorePlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+// [Feature] 장소 카드 클릭 → 여행 컨텍스트 설정 팝업 → 챗봇 이동
+import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
+import { setPendingAutoStartMeta } from "@/services/autoStart";
 
 type YourChoicesState = {
     restaurants: CategoryPlaceItem[];
@@ -78,6 +82,7 @@ const getExploreDataOnce = async (): Promise<ExploreInitPayload> => {
 };
 
 export function ExplorePage() {
+    const router = useRouter();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [yourChoices, setYourChoices] = useState<YourChoicesState>({
         restaurants: [],
@@ -87,6 +92,63 @@ export function ExplorePage() {
     const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
     const [popupStores, setPopupStores] = useState<CategoryPlaceItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // [Feature] 장소 카드 클릭 → TripContextModal → 챗봇 이동 상태
+    const [showTripModal, setShowTripModal] = useState(false);
+    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string } | null>(null);
+    const [isTripLoading, setIsTripLoading] = useState(false);
+
+    // [Feature] Your Choices 카드 클릭 시 TripContextModal 표시
+    const handleChoiceCardClick = (item: CategoryPlaceItem) => {
+        setPendingPlace({
+            name: item.title,
+            address: item.address,
+            id: item.contentid,
+        });
+        setShowTripModal(true);
+    };
+
+    // [Feature] Hot Places 카드 클릭 시 TripContextModal 표시
+    const handleHotPlaceCardClick = (place: HotPlace) => {
+        setPendingPlace({
+            name: place.name,
+            address: place.adress || "",
+            id: place.id,
+        });
+        setShowTripModal(true);
+    };
+
+    // [Feature] TripContextModal 확인 → 방 생성 + 메타 저장 + 챗봇 이동
+    const handleTripModalConfirm = async (context: TripContext) => {
+        setIsTripLoading(true);
+        try {
+            const newRoom = await createRoom("새로운 여행 계획");
+            const selectedPlaces = pendingPlace ? [{
+                name: pendingPlace.name,
+                adress: pendingPlace.address,
+                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+            }] : [];
+
+            if ((context.travelDuration || "").trim()) {
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: selectedPlaces.length > 0 ? "combined" : "trip_context",
+                    tripContext: context,
+                    selectedPlaces,
+                });
+            } else if (selectedPlaces.length > 0) {
+                setPendingAutoStartMeta(newRoom.id, {
+                    mode: "selected_places",
+                    selectedPlaces,
+                });
+            }
+            router.push(`/chatbot?roomId=${newRoom.id}`);
+        } catch (e) {
+            console.error("Failed to create room from ExplorePage", e);
+            setIsTripLoading(false);
+            setShowTripModal(false);
+            router.push("/chatbot");
+        }
+    };
 
     useEffect(() => {
         const initExplore = async () => {
@@ -130,8 +192,8 @@ export function ExplorePage() {
                 <Sidebar />
             </div>
 
-            {/* Main Content Area */}
-            <main className="flex-1 min-w-0 rounded-lg bg-white border-r border-gray-200 p-2 md:p-6 lg:h-full lg:overflow-hidden">
+            {/* Main Content Area — [Feature] lg 이상에서도 스크롤 가능하도록 overflow-y-auto 적용 (100% 줌에서 Contents까지 스크롤 가능) */}
+            <main className="flex-1 min-w-0 rounded-lg bg-white border-r border-gray-200 p-2 md:p-6 lg:h-full lg:overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col gap-6 w-full lg:h-full xl:flex-row">
 
                     {/* LEFT COLUMN: Your Choices (Largest) */}
@@ -172,7 +234,7 @@ export function ExplorePage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.restaurants.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
@@ -193,7 +255,7 @@ export function ExplorePage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tourist.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
@@ -214,7 +276,7 @@ export function ExplorePage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.activities.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer">
+                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
@@ -257,6 +319,7 @@ export function ExplorePage() {
                                             key={place.id}
                                             whileHover={{ scale: 1.02 }}
                                             className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
+                                            onClick={() => handleHotPlaceCardClick(place)}
                                         >
                                             <img
                                                 // 핫플레이스는 상대경로일 수도 있고 절대경로(http)일 수도 있으므로 분기처리
@@ -337,6 +400,19 @@ export function ExplorePage() {
                     </div>
                 </div>
             </main>
+
+            {/* [Feature] 장소 카드 클릭 후 여행 컨텍스트 설정 팝업 — 확인 시 챗봇으로 이동 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleTripModalConfirm}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) {
+                        setShowTripModal(false);
+                        setPendingPlace(null);
+                    }
+                }}
+            />
         </div>
     );
 }
