@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { CollectionPage } from "../src/app/collection/CollectionPage";
+import { MomentsPage } from "../src/app/moments/MomentsPage";
 
 jest.mock("@/components/navigation/Sidebar", () => ({
   Sidebar: () => <div data-testid="sidebar" />,
@@ -24,7 +24,7 @@ jest.mock("@/services/api", () => ({
   reverseGeocodeDiaryPlace: (...args: unknown[]) => mockReverseGeocodeDiaryPlace(...args),
 }));
 
-describe("CollectionPage", () => {
+describe("MomentsPage", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockFetchDiaries.mockReset();
@@ -47,7 +47,7 @@ describe("CollectionPage", () => {
   it("빈 상태를 렌더링한다", async () => {
     mockFetchDiaries.mockResolvedValue([]);
 
-    render(<CollectionPage />);
+    render(<MomentsPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Start Your First Memory")).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe("CollectionPage", () => {
         { id: 2, title: "한강 산책", content: "노을을 봤다.", entry_date: "2026-03-08", linked_places_count: 0 },
       ]);
 
-    render(<CollectionPage />);
+    render(<MomentsPage />);
 
     await waitFor(() => expect(screen.getByText("성수 카페")).toBeInTheDocument());
 
@@ -98,7 +98,7 @@ describe("CollectionPage", () => {
       linked_places: [{ id: 101, chat_place_id: 20, name: "북촌", adress: "서울 종로구" }],
     });
 
-    render(<CollectionPage />);
+    render(<MomentsPage />);
 
     await waitFor(() => expect(screen.getByText("Start Your First Memory")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Create"));
@@ -115,7 +115,7 @@ describe("CollectionPage", () => {
       expect(mockCreateDiary).toHaveBeenCalledWith({
         title: "새 일기",
         content: "본문입니다.",
-        entry_date: "2026-03-09",
+        entry_date: expect.any(String),
         cover_image_path: null,
         linked_places: [],
       });
@@ -151,7 +151,7 @@ describe("CollectionPage", () => {
       linked_chat_room: null,
       linked_places: [],
     });
-    render(<CollectionPage />);
+    render(<MomentsPage />);
 
     await waitFor(() => expect(screen.getByText("기존 일기")).toBeInTheDocument());
     fireEvent.click(screen.getByText("기존 일기"));

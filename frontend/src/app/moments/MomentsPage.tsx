@@ -16,7 +16,7 @@ import {
     updateDiary,
     uploadImageDataUrl,
 } from "@/services/api";
-import { CollectionHeader } from "./components/CollectionHeader";
+import { MomentsHeader } from "./components/MomentsHeader";
 import { DiaryEditorModal } from "./components/DiaryEditorModal";
 import { DiaryGallery } from "./components/DiaryGallery";
 import { DiaryLocationPickerModal } from "./components/DiaryLocationPickerModal";
@@ -24,7 +24,7 @@ import { EmptyDiaryState } from "./components/EmptyDiaryState";
 import { EditorState } from "./types";
 import { emptyEditorState, readFileAsDataUrl } from "./utils";
 
-export function CollectionPage() {
+export function MomentsPage() {
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -226,7 +226,7 @@ export function CollectionPage() {
             </div>
 
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg bg-white p-4 sm:p-6 lg:h-full">
-                <CollectionHeader
+                <MomentsHeader
                     query={query}
                     onQueryChange={setQuery}
                     uploadInputRef={uploadInputRef}
