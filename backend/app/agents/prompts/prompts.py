@@ -60,15 +60,26 @@ INTENT_PROMPT = """
 
 ### update_user_input
 - 사용자의 입력이 단답, 지시어형(예: "그럼 여기", "그중에", "두 번째", "1번"), 생략형(예: "비슷한 곳", "예약도")이거나 의도가 불명확하면 update_user_input을 생성하십시오.
-- update_user_input은 직전 AI 답변과 현재 사용자 입력을 합쳐, 사용자가 실제로 요청한 내용을 한 문장으로 복원한 값이어야 합니다.
+- update_user_input은 직전 AI 답변과 현재 사용자 입력을 바탕으로, 사용자가 실제로 요청한 내용을 한 문장으로 서술한 값이어야 합니다.
 - update_user_input에는 대화에 없는 새 정보나 추측을 넣지 마십시오.
 - 의도가 이미 충분히 명확하면 update_user_input은 null로 두십시오.
 - intents, primary_intent, slots는 원문보다 update_user_input을 우선 기준으로 해석하십시오.
 
-### categories 익히기: 
-추출된 카테고리가 여러 개일 경우 categories 리스트에 모두 담으십시오.
-- categories가 있으면 category에는 첫 번째 대표값만 넣고, categories에는 추출된 값을 빠짐없이 유지하십시오.
+### categories 추출 규칙:
+사용자 입력(또는 update_user_input)에서 해당하는 카테고리를 아래 목록에서 골라 categories 리스트에 담으십시오.
+카테고리가 여러 개이면 모두 담으십시오. 명확하지 않으면 None으로 두십시오.
+
 {category_desc}
+
+### location 추출 규칙
+아래 표준 장소 목록을 참고하여 location을 추출하십시오.
+형식: `표준명: 별칭1, 별칭2, ...`
+
+{landmark_desc}
+
+- 사용자 입력이 위 목록의 별칭이면 반드시 표준명으로 변환하십시오. 예: "압구정" → "압구정로데오"
+- 목록에 없지만 명확한 지명(예: "상수동 카페거리", "딥커피")이면 원문 그대로 반환하십시오.
+- 장소가 불명확하거나 없으면 None으로 설정하십시오.
 
 ---
 

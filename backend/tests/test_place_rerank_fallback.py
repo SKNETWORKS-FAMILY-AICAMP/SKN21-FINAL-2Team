@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from qdrant_client.models import FieldCondition, Filter, IsEmptyCondition, MatchAny
 
+from app.agents.models.output import CategoryType
 from app.core.retrieval.place import PlaceRetriever, _build_compact_text
 from app.utils.config import get_retrieval_params
 
@@ -56,7 +57,6 @@ def test_build_compact_text_uses_title_category_addr_only():
 
 def test_bm25_lexical_scores_only_given_candidates():
     retriever = object.__new__(PlaceRetriever)
-    retriever.normalize_category = lambda category: category
 
     candidates = [
         SimpleNamespace(id=1, payload={"title": "강남 맛집", "contenttypeid": "음식점", "addr": "서울 강남구"}),
@@ -66,7 +66,7 @@ def test_bm25_lexical_scores_only_given_candidates():
     out = asyncio.run(
         retriever._search_bm25_lexical(
             query="강남 맛집",
-            category=None,
+            categories=None,
             candidate_points=candidates,
             candidate_k=2,
             pool_limit=2,
@@ -77,10 +77,10 @@ def test_bm25_lexical_scores_only_given_candidates():
     assert out[0]["id"] == 1
 
 
-def test_build_category_filter_uses_normalized_and_raw_category_with_or_matching():
+def test_build_query_filter_with_category_type():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("맛집")
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT])
 
     assert isinstance(query_filter, Filter)
     assert len(query_filter.must) == 1
@@ -88,27 +88,23 @@ def test_build_category_filter_uses_normalized_and_raw_category_with_or_matching
     assert isinstance(category_filter, FieldCondition)
     assert category_filter.key == "contenttypeid"
     assert isinstance(category_filter.match, MatchAny)
-    assert set(category_filter.match.any) == {"음식점", "맛집"}
+    assert set(category_filter.match.any) == {"음식점"}
 
 
-def test_build_category_filter_falls_back_to_raw_category_when_not_normalized():
+def test_build_query_filter_multiple_categories():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("브런치")
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT, CategoryType.TOURIST_ATTRACTION])
 
     assert isinstance(query_filter, Filter)
-    assert len(query_filter.must) == 1
     category_filter = query_filter.must[0]
-    assert isinstance(category_filter, FieldCondition)
-    assert category_filter.key == "contenttypeid"
-    assert isinstance(category_filter.match, MatchAny)
-    assert set(category_filter.match.any) == {"브런치"}
+    assert set(category_filter.match.any) == {"음식점", "관광지"}
 
 
-def test_build_category_filter_adds_must_not_when_has_image_true():
+def test_build_query_filter_adds_must_not_when_has_image_true():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("맛집", has_image=True)
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT], has_image=True)
 
     assert isinstance(query_filter, Filter)
     assert len(query_filter.must) == 1
@@ -116,18 +112,18 @@ def test_build_category_filter_adds_must_not_when_has_image_true():
     assert isinstance(query_filter.must_not[0], IsEmptyCondition)
 
 
-def test_payload_matches_category_accepts_raw_category_field_fallback():
+def test_payload_matches_category_accepts_category_type():
     retriever = object.__new__(PlaceRetriever)
 
-    assert retriever._payload_matches_category({"category": "브런치"}, "브런치") is True
-    assert retriever._payload_matches_category({"contenttypeid": "브런치"}, "브런치") is True
-    assert retriever._payload_matches_category({"contenttypeid": "음식점"}, "맛집") is True
-    assert retriever._payload_matches_category({"category": "카페"}, "맛집") is False
+    assert retriever._payload_matches_category({"contenttypeid": "음식점"}, [CategoryType.RESTAURANT]) is True
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, [CategoryType.TOURIST_ATTRACTION]) is True
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, [CategoryType.RESTAURANT]) is False
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, None) is True
 
 
 def test_search_hybrid_caps_rerank_top_k_to_serving_profile():
     retriever = object.__new__(PlaceRetriever)
-    retriever._build_category_filter = lambda category=None, has_image=False: None
+    retriever._build_query_filter = lambda categories=None, has_image=False, anchor_lat=None, anchor_lon=None, radius_m=None: None
     retriever.text_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     retriever.vision_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     retriever.client = SimpleNamespace(
@@ -217,7 +213,7 @@ def test_search_nearby_falls_back_when_geo_filter_fails(monkeypatch):
 
 def test_search_hybrid_includes_qdrant_sparse_channel_when_enabled(monkeypatch):
     retriever = object.__new__(PlaceRetriever)
-    retriever._build_category_filter = lambda category=None, has_image=False: None
+    retriever._build_query_filter = lambda categories=None, has_image=False, anchor_lat=None, anchor_lon=None, radius_m=None: None
     retriever.text_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     retriever.vision_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     calls = {"using": []}

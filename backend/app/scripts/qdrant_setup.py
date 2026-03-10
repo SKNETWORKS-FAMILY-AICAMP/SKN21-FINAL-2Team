@@ -95,6 +95,8 @@ class QdrantClientDB:
         # group_by 키 성능 위해 인덱스 추천
         self.client.create_payload_index(PHOTOS_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
         self.client.create_payload_index(PHOTOS_COLLECTION, "contentid", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PHOTOS_COLLECTION, "geo", PayloadSchemaType.GEO)
+        self.client.create_payload_index(PHOTOS_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
 
     # 장소 저장
     # - description -> places.text_vec (BGE-M3)

@@ -197,10 +197,7 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
-        candidates=[],
-        candidate_pool=[],
         retrieval_diagnostics={},
-        selected_ids=[],
         answer="",
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")

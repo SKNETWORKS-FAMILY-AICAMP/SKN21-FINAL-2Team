@@ -141,7 +141,7 @@ app/
 - 점수 보정 정책
   - 대화/슬롯의 `location` 텍스트가 후보 주소/제목과 일치할수록 가산점 부여
   - 사용자 첨부 좌표(`latitude`, `longitude`)와 후보 좌표 간 거리가 가까울수록 가산점 부여
-  - 옵션 플래그(`ENABLE_SPARSE`)가 켜진 경우 `addr_tokens` 기반 sparse 주소 점수를 추가 가산
+  - 옵션 플래그(`ENABLE_ADDR_SPARSE_BOOST`)가 켜진 경우 `addr_tokens` 기반 sparse 주소 점수를 추가 가산
 - 카테고리 필터 정책
   - 슬롯의 `categories`(다중) 또는 `category`(단일) 값을 입력받아 정규화 맵(`맛집 -> 음식점`)을 적용
   - 정규화 실패 시 원문 category 자체도 후보군에 포함
