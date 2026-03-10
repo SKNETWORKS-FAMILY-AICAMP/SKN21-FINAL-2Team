@@ -70,3 +70,32 @@ def test_keyword_match_bonus_boosts_when_district_matches_address():
     bonus = retriever._keyword_match_bonus("성북동 조용한 카페 추천", payload)
 
     assert bonus >= 0.06
+
+
+def test_location_text_bonus_boosts_when_slots_location_matches_payload():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+    payload = {"title": "한강뷰 카페", "addr": "서울특별시 마포구 망원동 123-1"}
+
+    bonus = retriever._location_text_bonus("망원동", payload)
+
+    assert bonus > 0.0
+
+
+def test_geo_proximity_bonus_gives_higher_score_to_nearby_place():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+    near_payload = {"title": "가까운장소", "lat": 37.5666, "lng": 126.9781}
+    far_payload = {"title": "먼장소", "lat": 37.4949, "lng": 127.0276}
+
+    near_bonus = retriever._geo_proximity_bonus(
+        payload=near_payload,
+        anchor_lat=37.5665,
+        anchor_lng=126.9780,
+    )
+    far_bonus = retriever._geo_proximity_bonus(
+        payload=far_payload,
+        anchor_lat=37.5665,
+        anchor_lng=126.9780,
+    )
+
+    assert near_bonus > far_bonus
+    assert near_bonus > 0.0

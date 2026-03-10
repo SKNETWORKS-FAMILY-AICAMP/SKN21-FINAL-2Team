@@ -250,5 +250,6 @@ backend/tmp
 
 # frontend/tests/
 
+.claude/
 CLAUDE.md
 .gemini
