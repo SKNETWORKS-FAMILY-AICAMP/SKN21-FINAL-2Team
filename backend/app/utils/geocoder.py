@@ -3,6 +3,20 @@ from typing import Any, Dict, Optional
 
 import requests
 
+LANDMARK_DICTIONARY = {
+    "홍대": {"lat": 37.5575, "lon": 126.9245, "radius": 1500, "description": "홍대입구역 중심 서교동/연남동 일대"},
+    "건대": {"lat": 37.5404, "lon": 127.0692, "radius": 1000, "description": "건대입구역 중심 화양동 일대"},
+    "가로수길": {"lat": 37.5203, "lon": 127.0231, "radius": 800, "description": "신사동 가로수길 메인 로드 주변"},
+    "샤로수길": {"lat": 37.4791, "lon": 126.9535, "radius": 600, "description": "서울대입구역 인근 관악로 일대"},
+    "강남역": {"lat": 37.4979, "lon": 127.0276, "radius": 1200, "description": "강남역~신논현역 사이 상권"},
+    "성수동": {"lat": 37.5445, "lon": 127.0560, "radius": 1500, "description": "성수역 및 연무장길 카페거리 일대"},
+    "익선동": {"lat": 37.5744, "lon": 126.9897, "radius": 500, "description": "종로3가역 인근 한옥마을 상권"},
+    "을지로": {"lat": 37.5661, "lon": 126.9916, "radius": 1000, "description": "을지로3가~4가 일대 (힙지로)"},
+    "압구정로데오": {"lat": 37.5274, "lon": 127.0393, "radius": 800, "description": "압구정로데오역 및 도산공원 인근"},
+    "연남동": {"lat": 37.5612, "lon": 126.9235, "radius": 1000, "description": "경의선 숲길 주변 연트럴파크"},
+    "한남동": {"lat": 37.5350, "lon": 127.0010, "radius": 1200, "description": "이태원~한강진역 사이 한남동 카페거리"},
+    "망원동": {"lat": 37.5560, "lon": 126.9015, "radius": 900, "description": "망원시장 및 망리단길 주변"}
+}
 
 class GeoCoder:
     def __init__(self) -> None:

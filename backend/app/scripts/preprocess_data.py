@@ -154,58 +154,84 @@ def enrich_payload_geo_and_addr_tokens(payload: dict) -> dict:
     return payload
 
 
+def enrich_payload_llm_text(payload: dict) -> dict:
+    title = payload.get("title") or payload.get("name") or ""
+    address = (
+        payload.get("road_address") or
+        payload.get("old_address") or
+        payload.get("addr") or ""
+    )
+    category = payload.get("contenttypeid") or ""
+    description = payload.get("llm_text") or payload.get("description") or ""
+
+    # 앵커링: 이름+주소 앞에 붙이고, 자연어 설명 이어붙임
+    parts = []
+    if title:
+        parts.append(f"장소명: {title}")
+    if category:
+        parts.append(f"카테고리: {category}")
+    if address:
+        parts.append(f"위치: {address}")
+    if description:
+        parts.append(description)
+
+    payload["llm_text"] = " | ".join(parts)
+    return payload
+
+
 def ingest_data(data):
-    """
-    12_관광지     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'parking', 'pet_raw', 'restdate', 'tel', 'title', 'usetime']
-    39_음식점     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
-    15_축제공연행사 : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'tel', 'title']
-    28_레포츠     : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'fees', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
-    32_숙박       : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
-    14_문화시설    : ['addr', 'contentid', 'contenttypeid', 'contenttypeid_code', 'image', 'mapx', 'mapy', 'pet_raw', 'tel', 'title']
-    """
     print(f"[INFO] Start ingestion.. total {len(data)} items.")
+    
+    def remove_empty_values(d):
+        if isinstance(d, dict):
+            return {
+                k: v for k, v in ((k, remove_empty_values(v)) for k, v in d.items())
+                if v not in NONE_VALUES
+            }
+        elif isinstance(d, list):
+            return [
+                v for v in (remove_empty_values(i) for i in d)
+                if v not in NONE_VALUES
+            ]
+        elif isinstance(d, str):
+            # 줄바꿈 및 <br> 태그 제거
+            import re
+            text = d.replace("\n", " ")
+            text = re.sub(r"<br\s*/?>", " ", text, flags=re.IGNORECASE)
+            # 연속된 공백 제거 및 앞뒤 트림
+            return re.sub(r"\s+", " ", text).strip()
+        return d
+
     for item in data:
-        def remove_empty_values(data):
-            """
-            재귀적으로 dict와 list 내부의 빈 값(None, "", [], {}, 0, 0.0)을 제거합니다.
-            """
-            if isinstance(data, dict):
-                # 딕셔너리 컴프리헨션을 사용해 재귀적으로 탐색
-                return {
-                    k: v for k, v in ((k, remove_empty_values(v)) for k, v in data.items())
-                    if v not in NONE_VALUES
-                }
-            elif isinstance(data, list):
-                # 리스트 내부 요소들도 재귀적으로 탐색
-                return [
-                    v for v in (remove_empty_values(i) for i in data)
-                    if v not in NONE_VALUES
-                ]
-            else:
-                # 더 이상 쪼갤 수 없는 값(str, int, bool 등)은 그대로 반환
-                return data
-            
-        new_payload = remove_empty_values(item)
-        del(new_payload['contenttypeid_code'])
-        
-        lat = float(item.get("mapy", "0"))
-        lng = float(item.get("mapx", "0"))
+        # 1. 지오코딩 및 주소 토큰화 준비
+        lat = _safe_float(item.get("mapy")) or 0.0
+        lng = _safe_float(item.get("mapx")) or 0.0
         address = item.get("addr", "")
-        if len(address) > 0:
+
+        if address:
             result = GeoCoder().eocoder(address)
             if result:
-                new_payload['road_address'] = result['road_address']
-                new_payload['old_address'] = result['jibun_address']
+                item['road_address'] = result.get('road_address')
+                item['old_address'] = result.get('jibun_address')
+                # 좌표가 없으면 지오코딩 결과로 채움
                 if lat == 0.0 or lng == 0.0:
-                    item['mapy'] = result['lat']
-                    item['mapx'] = result['lng']
-        else:
-            # 주소가 비어있는 경우
-            if lat != 0.0 and lng != 0.0:
-                latlng = GeoCoder().reverse_geocoder(lat, lng)
-                if latlng is not None:
-                    new_payload['road_address'] = latlng['road_address']
-                    new_payload['old_address'] = latlng['jibun_address']
-                    new_payload['addr'] = new_payload['road_address']
+                    item['mapy'] = result.get('lat')
+                    item['mapx'] = result.get('lng')
+        elif lat != 0.0 and lng != 0.0:
+            # 주소는 없는데 좌표는 있는 경우 리버스 지오코딩
+            latlng = GeoCoder().reverse_geocoder(lat, lng)
+            if latlng:
+                item['road_address'] = latlng.get('road_address')
+                item['old_address'] = latlng.get('jibun_address')
+                item['addr'] = item['road_address']
 
-        yield enrich_payload_geo_and_addr_tokens(new_payload)
+        # 2. 불필요한 필드 제거 및 데이터 정제
+        if 'contenttypeid_code' in item:
+            del item['contenttypeid_code']
+        
+        # 정제된 딕셔너리 생성 (최종 Qdrant 필드 생성은 qdrant_setup.py에서 수행)
+        clean_payload = remove_empty_values(item)
+        
+        yield clean_payload
+
+

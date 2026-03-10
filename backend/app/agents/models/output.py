@@ -50,9 +50,9 @@ class IntentSlots(BaseModel):
 
 
 class IntentOutput(BaseModel):
-    intents: List[IntentType]
-    primary_intent: IntentType
-    slots: IntentSlots
+    intents: List[IntentType] = Field(description="사용자의 의도")
+    primary_intent: IntentType = Field(description="사용자의 주요 의도")
+    slots: IntentSlots = Field(description="사용자 입력에서 추출된 슬롯")
     update_user_input: Optional[str] = Field(
         default=None,
         description="사용자 입력이 단답이거나 의도가 불명확할 때, 직전 대화 맥락을 반영해 보강한 사용자 요청 문장",

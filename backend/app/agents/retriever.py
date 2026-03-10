@@ -6,7 +6,7 @@ from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
 from app.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
-from app.services.vision import describe_image
+from app.utils.vision import describe_image
 from app.utils.common import getattr_safe
 from app.utils.place_id import get_candidate_point_id, get_place_id
 
