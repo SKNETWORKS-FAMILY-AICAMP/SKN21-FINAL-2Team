@@ -122,6 +122,8 @@ export function MyPagePage() {
   const [draftExtraPreferences, setDraftExtraPreferences] = useState<string[]>([]);
   // [Feature] 선호도 수정 확인 팝업 상태
   const [showPreferenceSavedPopup, setShowPreferenceSavedPopup] = useState<boolean>(false);
+  // [Feature] Settings 회원정보 수정 확인 팝업 상태
+  const [showSettingsSavedPopup, setShowSettingsSavedPopup] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
   const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
@@ -344,6 +346,7 @@ export function MyPagePage() {
     }
   };
 
+  // [Feature] Settings 회원정보 수정 완료 시 확인 팝업 표시
   const handleSaveSettingsPopup = async () => {
     setSettingsSaving(true);
     try {
@@ -363,6 +366,7 @@ export function MyPagePage() {
       }));
       window.dispatchEvent(new Event("triver:profile-updated"));
       setSettingsOpen(false);
+      setShowSettingsSavedPopup(true);
     } catch (error) {
       console.error("Failed to update user settings", error);
     } finally {
@@ -1195,6 +1199,28 @@ export function MyPagePage() {
             <button
               type="button"
               onClick={() => setShowPreferenceSavedPopup(false)}
+              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
+
+      {/* [Feature] Settings 회원정보 수정 완료 확인 팝업 — Save 클릭 후 저장 성공 시 표시 */}
+      <SimpleModal
+        open={showSettingsSavedPopup}
+        title="회원정보 저장 완료"
+        onClose={() => setShowSettingsSavedPopup(false)}
+        zIndex={60}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">회원정보가 성공적으로 수정되었습니다.</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowSettingsSavedPopup(false)}
               className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
             >
               확인
