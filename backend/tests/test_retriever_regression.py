@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.retrieval.place import (
+from app.core.retrieval.place import (
     PHOTOS_COLLECTION,
     PLACES_COLLECTION,
     PlaceRetriever,
@@ -23,7 +23,7 @@ def test_extract_place_id_uses_contentid_for_photo_points():
 
 @pytest.mark.asyncio
 async def test_retrieval_place_returns_empty_when_retriever_init_fails(monkeypatch):
-    from app.retrieval.place import PlaceRetriever
+    from app.core.retrieval.place import PlaceRetriever
 
     def _raise_init_error():
         raise RuntimeError("init error")

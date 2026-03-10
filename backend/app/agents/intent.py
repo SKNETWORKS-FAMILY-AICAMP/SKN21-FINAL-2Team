@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.agents.models.output import IntentOutput, IntentType, IntentSlots, InputType
 from app.agents.prompts.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
 
 async def intent_node(state: TravelState):

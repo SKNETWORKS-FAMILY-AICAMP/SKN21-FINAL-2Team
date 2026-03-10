@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.prompts.prompts import PLANNER_PROMPT
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.agents.models.output import PlannerOutput, PlannerNeedType
 
 async def planner_node(state: TravelState):

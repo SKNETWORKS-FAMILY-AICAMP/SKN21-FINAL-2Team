@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
-from app.retrieval.place import PlaceRetriever
+from app.core.retrieval.place import PlaceRetriever
 from app.utils.geocoder import GeoCoder
 from app.utils.vision import describe_image
 from app.utils.common import getattr_safe

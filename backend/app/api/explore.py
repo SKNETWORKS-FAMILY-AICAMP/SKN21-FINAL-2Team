@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import random
 
-from app.retrieval.place import PlaceRetriever
+from app.core.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
 from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue, IsEmptyCondition, PayloadField

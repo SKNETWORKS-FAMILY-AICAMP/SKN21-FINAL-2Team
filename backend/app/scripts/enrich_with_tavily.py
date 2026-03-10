@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.utils.config import LLM_MODEL
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.scripts.preprocess_data import ingest_data
 
 load_dotenv(override=True)

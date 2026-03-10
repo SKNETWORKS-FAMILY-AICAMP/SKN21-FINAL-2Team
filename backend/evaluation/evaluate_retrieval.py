@@ -475,7 +475,7 @@ async def _default_retrieve_fn(
     retriever_candidate_k: Optional[int] = None,
     retriever_rerank_max_k: Optional[int] = None,
 ) -> list[dict[str, Any]]:
-    from app.retrieval.place import PlaceRetriever
+    from app.core.retrieval.place import PlaceRetriever
 
     retriever = PlaceRetriever.get_instance()
     eval_defaults = get_retrieval_params("evaluation")

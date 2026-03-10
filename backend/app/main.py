@@ -14,8 +14,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.api import auth, users, chat, prefer, common, explore, reservations, diaries
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation, diary
-from app.retrieval.place import PlaceRetriever
-from app.utils.llm_factory import LLMFactory
+from app.core.retrieval.place import PlaceRetriever
+from app.core.llm_factory import LLMFactory
 from app.utils.error_handler import (
     AppException,
     app_exception_handler,

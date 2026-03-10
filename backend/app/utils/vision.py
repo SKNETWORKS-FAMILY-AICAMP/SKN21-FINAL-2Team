@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.agents.prompts.prompts import IMAGE_TO_EMOTIONAL_PROMPT
 
 load_dotenv()

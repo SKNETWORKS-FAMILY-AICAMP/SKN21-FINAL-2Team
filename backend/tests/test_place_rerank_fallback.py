@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from qdrant_client.models import FieldCondition, Filter, IsEmptyCondition, MatchAny
 
-from app.retrieval.place import PlaceRetriever, _build_compact_text
+from app.core.retrieval.place import PlaceRetriever, _build_compact_text
 from app.utils.config import get_retrieval_params
 
 
@@ -182,7 +182,7 @@ def test_search_nearby_uses_geo_filter_when_enabled(monkeypatch):
         return [point], None
 
     retriever.client = SimpleNamespace(scroll=_fake_scroll)
-    monkeypatch.setattr("app.retrieval.place.ENABLE_GEO_FILTER", True)
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_GEO_FILTER", True)
 
     out = retriever.search_nearby(37.5665, 126.9780, limit=3, radius_km=5.0)
 
@@ -206,7 +206,7 @@ def test_search_nearby_falls_back_when_geo_filter_fails(monkeypatch):
         return [point], None
 
     retriever.client = SimpleNamespace(scroll=_fake_scroll)
-    monkeypatch.setattr("app.retrieval.place.ENABLE_GEO_FILTER", True)
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_GEO_FILTER", True)
 
     out = retriever.search_nearby(37.5665, 126.9780, limit=3, radius_km=5.0)
 
@@ -236,7 +236,7 @@ def test_search_hybrid_includes_qdrant_sparse_channel_when_enabled(monkeypatch):
 
     retriever.client = SimpleNamespace(query_points=_fake_query_points)
 
-    monkeypatch.setattr("app.retrieval.place.ENABLE_QDRANT_SPARSE", True)
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_QDRANT_SPARSE", True)
 
     out = asyncio.run(
         retriever.search_hybrid(

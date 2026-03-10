@@ -11,9 +11,9 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
-from app.utils.llm_streaming import collect_streamed_text
+from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
 
 

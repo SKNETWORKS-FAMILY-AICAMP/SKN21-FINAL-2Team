@@ -36,7 +36,7 @@ from app.agents.prompts.auto_start_prompt import (
     render_auto_start_combined_prompt,
     render_auto_start_greeting_prompt,
 )
-from app.utils.llm_streaming import compute_visible_delta, extract_text_from_chunk
+from app.core.llm_streaming import compute_visible_delta, extract_text_from_chunk
 from app.utils.place_id import get_place_id
 
 from langchain_core.messages import HumanMessage
