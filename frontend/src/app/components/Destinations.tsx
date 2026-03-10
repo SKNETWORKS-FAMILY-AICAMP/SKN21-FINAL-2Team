@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, CalendarPlus } from "lucide-react";
+import { MapPin, CalendarPlus } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -298,16 +298,7 @@ export function Destinations() {
                                             <div className="flex items-center gap-4 text-gray-500 text-sm mb-2 font-mono">
                                                 <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span>{place.address}</span></div>
                                             </div>
-                                            <div className="mt-auto flex items-center justify-between gap-3 pt-4 border-t border-gray-50">
-                                                {/* [Feature] Reviews 버튼 — 네이버 지도에서 해당 장소 검색 결과를 새 탭으로 열어 리뷰 확인 */}
-                                                <a
-                                                    href={`https://map.naver.com/v5/search/${encodeURIComponent(place.name)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black transition-colors px-2 py-1.5 rounded-md hover:bg-gray-100"
-                                                >
-                                                    <Search size={14} /><span>Reviews</span>
-                                                </a>
+                                            <div className="mt-auto flex items-center justify-end pt-4 border-t border-gray-50">
                                                 <button
                                                     onClick={(e) => handlePlanTripClick(place, e)}
                                                     className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
