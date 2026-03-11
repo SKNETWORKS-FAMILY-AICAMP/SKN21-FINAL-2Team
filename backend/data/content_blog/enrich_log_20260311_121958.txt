@@ -1,0 +1,196 @@
+[1] 정하은 첼로 독주회 | context=0자 | llm_text=348자
+[2] 하이든 교향곡 전곡 시리즈 31 | context=3720자 | llm_text=368자
+[3] 차이코프스키 피아노 트리오 | context=2174자 | llm_text=408자
+[4] 쇼팽, 세 개의 소나타와 세 개의 고독 | context=0자 | llm_text=410자
+[5] 라틴 키친 루나 X 일레인 | context=0자 | llm_text=371자
+[6] 명작시리즈 I 언제라도, 봄] | context=0자 | llm_text=442자
+[7] 고전과 낭만 사이 | context=4271자 | llm_text=440자
+[8] 2026년 서울문화재단 예술창작활동지원 선정 프로젝트 [장단은 점에서 시작한다] | context=2150자 | llm_text=432자
+[9] 공화(空花)-허공에 핀 꽃 | context=0자 | llm_text=318자
+[10] 연희 판타지아 | context=2140자 | llm_text=457자
+[11] 삼양동화 | context=649자 | llm_text=448자
+[12] 이터니티 | context=661자 | llm_text=407자
+[13] 트리오 진심 眞心 창단 연주회 | context=0자 | llm_text=363자
+[14] 피아니스트 조지현의 쇼팽 시리즈 II | context=0자 | llm_text=396자
+[15] 피아니스트 정성희 - 베토벤 피아노 소나타 전곡 시리즈 I | context=0자 | llm_text=413자
+[16] 영혼을 울리는 음악회 IX | context=0자 | llm_text=366자
+[17] 2026 강남심포니오케스트라 기획공연 콘서트오페라 | context=0자 | llm_text=413자
+[18] 이은선, 리즈 문 포레(G.faure)의 봄 | context=0자 | llm_text=447자
+[19] 2026 서울시향 얍 판 츠베덴의 말러 교향곡 6번 [비극적] ①, ② | context=0자 | llm_text=453자
+[20] 처음 만나는 세계 | context=2135자 | llm_text=375자
+[21] The Bliss | context=4847자 | llm_text=478자
+[22] 봄의 멜로디 | context=639자 | llm_text=349자
+[23] Flower is Blooming | context=0자 | llm_text=410자
+[24] 지브리와 사랑에 빠지다 | context=4576자 | llm_text=451자
+[25] 더블 빌 Bliss & Jakie | context=0자 | llm_text=420자
+[26] 김보책 | context=0자 | llm_text=436자
+[27] [센과 치히로의 행방불명]SPIRITED AWAY | context=4573자 | llm_text=475자
+[28] 시간의 결을 노래하다 : 바로크에서 낭만까지 | context=0자 | llm_text=440자
+[29] MAC 모닝 콘서트 #1~3 | context=0자 | llm_text=385자
+[30] 까망돌 칸타빌레 [More Bounce, Unbound] | context=0자 | llm_text=454자
+[31] VIOLIN EMOTION Ⅸ | context=0자 | llm_text=376자
+[32] 2026 MAC 모닝 콘서트 #1 | context=0자 | llm_text=404자
+[33] 김경헌의 오가선집(金經憲式 五歌選集) | context=0자 | llm_text=343자
+[34] L’Aube Quartet(로브 콰르텟) Recital | context=0자 | llm_text=366자
+[35]  하주애 신승훈 조인트 피아노 리사이틀 | context=0자 | llm_text=392자
+[36] 하루키가 사랑한 재즈 | context=935자 | llm_text=377자
+[37] GAT | context=129자 | llm_text=314자
+[38] 긴긴밤 | context=646자 | llm_text=412자
+[39] 킹키부츠 | context=710자 | llm_text=463자
+[40] 바로크비올리스트 장민경의 The Bach III | context=0자 | llm_text=367자
+[41] PROMENADE | context=734자 | llm_text=420자
+[42] 2026 M 초이스 이자람 판소리 갈라 | context=0자 | llm_text=392자
+[43] 안네프랑크 | context=0자 | llm_text=422자
+[44] 전래동화 뮤지컬 음악회 | context=2519자 | llm_text=526자
+[45] 2026 Immersion 몰입 | context=0자 | llm_text=405자
+[46] 토마스 스트로넨 내한공연 | context=0자 | llm_text=350자
+[47] 비기닝 | context=666자 | llm_text=416자
+[48] 나부코 | context=682자 | llm_text=375자
+[49] 덩덩쿵별쿵 어린왕자 | context=0자 | llm_text=432자
+[50] 2026 누구나 클래식 with 강릉시립교향악단 | context=0자 | llm_text=412자
+[51] Toki Asako Live in Korea 2026 | context=0자 | llm_text=375자
+[52] 믹스드 오케스트라 26 | context=0자 | llm_text=479자
+[53] 4월의 비상(飛上) | context=0자 | llm_text=441자
+[54] 대니 구 X 디토 오케스트라 - Mozartiana | context=0자 | llm_text=369자
+[55] 꼭두, 80일간의 세계일주 | context=3413자 | llm_text=468자
+[56] ABT 스튜디오 컴퍼니 발레 갈라 | context=0자 | llm_text=296자
+[57] 얼굴과 얼굴 마주;봄 | context=2475자 | llm_text=416자
+[58] 2026 MAC 모닝 콘서트 #2 | context=0자 | llm_text=435자
+[59] 어슬렁 어슬렁 콘서트 [정우] | context=0자 | llm_text=319자
+[60] [타이타닉] & [아바타] 라이브 백-투-백 필름 콘서트 | context=0자 | llm_text=416자
+[61] K-TEA Classic Concert: Seoul Edition 다도 음악회 | context=0자 | llm_text=473자
+[62] 해리엇 | context=633자 | llm_text=382자
+[63] 빅 마더 | context=0자 | llm_text=420자
+[64] THE WASP | context=4710자 | llm_text=365자
+[65] 스피드 | context=652자 | llm_text=390자
+[66] Beyond the Magic | context=4293자 | llm_text=393자
+[67] CHANGMO : THE EMPEROR | context=0자 | llm_text=356자
+[68] 리모트 서울 | context=0자 | llm_text=412자
+[69] 해리 포터와 죽음의 성물™ Part II 인 콘서트 | context=0자 | llm_text=458자
+[70] In the Bamboo Forest | context=0자 | llm_text=422자
+[71] 홍련 | context=660자 | llm_text=391자
+[72] 피터팬 | context=626자 | llm_text=494자
+[73] 2026 MAC 모닝 콘서트 #3 | context=0자 | llm_text=443자
+[74] 피터와 늑대 & 어미 거위 | context=0자 | llm_text=417자
+[75] 까망돌 칸타빌레 | context=1074자 | llm_text=369자
+[76] 미스트 | context=613자 | llm_text=399자
+[77] 프리즘 | context=632자 | llm_text=317자
+[78] 양인모 X 김치앤칩스 | context=0자 | llm_text=415자
+[79] 스윙 데이즈_암호명 A | context=4223자 | llm_text=485자
+[80] 마티네콘서트 With 금난새 | context=0자 | llm_text=433자
+[81] 삼청일화예술단 | context=0자 | llm_text=389자
+[82] Trace Mapping | context=2181자 | llm_text=336자
+[83] 선 넘는 예술 | context=1985자 | llm_text=420자
+[84] 21세기의 PARTY | context=0자 | llm_text=391자
+[85] 김동석 기획초대전 | context=736자 | llm_text=399자
+[86] 궤적: 기억의 집합 | context=0자 | llm_text=404자
+[87] Dancing, Dreaming, Enlightening | context=4742자 | llm_text=499자
+[88] 인상주의에서 초기 모더니즘까지, 빛을 수집한 사람들 | context=0자 | llm_text=464자
+[89] K-라면과 구공탄 | context=4670자 | llm_text=442자
+[90] 2025 아뜰리에 광화 겨울 전시 | context=4446자 | llm_text=409자
+[91] 2025 서울로미디어캔버스 겨울 전시 [숨결] | context=3782자 | llm_text=447자
+[92] 클림트와 라치오디의 기적 | context=4701자 | llm_text=488자
+[93] 밤풍경 | context=628자 | llm_text=398자
+[94] 그림과 현실 | context=4692자 | llm_text=450자
+[95] 일렉트릭 쇼크 | context=3956자 | llm_text=492자
+[96] 《미완의 식물지-이소요》, 《꽃 시계-안나 리들러》 | context=4606자 | llm_text=507자
+[97] 글(자)감(각): 쓰기와 도구 | context=4813자 | llm_text=493자
+[98] 원본은 없다 버전 투 | context=0자 | llm_text=424자
+[99] YOURS TRULY, LE CAT | context=4760자 | llm_text=484자
+[100] [울트라백화점 서울 Vol.2] 포스트 서브컬쳐 | context=4732자 | llm_text=516자
+[101] The Path of Lightning | context=0자 | llm_text=423자
+[102] 위안과 치유의 공명 共鳴 | context=3182자 | llm_text=404자
+[103] 사라지는 풍경들: 우리가 마주한 지구의 시간 | context=4306자 | llm_text=408자
+[104] 이름없는 흔적들 | context=4474자 | llm_text=412자
+[105] 오류를 거니는 산책자 | context=4697자 | llm_text=466자
+[106] #1. 누적의 형상 Forms of Accumulation | context=3168자 | llm_text=440자
+[107] 서울 속 미국, 워싱턴 속 대한제국 | context=4737자 | llm_text=509자
+[108] 근접한 세계 | context=3942자 | llm_text=425자
+[109] 보노보노 40주년 특별전 in Seoul | context=4676자 | llm_text=500자
+[110] 청계천사람들: 삶과 기억의 만남 | context=2146자 | llm_text=406자
+[111] 임신과 출생 문화를 다룬 특별전 [아가 마중] | context=4279자 | llm_text=476자
+[112] 미스터 팔롱의 판타스틱 의상실 | context=2144자 | llm_text=381자
+[113] Next Hi-Light 展 | context=4783자 | llm_text=446자
+[114] 일인용 심야 공연 | context=0자 | llm_text=414자
+[115] 비로소 밤 | context=2552자 | llm_text=433자
+[116] 도시의 리듬 : City Rhythms | context=4495자 | llm_text=527자
+[117] 최재은: 약속 | context=4404자 | llm_text=451자
+[118] 월리를 찾아라 특별전 | context=3759자 | llm_text=569자
+[119] 쿠키런: 사라진 국가유산을 찾아서 | context=4583자 | llm_text=379자
+[120] 쿠키런 : 킹덤 아트 콜라보 위대한 왕국의 유산 | context=4413자 | llm_text=437자
+[121] 광복, 끝과 시작의 문턱에서 | context=4485자 | llm_text=359자
+[122] 마지막 춤은 나와 함께 The Last Dance with Me | context=0자 | llm_text=432자
+[123] 서서울미술관 개관 특별전 SeMA 퍼포먼스 《호흡》 | context=4619자 | llm_text=378자
+[124] 그 약,알고 먹나요? | context=0자 | llm_text=423자
+[125] 안녕, 금성당 | context=4688자 | llm_text=392자
+[126] 영 아티스트 어워드 2026 [더 리빙 아카이브] | context=144자 | llm_text=461자
+[127] 2026 서울 일러스트코리아 | context=4266자 | llm_text=450자
+[128] 현대미술 거장과 동시대 작가들의 조우 | context=4268자 | llm_text=432자
+[129] 설레는 봄의 초대, [미리, 봄] | context=4081자 | llm_text=495자
+[130] 박신양의 전시쑈 [제 4의 벽] | context=4698자 | llm_text=429자
+[131] 출산, 모두의 잔치 | context=4717자 | llm_text=455자
+[132] 크리스찬 히다카: 하늘이 극장이 되고, 극장이 하늘에 있으니 | context=4722자 | llm_text=467자
+[133] 처음 만나는 세계 | context=3313자 | llm_text=366자
+[134] 인상파, 찬란한 순간들: 모네, 르누아르, 반 고흐 그리고 세잔 | context=4702자 | llm_text=530자
+[135] Sonic Planet―Hertz and Dough | context=4769자 | llm_text=448자
+[136] 볼 빨간 돼지의 종이 모험 | context=3618자 | llm_text=443자
+[137] SeMA 프로젝트V_얄루 | context=2071자 | llm_text=501자
+[138] BtheB [Beauty For All] | context=0자 | llm_text=412자
+[139] 길 위의 시인, 신경림 | context=4145자 | llm_text=454자
+[140] Megatron Rhapsody | context=0자 | llm_text=404자
+[141] 각角진 백자 이야기 | context=4088자 | llm_text=462자
+[142] 금빛으로 지은 옷을 여미다 | context=3824자 | llm_text=408자
+[143] 독립, 일상에서 지킨 염원 | context=4653자 | llm_text=407자
+[144] 보존과학, 새로운 시작 함께하는 미래 | context=4668자 | llm_text=543자
+[145] 글로벌 전시회 2026 인터참코리아 InterCHARM Korea | context=144자 | llm_text=441자
+[146] AI 미디어아트 [뉴-미디어의 재해-석] | context=0자 | llm_text=399자
+[147] 우리의 시간은 여기서부터 | context=4021자 | llm_text=470자
+[148] 서울상상나라: 엉뚱하고 기발한 | context=2136자 | llm_text=508자
+[149] 2026 핸드아티코리아 | context=133자 | llm_text=440자
+[150] 어린이 기록체험실 [꼬불꼬불 기록 탐험] | context=3859자 | llm_text=563자
+[151] 기록으로 산책하기_서울의 공원 展 | context=4692자 | llm_text=490자
+[152] 이슬람 미술, 찬란한 빛의 여정 | context=4194자 | llm_text=436자
+[153] 통-하다 | context=2672자 | llm_text=567자
+[154] 사랑하는 모양이야 | context=4592자 | llm_text=447자
+[155] 공공미술 <솜사탕코끼리> | context=0자 | llm_text=369자
+[156] 산수·격물 | context=4709자 | llm_text=400자
+[157] Dream in Light | context=4537자 | llm_text=511자
+[158] DDP 건축투어 | context=4726자 | llm_text=529자
+[159] 자수, 염원을 그리다 | context=4663자 | llm_text=531자
+[160] 사적 게임 아카이브 | context=2076자 | llm_text=443자
+[161] 선유담담 | context=129자 | llm_text=417자
+[162] 그리스가 로마에게, 로마가 그리스에게 | context=0자 | llm_text=410자
+[163] 어느 도시의 탑승록 | context=1335자 | llm_text=460자
+[164] 규장각과 정조시대 | context=0자 | llm_text=396자
+[165] 상설전 장인, 세상을 이롭게 하다 | context=4668자 | llm_text=465자
+[166] 상설전 보자기, 일상을 감싸다 | context=3095자 | llm_text=449자
+[167] 상설전 자수, 꽃이 피다 | context=4677자 | llm_text=514자
+[168] 막걸리, 거친 일상의 벗 | context=3610자 | llm_text=418자
+[169] AI 미디어 아티스트 [레픽 아나돌의 최초 상설전시] | context=0자 | llm_text=477자
+[170] Bucket Run 2026 | context=0자 | llm_text=387자
+[171] 2026 서울 유아차 런 | context=4692자 | llm_text=469자
+[172] 2026 YeonDeungHoe | context=0자 | llm_text=457자
+[173] 2026 기획 시즌 안내 | context=0자 | llm_text=367자
+[174] 남산골 전통혼례 | context=3820자 | llm_text=398자
+[175] 2026 서울국제불교박람회 | context=4715자 | llm_text=415자
+[176] 서울스프링페스티벌 | context=647자 | llm_text=303자
+[177] 2026 보드게임페스타 | context=0자 | llm_text=455자
+[178] 2026 LOTTE WORLD TOWER SKY RUN | context=2166자 | llm_text=459자
+[179] 서울국제정원박람회 | context=652자 | llm_text=375자
+[180] 어린이·가족 예술축제 | context=0자 | llm_text=450자
+[181] 남산봉수의식 등 전통문화행사 | context=4143자 | llm_text=383자
+[182] 2026 숭례문 파수의식 | context=0자 | llm_text=402자
+[183] 서울 왕궁수문장 교대의식 | context=4434자 | llm_text=384자
+[184] 연등회 | context=2635자 | llm_text=508자
+[185] 제3회 쉬엄쉬엄 한강 3종 축제 | context=3870자 | llm_text=477자
+[186] 2026 서울국제도서전 | context=2663자 | llm_text=400자
+[187] 서울어텀페스타 | context=637자 | llm_text=415자
+[188] 정조대왕 능행차 공동재현 | context=3336자 | llm_text=456자
+[189] 강동선사문화축제 | context=2375자 | llm_text=419자
+[190] FUTUREGROUND | context=137자 | llm_text=466자
+[191] 2026년 [라라랜드] 배리어프리영화 상영 | context=0자 | llm_text=416자
+[192] 2026 Cinema Quebec | context=0자 | llm_text=370자
+[193] 팟캐스트 서강도서관 시(詩)작하는 마음 | context=0자 | llm_text=426자
+[194] 키크클럽 | context=630자 | llm_text=408자
+[195] 독서토론회 | context=2158자 | llm_text=435자
+[196] SEOULDAL | context=3673자 | llm_text=495자

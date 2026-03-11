@@ -69,6 +69,17 @@ PLACE_SUFFIX_HINTS = (
     "먹자골목",
     "마을",
 )
+REDUNDANT_TEXTS = {
+    "운영시간",
+    "전화번호",
+    "연락처",
+    "교통편",
+    "웹사이트",
+    "홈페이지",
+    "인스타그램",
+    "공식블로그",
+    "유튜브채널",
+}
 
 
 def normalize_text(text: str) -> str:
@@ -233,6 +244,10 @@ def should_skip_text(text: str) -> bool:
     return not text or text.startswith(SKIP_PREFIXES)
 
 
+def is_redundant_text(text: str) -> bool:
+    return strip_list_marker(normalize_text(text)) in REDUNDANT_TEXTS
+
+
 def should_capture_text_node(node: Tag, text: str) -> bool:
     if node.name in {"p", "li", "h1", "h2", "h3", "h4", "h5", "h6"}:
         return True
@@ -330,6 +345,87 @@ def choose_title_block(segment: list[dict[str, Any]]) -> dict[str, Any] | None:
     return best_block if best_score >= 4 else None
 
 
+def is_section_heading_block(block: dict[str, Any]) -> bool:
+    if block["type"] != "text":
+        return False
+    text = block["text"]
+    if should_skip_text(text) or is_redundant_text(text) or extract_address(text) or is_info_text(text):
+        return False
+    normalized = normalize_text(text)
+    if looks_like_place_name(normalized):
+        return True
+    if block.get("tag") in {"h1", "h2", "h3", "h4", "h5", "h6"} and len(normalized) <= 80:
+        return True
+    return block.get("emphasized", False) and len(normalized) <= 80
+
+
+def find_section_start(segment: list[dict[str, Any]]) -> int | None:
+    for index in range(len(segment) - 1, -1, -1):
+        block = segment[index]
+        if is_section_heading_block(block):
+            return index
+
+    for index, block in enumerate(segment):
+        if block["type"] != "text":
+            continue
+        text = block["text"]
+        if should_skip_text(text) or is_redundant_text(text) or extract_address(text) or is_info_text(text):
+            continue
+        return index
+
+    return None
+
+
+def cleanup_section_texts(blocks: list[dict[str, Any]]) -> list[str]:
+    texts: list[str] = []
+    for block in blocks:
+        if block["type"] != "text":
+            continue
+        text = normalize_text(block["text"])
+        if should_skip_text(text) or is_redundant_text(text):
+            continue
+        if texts and texts[-1] == text:
+            continue
+        texts.append(text)
+    return texts
+
+
+def extract_place_sections(blocks: list[dict[str, Any]]) -> list[list[str]]:
+    address_indices = [
+        index
+        for index, block in enumerate(blocks)
+        if block["type"] == "text" and extract_address(block["text"])
+    ]
+    if not address_indices:
+        return []
+
+    sections: list[list[str]] = []
+    search_start = 0
+
+    for idx, address_index in enumerate(address_indices):
+        pre_address_segment = blocks[search_start:address_index]
+        start_offset = find_section_start(pre_address_segment)
+        if start_offset is None:
+            search_start = address_index + 1
+            continue
+
+        section_start = search_start + start_offset
+        next_address_index = address_indices[idx + 1] if idx + 1 < len(address_indices) else len(blocks)
+        section_end = next_address_index
+
+        for probe in range(address_index + 1, next_address_index):
+            if is_section_heading_block(blocks[probe]):
+                section_end = probe
+                break
+
+        section_texts = cleanup_section_texts(blocks[section_start:section_end])
+        if section_texts:
+            sections.append(section_texts)
+        search_start = address_index + 1
+
+    return sections
+
+
 def extract_record_from_segment(
     article_key: str,
     record_index: int,
@@ -388,6 +484,105 @@ def extract_record_from_segment(
     )
 
 
+def choose_title_from_section(section: list[str]) -> str:
+    if not section:
+        return ""
+
+    header_candidates = [
+        normalize_text(text)
+        for text in section[:3]
+        if text
+        and len(normalize_text(text)) <= 80
+        and not extract_address(text)
+        and not is_info_text(text)
+    ]
+    if len(header_candidates) >= 2:
+        trailing_header = strip_list_marker(header_candidates[-1])
+        if looks_like_place_name(trailing_header):
+            return trailing_header
+
+    heading = normalize_text(section[0])
+    heading_candidates: list[str] = []
+    extracted = extract_place_name(heading)
+    heading_candidates.append(extracted)
+
+    heading_words = heading.split()
+    if heading_words:
+        heading_candidates.append(normalize_text(heading_words[-1]))
+
+    for splitter in (" - ", " – ", ", "):
+        if splitter in heading:
+            heading_candidates.append(normalize_text(heading.split(splitter)[-1]))
+
+    for candidate in heading_candidates:
+        cleaned = strip_list_marker(candidate)
+        if looks_like_place_name(cleaned):
+            return cleaned
+
+    intro_title = extract_place_name_from_intro(" ".join(section[1:]))
+    if looks_like_place_name(intro_title):
+        return intro_title
+
+    for text in section:
+        candidate = extract_place_name_from_intro(text)
+        if looks_like_place_name(candidate):
+            return candidate
+
+    return extracted
+
+
+def parse_place_sections_only(page_url: str, payload: dict[str, Any]) -> list[dict[str, str]]:
+    article_key = urlparse(page_url).path.rstrip("/").split("/")[-1] or "visitseoul"
+    records: list[dict[str, str]] = []
+
+    for index, section in enumerate(payload.get("place_sections", []), 1):
+        if not section:
+            continue
+
+        address = ""
+        info_lines: list[str] = []
+        intro_lines: list[str] = []
+
+        for text in section:
+            normalized = normalize_text(text)
+            if not normalized:
+                continue
+            extracted_address = extract_address(normalized)
+            if extracted_address and not address:
+                address = extracted_address
+            if is_info_text(normalized) or extracted_address:
+                info_lines.append(normalized)
+                continue
+            intro_lines.append(normalized)
+
+        if not address:
+            continue
+
+        title = choose_title_from_section(section)
+        if not looks_like_place_name(title):
+            continue
+
+        if intro_lines and normalize_text(intro_lines[0]) == normalize_text(section[0]):
+            introduction = normalize_text(" ".join(intro_lines[1:]))
+        else:
+            introduction = normalize_text(" ".join(intro_lines))
+
+        if not introduction:
+            introduction = normalize_text(" ".join(info_lines))
+
+        records.append(
+            make_record(
+                contentid=f"{article_key}_{index:02d}",
+                title=title,
+                image="",
+                addr=address,
+                introduction=introduction,
+            )
+        )
+
+    return records
+
+
 def extract_page_payload(page_url: str, soup: BeautifulSoup) -> dict[str, Any]:
     content = soup.select_one("div.se-contents")
     if content is None:
@@ -402,6 +597,7 @@ def extract_page_payload(page_url: str, soup: BeautifulSoup) -> dict[str, Any]:
         (soup.select_one("meta[name='description']") or {}).get("content", "")
     )
     blocks = iter_content_blocks(content, page_url)
+    place_sections = extract_place_sections(blocks)
     body_text = normalize_text(
         " ".join(block["text"] for block in blocks if block["type"] == "text")
     )
@@ -412,6 +608,8 @@ def extract_page_payload(page_url: str, soup: BeautifulSoup) -> dict[str, Any]:
         "meta_description": meta_description,
         "body_text": body_text,
         "blocks": blocks,
+        "place_sections": place_sections,
+        "place_texts": [text for section in place_sections for text in section],
     }
 
 
@@ -597,6 +795,11 @@ def main() -> None:
         "--raw-output",
         help="1차 크롤링 전체 본문 블록을 저장할 JSON 경로",
     )
+    parser.add_argument(
+        "--use-place-sections-only",
+        action="store_true",
+        help="raw payload의 place_sections 텍스트만 사용해 장소 JSONL을 생성합니다.",
+    )
     args = parser.parse_args()
 
     if not args.urls and not args.list_url:
@@ -620,7 +823,10 @@ def main() -> None:
 
     records: list[dict[str, str]] = []
     for payload in raw_payloads:
-        records.extend(parse_place_blocks(payload["url"], payload))
+        if args.use_place_sections_only:
+            records.extend(parse_place_sections_only(payload["url"], payload))
+        else:
+            records.extend(parse_place_blocks(payload["url"], payload))
     write_output(records, Path(args.output))
     print(f"saved {len(records)} places to {args.output}")
 
