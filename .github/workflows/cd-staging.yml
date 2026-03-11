@@ -226,15 +226,16 @@ jobs:
             echo "Docker disk usage after deploy"
             docker system df || true
             echo "Waiting for services to be ready via ${HEALTHCHECK_URL}..."
-            for i in $(seq 1 10); do
+            echo "Health check retry policy: 30 attempts, 10 seconds interval"
+            for i in $(seq 1 30); do
               if curl -fsS "${HEALTHCHECK_URL}"; then
                 echo "Health check passed!"
                 break
               fi
               echo "Attempt $i failed, waiting 10s..."
               sleep 10
-              if [ "$i" = "10" ]; then
-                echo "Health check failed after 10 attempts"
+              if [ "$i" = "30" ]; then
+                echo "Health check failed after 30 attempts"
                 exit 1
               fi
             done

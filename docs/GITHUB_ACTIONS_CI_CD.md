@@ -43,7 +43,8 @@
   - 디스크 부족 위험이 있으면 현재 compose 스택을 `down` 한 뒤 이미지 참조를 해제하고 한 번 더 정리
   - `docker compose pull && docker compose up -d`
   - 배포 후 다시 `df -h`, `docker system df` 출력
-- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 10회 retry 확인
+- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 30회 retry 확인
+- backend 컨테이너 healthcheck는 `curl` 대신 Python one-liner로 `/api/healthz`를 검사하며, 초기 모델 로딩 시간을 고려해 `start_period=180s`를 사용한다
 
 ### 2.3 운영 배포
 
@@ -53,7 +54,7 @@
 - 동일한 2단계 병렬 검증 수행
 - 운영용 이미지를 GHCR에 푸시
 - 운영 EC2에 SSH 접속 후 스테이징과 동일한 정리/검사 절차를 거쳐 재배포
-- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 10회 retry 확인
+- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 30회 retry 확인
 
 ## 3. 자동배포 트리거
 

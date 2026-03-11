@@ -9,11 +9,17 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:8000/api/healthz" ]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/healthz', timeout=5)"
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 180s
 
   frontend:
     image: ${FRONTEND_IMAGE}
