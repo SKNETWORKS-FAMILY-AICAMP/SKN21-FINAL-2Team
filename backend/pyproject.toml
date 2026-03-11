@@ -5,9 +5,12 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.13",
     "pillow>=12.1.1",
+    "pymysql>=1.1.2",
     "python-dotenv>=1.2.1",
     "qdrant-client>=1.16.2",
     "requests>=2.32.5",
     "sentence-transformers>=5.2.2",
+    "sqlalchemy>=2.0.48",
 ]

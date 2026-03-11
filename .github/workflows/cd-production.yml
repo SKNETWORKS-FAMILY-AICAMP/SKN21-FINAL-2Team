@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      apply_qdrant_snapshots:
+        description: 'Qdrant 스냅샷을 S3에서 다운로드하여 적용'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -168,12 +174,13 @@ jobs:
         env:
           IMAGE_NAMESPACE: ${{ needs.build-and-push.outputs.image_namespace }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          APPLY_SNAPSHOTS: ${{ inputs.apply_qdrant_snapshots || 'false' }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           port: ${{ secrets.PROD_PORT }}
-          envs: IMAGE_NAMESPACE,IMAGE_TAG
+          envs: IMAGE_NAMESPACE,IMAGE_TAG,APPLY_SNAPSHOTS
           script: |
             set -eu
             cd "${{ secrets.PROD_APP_DIR }}"
@@ -189,6 +196,9 @@ jobs:
               echo "Expected files under: ${{ secrets.PROD_APP_DIR }}"
               exit 1
             fi
+            NGINX_PORT="$(grep '^NGINX_PORT=' .env.production | cut -d= -f2- || true)"
+            NGINX_PORT="${NGINX_PORT:-80}"
+            HEALTHCHECK_URL="http://127.0.0.1:${NGINX_PORT}/api/healthz"
             echo "Initial disk usage"
             df -h
             echo "Initial docker disk usage"
@@ -217,11 +227,39 @@ jobs:
             echo "Docker disk usage after shutdown cleanup"
             docker system df || true
             docker compose --env-file .env.production -f docker-compose.ec2.yml pull
+
+            # RDS schema migration (앱 기동 전 실행)
+            docker compose --env-file .env.production -f docker-compose.ec2.yml \
+              run --rm --no-deps backend alembic upgrade head
+
+            # 앱 기동
             docker compose --env-file .env.production -f docker-compose.ec2.yml up -d --remove-orphans
-            echo "Disk usage after deploy"
-            df -h
-            echo "Docker disk usage after deploy"
-            docker system df || true
+
+            # Qdrant 스냅샷 적용 (workflow_dispatch에서 bool 옵션 선택 시)
+            if [ "${APPLY_SNAPSHOTS}" = "true" ]; then
+              echo "Applying Qdrant snapshots from S3..."
+              aws s3 cp s3://triver-assets-prod/private/snapshots/photos-382739127437433-2026-03-10-22-11-06.snapshot.tar /tmp/photos.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/places-382739127437433-2026-03-10-22-11-19.snapshot.tar /tmp/places.snapshot
+
+              echo "Waiting for Qdrant to be ready..."
+              for i in $(seq 1 12); do
+                if curl -fsS http://localhost:6333/healthz; then
+                  break
+                fi
+                echo "Attempt $i/12, waiting 5s..."
+                sleep 5
+              done
+
+              curl -fsS -X POST "http://localhost:6333/collections/photos/snapshots/upload?priority=snapshot" \
+                -H "Content-Type: multipart/form-data" \
+                -F "snapshot=@/tmp/photos.snapshot"
+              curl -fsS -X POST "http://localhost:6333/collections/places/snapshots/upload?priority=snapshot" \
+                -H "Content-Type: multipart/form-data" \
+                -F "snapshot=@/tmp/places.snapshot"
+
+              echo "Qdrant snapshots applied."
+            fi
+
             echo "Waiting for services to be ready..."
             for i in $(seq 1 10); do
               if curl -fsS http://127.0.0.1/api/healthz; then
@@ -230,8 +268,8 @@ jobs:
               fi
               echo "Attempt $i failed, waiting 10s..."
               sleep 10
-              if [ "$i" = "10" ]; then
-                echo "Health check failed after 10 attempts"
+              if [ "$i" = "30" ]; then
+                echo "Health check failed after 30 attempts"
                 exit 1
               fi
             done
