@@ -11,10 +11,7 @@ def route_by_intent(state: TravelState):
     elif state['primary_intent'] == IntentType.GENERAL:
         next_node = 'executor_general'
 
-    return Send(next_node,{
-        **state,
-        '_node_name': next_node
-    })
+    return next_node
 
 
 def route_by_missing(state: TravelState):
@@ -25,7 +22,4 @@ def route_by_missing(state: TravelState):
     if len(missing) > 0:
         next_node = 'executor_missing'
 
-    return Send(next_node,{
-        **state,
-        '_node_name': next_node
-    })
+    return next_node

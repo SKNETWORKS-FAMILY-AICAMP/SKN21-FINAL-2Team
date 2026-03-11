@@ -10,10 +10,17 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct,
     PayloadSchemaType, HnswConfigDiff, OptimizersConfigDiff,
+    SparseVectorParams, SparseIndexParams, SparseVector,
 )
 from sentence_transformers import SentenceTransformer
 
-from app.scripts.preprocess_data import download_image
+from app.scripts.preprocess_data import (
+    download_image,
+    enrich_payload_geo_and_addr_tokens,
+    build_sparse_text,
+    build_sparse_vector,
+    enrich_payload_llm_text,
+)
 
 from app.utils.config import *
 from app.scripts.preprocess_data import ingest_data
@@ -50,6 +57,11 @@ class QdrantClientDB:
         self.client.create_collection(
             collection_name=PLACES_COLLECTION,
             vectors_config=VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            sparse_vectors_config={
+                "text_sparse": SparseVectorParams(
+                    index=SparseIndexParams(on_disk=True)
+                )
+            },
             hnsw_config=HnswConfigDiff(
                 on_disk=True,
                 m=16,
@@ -61,6 +73,8 @@ class QdrantClientDB:
         )
         # 필터 자주 쓰면 인덱스
         self.client.create_payload_index(PLACES_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PLACES_COLLECTION, "geo", PayloadSchemaType.GEO)
+        self.client.create_payload_index(PLACES_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
         
         # 2) photos: image vector only
         if self.client.collection_exists(PHOTOS_COLLECTION):
@@ -79,13 +93,20 @@ class QdrantClientDB:
             ),
         )
         # group_by 키 성능 위해 인덱스 추천
+        self.client.create_payload_index(PHOTOS_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
         self.client.create_payload_index(PHOTOS_COLLECTION, "contentid", PayloadSchemaType.KEYWORD)
+        self.client.create_payload_index(PHOTOS_COLLECTION, "geo", PayloadSchemaType.GEO)
+        self.client.create_payload_index(PHOTOS_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
 
     # 장소 저장
     # - description -> places.text_vec (BGE-M3)
     # - image_urls -> photos(img_vec) 여러개 저장 + places.img_vec_agg 대표벡터 저장 (CLIP Vision)
     def add_place(self, payload: dict):
+        payload = enrich_payload_geo_and_addr_tokens(dict(payload))
+        payload = enrich_payload_llm_text(payload)
+        print(f"[ADD PLACE] payload : {payload}")
         llm_text = payload.pop('llm_text', '')
+        llm_text = llm_text.replace("\n", " ")
 
         contentid = int(payload['contentid'])
         
@@ -120,10 +141,19 @@ class QdrantClientDB:
         # [Text] : Place Collection ================================
         # 3) places upsert (named vectors)
         text_vec = self.text_model.encode(llm_text).astype(np.float32)
+        sparse_text = build_sparse_text(payload)
+        sparse_indices, sparse_values = build_sparse_vector(sparse_text)
+        print(f"[SPARSE] sparse_text : {sparse_text}")
+        print(f"[SPARSE] sparse_indices : {sparse_indices}")
+        print(f"[SPARSE] sparse_values : {sparse_values}")
+
+        vector_payload = {"": text_vec.tolist()}
+        if sparse_indices and sparse_values:
+            vector_payload["text_sparse"] = SparseVector(indices=sparse_indices, values=sparse_values)
 
         place_point = PointStruct(
             id=contentid,
-            vector=text_vec.tolist(),
+            vector=vector_payload,
             payload=payload,
         )
         self.client.upsert(collection_name=PLACES_COLLECTION, points=[place_point])
@@ -160,7 +190,10 @@ class QdrantClientDB:
 
 
 # cd backend
-# docker exec -it skn21-final-2team-backend-1 python -m app.scripts.qdrant_setup
+# 실행 모드:
+#   all   (기본값) : 컬렉션 재생성 → 전체 데이터 업로드 → 팝업스토어 업로드
+#   popup           : 컬렉션 유지, 팝업스토어만 추가 업로드
+# docker exec -it skn21-final-2team-backend-1 python -m app.scripts.qdrant_setup [all|popup]
 if __name__ == "__main__":
     import sys
     mode = sys.argv[1] if len(sys.argv) > 1 else "all"
@@ -181,29 +214,36 @@ if __name__ == "__main__":
         print(f"[ERROR] Data dir not found: {data_dir}")
         sys.exit(1)
 
+    popup_path = os.path.join(data_dir, "99_팝업스토어_enriched.jsonl")
+
     if mode == "popup":
         # 팝업스토어만 추가 (기존 DB 유지, 지오코딩 재호출 없음)
-        popup_path = os.path.join(data_dir, "99_팝업스토어_enriched.jsonl")
         print("==== popup_path : ", popup_path)
         client.add_popup_places(popup_path)
     else:
-        # 기존 전체 업로드 (팝업 제외)
+        # [STEP 1] 전체 데이터 업로드
         file_names = []
-        file_data = []
-        for filename in os.listdir(data_dir):
-            if filename.endswith(".jsonl") and not filename.startswith(("25_", "99_")):
-                data_path = os.path.join(data_dir, filename)
-                with open(data_path, 'r', encoding='utf-8') as f:
-                    data = [json.loads(line) for line in f]
-                    file_names.append((filename, len(data)))
-                    file_data.append(data)
-
         success_count = 0
-        flat_data = [item for sublist in file_data for item in sublist]
-        for data in ingest_data(flat_data):
-            client.add_place(data)
-            success_count += 1
-            if success_count % 10 == 0:
-                print(f"  - Progress: {success_count}/{len(flat_data)} done.")
+        for filename in sorted(os.listdir(data_dir)):
+            if not filename.endswith(".jsonl"):
+                continue
+            data_path = os.path.join(data_dir, filename)
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = [json.loads(line) for line in f]
 
-        print("Finish Load Data - File : ", file_names)
+            print(f"[INFO] {filename} ({len(data)}건) 처리 시작")
+            for item in ingest_data(data):
+                client.add_place(item)
+                success_count += 1
+                if success_count % 10 == 0:
+                    print(f"  - Progress: {success_count} done.")
+            file_names.append((filename, len(data)))
+
+        print(f"[INFO] 전체 업로드 완료 (총 {success_count}건) - Files: {file_names}")
+
+        # # [STEP 2] 팝업스토어 이어서 업로드
+        # if os.path.exists(popup_path):
+        #     print(f"[INFO] 팝업스토어 이어서 업로드 시작: {popup_path}")
+        #     client.add_popup_places(popup_path)
+        # else:
+        #     print(f"[WARN] 팝업스토어 파일 없음, 건너뜀: {popup_path}")

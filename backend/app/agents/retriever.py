@@ -2,11 +2,11 @@ import asyncio
 import random
 from typing import Dict, Any, List
 
-from app.agents.models.state import TravelState
+from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
-from app.retrieval.place import PlaceRetriever
-from app.utils.geocoder import GeoCoder
-from app.services.vision import describe_image
+from app.core.retrieval.place import PlaceRetriever
+from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY, normalize_location
+from app.utils.vision import describe_image
 from app.utils.common import getattr_safe
 from app.utils.place_id import get_candidate_point_id, get_place_id
 
@@ -34,11 +34,15 @@ def _resolve_search_scope(
     slots: Any,
     image_path: str | None,
 ) -> str:
-    """검색 범위를 단일 컬렉션으로 제한하기 위한 스코프 결정."""
-    if primary_intent == IntentType.TRIP_PLANNING:
-        return "place_only"
+    """검색 범위를 결정한다.
 
-    if not image_path:
+    - "place_only": PLACES_COLLECTION(BGE-M3 text) 전용
+    - "photo_only": PHOTOS_COLLECTION(CLIP vision/text) 전용
+    - "auto":       양쪽 모두 검색
+                    → Channel A(text_semantic) + Channel C(text_to_image) 활성화
+                    → image_url=None이면 Channel B/D는 search_hybrid 내에서 자동 스킵
+    """
+    if primary_intent == IntentType.TRIP_PLANNING:
         return "place_only"
 
     input_type = None
@@ -51,7 +55,10 @@ def _resolve_search_scope(
     if input_type == InputType.IMAGE or str(input_type) == str(InputType.IMAGE.value):
         return "photo_only"
 
-    return "place_only"
+    # 텍스트 전용 or 텍스트+이미지 복합 → "auto"
+    # Channel C(CLIP Text→PHOTOS) 활성화: 시각적 묘사 쿼리("바다 보이는 카페" 등) 품질 향상
+    # image_url=None 시 Channel B(image_visual)/D(image_emotional)는 내부에서 자동 스킵됨
+    return "auto"
 
 
 def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], final_k: int, top_pool: int) -> List[Dict[str, Any]]:
@@ -155,7 +162,7 @@ async def _search_for_trip_planning(
                     image_url=image_path,
                     limit=max(10, candidate_k // 3),
                     candidate_k=max(10, candidate_k // 3),
-                    category=item_category,
+                    categories=[item_category] if item_category else None,
                     emotional_text=emotional_text,
                     user_latitude=state.get("latitude"),
                     user_longitude=state.get("longitude"),
@@ -183,7 +190,7 @@ async def _search_for_general(
     """일반 검색: 텍스트/이미지/위치 기반 하이브리드 후보 풀 검색."""
     retriever = PlaceRetriever.get_instance()
 
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     image_path = state.get("image_path")
     latitude = state.get("latitude")
     longitude = state.get("longitude")
@@ -202,9 +209,29 @@ async def _search_for_general(
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
 
-    category = None
+    categories = None
+    raw_location = None
     if slots:
-        category = getattr_safe(slots, "category")
+        # 다중 카테고리(리스트) 우선, 없을 경우 단일 카테고리 사용
+        categories = getattr_safe(slots, "categories")
+        raw_location = getattr_safe(slots, "location")
+
+    # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
+    anchor_lat = anchor_lon = anchor_radius_m = None
+    if raw_location and raw_location in LANDMARK_DICTIONARY:
+        entry = LANDMARK_DICTIONARY[raw_location]
+        anchor_lat = entry["lat"]
+        anchor_lon = entry["lon"]
+        anchor_radius_m = entry["radius_m"]
+        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
+    elif raw_location:
+        # 만약 intent_node 후처리를 거치지 않은 경우에도 대비한 안전망
+        norm = normalize_location(raw_location)
+        if norm.canonical_matched and norm.lat is not None:
+            anchor_lat = norm.lat
+            anchor_lon = norm.lon
+            anchor_radius_m = norm.radius_m
+            print(f"[Retriever] landmark anchor (fallback normalize): {raw_location!r} → {norm.normalized_location!r}")
 
     try:
         return await retriever.search_hybrid(
@@ -212,15 +239,18 @@ async def _search_for_general(
             image_url=image_path,
             limit=candidate_k,
             candidate_k=candidate_k,
-            category=category,
+            categories=categories,
             emotional_text=emotional_text,
             user_latitude=latitude,
             user_longitude=longitude,
-            preferred_location=getattr_safe(slots, "location"),
+            preferred_location=raw_location,
             enable_bm25=True,
             enable_rerank=True,
             rerank_top_k=min(rerank_max_k, candidate_k),
             search_scope=search_scope,
+            location_anchor_lat=anchor_lat,
+            location_anchor_lon=anchor_lon,
+            location_radius_m=anchor_radius_m,
         )
     except Exception as e:
         print(f"[Retriever] Hybrid search error: {e}")
@@ -256,7 +286,7 @@ async def retriever_node(state: TravelState):
     print("--- Retriever Agent ---")
 
     serving_params = get_retrieval_params("serving")
-    user_input = state.get('user_input', "")
+    user_input = get_effective_user_input(state)
     candidate_k = int(state.get("candidate_k") or serving_params["candidate_k"])
     final_k = int(state.get("final_k") or serving_params["top_k"])
     rerank_max_k = int(state.get("rerank_max_k") or serving_params["rerank_max_k"])
@@ -267,7 +297,7 @@ async def retriever_node(state: TravelState):
     selection_seed = 42
 
     primary_intent = state.get("primary_intent")
-    print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(state.get('user_input', ''))}")
+    print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
     image_path = state.get("image_path")
     emotional_text = None
@@ -281,24 +311,36 @@ async def retriever_node(state: TravelState):
         image_path=image_path,
     )
     print(f"[Retriever] search_scope={search_scope}")
-    candidate_pool = await _search_for_general(
-        state,
-        emotional_text=emotional_text,
-        candidate_k=candidate_k,
-        rerank_max_k=rerank_max_k,
-        search_scope=search_scope,
-    )
-    print(f"[Retriever] general_pool={len(candidate_pool)}")
 
+    # TRIP_PLANNING: itinerary 기반 검색만 실행 (일반 검색 노이즈 제외).
+    # 결과가 0이면(itinerary 없거나 검색 실패) 일반 검색으로 fallback.
     if primary_intent == IntentType.TRIP_PLANNING:
-        trip_candidates = await _search_for_trip_planning(
+        candidate_pool = await _search_for_trip_planning(
             state,
             emotional_text=emotional_text,
             candidate_k=candidate_k,
             rerank_max_k=rerank_max_k,
         )
-        print(f"[Retriever] trip_candidates={len(trip_candidates)}")
-        candidate_pool.extend(trip_candidates)
+        print(f"[Retriever] trip_candidates={len(candidate_pool)}")
+        if not candidate_pool:
+            print("[Retriever] trip search returned 0, fallback to general search")
+            candidate_pool = await _search_for_general(
+                state,
+                emotional_text=emotional_text,
+                candidate_k=candidate_k,
+                rerank_max_k=rerank_max_k,
+                search_scope=search_scope,
+            )
+            print(f"[Retriever] fallback general_pool={len(candidate_pool)}")
+    else:
+        candidate_pool = await _search_for_general(
+            state,
+            emotional_text=emotional_text,
+            candidate_k=candidate_k,
+            rerank_max_k=rerank_max_k,
+            search_scope=search_scope,
+        )
+        print(f"[Retriever] general_pool={len(candidate_pool)}")
 
     print(f"[Retriever] candidate_pool total={len(candidate_pool)}")
 
@@ -332,9 +374,17 @@ async def retriever_node(state: TravelState):
 
     diagnostics = _build_retrieval_diagnostics(candidate_pool)
 
+    # location diagnostics 보강
+    slots = state.get("slots")
+    norm_location = getattr_safe(slots, "location") if slots else None
+    canonical_matched = norm_location in LANDMARK_DICTIONARY if norm_location else False
+    diagnostics["normalized_location"] = norm_location
+    diagnostics["location_canonical_matched"] = canonical_matched
+    diagnostics["location_geo_filter_applied"] = canonical_matched  # anchor 전달 여부와 동치
+
     return {
         "candidate_pool": candidate_pool,
-        "candidates": candidates,
+        "candidates": exposed_candidates,
         "retrieval_diagnostics": diagnostics,
         "selection_mode": selection_mode,
     }

@@ -11,7 +11,9 @@ frontend/
 ├── src/
 │   ├── app/
 │   ├── components/
+│   ├── features/
 │   ├── hooks/
+│   ├── lib/
 │   ├── services/
 │   └── types/
 ├── public/
@@ -101,7 +103,12 @@ frontend/
 
 ---
 
-## 5) `src/services/`, `src/hooks/`, `src/types/`
+## 5) `src/lib/`, `src/services/`, `src/hooks/`, `src/types/`
+
+### `src/lib/`
+
+- `utils.ts`: 공통 유틸리티 함수 (예: Tailwind 클래스 병합을 위한 `cn`)
+
 
 ### `src/services/`
 

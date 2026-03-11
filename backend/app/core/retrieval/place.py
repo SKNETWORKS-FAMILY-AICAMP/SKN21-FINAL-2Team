@@ -1,103 +1,35 @@
 import os
 import numpy as np
 import asyncio
-import math
-import re
-from typing import Any
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue, MatchAny
+    Filter, FieldCondition, MatchValue, MatchAny, SparseVector
 )
-from sentence_transformers import SentenceTransformer, CrossEncoder
+from sentence_transformers import SentenceTransformer
 
 from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
     BM25_POOL_LIMIT, BM25_ENABLE_THRESHOLD, BM25_ENABLE_SCORE_THRESHOLD,
+    ENABLE_ADDR_SPARSE_BOOST, ENABLE_GEO_FILTER,
+    ENABLE_QDRANT_SPARSE,
+    BOOST_WEIGHT,
+    CANDIDATE_LIMIT_MULTIPLIER,
+    GEO_PROXIMITY_RADIUS_KM,
+    RRF_SCORE_MAX, FUSED_SCORE_MAX, MAX_BOOST_SUM,
     get_retrieval_params,
 )
 from app.schemas.chat import ChatMessageCreate
-from app.scripts.preprocess_data import download_image
+from app.scripts.preprocess_data import download_image, build_sparse_vector
 from app.utils.geocoder import GeoCoder
-from app.services.vision import describe_image
-from app.utils.place_id import get_place_id_from_point
+from app.utils.vision import describe_image
+from app.core.retrieval.place_score import PlaceScorer, _extract_place_id, _to_positive_int
+from app.agents.models.output import CategoryType
 
 
-def _normalize_match_text(text: str) -> str:
-    return re.sub(r"[^0-9a-z가-힣]+", "", str(text or "").lower())
-
-
-def _district_stem(token: str) -> str:
-    token = str(token or "").strip()
-    if token.endswith(("구", "군", "시", "동", "읍", "면", "리")) and len(token) > 1:
-        return token[:-1]
-    return token
-
-
-def _build_compact_text(payload: dict[str, Any]) -> str:
-    title = str(payload.get("title") or payload.get("name") or "").strip()
-    category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
-    addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "").strip()
-    return " ".join([part for part in (title, category, addr) if part]).strip()
-
-
-def _to_positive_int(value: Any) -> int | None:
-    if value in (None, "", 0, 0.0):
-        return None
-    try:
-        parsed = int(str(value).strip())
-        return parsed if parsed > 0 else None
-    except (TypeError, ValueError):
-        return None
-
-
-def _safe_float(value: Any) -> float | None:
-    try:
-        if value in (None, ""):
-            return None
-        parsed = float(value)
-        if math.isnan(parsed) or math.isinf(parsed):
-            return None
-        return parsed
-    except (TypeError, ValueError):
-        return None
-
-
-def _extract_place_id(point: Any, source_collection: str) -> int | None:
-    if source_collection == PHOTOS_COLLECTION:
-        cid = get_place_id_from_point(point, prefer_payload=True, fallback_to_point_id=False)
-    else:
-        cid = get_place_id_from_point(point, prefer_payload=False, fallback_to_point_id=True)
-    return _to_positive_int(cid)
-
-
-class PlaceRetriever:
+class PlaceRetriever(PlaceScorer):
     _instance = None
-    CATEGORY_NORMALIZATION_MAP = {
-        "관광지": "관광지",
-        "명소": "관광지",
-        "볼거리": "관광지",
-        "문화시설": "문화시설",
-        "박물관": "문화시설",
-        "미술관": "문화시설",
-        "전시": "문화시설",
-        "축제공연행사": "축제공연행사",
-        "축제": "축제공연행사",
-        "공연": "축제공연행사",
-        "레포츠": "레포츠",
-        "액티비티": "레포츠",
-        "체험": "레포츠",
-        "숙박": "숙박",
-        "숙소": "숙박",
-        "호텔": "숙박",
-        "음식점": "음식점",
-        "맛집": "음식점",
-        "식당": "음식점",
-        "레스토랑": "음식점",
-        "카페": "음식점",
-        "팝업스토어": "팝업스토어",
-        "팝업": "팝업스토어",
-    }
 
     @classmethod
     def get_instance(cls):
@@ -106,55 +38,41 @@ class PlaceRetriever:
             cls._instance = cls()
         return cls._instance
 
-    def normalize_category(self, category: str | None) -> str | None:
-        if not category:
-            return None
-        normalized = self.CATEGORY_NORMALIZATION_MAP.get(self._category_to_str(category))
-        return normalized
-
-    def _get_category_candidates(self, category: str | None) -> list[str]:
-        raw = self._category_to_str(category)
-        if not raw:
-            return []
-
-        normalized = self.normalize_category(raw)
-        candidates: list[str] = []
-        for value in (normalized, raw):
-            if value and value not in candidates:
-                candidates.append(value)
-        return candidates
-
-    @staticmethod
-    def _category_to_str(category: Any) -> str:
-        if category is None:
-            return ""
-        value = getattr(category, "value", category)
-        return str(value).strip()
-
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
         port = os.getenv('QDRANT_PORT', 6333)
         print(f"[INFO] Connecting to Qdrant at {host}:{port}")
         self.client = QdrantClient(host=host, port=port)
-        
+
         print(f"[INFO] Loading models: Text={TEXT_MODEL}, Vision={VISION_MODEL}")
         self.text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
         self.vision_model = SentenceTransformer(VISION_MODEL, device=DEVICE)
         self._reranker = None
         self._reranker_load_attempted = False
-        
+
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
-    def _build_category_filter(self, category: str = None, has_image: bool = False) -> Filter | None:
-        """카테고리 필터 생성 (contenttypeid 필드에 한글 명칭으로 저장됨)"""
+    def _build_query_filter(
+        self,
+        categories: list[CategoryType] = None,
+        has_image: bool = False,
+        anchor_lat: float | None = None,
+        anchor_lon: float | None = None,
+        radius_m: float | None = None,
+    ) -> Filter | None:
+        """카테고리, 이미지 유무, Geo 조건을 합성한 Qdrant 필터 생성.
+
+        - category / has_image: PLACES_COLLECTION, PHOTOS_COLLECTION 공용
+        - anchor_lat/lon/radius_m: PLACES_COLLECTION 전용 geo 조건 (hard filter)
+          지정하지 않으면 geo 조건 없이 빌드.
+        """
         must_conditions = []
         must_not_conditions = []
-        category_values = self._get_category_candidates(category)
+        category_values = [c.value for c in (categories or [])]
 
         if category_values:
-            if len(category_values) == 2:
-                print(f"[INFO] category normalized: '{category}' -> '{category_values[0]}' (fallback='{category_values[1]}')")
-            # MatchAny: contenttypeid가 후보값 중 하나와 일치하면 통과
+            if len(category_values) >= 2:
+                print(f"[INFO] category candidates built: {category_values}")
             must_conditions.append(
                 FieldCondition(key="contenttypeid", match=MatchAny(any=category_values))
             )
@@ -163,25 +81,37 @@ class PlaceRetriever:
             from qdrant_client.models import IsEmptyCondition, PayloadField
             must_not_conditions.append(IsEmptyCondition(is_empty=PayloadField(key="image")))
 
+        if anchor_lat is not None and anchor_lon is not None and radius_m is not None:
+            must_conditions.append(
+                FieldCondition(
+                    key="geo",
+                    geo_radius={
+                        "center": {"lat": float(anchor_lat), "lon": float(anchor_lon)},
+                        "radius": float(radius_m),
+                    },
+                )
+            )
+            print(f"[INFO] geo filter added: lat={anchor_lat} lon={anchor_lon} radius_m={radius_m}")
+
         if not must_conditions and not must_not_conditions:
             return None
 
         built = Filter(
             must=must_conditions if must_conditions else None,
-            must_not=must_not_conditions if must_not_conditions else None
+            must_not=must_not_conditions if must_not_conditions else None,
         )
-        print(f"[INFO] category_filter built: category={category} values={category_values}")
+        print(f"[INFO] query_filter built: category={categories} values={category_values} geo={'yes' if anchor_lat else 'no'}")
         return built
 
-    def search_text(self, query: str, limit: int = 5, category: str = None, has_image: bool = False):
+    def search_text(self, query: str, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
         """
         Text-based search for places (Semantic).
         Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
         """
-        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} category={category} has_image={has_image}")
+        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} categories={categories} has_image={has_image}")
         query_vec = self.text_model.encode(query).astype(np.float32)
-        
-        query_filter = self._build_category_filter(category, has_image)
+
+        query_filter = self._build_query_filter(categories, has_image)
 
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
@@ -193,7 +123,7 @@ class PlaceRetriever:
         print(f"[INFO] search_text hits={len(response.points)}")
         return response.points
 
-    def search_text_to_image(self, query: str, limit: int = 5, category: str = None):
+    def search_text_to_image(self, query: str, limit: int = 5, categories: list[CategoryType] = None):
         """
         Text-to-Image cross-modal search.
         Uses CLIP Text Encoder to find images in 'img_vec_agg'.
@@ -201,8 +131,8 @@ class PlaceRetriever:
         print(f"[INFO] search_text_to_image (Cross-modal) start query='{query[:80]}'")
         # Using CLIP to encode text for image matching
         query_vec = self.vision_model.encode(query).astype(np.float32)
-        
-        query_filter = self._build_category_filter(category)
+
+        query_filter = self._build_query_filter(categories)
 
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
@@ -214,20 +144,20 @@ class PlaceRetriever:
         )
         return response.points
 
-    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, category: str = None):
+    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, categories: list[CategoryType] = None):
         """
         Image-based search (Visual Similarity).
         Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
         """
         print(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
-        
+
         img = await asyncio.to_thread(download_image, image_url)
         if img is None:
             return []
 
         query_vec = await asyncio.to_thread(self.vision_model.encode, img)
         query_vec = np.asarray(query_vec, dtype=np.float32)
-        query_filter = self._build_category_filter(category)
+        query_filter = self._build_query_filter(categories)
 
         response = await asyncio.to_thread(
             self.client.query_points_groups,
@@ -241,224 +171,12 @@ class PlaceRetriever:
         )
         return response.groups
 
-    def _tokenize(self, text: str) -> list[str]:
-        return re.findall(r"[가-힣A-Za-z0-9]+", text or "")
-
-    def _bm25_like_score(self, query: str, payload: dict) -> float:
-        tokens = self._tokenize(query)
-        if not tokens:
-            return 0.0
-        doc_text = _build_compact_text(payload)
-        doc_tokens = self._tokenize(doc_text)
-        if not doc_tokens:
-            return 0.0
-
-        freq = {}
-        for tok in doc_tokens:
-            freq[tok] = freq.get(tok, 0) + 1
-
-        k1 = 1.2
-        b = 0.75
-        avgdl = 120.0
-        doc_len = len(doc_tokens)
-        score = 0.0
-        for t in tokens:
-            tf = freq.get(t, 0)
-            if tf <= 0:
-                continue
-            denom = tf + k1 * (1 - b + b * (doc_len / avgdl))
-            score += ((k1 + 1) * tf) / denom
-        return float(1 - math.exp(-score))
-
-    def _payload_matches_category(self, payload: dict, normalized_category: str | None) -> bool:
-        category_values = self._get_category_candidates(normalized_category)
-        if not category_values:
-            return True
-        payload_values = {
-            str(payload.get("contenttypeid") or "").strip(),
-            str(payload.get("category") or "").strip(),
-        }
-        payload_values.discard("")
-        return any(value in payload_values for value in category_values)
-
-    def _keyword_match_bonus(self, query: str, payload: dict) -> float:
-        if not query or not payload:
-            return 0.0
-
-        title = str(payload.get("title") or payload.get("name") or "")
-        addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "")
-        if not title and not addr:
-            return 0.0
-
-        query_norm = _normalize_match_text(query)
-        title_norm = _normalize_match_text(title)
-        bonus = 0.0
-
-        if title_norm:
-            if len(title_norm) >= 3 and title_norm in query_norm:
-                bonus += 0.18
-            else:
-                # 제목 토큰이 2개 이상 질의에 겹치면 소폭 부스트
-                query_tokens = set(self._tokenize(query))
-                title_tokens = {t for t in self._tokenize(title) if len(t) >= 2}
-                overlap = len(query_tokens & title_tokens)
-                if overlap > 0:
-                    bonus += min(0.12, 0.04 * overlap)
-
-        # 질의 내 지역 토큰(예: 성북동, 강남구)이 주소에 있으면 소폭 부스트
-        district_tokens = set(re.findall(r"[가-힣A-Za-z0-9]+(?:구|군|시|동|읍|면|리)", query))
-        if district_tokens and addr:
-            addr_norm = _normalize_match_text(addr)
-            normalized_districts = {_normalize_match_text(tok) for tok in district_tokens}
-            stemmed_districts = {_normalize_match_text(_district_stem(tok)) for tok in district_tokens}
-            if any(tok and tok in addr_norm for tok in normalized_districts):
-                bonus += 0.06
-            elif any(stem and stem in addr_norm for stem in stemmed_districts):
-                bonus += 0.06
-
-        return min(0.25, bonus)
-
-    def _payload_coordinates(self, payload: dict[str, Any]) -> tuple[float | None, float | None]:
-        if not payload:
-            return None, None
-
-        lat_keys = ("lat", "mapy", "latitude")
-        lng_keys = ("lng", "mapx", "longitude")
-
-        lat = next((_safe_float(payload.get(k)) for k in lat_keys if _safe_float(payload.get(k)) is not None), None)
-        lng = next((_safe_float(payload.get(k)) for k in lng_keys if _safe_float(payload.get(k)) is not None), None)
-
-        if lat is None or lng is None:
-            return None, None
-        if abs(lat) < 1e-9 and abs(lng) < 1e-9:
-            return None, None
-        if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
-            return None, None
-        return lat, lng
-
-    def _location_text_bonus(self, preferred_location: str | None, payload: dict) -> float:
-        if not preferred_location or not payload:
-            return 0.0
-
-        addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "")
-        title = str(payload.get("title") or payload.get("name") or "")
-        target_norm = _normalize_match_text(f"{addr} {title}")
-        if not target_norm:
-            return 0.0
-
-        location_tokens = {t for t in self._tokenize(preferred_location) if len(t) >= 2}
-        if not location_tokens:
-            return 0.0
-
-        hit_count = 0
-        for token in location_tokens:
-            token_norm = _normalize_match_text(token)
-            if token_norm and token_norm in target_norm:
-                hit_count += 1
-                continue
-            stem_norm = _normalize_match_text(_district_stem(token))
-            if stem_norm and stem_norm in target_norm:
-                hit_count += 1
-
-        return min(0.10, 0.03 * hit_count)
-
-    def _geo_proximity_bonus(
-        self,
-        payload: dict,
-        anchor_lat: float | None,
-        anchor_lng: float | None,
-        radius_km: float = 20.0,
-        max_boost: float = 0.20,
-    ) -> float:
-        if anchor_lat in (None, 0, 0.0) or anchor_lng in (None, 0, 0.0):
-            return 0.0
-
-        point_lat, point_lng = self._payload_coordinates(payload)
-        if point_lat is None or point_lng is None:
-            return 0.0
-
-        dist_km = self._haversine(anchor_lat, anchor_lng, point_lat, point_lng)
-        if dist_km > radius_km:
-            return 0.0
-
-        normalized = max(0.0, 1.0 - (dist_km / radius_km))
-        return max_boost * normalized
-
-    async def _search_bm25_lexical(
-        self,
-        query: str,
-        category: str | None,
-        candidate_points: list,
-        candidate_k: int,
-        pool_limit: int = BM25_POOL_LIMIT,
-    ) -> list[dict]:
-        normalized_category = self.normalize_category(category)
-
-        scored = []
-        for p in list(candidate_points)[: max(int(pool_limit or 0), 1)]:
-            payload = p.payload or {}
-            if not self._payload_matches_category(payload, normalized_category):
-                continue
-            lexical_score = self._bm25_like_score(query, payload)
-            if lexical_score <= 0:
-                continue
-            scored.append(
-                {
-                    "id": _extract_place_id(p, PLACES_COLLECTION),
-                    "payload": payload,
-                    "score": lexical_score,
-                }
-            )
-
-        scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:candidate_k]
-
-    def _ensure_reranker(self):
-        if self._reranker_load_attempted:
-            return
-        self._reranker_load_attempted = True
-        try:
-
-            self._reranker = CrossEncoder("BAAI/bge-reranker-base", device=DEVICE)
-            print("[INFO] Reranker loaded: BAAI/bge-reranker-base")
-        except Exception as e:
-            self._reranker = None
-            print(f"[WARN] Reranker unavailable: {e}")
-
-    async def _rerank_candidates(self, query: str, candidates: list[dict], top_k: int) -> list[dict]:
-        self._ensure_reranker()
-        if not self._reranker or not candidates:
-            for idx, c in enumerate(candidates[:top_k], start=1):
-                c["rerank_score"] = None
-                c["final_rank"] = idx
-            return candidates[:top_k]
-
-        pairs = []
-        for c in candidates:
-            payload = c.get("payload", {})
-            pairs.append((query, _build_compact_text(payload)))
-
-        try:
-            scores = await asyncio.to_thread(self._reranker.predict, pairs)
-            for c, s in zip(candidates, scores):
-                c["rerank_score"] = float(s)
-            candidates.sort(key=lambda x: float(x.get("rerank_score", 0.0)), reverse=True)
-            for idx, c in enumerate(candidates[:top_k], start=1):
-                c["final_rank"] = idx
-            return candidates[:top_k]
-        except Exception as e:
-            print(f"[WARN] Reranker inference failed: {e}")
-            for idx, c in enumerate(candidates[:top_k], start=1):
-                c["rerank_score"] = None
-                c["final_rank"] = idx
-            return candidates[:top_k]
-
     async def search_hybrid(
         self,
         query: str,
         image_url: str = None,
         limit: int = 5,
-        category: str = None,
+        categories: list[CategoryType] = None,
         emotional_text: str = None,
         user_latitude: float | None = None,
         user_longitude: float | None = None,
@@ -468,6 +186,9 @@ class PlaceRetriever:
         enable_rerank: bool = True,
         rerank_top_k: int | None = None,
         search_scope: str = "auto",
+        location_anchor_lat: float | None = None,
+        location_anchor_lon: float | None = None,
+        location_radius_m: float | None = None,
     ):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
@@ -481,15 +202,32 @@ class PlaceRetriever:
             f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'} "
             f"scope={scope}"
         )
-        
+
         defaults = get_retrieval_params()
-        query_filter = self._build_category_filter(category)
+
+        # geo filter는 PLACES_COLLECTION 전용. PHOTOS_COLLECTION에는 geo 필드가 없으므로 분리.
+        apply_geo = (
+            ENABLE_GEO_FILTER
+            and location_anchor_lat is not None
+            and location_anchor_lon is not None
+            and location_radius_m is not None
+        )
+        places_filter = self._build_query_filter(
+            categories,
+            anchor_lat=location_anchor_lat if apply_geo else None,
+            anchor_lon=location_anchor_lon if apply_geo else None,
+            radius_m=location_radius_m if apply_geo else None,
+        )
+        photos_filter = self._build_query_filter(categories)  # geo 없이 category만
+
         candidate_k = max(int(candidate_k or defaults["candidate_k"]), int(limit or 0), 1)
         rerank_top_k = min(
             max(int(rerank_top_k or defaults["top_k"]), int(limit or 0), 1),
             min(defaults["rerank_max_k"], candidate_k),
         )
-        candidates_limit = max(candidate_k * 5, 30)
+        # 채널별 Qdrant fetch 상한. *5는 과도 → *CANDIDATE_LIMIT_MULTIPLIER(기본 3)으로 축소.
+        # 채널 수(최대 4)를 감안해도 candidate_k*3이면 RRF 융합에 충분한 pool 확보 가능.
+        candidates_limit = max(candidate_k * CANDIDATE_LIMIT_MULTIPLIER, 20)
         score_map = {}  # place_id -> {score, payload, matches}
         place_vector_points = []
         rrf_k = 60
@@ -512,7 +250,7 @@ class PlaceRetriever:
 
         # --- A. Text Search Channel ---
         if query and query.strip() and scope in {"auto", "place_only"}:
-            # 1. Scenario: Semantic Text Search (BGE-M3)
+            # 1. Scenario: Semantic Text Search (BGE-M3) — PLACES_COLLECTION (geo filter 적용)
             text_emb = await asyncio.to_thread(self.text_model.encode, query)
             text_emb = np.asarray(text_emb, dtype=np.float32)
             t_t_resp = await asyncio.to_thread(
@@ -521,14 +259,33 @@ class PlaceRetriever:
                 query=text_emb.tolist(),
                 limit=candidates_limit,
                 with_payload=True,
-                query_filter=query_filter,
+                query_filter=places_filter,
             )
             place_vector_points.extend(t_t_resp.points)
-            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if query_filter else 'no'})")
+            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
             collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
+        if ENABLE_QDRANT_SPARSE and query and query.strip() and scope in {"auto", "place_only"}:
+            try:
+                sparse_indices, sparse_values = build_sparse_vector(query)
+                if sparse_indices and sparse_values:
+                    sparse_resp = await asyncio.to_thread(
+                        self.client.query_points,
+                        collection_name=PLACES_COLLECTION,
+                        query=SparseVector(indices=sparse_indices, values=sparse_values),
+                        using="text_sparse",
+                        limit=candidates_limit,
+                        with_payload=True,
+                        query_filter=places_filter,  # geo filter 적용
+                    )
+                    place_vector_points.extend(sparse_resp.points)
+                    collect_hits(sparse_resp.points, 0.85, "qdrant_sparse", PLACES_COLLECTION)
+                    print(f"[INFO] qdrant_sparse hits={len(sparse_resp.points)}")
+            except Exception as e:
+                print(f"[WARN] qdrant sparse channel failed: {e}")
+
         if query and query.strip() and scope in {"auto", "photo_only"}:
-            # 2. Scenario: Cross-modal Text-to-Image (CLIP Text)
+            # 2. Scenario: Cross-modal Text-to-Image (CLIP Text) — PHOTOS_COLLECTION (geo 없음)
             clip_text_emb = await asyncio.to_thread(self.vision_model.encode, query)
             clip_text_emb = np.asarray(clip_text_emb, dtype=np.float32)
             t_i_resp = await asyncio.to_thread(
@@ -537,7 +294,7 @@ class PlaceRetriever:
                 query=clip_text_emb.tolist(),
                 limit=candidates_limit,
                 with_payload=True,
-                query_filter=query_filter,
+                query_filter=photos_filter,  # PHOTOS에는 geo 필드 없으므로 category만
             )
             collect_hits(t_i_resp.points, 0.5, "text_to_image", PHOTOS_COLLECTION)
 
@@ -545,7 +302,7 @@ class PlaceRetriever:
         if image_url and scope in {"auto", "photo_only"}:
             img = await asyncio.to_thread(download_image, image_url)
             if img:
-                # 3. Scenario: Visual Similarity (CLIP Vision)
+                # 3. Scenario: Visual Similarity (CLIP Vision) — PHOTOS_COLLECTION (geo 없음)
                 img_emb = await asyncio.to_thread(self.vision_model.encode, img)
                 img_emb = np.asarray(img_emb, dtype=np.float32)
                 i_i_resp = await asyncio.to_thread(
@@ -554,12 +311,12 @@ class PlaceRetriever:
                     query=img_emb.tolist(),
                     limit=candidates_limit,
                     with_payload=True,
-                    query_filter=query_filter,
+                    query_filter=photos_filter,  # geo 없음
                 )
                 collect_hits(i_i_resp.points, 1.0, "image_visual", PHOTOS_COLLECTION)
 
         if image_url and scope == "auto":
-            # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3)
+            # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3) — PLACES_COLLECTION (geo filter 적용)
             if not emotional_text:
                 emotional_text = await describe_image(image_url)
 
@@ -572,7 +329,7 @@ class PlaceRetriever:
                     query=emo_emb.tolist(),
                     limit=candidates_limit,
                     with_payload=True,
-                    query_filter=query_filter,
+                    query_filter=places_filter,  # geo filter 적용
                 )
                 place_vector_points.extend(i_e_resp.points)
                 collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
@@ -600,11 +357,13 @@ class PlaceRetriever:
                 )
 
                 if bm25_needed and point_pool:
+                    # BM25는 벡터 pool 재채점이므로 반환 상한은 candidate_k에 맞춤. (#10)
+                    # candidates_limit(채널 fetch 상한)이 아닌 실제 필요 후보 수 사용.
                     lexical_hits = await self._search_bm25_lexical(
                         query=query,
-                        category=category,
+                        categories=categories,
                         candidate_points=point_pool,
-                        candidate_k=candidates_limit,
+                        candidate_k=candidate_k,
                         pool_limit=BM25_POOL_LIMIT,
                     )
                     for rank, item in enumerate(lexical_hits, start=1):
@@ -626,28 +385,83 @@ class PlaceRetriever:
             except Exception as e:
                 print(f"[WARN] bm25 lexical channel failed: {e}")
 
+        # --- geo filter 0결과 fallback ---
+        # geo filter 적용 후 후보가 하나도 없으면 geo 없이 재시도
+        if apply_geo and not score_map:
+            print(
+                f"[INFO] search_hybrid: geo filter returned 0 candidates "
+                f"(lat={location_anchor_lat} lon={location_anchor_lon} r={location_radius_m}), "
+                f"retrying without geo filter"
+            )
+            return await self.search_hybrid(
+                query=query,
+                image_url=image_url,
+                limit=limit,
+                categories=categories,
+                emotional_text=emotional_text,
+                user_latitude=user_latitude,
+                user_longitude=user_longitude,
+                preferred_location=preferred_location,
+                candidate_k=candidate_k,
+                enable_bm25=enable_bm25,
+                enable_rerank=enable_rerank,
+                rerank_top_k=rerank_top_k,
+                search_scope=search_scope,
+                # anchor None → 재귀 방지
+                location_anchor_lat=None,
+                location_anchor_lon=None,
+                location_radius_m=None,
+            )
+
         # --- C. Fusion & Boosting ---
         results = []
         fused = []
+        query_addr_tokens = self._extract_query_addr_tokens(query or "")
+        # preferred_location은 _location_text_bonus가 전담 처리.
+        # _addr_sparse_bonus는 query 원문 주소 토큰만 담당 → preferred_addr_tokens 불필요. (#11)
+        sparse_enabled = ENABLE_ADDR_SPARSE_BOOST and (
+            bool(categories)
+            or bool(query_addr_tokens)
+        )
+
+        # geo proximity boost anchor: 사용자 좌표 우선, 없으면 landmark anchor 사용
+        prox_lat = user_latitude if user_latitude else location_anchor_lat
+        prox_lon = user_longitude if user_longitude else location_anchor_lon
+
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
             keyword_boost = self._keyword_match_bonus(query=query or "", payload=payload)
             location_text_boost = self._location_text_bonus(preferred_location=preferred_location, payload=payload)
             geo_proximity_boost = self._geo_proximity_bonus(
                 payload=payload,
-                anchor_lat=user_latitude,
-                anchor_lng=user_longitude,
+                anchor_lat=prox_lat,
+                anchor_lng=prox_lon,
+                radius_km=GEO_PROXIMITY_RADIUS_KM,  # config 기반 반경 (#9)
             )
-            boost = keyword_boost + location_text_boost + geo_proximity_boost
+            payload_addr_tokens = self._payload_addr_tokens(payload)
+            addr_sparse_boost = 0.0
+            if sparse_enabled:
+                addr_sparse_boost = self._addr_sparse_bonus(
+                    query_addr_tokens=query_addr_tokens,
+                    payload_addr_tokens=payload_addr_tokens,
+                )
+                if addr_sparse_boost > 0.0:
+                    data["matches"].add("addr_sparse")
+
+            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost
+            # BOOST_WEIGHT로 스케일 보정: RRF first_stage_score(0.01~0.05) 대비
+            # boost 합계(최대 0.65) 스케일 불균형 완화.
+            # 적용 후 boost 최대 기여 ≈ 0.65 * 0.3 = 0.195
             fused.append(
                 (
                     pid,
                     data,
-                    float(data.get("score", 0.0)) + boost,
+                    float(data.get("score", 0.0)) + BOOST_WEIGHT * boost,
                     {
                         "keyword": keyword_boost,
                         "location_text": location_text_boost,
                         "geo_proximity": geo_proximity_boost,
+                        "addr_sparse": addr_sparse_boost,
                         "total": boost,
                     },
                 )
@@ -657,22 +471,31 @@ class PlaceRetriever:
         for idx, (pid, data, final_score, boost_detail) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
-                "score": final_score,
-                "first_stage_score": data["score"],
+                # 모든 점수를 [0.0, 1.0] 범위로 정규화
+                "score":             round(min(1.0, final_score        / FUSED_SCORE_MAX), 4),
+                "first_stage_score": round(min(1.0, data["score"]      / RRF_SCORE_MAX),   4),
                 "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"])),
-                "keyword_match_boost": boost_detail["keyword"],
-                "location_text_boost": boost_detail["location_text"],
-                "geo_proximity_boost": boost_detail["geo_proximity"],
-                "score_boost_total": boost_detail["total"],
+                "keyword_match_boost":  boost_detail["keyword"],
+                "location_text_boost":  boost_detail["location_text"],
+                "geo_proximity_boost":  boost_detail["geo_proximity"],
+                "addr_sparse_boost":    boost_detail["addr_sparse"],
+                "score_boost_total":    round(min(1.0, boost_detail["total"] / MAX_BOOST_SUM), 4),
             })
 
         print(f"[INFO] fusion & boosting returning {len(results)} candidates")
 
         first_stage_results = results[:candidate_k]
         if enable_rerank:
-            reranked = await self._rerank_candidates(query=query, candidates=first_stage_results, top_k=min(rerank_top_k, candidate_k))
+            # 이미지 전용 검색(query="")일 때 emotional_text를 fallback으로 사용.
+            # 둘 다 없으면 _rerank_candidates 내부에서 rerank를 스킵하고 score 순 유지.
+            rerank_query = (query or "").strip() or (emotional_text or "").strip()
+            reranked = await self._rerank_candidates(
+                query=rerank_query,
+                candidates=first_stage_results,
+                top_k=min(rerank_top_k, candidate_k)
+            )
         else:
             reranked = first_stage_results[: min(rerank_top_k, candidate_k)]
             for idx, c in enumerate(reranked, start=1):
@@ -683,74 +506,73 @@ class PlaceRetriever:
         final = reranked[: max(int(limit or 0), 1)]
         print(f"[INFO] search_hybrid returning {len(final)} candidates (score_map={len(score_map)} reranked={len(reranked)})")
         return final
-        
+
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
         """
         Search for places near a specific coordinate.
-        Since we don't have a Geo Index yet, we will fetch all (or many) and filter/sort in Python.
-        For 177 items, this is efficient enough.
+        GEO 인덱스 사용이 가능하면 반경 필터 기반으로 조회하고, 아니면 제한적 fallback scroll을 사용한다.
         """
         print(f"[INFO] search_nearby start lat={lat} lng={lng} limit={limit} radius_km={radius_km}")
-        # Fetch all places (scroll) - optimize this if data grows!
-        # For now, we scroll to get all points to calculate distance
-        all_points = []
-        offset = None
-        while True:
-            points, offset = self.client.scroll(
-                collection_name=PLACES_COLLECTION,
-                limit=100,
-                with_payload=True,
-                offset=offset,
-                with_vectors=False
-            )
-            all_points.extend(points)
-            if offset is None:
-                break
-        print(f"[DEBUG] search_nearby total_points_scrolled={len(all_points)}")
-        
-        # Calculate distance and filter
-        results = []
-        for p in all_points:
+        candidate_points = []
+        radius_m = max(float(radius_km), 0.1) * 1000.0
+        scan_limit = max(int(limit or 0) * 20, 50)
+
+        if ENABLE_GEO_FILTER:
             try:
-                p_lat = float(p.payload.get("lat", 0))
-                p_lng = float(p.payload.get("lng", 0))
-            except (ValueError, TypeError):
-                p_lat, p_lng = 0.0, 0.0
-            
-            if p_lat == 0 and p_lng == 0:
+                geo_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="geo",
+                            geo_radius={
+                                "center": {"lat": float(lat), "lon": float(lng)},
+                                "radius": radius_m,
+                            },
+                        )
+                    ]
+                )
+                points, _ = self.client.scroll(
+                    collection_name=PLACES_COLLECTION,
+                    scroll_filter=geo_filter,
+                    limit=scan_limit,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+                candidate_points = list(points)
+                print(f"[DEBUG] search_nearby geo-filter candidates={len(candidate_points)}")
+            except Exception as e:
+                print(f"[WARN] search_nearby geo filter failed, fallback scroll: {e}")
+
+        # fallback: legacy scroll (제한된 수량만 조회)
+        if not candidate_points:
+            points, _ = self.client.scroll(
+                collection_name=PLACES_COLLECTION,
+                limit=scan_limit,
+                with_payload=True,
+                with_vectors=False,
+            )
+            candidate_points = list(points)
+            print(f"[DEBUG] search_nearby fallback candidates={len(candidate_points)}")
+
+        results = []
+        for p in candidate_points:
+            payload = p.payload or {}
+            p_lat, p_lng = self._payload_coordinates(payload)
+            if p_lat is None or p_lng is None:
                 continue
-                
-            dist = self._haversine(lat, lng, p_lat, p_lng)
-            # radius 반경 내에 있는 장소만 추가
+
+            dist = self._haversine(float(lat), float(lng), p_lat, p_lng)
             if dist <= radius_km:
                 results.append({
                     "id": p.id,
-                    "payload": p.payload,
-                    "score": 1.0 / (dist + 0.1), # Score inversely proportional to distance
-                    "distance_km": dist
+                    "payload": payload,
+                    "score": 1.0 / (dist + 0.1),
+                    "distance_km": dist,
                 })
-        
-        # 거리가 가까운 순서대로 정렬
+
         results.sort(key=lambda x: x["distance_km"])
         trimmed = results[:limit]
         print(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")
         return trimmed
-
-    def _haversine(self, lat1, lon1, lat2, lon2):
-        """
-        두 지점 간의 거리를 계산합니다.
-        """
-        import math
-        R = 6371  # Earth radius in km
-        
-        dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lon2 - lon1)
-        a = (math.sin(dlat / 2) * math.sin(dlat / 2) +
-             math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-             math.sin(dlon / 2) * math.sin(dlon / 2))
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        d = R * c
-        return d
 
 
 async def retrieval_place(message_in: ChatMessageCreate):
@@ -758,15 +580,15 @@ async def retrieval_place(message_in: ChatMessageCreate):
     context_str = None
     search_results = []
     nearby_places = []
-    try:        
+    try:
         print(
             f"[INFO] retrieval_place start message_len={len(message_in.message or '')} "
             f"has_image={'yes' if message_in.image_path else 'no'}"
         )
         # Instantiate retriever (In production, use dependency injection or singleton)
-        # Note: This loads the model every time if not cached. 
+        # Note: This loads the model every time if not cached.
         # For better performance, move instantiation outside or use lru_cache
-        retriever = PlaceRetriever.get_instance() 
+        retriever = PlaceRetriever.get_instance()
 
         user_lat = message_in.latitude
         user_long = message_in.longitude
@@ -782,7 +604,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
                 print(f"[DEBUG] retrieval_place reverse_geocoded address='{address}'")
             else:
                 print("[WARN] retrieval_place reverse geocoder returned no address")
-        
+
         query = message_in.message
         if len(address) > 0:
             query += f'\n## location : ({user_lat}, {user_long}), address : {address}'
@@ -795,7 +617,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
             user_longitude=user_long,
         )
         print(f"[INFO] retrieval_place search_results_count={len(search_results) if search_results else 0}")
-        
+
         formatted_results = []
         search_ids = []
         photo_url_map = {}
@@ -806,14 +628,14 @@ async def retrieval_place(message_in: ChatMessageCreate):
                 per_place=3,
             )
 
-        if search_results:            
+        if search_results:
             formatted_results.append(f"### 🔎 Search Results (Hybrid Fusion)")
             for i, res in enumerate(search_results):
                 payload = res.get('payload', {})
                 rid = res.get('id')
                 score = res.get('score')
                 matches = res.get('match_types', [])
-                
+
                 search_ids.append(rid)
 
                 title = payload.get('title', 'Unknown')
@@ -841,7 +663,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
             lat = user_lat
             lng = user_long
             print(f"[DEBUG] retrieval_place best_place coords lat={lat} lng={lng}")
-            
+
             if lat != 0 and lng != 0:
                 nearby_places = retriever.search_nearby(lat, lng, limit=3, radius_km=5.0)
                 if nearby_places:
@@ -851,7 +673,7 @@ async def retrieval_place(message_in: ChatMessageCreate):
                         if res['id'] in search_ids:
                             print(f"[DEBUG] retrieval_place skip nearby self id={res['id']}")
                             continue
-                            
+
                         payload = res.get('payload', {})
                         title = payload.get('title', 'Unknown')
                         dist = res.get('distance_km', 0)
@@ -867,20 +689,20 @@ async def retrieval_place(message_in: ChatMessageCreate):
             print(f"[INFO] Context Reference:\n{context_str}")
         else:
             print("[INFO] retrieval_place no formatted context generated")
-            
+
     except Exception as e:
         print(f"[ERROR] Retrieval failed: {e}")
         context_str = None
 
     print(f"[INFO] retrieval_place done context_exists={'yes' if context_str else 'no'}")
-    
+
     # Collect all results for the agent
     all_results = []
     if search_results:
         all_results.extend(search_results)
     if 'nearby_places' in locals() and nearby_places:
         all_results.extend(nearby_places)
-        
+
     return context_str, all_results
 
 
