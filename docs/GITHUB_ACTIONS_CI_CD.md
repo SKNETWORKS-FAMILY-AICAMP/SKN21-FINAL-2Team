@@ -19,6 +19,8 @@
 - 백엔드 `pytest -q`
 - 프론트엔드 `npm test -- --runInBand`
 - 프론트엔드 `npm run build`
+  - 현재 `frontend/package.json`의 `build` 스크립트는 `next build --webpack`이다.
+  - 이유: Next 16 기본 Turbopack 빌드에서 경로 alias 해석이 불안정하게 실패한 사례가 있어 CI와 로컬 빌드 결과를 일치시키기 위해 Webpack 빌드로 고정했다.
 
 대상 이벤트:
 
