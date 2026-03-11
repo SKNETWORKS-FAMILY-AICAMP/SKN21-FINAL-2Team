@@ -1,4 +1,4 @@
-from app.utils.llm_streaming import compute_visible_delta
+from app.core.llm_streaming import compute_visible_delta
 
 
 def test_compute_visible_delta_buffers_trailing_raw_url() -> None:

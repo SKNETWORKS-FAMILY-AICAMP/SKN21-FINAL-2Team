@@ -1,9 +1,10 @@
 import asyncio
 from types import SimpleNamespace
 
-from qdrant_client.models import FieldCondition, Filter, IsEmptyCondition
+from qdrant_client.models import FieldCondition, Filter, IsEmptyCondition, MatchAny
 
-from app.retrieval.place import PlaceRetriever, _build_compact_text
+from app.agents.models.output import CategoryType
+from app.core.retrieval.place import PlaceRetriever, _build_compact_text
 from app.utils.config import get_retrieval_params
 
 
@@ -56,7 +57,6 @@ def test_build_compact_text_uses_title_category_addr_only():
 
 def test_bm25_lexical_scores_only_given_candidates():
     retriever = object.__new__(PlaceRetriever)
-    retriever.normalize_category = lambda category: category
 
     candidates = [
         SimpleNamespace(id=1, payload={"title": "강남 맛집", "contenttypeid": "음식점", "addr": "서울 강남구"}),
@@ -66,7 +66,7 @@ def test_bm25_lexical_scores_only_given_candidates():
     out = asyncio.run(
         retriever._search_bm25_lexical(
             query="강남 맛집",
-            category=None,
+            categories=None,
             candidate_points=candidates,
             candidate_k=2,
             pool_limit=2,
@@ -77,45 +77,34 @@ def test_bm25_lexical_scores_only_given_candidates():
     assert out[0]["id"] == 1
 
 
-def test_build_category_filter_uses_normalized_and_raw_category_with_or_matching():
+def test_build_query_filter_with_category_type():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("맛집")
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT])
 
     assert isinstance(query_filter, Filter)
     assert len(query_filter.must) == 1
     category_filter = query_filter.must[0]
-    assert isinstance(category_filter, Filter)
-    assert len(category_filter.should) == 4
-
-    condition_pairs = {(item.key, item.match.value) for item in category_filter.should if isinstance(item, FieldCondition)}
-    assert ("contenttypeid", "음식점") in condition_pairs
-    assert ("category", "음식점") in condition_pairs
-    assert ("contenttypeid", "맛집") in condition_pairs
-    assert ("category", "맛집") in condition_pairs
+    assert isinstance(category_filter, FieldCondition)
+    assert category_filter.key == "contenttypeid"
+    assert isinstance(category_filter.match, MatchAny)
+    assert set(category_filter.match.any) == {"음식점"}
 
 
-def test_build_category_filter_falls_back_to_raw_category_when_not_normalized():
+def test_build_query_filter_multiple_categories():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("브런치")
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT, CategoryType.TOURIST_ATTRACTION])
 
     assert isinstance(query_filter, Filter)
-    assert len(query_filter.must) == 1
     category_filter = query_filter.must[0]
-    assert isinstance(category_filter, Filter)
-
-    condition_pairs = {(item.key, item.match.value) for item in category_filter.should if isinstance(item, FieldCondition)}
-    assert condition_pairs == {
-        ("contenttypeid", "브런치"),
-        ("category", "브런치"),
-    }
+    assert set(category_filter.match.any) == {"음식점", "관광지"}
 
 
-def test_build_category_filter_adds_must_not_when_has_image_true():
+def test_build_query_filter_adds_must_not_when_has_image_true():
     retriever = object.__new__(PlaceRetriever)
 
-    query_filter = retriever._build_category_filter("맛집", has_image=True)
+    query_filter = retriever._build_query_filter([CategoryType.RESTAURANT], has_image=True)
 
     assert isinstance(query_filter, Filter)
     assert len(query_filter.must) == 1
@@ -123,18 +112,18 @@ def test_build_category_filter_adds_must_not_when_has_image_true():
     assert isinstance(query_filter.must_not[0], IsEmptyCondition)
 
 
-def test_payload_matches_category_accepts_raw_category_field_fallback():
+def test_payload_matches_category_accepts_category_type():
     retriever = object.__new__(PlaceRetriever)
 
-    assert retriever._payload_matches_category({"category": "브런치"}, "브런치") is True
-    assert retriever._payload_matches_category({"contenttypeid": "브런치"}, "브런치") is True
-    assert retriever._payload_matches_category({"contenttypeid": "음식점"}, "맛집") is True
-    assert retriever._payload_matches_category({"category": "카페"}, "맛집") is False
+    assert retriever._payload_matches_category({"contenttypeid": "음식점"}, [CategoryType.RESTAURANT]) is True
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, [CategoryType.TOURIST_ATTRACTION]) is True
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, [CategoryType.RESTAURANT]) is False
+    assert retriever._payload_matches_category({"contenttypeid": "관광지"}, None) is True
 
 
 def test_search_hybrid_caps_rerank_top_k_to_serving_profile():
     retriever = object.__new__(PlaceRetriever)
-    retriever._build_category_filter = lambda category=None, has_image=False: None
+    retriever._build_query_filter = lambda categories=None, has_image=False, anchor_lat=None, anchor_lon=None, radius_m=None: None
     retriever.text_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     retriever.vision_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
     retriever.client = SimpleNamespace(
@@ -174,3 +163,87 @@ def test_search_hybrid_caps_rerank_top_k_to_serving_profile():
 
     assert captured["top_k"] == get_retrieval_params("serving")["rerank_max_k"]
     assert len(out) == 1
+
+
+def test_search_nearby_uses_geo_filter_when_enabled(monkeypatch):
+    retriever = object.__new__(PlaceRetriever)
+    captured = {"scroll_filter": None}
+
+    def _fake_scroll(**kwargs):
+        captured["scroll_filter"] = kwargs.get("scroll_filter")
+        point = SimpleNamespace(
+            id=1,
+            payload={"geo": {"lat": 37.5666, "lon": 126.9781}, "title": "A"},
+        )
+        return [point], None
+
+    retriever.client = SimpleNamespace(scroll=_fake_scroll)
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_GEO_FILTER", True)
+
+    out = retriever.search_nearby(37.5665, 126.9780, limit=3, radius_km=5.0)
+
+    assert captured["scroll_filter"] is not None
+    assert len(out) == 1
+    assert out[0]["id"] == 1
+
+
+def test_search_nearby_falls_back_when_geo_filter_fails(monkeypatch):
+    retriever = object.__new__(PlaceRetriever)
+    calls = {"count": 0}
+
+    def _fake_scroll(**kwargs):
+        calls["count"] += 1
+        if kwargs.get("scroll_filter") is not None:
+            raise RuntimeError("geo filter error")
+        point = SimpleNamespace(
+            id=2,
+            payload={"mapy": "37.5667", "mapx": "126.9782", "title": "B"},
+        )
+        return [point], None
+
+    retriever.client = SimpleNamespace(scroll=_fake_scroll)
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_GEO_FILTER", True)
+
+    out = retriever.search_nearby(37.5665, 126.9780, limit=3, radius_km=5.0)
+
+    assert calls["count"] == 2
+    assert len(out) == 1
+    assert out[0]["id"] == 2
+
+
+def test_search_hybrid_includes_qdrant_sparse_channel_when_enabled(monkeypatch):
+    retriever = object.__new__(PlaceRetriever)
+    retriever._build_query_filter = lambda categories=None, has_image=False, anchor_lat=None, anchor_lon=None, radius_m=None: None
+    retriever.text_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
+    retriever.vision_model = SimpleNamespace(encode=lambda text: [0.1, 0.2, 0.3])
+    calls = {"using": []}
+
+    def _fake_query_points(**kwargs):
+        calls["using"].append(kwargs.get("using"))
+        return SimpleNamespace(
+            points=[
+                SimpleNamespace(
+                    id=1,
+                    payload={"contentid": "1", "title": "A", "contenttypeid": "음식점", "addr_tokens": ["강남구", "강남"]},
+                    score=0.3,
+                )
+            ]
+        )
+
+    retriever.client = SimpleNamespace(query_points=_fake_query_points)
+
+    monkeypatch.setattr("app.core.retrieval.place.ENABLE_QDRANT_SPARSE", True)
+
+    out = asyncio.run(
+        retriever.search_hybrid(
+            query="강남구 맛집",
+            limit=5,
+            candidate_k=10,
+            enable_bm25=False,
+            enable_rerank=False,
+            search_scope="place_only",
+        )
+    )
+
+    assert "text_sparse" in calls["using"]
+    assert any("qdrant_sparse" in c.get("match_types", []) for c in out)

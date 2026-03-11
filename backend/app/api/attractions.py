@@ -2,7 +2,7 @@ import random
 from typing import List
 from fastapi import APIRouter
 
-from app.retrieval.place import PlaceRetriever
+from app.core.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION
 from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue

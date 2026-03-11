@@ -133,21 +133,26 @@ app/
   - `auto`: 기존 하이브리드 전체 채널
 - 성능 최적화 정책
   - BM25 입력 텍스트는 경량 포맷 사용
+  - 옵션 플래그(`ENABLE_QDRANT_SPARSE`)가 켜진 경우 `text_sparse`(Qdrant native sparse vector) 채널을 추가로 사용
   - rerank 대상 수는 Retrieval 프로파일에서 상한 관리
   - BM25는 벡터 1차 후보 풀 내부에서만 계산
   - 벡터 점수가 충분하면 BM25를 조건부 스킵
+  - `search_nearby`는 기본적으로 Qdrant `geo_radius` 필터를 우선 사용하고, 실패 시 제한적 fallback scroll로 동작
 - 점수 보정 정책
   - 대화/슬롯의 `location` 텍스트가 후보 주소/제목과 일치할수록 가산점 부여
   - 사용자 첨부 좌표(`latitude`, `longitude`)와 후보 좌표 간 거리가 가까울수록 가산점 부여
+  - 옵션 플래그(`ENABLE_ADDR_SPARSE_BOOST`)가 켜진 경우 `addr_tokens` 기반 sparse 주소 점수를 추가 가산
 - 카테고리 필터 정책
-  - 슬롯의 `category`가 있으면 우선 정규화 맵으로 표준 카테고리(`맛집 -> 음식점`)를 시도
-  - 정규화 실패 시 원문 category 자체로도 필터를 유지
-  - 데이터 스키마 차이를 고려해 `contenttypeid`와 `category` 필드를 OR 조건으로 함께 비교
+  - 슬롯의 `categories`(다중) 또는 `category`(단일) 값을 입력받아 정규화 맵(`맛집 -> 음식점`)을 적용
+  - 정규화 실패 시 원문 category 자체도 후보군에 포함
+  - `contenttypeid` 필드에 대해 후보군 OR 매칭으로 필터링
 
 ### 3-9. `app/scripts/`
 
 - 데이터 전처리, 팝업스토어 수집, LLM 보강, Qdrant 적재 스크립트 제공
 - 대표 스크립트: `preprocess_data.py`, `preprocess_popup.py`, `enrich_llm.py`, `enrich_with_tavily.py`, `qdrant_setup.py`
+  - 전처리/적재 시 payload에 `geo(lat/lon)`와 `addr_tokens`를 함께 저장하여 위치 필터와 sparse 주소 보강에 활용
+  - `qdrant_setup.py`는 `places` 컬렉션에 `text_sparse` sparse vector를 함께 적재하여 native sparse 검색을 지원
 
 ### 3-10. `app/utils/`
 

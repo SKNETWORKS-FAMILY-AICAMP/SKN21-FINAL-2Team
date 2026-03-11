@@ -8,12 +8,12 @@ from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from app.agents.models.state import TravelState
+from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType
-from app.services.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
-from app.utils.llm_factory import LLMFactory
+from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
+from app.core.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
-from app.utils.llm_streaming import collect_streamed_text
+from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
 
 
@@ -69,8 +69,8 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         lng = float(payload.get("mapx", "0"))
 
         # 네이버 지도 링크 생성
-        title = payload.get("title") or payload.get("name") or "Unknown"
-        contentid = get_place_id(c) or "Unknown"
+        title = payload.get("place") or payload.get("title") or ""
+        contentid = get_place_id(c) or ""
         
         if title:
             encoded = urllib.parse.quote(title)
@@ -201,7 +201,7 @@ async def executor_node(state: TravelState, config=None):
 
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
@@ -332,7 +332,7 @@ async def executor_missing_node(state: TravelState, config=None):
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
     slots = state.get("slots")
@@ -373,7 +373,7 @@ async def executor_general_node(state: TravelState, config=None):
     """
     print("--- Executor General Agent ---")
 
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
     slots = state.get("slots")

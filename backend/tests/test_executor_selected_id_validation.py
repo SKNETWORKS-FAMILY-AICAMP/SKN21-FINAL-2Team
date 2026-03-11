@@ -105,3 +105,39 @@ async def test_executor_passes_plain_human_text_for_text_only(monkeypatch):
     assert isinstance(prompt_value, list)
     assert isinstance(prompt_value[-1], HumanMessage)
     assert prompt_value[-1].content == "강남 데이트 추천"
+
+
+@pytest.mark.asyncio
+async def test_executor_prefers_update_user_input(monkeypatch):
+    from app.utils.llm_factory import LLMFactory
+    from langchain_core.messages import HumanMessage
+
+    captured = {"prompt_value": None}
+
+    class _CaptureLLM:
+        async def astream(self, prompt_value):
+            captured["prompt_value"] = prompt_value
+            yield _Chunk("추천 문장입니다. [IDs: 1]")
+
+    monkeypatch.setattr(LLMFactory, "get_llm", staticmethod(lambda temperature=0.2, model=None: _CaptureLLM()))
+
+    state = {
+        "user_input": "그럼 여기",
+        "update_user_input": "성수동에서 전시 보고 갈 만한 카페 추천해줘",
+        "messages": [],
+        "prefs_info": {},
+        "slots": {},
+        "candidates": [
+            {"id": "1", "payload": {"title": "가게1", "contentid": "1", "addr": "서울"}},
+        ],
+        "candidate_pool": [
+            {"id": "1", "payload": {"title": "가게1", "contentid": "1", "addr": "서울"}},
+        ],
+    }
+
+    await executor_node(state)
+
+    prompt_value = captured["prompt_value"]
+    assert isinstance(prompt_value, list)
+    assert isinstance(prompt_value[-1], HumanMessage)
+    assert prompt_value[-1].content == "성수동에서 전시 보고 갈 만한 카페 추천해줘"

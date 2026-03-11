@@ -14,8 +14,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from app.api import auth, users, chat, prefer, common, explore, reservations, diaries
 # 모델 등록 (Base.metadata에 포함되도록 import)
 from app.models import user, chat as chat_model, country, hot_place, reservation, diary
-from app.retrieval.place import PlaceRetriever
-from app.utils.llm_factory import LLMFactory
+from app.core.retrieval.place import PlaceRetriever
+from app.core.llm_factory import LLMFactory
 from app.utils.error_handler import (
     AppException,
     app_exception_handler,
@@ -62,10 +62,11 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(Exception, internal_exception_handler)
 
-# CORS 설정 (프론트엔드 3000번 포트 허용)
-origins = [
-    "http://localhost:3000",
-]
+# CORS 설정
+# CORS_ORIGINS 환경변수에 쉼표로 구분된 도메인 목록을 설정 (예: http://example.com,http://www.example.com)
+# 미설정 시 localhost:3000 만 허용
+_cors_env = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in _cors_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -137,3 +138,8 @@ app.add_middleware(RequestLoggingMiddleware)
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
+
+
+@app.get("/api/healthz")
+def healthz():
+    return {"status": "ok"}

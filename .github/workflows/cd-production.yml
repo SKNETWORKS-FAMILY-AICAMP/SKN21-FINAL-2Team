@@ -1,0 +1,198 @@
+name: CD Production
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  verify-backend:
+    name: Verify Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backend pytest
+        env:
+          OPENAI_API_KEY: test-openai-key
+          TAVILY_API_KEY: test-tavily-key
+          GOOGLE_CLIENT_ID: test-google-client-id
+          GOOGLE_CLIENT_SECRET: test-google-client-secret
+          JWT_SECRET_KEY: test-jwt-secret
+          MYSQL_HOST: localhost
+          MYSQL_PORT: '3306'
+          MYSQL_USER: test
+          MYSQL_PASSWORD: test
+          MYSQL_DATABASE: test
+          QDRANT_HOST: localhost
+          QDRANT_PORT: '6333'
+        run: pytest -q
+
+  verify-frontend:
+    name: Verify Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test -- --runInBand
+
+      - name: Build frontend
+        env:
+          NEXT_PUBLIC_API_URL: /api
+          NEXT_PUBLIC_STREAM_API_URL: /api
+          BACKEND_URL: http://backend:8000
+        run: npm run build
+
+  build-and-push:
+    name: Build And Push Images
+    runs-on: ubuntu-latest
+    needs: [verify-backend, verify-frontend]
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_namespace: ${{ steps.meta.outputs.image_namespace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive image metadata
+        id: meta
+        run: |
+          echo "image_tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image_namespace=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-backend:${{ steps.meta.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-backend:prod-latest
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-frontend:${{ steps.meta.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-frontend:prod-latest
+
+      - name: Build and push nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-nginx:${{ steps.meta.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-nginx:prod-latest
+
+  deploy:
+    name: Deploy To Production EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          source: deploy/docker-compose.ec2.yml
+          target: ${{ secrets.PROD_APP_DIR }}
+          strip_components: 1
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE_NAMESPACE: ${{ needs.build-and-push.outputs.image_namespace }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          envs: IMAGE_NAMESPACE,IMAGE_TAG
+          script: |
+            set -eu
+            cd "${{ secrets.PROD_APP_DIR }}"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            export BACKEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-backend:${IMAGE_TAG}"
+            export FRONTEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-frontend:${IMAGE_TAG}"
+            export NGINX_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-nginx:${IMAGE_TAG}"
+            docker compose --env-file .env.production -f docker-compose.ec2.yml pull
+            docker compose --env-file .env.production -f docker-compose.ec2.yml up -d --remove-orphans
+            echo "Waiting for services to be ready..."
+            for i in $(seq 1 10); do
+              if curl -fsS http://127.0.0.1/api/healthz; then
+                echo "Health check passed!"
+                break
+              fi
+              echo "Attempt $i failed, waiting 10s..."
+              sleep 10
+              if [ "$i" = "10" ]; then
+                echo "Health check failed after 10 attempts"
+                exit 1
+              fi
+            done
