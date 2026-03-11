@@ -53,7 +53,6 @@ export function Destinations() {
     const [showTripModal, setShowTripModal] = useState(false);
     const [pendingPlace, setPendingPlace] = useState<Destination | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
-    const [allRandomData, setAllRandomData] = useState<Record<string, Destination[]>>({});
 
     // 가입/설문 미완료 시 경고 모달 상태
     const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
@@ -156,7 +155,7 @@ export function Destinations() {
                 const mappedData: Record<string, Destination[]> = {};
 
                 // 1. 핫플레이스 매핑
-                mappedData["hot-places"] = (raw["hot_places"] || []).map(p => ({
+                mappedData["hot-places"] = (raw["hot_places"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
@@ -167,7 +166,7 @@ export function Destinations() {
                 }));
 
                 // 2. 관광지 매핑
-                mappedData["tourist-spot"] = (raw["tourist_spots"] || []).map(p => ({
+                mappedData["tourist-spot"] = (raw["tourist_spots"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
@@ -175,7 +174,7 @@ export function Destinations() {
                 }));
 
                 // 3. 음식점 매핑
-                mappedData["foods"] = (raw["restaurants"] || []).map(p => ({
+                mappedData["foods"] = (raw["restaurants"] || []).map((p: CategoryPlaceItem) => ({
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
