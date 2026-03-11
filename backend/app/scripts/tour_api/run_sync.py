@@ -7,12 +7,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[3]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.scripts.tour_api.__config import load_settings
-from app.scripts.tour_api.__pipeline import run_pipeline
-from app.scripts.tour_api.crawl.__festival_event_image_add_crawl import (
-    DEFAULT_CRAWL_OUTPUT_PATH,
-    build_festival_image_add_crawl_only,
-)
+from app.scripts.tour_api.__crawl import add_content_args, run_content_collection
+from app.scripts.tour_api.__tour_api import load_settings, run_pipeline
 
 
 def parse_args():
@@ -28,11 +24,7 @@ def parse_args():
     parser.add_argument("--test-pages", type=int, default=1)
     parser.add_argument("--test-geocode-limit", type=int, default=3)
     parser.add_argument("--no-resume", action="store_true", default=False)
-    parser.add_argument("--skip-15-crawl", action="store_true", default=False)
-    parser.add_argument("--festival-output", type=Path, default=DEFAULT_CRAWL_OUTPUT_PATH)
-    parser.add_argument("--max-seoul-pages", type=int, default=None)
-    parser.add_argument("--max-visitkorea-pages", type=int, default=None)
-    return parser.parse_args()
+    return add_content_args(parser).parse_args()
 
 
 def main():
@@ -42,6 +34,7 @@ def main():
     settings = load_settings()
     if not settings.tour_api_key:
         raise RuntimeError("TOURAPI_KEY 누락(.env 확인)")
+
     resume = (not args.no_resume) and (not args.fresh)
     api_summary = run_pipeline(
         settings=settings,
@@ -56,19 +49,12 @@ def main():
         test_pages=args.test_pages,
         test_geocode_limit=args.test_geocode_limit,
     )
-
-    festival_summary = None
-    if not args.skip_15_crawl:
-        festival_summary = build_festival_image_add_crawl_only(
-            output_path=args.festival_output,
-            max_seoul_pages=args.max_seoul_pages,
-            max_visitkorea_pages=args.max_visitkorea_pages,
-        )
+    content_summary = run_content_collection(args)
 
     print(json.dumps({
         "tour_api_types": args.types,
         "tour_api_summary": api_summary,
-        "festival_crawl_summary": festival_summary,
+        "content_collection_summary": content_summary,
     }, ensure_ascii=False, indent=2))
 
 
