@@ -35,7 +35,12 @@
 - `verify-backend`, `verify-frontend` 두 job이 **병렬로** 검증 수행
   - 각 job에 pip 캐시 / npm 캐시 적용
 - `backend`, `frontend`, `nginx` 이미지를 GHCR에 푸시
-- 스테이징 EC2에 SSH 접속 후 `docker compose pull && docker compose up -d`
+- 스테이징 EC2에 SSH 접속 후 다음 순서로 배포
+  - 배포 디렉토리 이동 후 `.env.staging`, `.env.backend.staging`, `.env.frontend.staging`, `docker-compose.ec2.yml` 존재 여부 확인
+  - `df -h`, `docker system df`로 초기 상태 출력
+  - 미사용 컨테이너/이미지/build cache 및 7일 이상 지난 미사용 이미지 정리
+  - `docker compose pull && docker compose up -d`
+  - 배포 후 다시 `df -h`, `docker system df` 출력
 - 배포 후 `http://127.0.0.1/api/healthz` 최대 10회 retry 확인
 
 ### 2.3 운영 배포
@@ -45,7 +50,7 @@
 - `main` 브랜치에 `push` 발생 시 실행
 - 동일한 2단계 병렬 검증 수행
 - 운영용 이미지를 GHCR에 푸시
-- 운영 EC2에 SSH 접속 후 동일한 방식으로 재배포
+- 운영 EC2에 SSH 접속 후 스테이징과 동일한 정리/검사 절차를 거쳐 재배포
 - 배포 후 `http://127.0.0.1/api/healthz` 최대 10회 retry 확인
 
 ## 3. 자동배포 트리거
@@ -76,6 +81,7 @@
 - Docker Compose
 - 배포 디렉토리
 - 환경 파일
+- 충분한 루트 디스크 여유 공간
 
 예시 디렉토리 구조:
 
@@ -92,6 +98,12 @@
 
 배포용 compose 템플릿은 `deploy/docker-compose.ec2.yml`을 사용한다.  
 SCP로 EC2 배포 디렉토리에 직접 복사된다 (`deploy/` 폴더 제거, 파일만 전달).
+
+중요:
+
+- GitHub `Secrets` 또는 `Environments`에 저장한 값은 EC2의 `.env.*` 파일을 자동으로 생성하지 않는다.
+- `${STAGING_APP_DIR}` 또는 `${PROD_APP_DIR}` 아래에 런타임용 `.env.*` 파일을 미리 배치해야 한다.
+- 필수 파일이 없으면 배포 워크플로우가 즉시 실패한다.
 
 ## 5. GitHub Secrets
 
@@ -138,6 +150,21 @@ SCP로 EC2 배포 디렉토리에 직접 복사된다 (`deploy/` 폴더 제거, 
 
 백엔드 환경변수 예시는 `backend/.env.example` 파일을 참고한다.
 
+`docker-compose.ec2.yml`은 기본값으로 `.env.backend`, `.env.frontend`를 바라보지만, 실제 배포에서는 `.env.staging` 또는 `.env.production`의 아래 값으로 덮어쓴다.
+
+```env
+BACKEND_ENV_FILE=.env.backend.staging
+FRONTEND_ENV_FILE=.env.frontend.staging
+```
+
+즉 스테이징 EC2에는 최소 아래 파일이 모두 있어야 한다.
+
+- `.env.staging`
+- `.env.backend.staging`
+- `.env.frontend.staging`
+
+운영도 동일하게 `.env.production`, `.env.backend.production`, `.env.frontend.production`이 필요하다.
+
 ### 6.1 CORS 설정
 
 백엔드는 `CORS_ORIGINS` 환경변수로 허용 도메인을 제어한다.
@@ -179,3 +206,7 @@ backend 서비스는 `/api/healthz` 엔드포인트로 헬스체크를 수행한
 - 데이터베이스 마이그레이션 자동화는 현재 범위에 포함하지 않는다.
 - 서버의 `.env.*` 파일은 Git에 포함하지 않는다.
 - `GHCR_TOKEN` PAT는 만료 전 갱신하고 GitHub Secrets를 업데이트한다.
+- 배포 전후 서버에서 `df -h`, `docker system df`, `sudo du -sh /var/lib/containerd`로 용량을 점검하는 것을 권장한다.
+- 현재 자동 정리 정책은 미사용 컨테이너/이미지/build cache 및 7일 이상 지난 미사용 이미지를 정리한다.
+- `docker volume prune`은 데이터 손실 위험 때문에 기본 배포 절차에 포함하지 않는다.
+- 루트 디스크 사용률이 80%를 넘기기 시작하면 EBS 증설을 검토한다. 29GB급 루트 디스크는 이미지 누적 시 재발 가능성이 높다.
