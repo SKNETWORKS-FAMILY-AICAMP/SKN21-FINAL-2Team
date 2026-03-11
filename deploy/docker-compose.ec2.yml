@@ -1,4 +1,14 @@
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - app-network
+
   backend:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
@@ -6,6 +16,8 @@ services:
       - ${BACKEND_ENV_FILE:-.env.backend}
     volumes:
       - backend_uploads:/app/data/uploads
+    depends_on:
+      - qdrant
     networks:
       - app-network
     healthcheck:
@@ -38,6 +50,7 @@ services:
 
 volumes:
   backend_uploads:
+  qdrant_data:
 
 
 networks:

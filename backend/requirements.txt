@@ -13,6 +13,7 @@ langsmith
 pydbml # Database Modeling
 pymysql # MySQL Connector
 sqlalchemy # ORM
+alembic # DB schema migration
 python-jose[cryptography] # JWT Token
 passlib[bcrypt] # Password Hashing
 python-multipart # File Upload
