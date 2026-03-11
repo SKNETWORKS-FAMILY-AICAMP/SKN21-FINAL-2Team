@@ -472,8 +472,9 @@ export function MyPagePage() {
           <Sidebar />
         </div>
       </div>
-      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900">
-        <div className="p-4 sm:p-6">
+      {/* [Fix] 화면 사이즈에 따른 유동적 레이아웃 — 큰 화면에서 공백 없이 남은 높이 전부 채움 */}
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
+        <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">
             <h1 className="page-title text-gray-900 mb-2">My Page</h1>
             <p className="page-subtitle">Traveler Profile</p>
@@ -490,16 +491,17 @@ export function MyPagePage() {
             </div>
           </header>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-8">
-            <div className="xl:col-span-2">
+          {/* [Fix] 그리드가 남은 높이를 전부 채우도록 flex-1 적용 */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-8 flex-1">
+            <div className="xl:col-span-2 flex flex-col">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 sm:p-6 sm:pb-4 rounded-3xl border border-gray-200 bg-white shadow-sm flex flex-col"
+                className="p-4 sm:p-6 sm:pb-4 rounded-3xl border border-gray-200 bg-white shadow-sm flex flex-col flex-1"
               >
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 xl:w-20 xl:h-20 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                       {userProfile.profile_picture ? (
                         <img
                           src={userProfile.profile_picture}
@@ -573,7 +575,8 @@ export function MyPagePage() {
                         const imageSrc = SURVEY_IMAGE_MAP[item.value] ?? "/image/noplan.png";
                         return (
                           <div key={item.key} className="space-y-2">
-                            <div className="relative h-48 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                            {/* [Fix] 이미지 높이를 aspect-ratio로 변경하여 화면 사이즈에 비례하여 유동 확장 */}
+                            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                               <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 p-4">
@@ -718,7 +721,7 @@ export function MyPagePage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm overflow-hidden"
+                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm overflow-hidden min-h-0"
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
