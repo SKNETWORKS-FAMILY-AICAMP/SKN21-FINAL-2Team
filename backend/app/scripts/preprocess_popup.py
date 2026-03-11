@@ -25,10 +25,10 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 # ── 경로 설정 ──────────────────────────────────────────────────────────────────
-ROOT_DIR = Path(__file__).resolve().parent.parent          # backend/
-DATA_DIR = Path(__file__).resolve().parent                 # backend/data/
-STEP_DIR = DATA_DIR / "preprocess_steps"
-LLM_DIR  = DATA_DIR / "llm_result"
+ROOT_DIR  = Path(__file__).resolve().parent.parent.parent  # backend/
+DATA_DIR  = ROOT_DIR / "data"                              # backend/data/
+STEP_DIR  = DATA_DIR / "preprocess_steps"
+LLM_DIR   = DATA_DIR / "llm_result"
 
 STEP_DIR.mkdir(exist_ok=True)
 LLM_DIR.mkdir(exist_ok=True)
