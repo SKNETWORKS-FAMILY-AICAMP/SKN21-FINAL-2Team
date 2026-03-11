@@ -213,6 +213,7 @@ export function Destinations() {
 
     return (
         <>
+            {/* [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정 */}
             <section id="destinations" className="py-24 bg-gray-50/30">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">

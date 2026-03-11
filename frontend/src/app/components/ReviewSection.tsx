@@ -77,6 +77,7 @@ export function ReviewSection() {
         exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80 }),
     };
 
+    // [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정
     return (
         <section id="reviews" className="py-24 bg-gray-50 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 lg:px-8">

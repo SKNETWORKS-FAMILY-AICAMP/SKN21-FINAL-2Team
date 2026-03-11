@@ -34,6 +34,7 @@ export function Features() {
     const [activeIndex, setActiveIndex] = useState(0);
     const activeFeature = features[activeIndex];
 
+    // [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정
     return (
         <section id="features" className="py-16 bg-gray-50 overflow-hidden relative">
             <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col items-center">
