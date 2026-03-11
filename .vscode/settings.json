@@ -1,4 +1,0 @@
-{
-    "python.defaultInterpreterPath": "./.venv/scripts/python",
-    "python.terminal.useEnvFile": true
-}
