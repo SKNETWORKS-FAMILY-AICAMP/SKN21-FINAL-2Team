@@ -21,6 +21,7 @@ class TravelState(TypedDict, total=False):
     intents: List[IntentType]
     primary_intent: IntentType
     slots: IntentSlots
+    update_user_input: str | None
     summary_title: str
     summary_message: str
     user_preferences: Dict[str, Any]           # 선호도 조사
@@ -43,3 +44,7 @@ class TravelState(TypedDict, total=False):
     missing_slots: List[PlannerNeedType]                # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)
     answer: str
     selected_ids: List[str]                 # LLM이 최종 답변에서 선택한 장소들의 contentid 목록
+
+
+def get_effective_user_input(state: TravelState) -> str:
+    return (state.get("update_user_input") or state.get("user_input") or "").strip()

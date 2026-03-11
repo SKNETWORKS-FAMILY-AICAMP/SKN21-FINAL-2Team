@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.retrieval.place import (
+from app.core.retrieval.place import (
     PHOTOS_COLLECTION,
     PLACES_COLLECTION,
     PlaceRetriever,
@@ -23,7 +23,7 @@ def test_extract_place_id_uses_contentid_for_photo_points():
 
 @pytest.mark.asyncio
 async def test_retrieval_place_returns_empty_when_retriever_init_fails(monkeypatch):
-    from app.retrieval.place import PlaceRetriever
+    from app.core.retrieval.place import PlaceRetriever
 
     def _raise_init_error():
         raise RuntimeError("init error")
@@ -99,3 +99,32 @@ def test_geo_proximity_bonus_gives_higher_score_to_nearby_place():
 
     assert near_bonus > far_bonus
     assert near_bonus > 0.0
+
+
+def test_addr_sparse_bonus_respects_exact_and_stem_weights():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+
+    bonus = retriever._addr_sparse_bonus(
+        query_addr_tokens=["성북동", "성북", "21-18"],
+        payload_addr_tokens=["서울특별시", "성북동", "21-18"],
+        max_boost=0.20,
+        exact_weight=0.04,
+        stem_weight=0.02,
+    )
+
+    assert bonus == pytest.approx(0.10, rel=1e-6)
+
+
+def test_payload_coordinates_prefers_geo_field():
+    retriever = PlaceRetriever.__new__(PlaceRetriever)
+
+    lat, lng = retriever._payload_coordinates(
+        {
+            "geo": {"lat": 37.56, "lon": 126.97},
+            "mapy": "1.0",
+            "mapx": "1.0",
+        }
+    )
+
+    assert lat == pytest.approx(37.56, rel=1e-6)
+    assert lng == pytest.approx(126.97, rel=1e-6)

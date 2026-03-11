@@ -1,9 +1,11 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.agents.models.output import IntentOutput, IntentType, IntentSlots, InputType
-from app.services.prompts import INTENT_PROMPT
+from app.agents.prompts.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
+from app.agents.models.output import CategoryType
+from app.utils.geocoder import LANDMARK_DESC, normalize_location
 
 async def intent_node(state: TravelState):
     """
@@ -30,8 +32,12 @@ async def intent_node(state: TravelState):
                 "primary_intent": IntentType.IMAGE_SIMILAR,
                 "slots": IntentSlots(input_type=InputType.IMAGE),
                 "summary_title": "이미지 검색",
+                "summary_message": "이미지 기반 장소 검색 요청",
              }
-        return state
+        return {
+            "intents": [IntentType.GENERAL],
+            "primary_intent": IntentType.GENERAL,
+        }
 
     # 최근 10개 메시지만 사용
     messages = state.get("messages", [])[-10:]
@@ -50,24 +56,38 @@ async def intent_node(state: TravelState):
 
     print(f"[Intent] Prefs info from state: {prefs_info}")
     result = await chain.ainvoke({
-            "messages": messages, 
-            "user_input": user_input, 
+            "messages": messages,
+            "user_input": user_input,
             "prefs_info": prefs_info,
+            "category_desc": CategoryType.description(),
             "summary_title": summary_title,
-            "summary_message": summary_message
+            "summary_message": summary_message,
+            "landmark_desc": LANDMARK_DESC,
         })
 
     print("Intent Result : ", result)
+
+    # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
+    slots = result.slots
+    if slots and slots.location:
+        norm = normalize_location(slots.location)
+        if norm.normalized_location != slots.location:
+            print(
+                f"[Intent] location normalized: {slots.location!r} → {norm.normalized_location!r} "
+                f"(canonical={norm.canonical_matched})"
+            )
+        slots = slots.model_copy(update={"location": norm.normalized_location})
 
     # State에 결과 저장
     return {
         "intents": result.intents,
         "primary_intent": result.primary_intent,
-        "slots": result.slots,
+        "slots": slots,
+        "update_user_input": result.update_user_input,
         "summary_title": result.summary_title,
         "summary_message": result.summary_message,
         "prefs_info": prefs_info,
+        "candidates": [],
+        "candidate_pool": [],
+        "selected_ids": [],
     }
-
-
-

@@ -2,7 +2,7 @@ import pytest
 from types import SimpleNamespace
 
 from app.agents.models.output import InputType, IntentType
-from app.agents.retriever import _candidate_category, _pick_candidates, _resolve_search_scope, retriever_node
+from app.agents.retriever import _candidate_category, _pick_candidates, _resolve_search_scope, _search_for_general, retriever_node
 from app.utils.config import get_retrieval_params
 
 
@@ -94,3 +94,24 @@ async def test_retriever_node_dedup_uses_payload_contentid(monkeypatch):
     assert len(result["candidates"]) == 2
     ids = {str((c.get("payload") or {}).get("contentid", "")).strip() for c in result["candidates"]}
     assert ids == {"100", "200"}
+
+
+@pytest.mark.asyncio
+async def test_search_for_general_prefers_update_user_input(monkeypatch):
+    captured = {}
+
+    class _FakeRetriever:
+        async def search_hybrid(self, **kwargs):
+            captured["query"] = kwargs["query"]
+            return []
+
+    monkeypatch.setattr("app.agents.retriever.PlaceRetriever.get_instance", lambda: _FakeRetriever())
+
+    await _search_for_general(
+        {
+            "user_input": "여기",
+            "update_user_input": "성수동에서 전시랑 카페 추천해줘",
+        }
+    )
+
+    assert captured["query"] == "성수동에서 전시랑 카페 추천해줘"

@@ -30,13 +30,13 @@ from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
 from app.models.chat import ChatPlace
-from app.services.auto_start_prompt import (
+from app.agents.prompts.auto_start_prompt import (
     render_auto_start_prompt,
     render_auto_start_place_prompt,
     render_auto_start_combined_prompt,
     render_auto_start_greeting_prompt,
 )
-from app.utils.llm_streaming import compute_visible_delta, extract_text_from_chunk
+from app.core.llm_streaming import compute_visible_delta, extract_text_from_chunk
 from app.utils.place_id import get_place_id
 
 from langchain_core.messages import HumanMessage
@@ -197,10 +197,7 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
-        candidates=[],
-        candidate_pool=[],
         retrieval_diagnostics={},
-        selected_ids=[],
         answer="",
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")

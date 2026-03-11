@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.agents.models.state import TravelState
-from app.services.prompts import PLANNER_PROMPT
-from app.utils.llm_factory import LLMFactory
+from app.agents.models.state import TravelState, get_effective_user_input
+from app.agents.prompts.prompts import PLANNER_PROMPT
+from app.core.llm_factory import LLMFactory
 from app.agents.models.output import PlannerOutput, PlannerNeedType
 
 async def planner_node(state: TravelState):
@@ -15,7 +15,7 @@ async def planner_node(state: TravelState):
     """
     print("--- Planner Agent ---")
 
-    user_input = state.get("user_input", "")
+    user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
     slots = state.get("slots")
     prefs_info = state.get("prefs_info", "")
@@ -29,19 +29,19 @@ async def planner_node(state: TravelState):
         slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
         slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
 
-    # LLM으로 여행 일정 초안 생성
-    llm = LLMFactory.get_llm(temperature=0.7)
-    structured_llm = llm.with_structured_output(PlannerOutput)
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", PLANNER_PROMPT),
-        MessagesPlaceholder(variable_name="messages"),
-        ("human", "{user_input}")
-    ])
-
-    chain = prompt | structured_llm
-
     try:
+        # LLM으로 여행 일정 초안 생성
+        llm = LLMFactory.get_llm(temperature=0.7)
+        structured_llm = llm.with_structured_output(PlannerOutput)
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", PLANNER_PROMPT),
+            MessagesPlaceholder(variable_name="messages"),
+            ("human", "{user_input}")
+        ])
+
+        chain = prompt | structured_llm
+
         result = await chain.ainvoke({
             "messages": messages,
             "user_input": user_input,
@@ -62,7 +62,7 @@ async def planner_node(state: TravelState):
         
         if result.followup_question:
             followup_questions = state.get("follow_up_questions", [])
-            followup_questions.extend(result.followup_question)
+            followup_questions.append(result.followup_question)
             state_dict["follow_up_questions"] = followup_questions
 
         return state_dict
@@ -71,5 +71,5 @@ async def planner_node(state: TravelState):
         print(f"[Planner] Error: {e}")
         return {
             "itinerary": [],
-            "missing_slots": [PlannerNeedType.DURATION, PlannerNeedType.PARTY_SIZE],
+            "missing_slots": [PlannerNeedType.DATES, PlannerNeedType.PARTY_SIZE],
         }

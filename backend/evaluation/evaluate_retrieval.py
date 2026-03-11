@@ -39,6 +39,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from app.utils.config import get_retrieval_params
+from app.agents.models.output import CategoryType
 
 CATEGORIES = ["관광지", "문화시설", "축제공연행사", "레포츠", "숙박", "음식점"]
 CATEGORY_ALIASES = {
@@ -475,16 +476,24 @@ async def _default_retrieve_fn(
     retriever_candidate_k: Optional[int] = None,
     retriever_rerank_max_k: Optional[int] = None,
 ) -> list[dict[str, Any]]:
-    from app.retrieval.place import PlaceRetriever
+    from app.core.retrieval.place import PlaceRetriever
 
     retriever = PlaceRetriever.get_instance()
     eval_defaults = get_retrieval_params("evaluation")
     candidate_k = int(retriever_candidate_k or eval_defaults["candidate_k"])
     rerank_max_k = int(retriever_rerank_max_k or eval_defaults["rerank_max_k"])
+
+    # str → CategoryType 변환 (일치하는 value가 없으면 필터 없이 검색)
+    category_filter: list[CategoryType] = []
+    if category:
+        matched = next((ct for ct in CategoryType if ct.value == category), None)
+        if matched:
+            category_filter = [matched]
+
     return await retriever.search_hybrid(
         query=question,
         limit=top_k,
-        category=category,
+        categories=category_filter or [],
         candidate_k=max(candidate_k, 1),
         rerank_top_k=min(max(rerank_max_k, 1), max(candidate_k, 1)),
     )
