@@ -25,15 +25,19 @@ from app.schemas.chat import (
 )
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
+from app.utils.common import to_client_image_url
 from app.agents.graph import workflow
+from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
 from app.models.chat import ChatPlace
-from app.services.auto_start_prompt import (
+from app.agents.prompts.auto_start_prompt import (
     render_auto_start_prompt,
     render_auto_start_place_prompt,
     render_auto_start_combined_prompt,
     render_auto_start_greeting_prompt,
 )
+from app.core.llm_streaming import compute_visible_delta, extract_text_from_chunk
+from app.utils.place_id import get_place_id
 
 from langchain_core.messages import HumanMessage
 
@@ -62,6 +66,20 @@ class TodayRecommendationItem(BaseModel):
     prompt: str
 
 
+class ChatRoomDeleteResponse(BaseModel):
+    ok: bool
+    room_id: int
+
+
+def _encode_sse(payload: dict) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _encode_sse_padding() -> str:
+    # 브라우저가 작은 초기 chunk를 늦게 flush하는 경우를 줄이기 위한 프리앰블 패딩
+    return f": {' ' * 2048}\n\n"
+
+
 def _clean_history_text(value: str) -> str:
     clean = re.sub(r"\s+", " ", (value or "")).strip()
     return clean
@@ -84,7 +102,7 @@ def _make_room_title(text: str) -> str:
 
 def _should_update_room_title(db: Session, room_id: int) -> bool:
     count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
-    return int(count) <= 2
+    return int(count) <= 20
 
 
 def _can_overwrite_room_title(room: ChatRoom) -> bool:
@@ -165,17 +183,25 @@ def _save_human_message_if_needed(db: Session, room_id: int, message_in: ChatMes
     db.commit()
 
 
-def _build_graph_inputs(room_id: int, user_id: int, message_in: ChatMessageCreate, prefs_info: str):
-    return {
-        "user_input": message_in.message,
-        "user_id": user_id,
-        "room_id": room_id,
-        "latitude": message_in.latitude,
-        "longitude": message_in.longitude,
-        "image_path": message_in.image_path,
-        "prefs_info": prefs_info,
-        "messages": [HumanMessage(content=message_in.message)],
-    }
+def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreate) -> TravelState:
+    print(f"[BuildInputs] User({user.id}) Raw - Plan: '{user.plan_prefer}', Vibe: '{user.vibe_prefer}', Places: '{user.places_prefer}', Extras: '{user.extra_prefer1}', '{user.extra_prefer2}', '{user.extra_prefer3}'")
+    
+    inputs = TravelState(
+        user_input=message_in.message,
+        user_id=user.id,
+        room_id=room.id,
+        latitude=message_in.latitude,
+        longitude=message_in.longitude,
+        image_path=message_in.image_path,
+        prefs_info=user.build_preferences(),
+        messages=[HumanMessage(content=message_in.message)],
+        summary_title=room.title,
+        summary_message=room.history,
+        retrieval_diagnostics={},
+        answer="",
+    )
+    print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")
+    return inputs
 
 # 채팅방 목록 조회
 @router.get("/rooms", response_model=List[ChatRoomResponse])
@@ -288,7 +314,40 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
         raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
+    for message in room.messages:
+        if message.image_path:
+            message.image_path = to_client_image_url(message.image_path)
+        for place in message.places:
+            place.image_path = to_client_image_url(place.image_path)
     return room
+
+
+@router.delete("/rooms/{room_id}", response_model=ChatRoomDeleteResponse)
+def delete_room(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(db_manager.get_db),
+):
+    room = _get_owned_room_or_404(db, room_id, current_user.id)
+
+    try:
+        message_ids = [
+            message_id
+            for (message_id,) in db.query(ChatMessage.id).filter(ChatMessage.room_id == room_id).all()
+        ]
+
+        if message_ids:
+            db.query(ChatPlace).filter(ChatPlace.messages_id.in_(message_ids)).delete(synchronize_session=False)
+            db.query(ChatMessage).filter(ChatMessage.id.in_(message_ids)).delete(synchronize_session=False)
+
+        db.delete(room)
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"[ChatAPI] Room delete failed(room_id={room_id}): {e}")
+        raise AppException(ErrorCode.INTERNAL_ERROR, "Failed to delete room", 500)
+
+    return ChatRoomDeleteResponse(ok=True, room_id=room_id)
 
 
 @router.patch("/rooms/{room_id}/bookmark", response_model=ChatRoomResponse)
@@ -346,6 +405,7 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
     db.add(place)
     db.commit()
     db.refresh(place)
+    place.image_path = to_client_image_url(place.image_path)
     return place
 
 
@@ -406,7 +466,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "place_id": _normalize_int_or_zero(place.place_id),
             "name": place.name,
             "adress": place.adress,
-            "image_path": place.image_path,
+            "image_path": to_client_image_url(place.image_path),
             "longitude": _normalize_float_or_zero(place.longitude),
             "latitude": _normalize_float_or_zero(place.latitude),
             "bookmark_yn": place.bookmark_yn,
@@ -426,12 +486,8 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
 
-    # Backend에서 사용자 선호도 조회 후 LLM에 전달
-    prefs_info = current_user.build_preferences()
-
     # 그래프 입력 상태 구성 (대화 이력은 checkpointer가 자동 관리)
-    inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
-
+    inputs = _build_graph_inputs(current_user, room, message_in)
     
     # 그래프 실행 (Global Cache)
     try:
@@ -443,11 +499,10 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
         
         if should_update_title and _can_overwrite_room_title(room):
-            # 방 제목 자동 설정 (메시지 2개 이하일 때만)
-            summary_query = result.get("summary_query")
-            fallback_message = message_in.message
-            next_title = summary_query if summary_query else fallback_message
-            _save_room_title(db, room, next_title)
+            # 방 제목 자동 설정 (LLM이 제목을 생성했을 때만)
+            title = result.get("summary_title")
+            if title:
+                _save_room_title(db, room, title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
         import traceback
@@ -477,58 +532,18 @@ def _build_streaming_response(
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
-    prefs_info = current_user.build_preferences()
-    inputs = _build_graph_inputs(room_id, current_user.id, message_in, prefs_info)
+    inputs = _build_graph_inputs(current_user, room, message_in)
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
     async def event_generator():
+        yield _encode_sse_padding()
         full_answer = ""
         streamed_visible_text = ""
+        buffering_reason = None
         in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
         selected_ids = []
         candidates = []
 
-        def _chunk_to_text(chunk) -> str:
-            if chunk is None:
-                return ""
-            if isinstance(chunk, dict):
-                text = chunk.get("text")
-                if isinstance(text, str):
-                    return text
-                content = chunk.get("content")
-                if isinstance(content, str):
-                    return content
-                if isinstance(content, list):
-                    texts = []
-                    for part in content:
-                        if isinstance(part, dict):
-                            t = part.get("text")
-                            if t:
-                                texts.append(str(t))
-                        elif isinstance(part, str):
-                            texts.append(part)
-                    return "".join(texts)
-            if hasattr(chunk, "content"):
-                content = getattr(chunk, "content")
-                if isinstance(content, str):
-                    return content
-                if isinstance(content, list):
-                    texts = []
-                    for part in content:
-                        if isinstance(part, dict):
-                            t = part.get("text")
-                            if t:
-                                texts.append(str(t))
-                        elif isinstance(part, str):
-                            texts.append(part)
-                    return "".join(texts)
-            if hasattr(chunk, "text"):
-                text = getattr(chunk, "text")
-                if isinstance(text, str):
-                    return text
-            if isinstance(chunk, str):
-                return chunk
-            return ""
         try:
             graph_app = await get_graph_app()
             # 그래프에서 노드 이름을 동적으로 가져옴 (__start__, __end__ 등 내부 노드 제외)
@@ -539,16 +554,16 @@ def _build_streaming_response(
 
                 # 노드 시작/종료 이벤트
                 if kind == "on_chain_start" and name in graph_nodes:
-                    yield f"data: {json.dumps({'step': name, 'status': 'start'})}\n\n"
-                    if name in ("executor", "executor_missing"):
+                    yield _encode_sse({"step": name, "status": "start"})
+                    if name in ("executor", "executor_missing", "executor_general"):
                         in_executor = True
                 elif kind == "on_chain_end" and name in graph_nodes:
-                    yield f"data: {json.dumps({'step': name, 'status': 'done'})}\n\n"
+                    yield _encode_sse({"step": name, "status": "done"})
                     
                     output = event.get("data", {}).get("output", {})
                     print(f"[SSE] Node '{name}' finished. Output keys: {list(output.keys())}")
                     
-                    if name in ("executor", "executor_missing"):
+                    if name in ("executor", "executor_missing", "executor_general"):
                         in_executor = False
                         # executor 노드 종료 시 결과 캡처
                         output = event.get("data", {}).get("output", {})
@@ -564,39 +579,32 @@ def _build_streaming_response(
                             candidates = output["candidates"]
                             print(f"[SSE] Captured {len(candidates)} candidates")
                     
-                    # Intent 노드 종료 시점에 summary_query로 제목 즉시 업데이트
+                    # Intent 노드 종료 시점에 summary_title 제목 즉시 업데이트
                     if name == "intent":
                         output = event.get("data", {}).get("output")
                         if should_update_title and output and _can_overwrite_room_title(room):
-                            summary_query = output.get("summary_query")
-                            fallback_message = message_in.message
-                            next_title = summary_query if summary_query else fallback_message
-                            if _save_room_title(db, room, next_title):
-                                print(f"[ChatAPI] Room title updated to: {room.title}")
-                                # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
-                                yield f"data: {json.dumps({'room_title': room.title})}\n\n"
+                            summary_title = output.get("summary_title")
+                            if summary_title:
+                                if _save_room_title(db, room, summary_title):
+                                    print(f"[ChatAPI] Room title updated to: {room.title}")
+                                    # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
+                                    yield _encode_sse({"room_title": room.title})
 
                 # LLM 토큰 스트리밍 (executor 노드의 LLM만)
                 elif kind in ("on_chat_model_stream", "on_llm_stream") and in_executor:
-                    chunk = event.get("data", {}).get("chunk")
-                    token_text = _chunk_to_text(chunk)
-                    if token_text:
+                    # executor 계열 노드는 custom token event를 표준 경로로 사용한다.
+                    # raw LLM stream 이벤트까지 함께 처리하면 중복 토큰이 발생할 수 있다.
+                    continue
+                elif kind == "on_custom_event" and name == "token" and in_executor:
+                    token_text = event.get("data", {}).get("token", "")
+                    if isinstance(token_text, str) and token_text:
                         full_answer += token_text
-
-                        # [IDs: ...] 태그(완성/미완성)를 모두 숨긴 가시 텍스트 계산
-                        visible_text = re.sub(r"\[IDs:\s*.*?\]", "", full_answer, flags=re.DOTALL)
-                        partial_tag_start = visible_text.rfind("[IDs:")
-                        if partial_tag_start != -1:
-                            visible_text = visible_text[:partial_tag_start]
-
-                        if len(visible_text) > len(streamed_visible_text):
-                            delta = visible_text[len(streamed_visible_text):]
-                            streamed_visible_text = visible_text
-                            if delta:
-                                yield f"data: {json.dumps({'token': delta})}\n\n"
-                        else:
-                            # 태그 완성 시 텍스트 길이가 줄어들 수 있으므로 기준만 동기화
-                            streamed_visible_text = visible_text
+                        streamed_visible_text, delta, next_buffering_reason = compute_visible_delta(full_answer, streamed_visible_text)
+                        if next_buffering_reason != buffering_reason:
+                            buffering_reason = next_buffering_reason
+                            yield _encode_sse({"buffering": buffering_reason})
+                        if delta:
+                            yield _encode_sse({"token": delta})
 
 
         except asyncio.CancelledError:
@@ -610,7 +618,7 @@ def _build_streaming_response(
             db.rollback()
             if not full_answer:
                 full_answer = "죄송합니다. 오류가 발생했습니다."
-                yield f"data: {json.dumps({'token': full_answer})}\n\n"
+                yield _encode_sse({"token": full_answer})
 
         # AI 메시지 DB 저장
         if not full_answer:
@@ -631,11 +639,6 @@ def _build_streaming_response(
         if candidates:
             def _normalize_text(value: str) -> str:
                 return re.sub(r"\s+", "", (value or "")).lower()
-
-            def _candidate_id(candidate: dict) -> str:
-                payload = candidate.get("payload", {}) or {}
-                return str(payload.get("contentid") or candidate.get("id") or "").strip()
-
             def _infer_candidates_from_answer(answer_text: str):
                 if not answer_text:
                     return []
@@ -662,7 +665,7 @@ def _build_streaming_response(
             ordered_candidates = []
             if selected_ids:
                 for cid in selected_ids:
-                    candidate = next((c for c in candidates if _candidate_id(c) == str(cid).strip()), None)
+                    candidate = next((c for c in candidates if get_place_id(c) == str(cid).strip()), None)
                     if candidate and candidate not in ordered_candidates:
                         ordered_candidates.append(candidate)
 
@@ -672,7 +675,7 @@ def _build_streaming_response(
 
             for candidate in ordered_candidates[:3]:
                 payload = candidate.get("payload", {})
-                candidate_pid = _candidate_id(candidate)
+                candidate_pid = get_place_id(candidate)
                 new_place = ChatPlace(
                     messages_id=ai_message.id,
                     place_id=int(candidate_pid) if candidate_pid.isdigit() else 0,
@@ -701,7 +704,7 @@ def _build_streaming_response(
                 "place_id": _normalize_int_or_zero(p.place_id),
                 "name": p.name,
                 "adress": p.adress,
-                "image_path": p.image_path,
+                "image_path": to_client_image_url(p.image_path),
                 "longitude": _normalize_float_or_zero(p.longitude),
                 "latitude": _normalize_float_or_zero(p.latitude),
                 "bookmark_yn": p.bookmark_yn
@@ -709,9 +712,24 @@ def _build_streaming_response(
         ]
         
         print(f"[SSE] Sending 'done' event with {len(places_data)} places")
-        yield f"data: {json.dumps({'done': True, 'full_message': full_answer, 'message_id': ai_message.id, 'created_at': ai_message.created_at.isoformat(), 'room_title': room.title, 'places': places_data})}\n\n"
+        yield _encode_sse({
+            "done": True,
+            "full_message": full_answer,
+            "message_id": ai_message.id,
+            "created_at": ai_message.created_at.isoformat(),
+            "room_title": room.title,
+            "places": places_data,
+        })
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # 대화하기 — SSE 스트리밍
@@ -759,7 +777,9 @@ async def auto_start_chat_room_stream(
             selected_places=auto_start_in.selected_places,
         )
     elif auto_start_in.mode == "greeting":
-        prompt = render_auto_start_greeting_prompt()
+        prompt = render_auto_start_greeting_prompt(
+            prefs_info=current_user.build_preferences(),
+        )
     else:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported auto start mode", 400)
 

@@ -38,6 +38,9 @@ RESULT_DIR = EVAL_DIR / "result"
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from app.utils.config import get_retrieval_params
+from app.agents.models.output import CategoryType
+
 CATEGORIES = ["관광지", "문화시설", "축제공연행사", "레포츠", "숙박", "음식점"]
 CATEGORY_ALIASES = {
     "명소": "관광지",
@@ -466,11 +469,34 @@ def _write_summary(summary: dict[str, Any], output_prefix: str) -> tuple[Path, P
 RetrieveFn = Callable[[str, int, Optional[str]], Awaitable[list[dict[str, Any]]]]
 
 
-async def _default_retrieve_fn(question: str, top_k: int, category: Optional[str]) -> list[dict[str, Any]]:
-    from app.retrieval.place import PlaceRetriever
+async def _default_retrieve_fn(
+    question: str,
+    top_k: int,
+    category: Optional[str],
+    retriever_candidate_k: Optional[int] = None,
+    retriever_rerank_max_k: Optional[int] = None,
+) -> list[dict[str, Any]]:
+    from app.core.retrieval.place import PlaceRetriever
 
     retriever = PlaceRetriever.get_instance()
-    return await retriever.search_hybrid(query=question, limit=top_k, category=category)
+    eval_defaults = get_retrieval_params("evaluation")
+    candidate_k = int(retriever_candidate_k or eval_defaults["candidate_k"])
+    rerank_max_k = int(retriever_rerank_max_k or eval_defaults["rerank_max_k"])
+
+    # str → CategoryType 변환 (일치하는 value가 없으면 필터 없이 검색)
+    category_filter: list[CategoryType] = []
+    if category:
+        matched = next((ct for ct in CategoryType if ct.value == category), None)
+        if matched:
+            category_filter = [matched]
+
+    return await retriever.search_hybrid(
+        query=question,
+        limit=top_k,
+        categories=category_filter or [],
+        candidate_k=max(candidate_k, 1),
+        rerank_top_k=min(max(rerank_max_k, 1), max(candidate_k, 1)),
+    )
 
 
 async def evaluate_records(
@@ -578,6 +604,8 @@ async def run(
     output_prefix: str,
     embedding_model: Optional[str],
     enrich_reference: bool,
+    retriever_candidate_k: Optional[int] = None,
+    retriever_rerank_max_k: Optional[int] = None,
 ) -> dict[str, Any]:
     records = _load_records(data_file, limit=limit)
 
@@ -593,7 +621,13 @@ async def run(
         mode=mode,
         top_k=top_k,
         scorer=scorer,
-        retrieve_fn=_default_retrieve_fn,
+        retrieve_fn=lambda q, k, c: _default_retrieve_fn(
+            q,
+            k,
+            c,
+            retriever_candidate_k=retriever_candidate_k,
+            retriever_rerank_max_k=retriever_rerank_max_k,
+        ),
     )
 
     summary = _build_summary(
@@ -786,6 +820,7 @@ def run_csv_stage_evaluation(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    eval_defaults = get_retrieval_params("evaluation")
     parser = argparse.ArgumentParser(description="RAGAS 비의존 리트리버 평가")
     parser.add_argument("--input-csv", default=None, help="CSV 입력 기반 평가 경로")
     parser.add_argument("--stage", default="all", choices=["first", "rerank", "all"])
@@ -793,6 +828,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", default="all", choices=["unsupervised", "labeled", "all"])
     parser.add_argument("--top-k", type=int, default=30)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--retriever-candidate-k", type=int, default=eval_defaults["candidate_k"])
+    parser.add_argument("--retriever-rerank-max-k", type=int, default=eval_defaults["rerank_max_k"])
     parser.add_argument("--embedding-model", default=None)
     parser.add_argument("--output-prefix", default="evaluation_retrieval")
     parser.add_argument("--seed", type=int, default=42)  # 인터페이스 호환용
@@ -820,5 +857,7 @@ if __name__ == "__main__":
                 output_prefix=args.output_prefix,
                 embedding_model=args.embedding_model,
                 enrich_reference=args.enrich_reference,
+                retriever_candidate_k=args.retriever_candidate_k,
+                retriever_rerank_max_k=args.retriever_rerank_max_k,
             )
         )

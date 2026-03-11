@@ -3,17 +3,18 @@ import os
 import base64
 import mimetypes
 import concurrent.futures
-import time
 import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from app.agents.models.state import TravelState
+from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType
-from app.services.prompts import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT
-from app.utils.llm_factory import LLMFactory
-from app.utils.common import parse_payload
+from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
+from app.core.llm_factory import LLMFactory
+from app.utils.common import parse_payload, getattr_safe
+from app.core.llm_streaming import collect_streamed_text
+from app.utils.place_id import get_place_id
 
 
 def _normalize_text(value: str) -> str:
@@ -37,7 +38,7 @@ def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str,
                 continue
             candidate_key = _normalize_text(candidate_name)
             if name_key and (name_key in candidate_key or candidate_key in name_key):
-                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                cid = get_place_id(c)
                 if cid and cid not in inferred_ids:
                     inferred_ids.append(cid)
                 break
@@ -50,7 +51,7 @@ def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str,
             candidate_name = payload.get("title") or payload.get("name") or ""
             candidate_key = _normalize_text(candidate_name)
             if candidate_key and candidate_key in answer_key:
-                cid = str(payload.get("contentid") or c.get("id") or "").strip()
+                cid = get_place_id(c)
                 if cid and cid not in inferred_ids:
                     inferred_ids.append(cid)
 
@@ -68,8 +69,8 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         lng = float(payload.get("mapx", "0"))
 
         # 네이버 지도 링크 생성
-        title = payload.get("title") or payload.get("name") or "Unknown"
-        contentid = payload.get("contentid") or c.get("id") or "Unknown"
+        title = payload.get("place") or payload.get("title") or ""
+        contentid = get_place_id(c) or ""
         
         if title:
             encoded = urllib.parse.quote(title)
@@ -129,7 +130,7 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeo
         
         search_query = query
         if slots:
-            location = slots.location if hasattr(slots, 'location') else (slots.get("location") if isinstance(slots, dict) else None)
+            location = getattr_safe(slots, "location")
             if location:
                 search_query = f"{location} 여행 {query}"
         # Tavily 응답 지연 시 executor 전체 대기를 막기 위해 타임아웃 적용
@@ -143,7 +144,7 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeo
                     web_lines.append(f"- {r.get('content', '')[:200]}")
                 else:
                     web_lines.append(f"- {str(r)[:200]}")
-            web_context = "\n".join(web_lines)
+            web_context = "".join(web_lines)
             print(f"[Executor] Tavily fallback results: {len(web_results)}")
     except concurrent.futures.TimeoutError:
         print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
@@ -189,7 +190,7 @@ def _build_missing_context(missing_slots: List[str]) -> str:
     
     return "\n".join(lines)
 
-async def executor_node(state: TravelState):
+async def executor_node(state: TravelState, config=None):
     """
     여행 계획을 최종적으로 확정하는 노드
     - 검증: 영업시간, 예약 필요 여부 확인
@@ -197,30 +198,34 @@ async def executor_node(state: TravelState):
     - 최종 답변 생성
     """
     print("--- Executor Agent ---")
-    t0 = time.perf_counter()
 
-    candidates = state.get("candidates", [])
-    candidate_pool = state.get("candidate_pool", candidates) or []
-    user_input = state.get("user_input", "")
+    candidates = state.get("candidates")
+    candidate_pool = state.get("candidate_pool")
+    user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
-    prefs_info = state.get("prefs_info", {})
+    prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
     image_path = state.get("image_path") # 이미지 경로 가져오기
+    follow_up_questions = state.get("follow_up_questions", [])
 
-    # 컨텍스트 구성
-    t_ctx0 = time.perf_counter()
-    place_context = _build_place_context(candidates)
-    # print(f"[Executor] Place context: {place_context}")
-    itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
-    t_ctx1 = time.perf_counter()
+    if not candidate_pool:
+        candidate_pool = candidates
 
-    # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = None
-    if len(candidates) == 0:
+    place_context = None
+    itinerary_context = None
+    if not candidates:
         print("[Executor] No candidates — trying Tavily fallback")
         web_context = _build_web_context(user_input, slots)
-    t_web1 = time.perf_counter()
+    else:
+        print(f"candidate_pool : {len(candidate_pool)}")
+        print(f"candidates : {len(candidates)}")
+
+        # 컨텍스트 구성
+        place_context = _build_place_context(candidates)
+        # print(f"[Executor] Place context: {place_context}")
+        itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
 
     # 슬롯 정보 텍스트
     slots_info = ""
@@ -230,63 +235,53 @@ async def executor_node(state: TravelState):
 
     # candidates 부족 시 안내 메시지 추가
     data_notice = ""
-    if candidates is None and web_context is None:
+    if not candidates and not web_context:
         data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
     elif candidates is not None and len(candidates) < 3:
         data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
 
     # 최종 답변 생성
-    context_block = "\n\n".join(filter(None, [place_context, itinerary_context, web_context]))
+    context_block = "\n\n".join(filter(None, [place_context, itinerary_context]))
 
     llm = LLMFactory.get_llm(temperature=0.5)
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
     
-    # 텍스트 추가
-    if user_input:
-        content_blocks.append({"type": "text", "text": f"사용자 입력: {user_input}"})
-    else:
-        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
-        if image_path:
-             content_blocks.append({"type": "text", "text": "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."})
-
-    # 이미지 추가
     if image_path:
+        # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
+        if len(user_input) == 0:
+            user_input = "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."
+        content_blocks.append({"type": "text", "text": user_input})
+
         image_url = _get_image_data_url(image_path)
         content_blocks.append({
             "type": "image_url",
             "image_url": {"url": image_url}
         })
+    else:
+        content_blocks.append({"type": "text", "text": f"{user_input}"})
     
     # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
-    human_message = HumanMessage(content=content_blocks)
+    system_prompt = EXECUTOR_PROMPT.format(
+        data_notice=data_notice,
+        slots_info=slots_info,
+        prefs_info=prefs_info,
+        web_context=web_context or "",
+        context_block=context_block or "",
+    )
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", EXECUTOR_PROMPT),
-        MessagesPlaceholder(variable_name="messages"),
-        human_message
-    ])
+    prompt_messages = [SystemMessage(content=system_prompt), *messages]
+    if image_path:
+        prompt_messages.append(HumanMessage(content=content_blocks))
+    else:
+        prompt_messages.append(HumanMessage(content=user_input))
 
-    prompt_value = prompt.invoke({
-        "messages": messages,
-        "user_input": user_input,
-        "slots_info": slots_info,
-        "prefs_info": prefs_info,
-        "context_block": context_block,
-        "data_notice": data_notice,
-    })
-
-    # astream을 사용하여 토큰 단위 스트리밍 (astream_events가 자동 캡처)
-    t_llm0 = time.perf_counter()
-    full_content = ""
-    async for chunk in llm.astream(prompt_value):
-        if chunk.content:
-            full_content += chunk.content
-    t_llm1 = time.perf_counter()
+    # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
+    full_content = await collect_streamed_text(llm, prompt_messages, config=config)
 
     # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
     selected_ids = []
@@ -308,7 +303,7 @@ async def executor_node(state: TravelState):
     valid_candidate_ids = set()
     for c in candidate_pool:
         payload = c.get("payload", {}) if isinstance(c, dict) else {}
-        cid = str(payload.get("contentid") or c.get("id") or "").strip()
+        cid = get_place_id(c)
         if cid:
             valid_candidate_ids.add(cid)
 
@@ -325,18 +320,11 @@ async def executor_node(state: TravelState):
 
     print(f"[Executor] Selected IDs: {selected_ids}")
     print(f"[Executor] Answer length: {len(cleaned_answer)}")
-    print(
-        "[Executor][Timing] "
-        f"context_build={t_ctx1 - t_ctx0:.3f}s, "
-        f"fallback={t_web1 - t_ctx1:.3f}s, "
-        f"llm={t_llm1 - t_llm0:.3f}s, "
-        f"total={t_llm1 - t0:.3f}s"
-    )
 
     return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
 
 
-async def executor_missing_node(state: TravelState):
+async def executor_missing_node(state: TravelState, config=None):
     """
     여행 계획에서 부족한 정보를 재질문하는 node
     """
@@ -344,6 +332,11 @@ async def executor_missing_node(state: TravelState):
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
+    user_input = get_effective_user_input(state)
+    messages = state.get("messages", [])[-10:]
+    prefs_info = state.get("prefs_info", "")
+    slots = state.get("slots")
+    follow_up_questions = state.get("follow_up_questions", [])
 
     print(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
@@ -356,29 +349,59 @@ async def executor_missing_node(state: TravelState):
         human_message
     ])
 
-    llm = LLMFactory.get_llm(temperature=0.3)
+    llm = LLMFactory.get_llm(temperature=0.5)
     prompt_value = prompt.invoke({
-        "messages": state.get("messages")[-10:],
-        "user_input": state.get("user_input"),
-        "slots_info": state.get("slots"),
-        "prefs_info": state.get("prefs_info"),
+        "messages": messages,
+        "user_input": user_input,
+        "slots_info": slots,
+        "prefs_info": prefs_info,
         "missing_info": missing_context,
+        "follow_up_questions": follow_up_questions,
     })
 
-    # executor_missing도 토큰 스트리밍 이벤트가 발생하도록 astream 사용
-    full_content = ""
-    async for chunk in llm.astream(prompt_value):
-        if hasattr(chunk, "content") and chunk.content:
-            if isinstance(chunk.content, str):
-                full_content += chunk.content
-            elif isinstance(chunk.content, list):
-                for part in chunk.content:
-                    if isinstance(part, dict) and part.get("text"):
-                        full_content += str(part["text"])
-                    elif isinstance(part, str):
-                        full_content += part
+    full_content = await collect_streamed_text(llm, prompt_value, config=config)
 
     answer = full_content.strip()
     print(f"[Executor] Answer generated (length={len(answer)})")
+
+    return {"messages": AIMessage(content=answer), "answer": answer}
+
+
+async def executor_general_node(state: TravelState, config=None):
+    """
+    일상 대화 node
+    """
+    print("--- Executor General Agent ---")
+
+    user_input = get_effective_user_input(state)
+    messages = state.get("messages", [])[-10:]
+    prefs_info = state.get("prefs_info", "")
+    slots = state.get("slots")
+    follow_up_questions = state.get("follow_up_questions", [])
+
+    # 슬롯 정보 텍스트
+    slots_info = ""
+    if slots:
+        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
+        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
+
+    llm = LLMFactory.get_llm(temperature=0.7)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", EXECUTOR_GENERAL_PROMPT),
+    ])
+
+    prompt_value = prompt.invoke({
+        "messages": messages,
+        "user_input": user_input,
+        "slots_info": slots_info,
+        "prefs_info": prefs_info,
+        "follow_up_questions": follow_up_questions,
+    })
+
+    full_content = await collect_streamed_text(llm, prompt_value, config=config)
+
+    answer = full_content.strip()
+    print(f"[Executor General] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}

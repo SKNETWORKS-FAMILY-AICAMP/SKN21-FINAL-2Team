@@ -3,14 +3,22 @@ import os
 import requests as req
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from pydantic import BaseModel
 from app.database.connection import db_manager
 from app.models.user import User
+from app.models.chat import ChatRoom, ChatMessage, ChatPlace
+from app.models.reservation import Reservation
 from app.schemas.user import UserResponse, UserUpdate
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
 from app.database.connection import db_manager
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+class DeactivateResponse(BaseModel):
+    ok: bool
 
 @router.get("/me", response_model=UserResponse)
 def read_users_me(current_user: User = Depends(get_current_user)):
@@ -79,3 +87,34 @@ def reset_user_profile_picture_to_google(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/deactivate", response_model=DeactivateResponse)
+def deactivate_current_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(db_manager.get_db),
+):
+    """Deactivate (delete) the current user's account and owned data.
+
+    NOTE: This performs hard-delete for now because there is no soft-delete field.
+    Order matters due to FK constraints (places -> messages -> rooms -> user).
+    """
+    try:
+        user_id = current_user.id
+
+        room_ids = [r_id for (r_id,) in db.query(ChatRoom.id).filter(ChatRoom.user_id == user_id).all()]
+        if room_ids:
+            message_ids = [m_id for (m_id,) in db.query(ChatMessage.id).filter(ChatMessage.room_id.in_(room_ids)).all()]
+            if message_ids:
+                db.query(ChatPlace).filter(ChatPlace.messages_id.in_(message_ids)).delete(synchronize_session=False)
+                db.query(ChatMessage).filter(ChatMessage.id.in_(message_ids)).delete(synchronize_session=False)
+            db.query(ChatRoom).filter(ChatRoom.id.in_(room_ids)).delete(synchronize_session=False)
+
+        db.query(Reservation).filter(Reservation.user_id == user_id).delete(synchronize_session=False)
+
+        db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
+        db.commit()
+        return {"ok": True}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise AppException(ErrorCode.INTERNAL_SERVER_ERROR, f"Deactivate failed: {e}", 500)

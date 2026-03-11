@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.utils.config import LLM_MODEL
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.scripts.preprocess_data import ingest_data
 
 load_dotenv(override=True)
@@ -24,7 +24,8 @@ CATEGORY_HINTS = {
     "축제공연행사": ["사전예약", "라인업", "볼거리", "티켓", "이벤트", "꿀팁", "주말기준"],
     "레포츠": ["장비", "초보", "강습", "액티비티", "시설", "활동적", "난이도"],
     "숙박": ["청결", "어메니티", "조식", "호캉스", "연박", "룸컨디션", "방음", "위치"],
-    "문화시설": ["전시", "박물관", "도슨트", "관람", "체험", "교육", "실내데이트", "정기휴관"]
+    "문화시설": ["전시", "박물관", "도슨트", "관람", "체험", "교육", "실내데이트", "정기휴관"],
+    "팝업스토어": ["팝업", "팝업스토어", "팝업샵", "KPOP"]
 }
 
 # 광고 필터 예시

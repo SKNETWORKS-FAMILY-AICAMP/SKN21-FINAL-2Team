@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.utils.config import LLM_MODEL
-from app.utils.llm_factory import LLMFactory
+from app.core.llm_factory import LLMFactory
 from app.scripts.preprocess_data import ingest_data
 
 load_dotenv(override=True)
@@ -31,10 +31,12 @@ def general_emotional_description(item: dict) -> str:
     단순 나열이 아닌, 설명문의 문맥 속에 자연스럽게 녹여내어 정보와 감성이 조화를 이루게 하세요.
 
     작성 가이드:
-    1. **장소 정보 완전 반영**: 주소(addr), 전화번호(infocenter), 주차(parking), 이용시간(usetime), 휴무일(restdate) 등 모든 기술적 정보를 문장으로 풀어내어 필수적으로 포함하세요. (예: "parking: 가능" -> "주차가 편리하여 차량 방문이 용이하며", "restdate: 월요일" -> "매주 월요일은 휴무이니 방문에 참고하세요")
+    1. **장소 정보 완전 반영**: 주소(addr), 전화번호(infocenter), 주차(parking), 이용시간(usetime), 휴무일(restdate) 등 모든 기술적 정보를 문장으로 풀어내어 필수적으로 포함하세요. (예: "parking: 가능" -> "주차가 가능합니다.", "restdate: 월요일" -> "매주 월요일은 휴무이니 방문에 참고하세요.")
     2. **형식 및 제약**: 
        - "이곳은~", "저곳은~" 같은 진부한 시작은 지양하고 바로 특징을 설명하세요.
-       - 결과는 오직 설명 문장만 출력하세요. (URL, Source, JSON 키 이름 등 메타 정보 출력 금지)
+       - 결과는 장소에 대한 설명 문장만 출력하세요. (URL, Source, JSON 키 이름 등 메타 정보 출력 금지)
+       - 한국 아티스트나 배우들, K-pop 관련 정보가 존재하면 필수로 포함하세요.
+       - 한국 여행 트렌드 정보가 존재하면 필수로 포함하세요.
        - [장소 정보]에 있는 데이터가 하나라도 누락되면 안 됩니다.
     """
 
@@ -84,7 +86,9 @@ def enrich_data_file(input_path: str, output_path: str, limit: int = None):
         for item in data:
             if limit is not None and actual_processed >= limit:
                 break
-                
+            
+            item.pop('llm_text')
+            print("LLM Text 제외한 keys: ", item.keys())
             contentid = str(item.get("contentid", ""))
             if contentid in processed_ids:
                 count += 1

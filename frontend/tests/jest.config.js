@@ -13,10 +13,11 @@ const customJestConfig = {
     rootDir: path.join(__dirname, '../'),
     setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.js'],
     testEnvironment: 'jest-environment-jsdom',
+    modulePathIgnorePatterns: ['<rootDir>/.next/'],
+    testPathIgnorePatterns: ['<rootDir>/.next/'],
+    watchPathIgnorePatterns: ['<rootDir>/.next/'],
     moduleNameMapper: {
-        '^@/components/(.*)$': '<rootDir>/src/components/$1',
-        '^@/pages/(.*)$': '<rootDir>/src/pages/$1',
-        '^@/app/(.*)$': '<rootDir>/src/app/$1',
+        '^@/(.*)$': '<rootDir>/src/$1',
     },
 }
 

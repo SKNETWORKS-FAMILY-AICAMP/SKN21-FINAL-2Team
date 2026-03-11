@@ -1,0 +1,248 @@
+import { memo } from "react";
+import { Sparkles, Bookmark, Map as MapIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { ChatMessage, ChatPlaceItem } from "@/services/api";
+import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
+import { cn } from "@/lib/utils";
+
+const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
+const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
+    if (!steps) return false;
+    return Object.values(steps).some((status) => status === "running" || status === "done");
+};
+
+interface ChatMessageItemProps {
+    msg: ChatMessage;
+    isStreaming?: boolean;
+    streamingMsgId?: number | null;
+    showPipeline?: boolean;
+    pipelineSteps?: PipelineSteps;
+    streamBufferingReason?: string | null;
+    selectedMapPlaceId: string | null;
+    toMapId: (place: ChatPlaceItem) => string;
+    handleSelectMapPlace: (mapId: string) => void;
+    handleTogglePlaceBookmark: (messageId: number, placeId: number, currentStatus: boolean) => void;
+    placeCardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+    compactPlaces?: boolean;
+}
+
+export const ChatMessageItem = memo(({
+    msg,
+    streamingMsgId,
+    showPipeline,
+    pipelineSteps,
+    streamBufferingReason,
+    selectedMapPlaceId,
+    toMapId,
+    handleSelectMapPlace,
+    handleTogglePlaceBookmark,
+    placeCardRefs,
+    compactPlaces = false,
+}: ChatMessageItemProps) => {
+    const isStreamingCurrentMessage = Boolean(msg.id === streamingMsgId);
+
+    // 유저 메시지 처리
+    if (msg.role === "human") {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10, transformOrigin: 'bottom right' }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="flex justify-end w-full px-1 sm:px-2 lg:px-4 mb-2"
+            >
+                <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[90%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
+                    {!!msg.image_path && (
+                        <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
+                            <img
+                                src={msg.image_path}
+                                alt="Attached"
+                                className="w-full max-h-[220px] object-cover"
+                            />
+                        </div>
+                    )}
+                    {!!msg.message && (
+                        <p className="text-[14px] leading-[1.5] whitespace-pre-wrap font-medium">{msg.message}</p>
+                    )}
+                    <div className="text-[9px] mt-1.5 font-medium text-slate-300 text-right uppercase tracking-wider">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // AI 메시지 처리
+    const shouldRenderPipeline = Boolean(
+        isStreamingCurrentMessage &&
+        showPipeline &&
+        hasVisiblePipelineSteps(pipelineSteps) &&
+        !msg.message // 답변 텍스트(msg.message)가 오기 시작하면 파이프라인(생성 중...)을 바로 숨깁니다!
+    );
+    const shouldRenderWaitingBubble = Boolean(
+        isStreamingCurrentMessage &&
+        !msg.message &&
+        !shouldRenderPipeline
+    );
+    const shouldRenderAiBubble = Boolean(
+        shouldRenderPipeline ||
+        shouldRenderWaitingBubble ||
+        msg.message
+    );
+    const shouldHideEmptyAiMessage = Boolean(
+        !isStreamingCurrentMessage &&
+        !(msg.message || "").trim() &&
+        (!msg.places || msg.places.length === 0) &&
+        !shouldRenderPipeline &&
+        !shouldRenderWaitingBubble
+    );
+
+    if (shouldHideEmptyAiMessage) {
+        return null;
+    }
+
+    return (
+        <div className="flex flex-col gap-3 mb-2 w-full px-1 sm:px-3 lg:px-4">
+            <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="flex items-start gap-3 w-full"
+            >
+                {/* AI 아이콘 */}
+                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0 shadow-md shadow-black/10 mt-1 ring-2 ring-white">
+                    <Sparkles size={14} className="text-white" />
+                </div>
+
+                <div className="flex-1 min-w-0 w-full overflow-hidden md:max-w-[70%]">
+                    {shouldRenderAiBubble && (
+                        <div
+                            data-testid={`ai-bubble-${msg.id}`}
+                            className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-4 sm:px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
+                        >
+                            {shouldRenderPipeline && (
+                                <div className={msg.message ? "mb-3" : ""}>
+                                    <PipelineProgress steps={pipelineSteps || {}} visible={true} />
+                                </div>
+                            )}
+
+                            {shouldRenderWaitingBubble && (
+                                <div className="inline-flex items-center gap-2 text-slate-400">
+                                    <span className="inline-flex gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:120ms]" />
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:240ms]" />
+                                    </span>
+                                    <span className="text-[12px] font-medium tracking-wide">응답 준비 중...</span>
+                                </div>
+                            )}
+
+                            {!!msg.message && (
+                                <div className="prose prose-sm max-w-none text-slate-700 prose-p:my-2 prose-p:leading-[1.6] prose-p:text-[14px] prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-pre:rounded-xl">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            a: (props) => (
+                                                <a
+                                                    {...props}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                />
+                                            ),
+                                        }}
+                                    >
+                                        {msg.message}
+                                    </ReactMarkdown>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {isStreamingCurrentMessage && streamBufferingReason === "link" && (
+                        <div className="mb-2 ml-1 text-[11px] font-medium tracking-wide text-slate-400">
+                            링크 정리 중...
+                        </div>
+                    )}
+
+                    {/* 추천 장소 (Place Cards Carousel) */}
+                    {msg.places && msg.places.length > 0 && (
+                        <div className="mt-2 w-full">
+                            <h5 className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-3 ml-2 flex items-center gap-1.5">
+                                <MapIcon size={12} />
+                                Recommended Places
+                            </h5>
+                            <div className={cn(
+                                "flex overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar",
+                                compactPlaces
+                                    ? "gap-2 px-0"
+                                    : "gap-3 sm:gap-4 -mx-1 px-1 sm:-mx-2 sm:px-2"
+                            )}>
+                                {msg.places.map((place) => {
+                                    const mapId = toMapId(place);
+                                    const isMapSelected = selectedMapPlaceId === mapId;
+                                    return (
+                                        <div
+                                                key={place.id}
+                                                ref={(element) => {
+                                                    placeCardRefs.current[mapId] = element;
+                                                }}
+                                            onMouseEnter={() => handleSelectMapPlace(mapId)}
+                                            onClick={() => handleSelectMapPlace(mapId)}
+                                            className={cn(
+                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
+                                                compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",
+                                                isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
+                                            )}
+                                            style={compactPlaces ? { width: "min(15rem, calc((100% - 1rem) / 3))", minWidth: "8.75rem" } : undefined}
+                                        >
+                                            <div className={cn(
+                                                "relative bg-slate-100 overflow-hidden",
+                                                compactPlaces ? "h-[104px] sm:h-[112px]" : "h-[120px]"
+                                            )}>
+                                                <img
+                                                    src={place.image_path || DEFAULT_PLACEHOLDER}
+                                                    alt={place.name || "Place image"}
+                                                    className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                                                <button
+                                                    onClick={(event) => {
+                                                        event.stopPropagation(); // 카드 클릭 이벤트 막기
+                                                        handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn);
+                                                    }}
+                                                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-md transition-colors shadow-sm ${place.bookmark_yn ? "text-yellow-400 bg-black/40 hover:bg-black/60" : "text-white/90 bg-black/20 hover:text-yellow-400 hover:bg-black/40"}`}
+                                                >
+                                                    <Bookmark size={14} fill={place.bookmark_yn ? "currentColor" : "none"} />
+                                                </button>
+                                            </div>
+                                            <div className={cn("bg-white", compactPlaces ? "p-3" : "p-3.5")}>
+                                                <h4 className={cn(
+                                                    "font-semibold text-slate-800 leading-tight line-clamp-1 group-hover:text-black transition-colors",
+                                                    compactPlaces ? "text-[12px]" : "text-[13px]"
+                                                )}>
+                                                    {place.name}
+                                                </h4>
+                                                <p className={cn(
+                                                    "text-slate-500 mt-1.5 line-clamp-1 font-medium",
+                                                    compactPlaces ? "text-[10px]" : "text-[11px]"
+                                                )}>{place.adress}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 타임스탬프 */}
+                    <div className="text-[10px] mt-1 mb-2 font-medium text-slate-400 ml-1 uppercase tracking-wider">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+});
+
+ChatMessageItem.displayName = "ChatMessageItem";

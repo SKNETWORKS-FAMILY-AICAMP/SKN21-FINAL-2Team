@@ -3,18 +3,19 @@ load_dotenv()
 import os                                               # 추가
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
-from app.api import auth, users, chat, prefer, common, explore, reservations
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from app.api import auth, users, chat, prefer, common, explore, reservations, diaries
 # 모델 등록 (Base.metadata에 포함되도록 import)
-from app.models import user, chat as chat_model, country, hot_place, reservation
-from app.retrieval.place import PlaceRetriever
-from app.utils.llm_factory import LLMFactory
+from app.models import user, chat as chat_model, country, hot_place, reservation, diary
+from app.core.retrieval.place import PlaceRetriever
+from app.core.llm_factory import LLMFactory
 from app.utils.error_handler import (
     AppException,
     app_exception_handler,
@@ -29,6 +30,12 @@ from app.database.connection import Base, get_engine
 async def lifespan(app: FastAPI):
     # 서버 시작 시 실행될 로직
     print("[INFO] Starting up: Loading models...")
+    try:
+        Base.metadata.create_all(bind=get_engine())
+        print("[INFO] Database tables ensured.")
+    except Exception as e:
+        print(f"[ERROR] Failed to ensure database tables: {e}")
+
     try:
         # CLIP 모델 로드 (PlaceRetriever 초기화)
         PlaceRetriever.get_instance()
@@ -55,14 +62,11 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(Exception, internal_exception_handler)
 
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=get_engine())
-
-# CORS 설정 (프론트엔드 3000번 포트 허용)
-origins = [
-    "http://localhost:3000",
-]
+# CORS 설정
+# CORS_ORIGINS 환경변수에 쉼표로 구분된 도메인 목록을 설정 (예: http://example.com,http://www.example.com)
+# 미설정 시 localhost:3000 만 허용
+_cors_env = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in _cors_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -83,7 +87,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    reservations
+    reservations, diaries
 )
 
 # Register Routers
@@ -94,20 +98,48 @@ app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
 app.include_router(reservations.router)
+app.include_router(diaries.router)
 
 logger = logging.getLogger("api_logger")
 logging.basicConfig(level=logging.INFO)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start = time.time()
-    response = await call_next(request)
-    duration_ms = (time.time() - start) * 1000
-    logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms:.1f} ms)")
-    return response
+class RequestLoggingMiddleware:
+    """SSE와 충돌하지 않도록 BaseHTTPMiddleware를 피하는 ASGI 로깅 미들웨어."""
+
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        start = time.time()
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+        status_code = 500
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message["status"])
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_wrapper)
+        finally:
+            duration_ms = (time.time() - start) * 1000
+            logger.info(f"{method} {path} -> {status_code} ({duration_ms:.1f} ms)")
+
+
+app.add_middleware(RequestLoggingMiddleware)
 
 
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
 
+
+@app.get("/api/healthz")
+def healthz():
+    return {"status": "ok"}

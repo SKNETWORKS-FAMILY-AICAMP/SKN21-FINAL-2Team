@@ -1,116 +1,173 @@
 # Frontend 디렉토리 구조 분석
 
-> Next.js 기반 한국 여행 추천 챗봇 프론트엔드 애플리케이션
+> Next.js App Router 기반 한국 여행 추천 챗봇 프론트엔드
 
 ---
 
-## 📁 전체 디렉토리 구조
+## 1) 전체 구조
 
-```
+```text
 frontend/
-├── src/                    # 소스 코드
-│   ├── app/                # App Router (페이지 및 레이아웃)
-│   ├── components/         # 재사용 가능한 UI 컴포넌트
-│   ├── hooks/              # 커스텀 리액트 훅
-│   ├── services/           # API 통신 및 에러 핸들링 로직
-│   └── types/              # TypeScript 타입 정의
-├── public/                 # 정적 자원 (이미지, 아이콘 등)
-├── tests/                  # 테스트 코드
-├── Dockerfile              # Docker 이미지 빌드 설정
-├── next.config.ts          # Next.js 설정
-├── package.json            # 프로젝트 의존성 및 스크립트
-├── postcss.config.mjs      # PostCSS 설정
-├── tailwind.config.ts      # Tailwind CSS 설정
-└── tsconfig.json           # TypeScript 설정
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   ├── hooks/
+│   ├── lib/
+│   ├── services/
+│   └── types/
+├── public/
+├── tests/
+├── Dockerfile
+├── package.json
+├── next.config.ts
+├── vite.config.ts
+├── postcss.config.mjs
+├── eslint.config.mjs
+└── tsconfig.json
 ```
 
 ---
 
-## 🗂️ 루트 파일
+## 2) 루트 파일
 
 ### `package.json`
-프로젝트의 의존성 관리 및 실행 스크립트를 정의합니다.
 
-| 분류 | 라이브러리 |
-| --- | --- |
-| 프레임워크 | `next`, `react`, `react-dom` |
-| 스타일링 | `tailwindcss`, `postcss`, `lucide-react`, `framer-motion` |
-| 상태 관리/통신 | `axios` |
-| 유틸리티 | `clsx`, `tailwind-merge` |
-| 개발 도구 | `typescript`, `eslint`, `vitest` |
-
----
+- 프레임워크: `next@16`, `react@19`, `react-dom@19`
+- 스타일/렌더링: `framer-motion`, `lucide-react`, `react-markdown`, `remark-gfm`
+- 유틸리티: `clsx`, `tailwind-merge`, `jose`
+- 테스트: `jest`, `@testing-library/*`, `jest-environment-jsdom`
+- 실행 스크립트
+  - `npm run dev`
+  - `npm run build`
+  - `npm run start`
+  - `npm run lint`
+  - `npm run test`
 
 ### `Dockerfile`
-프론트엔드 어플리케이션을 빌드하고 실행하기 위한 설정입니다.
 
-- 베이스 이미지: `node:20-slim`
-- 패키지 매니저: `npm`
-- 실행 모드: `npm run dev` (개발 환경 기준)
+- Node 기반 프론트엔드 컨테이너 설정
+- 개발 환경에서 `npm run dev`를 기준으로 사용
+
+### 테스트 설정
+
+- `tests/jest.config.js`: Next.js 연동 Jest 설정
+- `tests/jest.setup.js`: DOM 테스트 공통 설정
 
 ---
 
-## 📦 `src/app/` — App Router
+## 3) `src/app/` 라우트 구조
 
-Next.js의 App Router 방식을 사용하여 URL 경로에 따른 페이지를 구성합니다.
+현재 확인되는 주요 페이지는 아래와 같습니다.
 
 | 경로 | 설명 |
 | --- | --- |
-| `/` | 랜딩 페이지 (`page.tsx`) |
-| `/login` | 로그인 페이지 |
+| `/` | 랜딩 페이지 |
 | `/signup` | 회원가입 페이지 |
-| `/onboarding` | 초기 온보딩 스텝 |
-| `/survey` | 사용자 취향 설문 페이지 |
+| `/signup/profile` | 프로필 입력 단계 |
+| `/survey` | 사용자 취향 설문 |
 | `/chatbot` | 메인 챗봇 인터페이스 |
-| `/explore` | 여행지 탐색 페이지 |
-| `/bookmark` | 북마크한 장소 목록 |
-| `/mypage` | 사용자 프로필 및 개인 설정 |
+| `/explore` | 여행지 탐색 |
+| `/bookmark` | 북마크 목록 |
+| `/collection` | 컬렉션 페이지 |
+| `/mypage` | 마이페이지 |
+
+공통 파일:
+
+- `layout.tsx`: 전역 레이아웃
+- `globals.css`: 전역 스타일
+- `favicon.ico`: 파비콘
+
+참고:
+
+- 문서 작성 시점 기준 `src/app/login`, `src/app/onboarding` 페이지는 존재하지 않습니다.
 
 ---
 
-## 📁 `src/components/` — UI 컴포넌트
+## 4) `src/components/` 구성
 
-공통으로 사용되거나 특정 도메인에 종속된 UI 컴포넌트들입니다.
-
-- **`chat/`**: 챗봇 인터페이스 관련 컴포넌트 (메시지 버블, 입력창, 프로세스 인디케이터 등)
-- **`landing/`**: 메인 랜딩 페이지 전용 컴포넌트
-- **`ui/`**: 기본 UI 빌딩 블록 (버튼, 입력창, 모달 등 기본 요소)
-- **독립 컴포넌트**: `Sidebar.tsx`, `Logo.tsx`, `SettingsModal.tsx`, `GoogleLoginBtn.tsx` 등
-
----
-
-## 📁 `src/services/` — 비즈니스 로직 및 API
-
-백엔드 서버와의 통신 및 데이터 처리를 담당합니다.
-
-- **`api.ts`**: Axios 인스턴스 설정 및 백엔드 API 엔드포인트 호출 함수 정의
-- **`errorHandler.ts`**: API 요청 시 발생하는 에러를 통합 관리하고 처리하는 로직
-
----
-
-## 📁 `src/hooks/` & `src/types/` — 유틸리티
-
-- **`hooks/`**: 다양한 컴포넌트에서 재사용되는 리액트 로직 (인증 상태 관리, 스크롤 처리 등)
-- **`types/`**: 프로젝트 전역에서 사용되는 TypeScript 인터페이스 및 타입 정의
+- `chat/`: 챗봇 인터페이스 핵심 컴포넌트
+  - `ChatHome.tsx`
+  - `ChatMessageItem.tsx`
+  - `PipelineProgress.tsx`
+  - `PlaceMapPanel.tsx`
+  - `PlaceMapSheet.tsx`
+  - `TripContextModal.tsx`
+  - `useNaverMap.ts`
+- `landing/`: 랜딩 전용 섹션 컴포넌트
+  - `Hero.tsx`, `Features.tsx`, `Destinations.tsx`, `ReviewSection.tsx`, `CTA.tsx`, `Header.tsx`, `Footer.tsx`
+- `ui/`: 공통 UI 컴포넌트
+  - `button.tsx`, `input.tsx`, `label.tsx`, `dialog.tsx`, `SimpleModal.tsx`
+- 기타 공통 컴포넌트
+  - `Sidebar.tsx`, `Logo.tsx`, `SettingsModal.tsx`, `GoogleLoginBtn.tsx`, `IntroGate.tsx`, `IntroOverlay.tsx`
 
 ---
 
-## 📁 `public/` — 정적 자원
+## 5) `src/lib/`, `src/services/`, `src/hooks/`, `src/types/`
 
-- 벡터 이미지 (`.svg`): `next.svg`, `vercel.svg`, `globe.svg` 등 기본 아이콘 및 로고 포함
+### `src/lib/`
+
+- `utils.ts`: 공통 유틸리티 함수 (예: Tailwind 클래스 병합을 위한 `cn`)
+
+
+### `src/services/`
+
+- `api.ts`: 프론트-백엔드 API 통신 래퍼
+- `authError.ts`: 인증 오류 처리
+- `errorHandler.ts`: 공통 에러 처리 로직
+
+### `src/hooks/`
+
+- `useSpeechRecognition.ts`: 음성 인식 처리 훅
+
+### `src/types/`
+
+- `speech-recognition.d.ts`: 브라우저 음성 인식 타입 정의
 
 ---
 
-## 🔄 데이터 흐름 요약
+## 6) `public/` 정적 자산
 
-```
+- 브랜드 로고: `public/brand/*`
+- 랜딩/설문용 이미지: `public/image/*`
+- 기본 SVG 아이콘: `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`, `file.svg`
+
+---
+
+## 7) 테스트 구성
+
+`frontend/tests/`에서 Jest + Testing Library 기반으로 주요 UI/상호작용을 검증합니다.
+
+- `ChatbotPage.test.tsx`
+- `ChatHome.stt-permission.test.tsx`
+- `GoogleLoginBtn.test.tsx`
+- `IntroGate.test.tsx`
+- `authError.test.ts`
+
+---
+
+## 8) 데이터 흐름 요약
+
+```text
 [사용자 브라우저]
     │
     ▼
-[src/app (Pages)] <───> [src/components (UI)]
-    │                      │
-    └────────┬─────────────┘
-             │
-             ▼
-[src/services (API)] <───> [Backend API (8000)]
+[src/app 페이지]
+    │
+    ▼
+[src/components UI]
+    │
+    ▼
+[src/services/api.ts]
+    │
+    ▼
+[Backend API]
 ```
+
+---
+
+## 9) 문서 관리 메모
+
+- 프론트 라우트가 추가/삭제되면 이 문서를 먼저 갱신
+- 테스트 도구는 현재 `Vitest`가 아니라 `Jest` 기준
+- 정적 자산 분류는 `public/brand`, `public/image` 구조를 기준으로 관리

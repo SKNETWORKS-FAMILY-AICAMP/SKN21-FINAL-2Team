@@ -46,11 +46,11 @@ from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.metrics import LLMContextRecall, LLMContextPrecisionWithReference, Faithfulness, AnswerRelevancy
 
 from app.agents.graph import workflow
-from app.utils.config import LLM_MODEL, TEXT_MODEL, PLACES_COLLECTION
+from app.utils.config import LLM_MODEL, TEXT_MODEL, PLACES_COLLECTION, get_retrieval_params
 from app.scripts.preprocess_data import ingest_data
 
 # ── EXECUTOR_PROMPT 참고 llm_text 생성 프롬프트 ────────────────────────────
-# app/services/prompts.py의 EXECUTOR_PROMPT 스타일을 따르는 문서 설명 생성 프롬프트
+# app/services/executor_prompt.py의 EXECUTOR_PROMPT 스타일을 따르는 문서 설명 생성 프롬프트
 DOCUMENT_DESCRIPTION_PROMPT = """\
 당신은 한국 여행 추천 에이전트입니다.
 아래 Context Information을 바탕으로, 이 장소를 추천하는 서술형 설명을 작성하세요.
@@ -199,7 +199,12 @@ def _infer_relevant_ids(reference: str, reference_contexts: list, candidates: li
     return relevant
 
 
-async def _invoke_graph(question: str):
+async def _invoke_graph(
+    question: str,
+    candidate_k: int,
+    final_k: int,
+    rerank_max_k: int,
+):
     """
     실제 RAG 시스템을 통해 답변, 컨텍스트, candidates, selected_ids를 추출.
     evaluate_prepare_enriched.py 없이 enriched 데이터를 한 번에 생성하기 위해
@@ -213,7 +218,10 @@ async def _invoke_graph(question: str):
             "user_input": question,
             "user_id": 1,
             "room_id": 1,
-            "messages": []
+            "messages": [],
+            "candidate_k": candidate_k,
+            "final_k": final_k,
+            "rerank_max_k": rerank_max_k,
         }
 
         print("  [DEBUG] Invoking graph...")
@@ -280,6 +288,9 @@ def generate_dataset(
     output: Path = Path("evaluate_testdata.csv"),
     seed: int = 42,
     source: str = "data/llm_result",
+    retriever_candidate_k: int = 60,
+    retriever_top_k: int = 10,
+    retriever_rerank_max_k: int = 30,
 ) -> None:
     """
     TestsetGenerator로 합성 데이터셋 생성 + RAG 파이프라인 실행 +
@@ -329,7 +340,14 @@ def generate_dataset(
         reference_contexts = row.get('reference_contexts', []) or []
 
         print(f"  [{idx+1}/{len(eval_df)}] 질의: {user_input[:60]}...")
-        answer, contexts, candidates, selected_ids = asyncio.run(_invoke_graph(user_input))
+        answer, contexts, candidates, selected_ids = asyncio.run(
+            _invoke_graph(
+                user_input,
+                candidate_k=max(int(retriever_candidate_k), 1),
+                final_k=max(int(retriever_top_k), 1),
+                rerank_max_k=max(int(retriever_rerank_max_k), 1),
+            )
+        )
 
         # relevant_ids: reference에 포함된 장소명 기반 추정
         relevant_ids = _infer_relevant_ids(reference, reference_contexts, candidates)
@@ -363,17 +381,32 @@ def generate_dataset(
 
 
 if __name__ == "__main__":
-    output = Path("evaluate_testdata.csv")
+    eval_defaults = get_retrieval_params("evaluation")
+    parser = argparse.ArgumentParser(description="RAGAS 평가용 enriched 데이터 생성")
+    parser.add_argument("--num-samples", type=int, default=20)
+    parser.add_argument("--limit", type=int, default=200)
+    parser.add_argument("--output", default="evaluate_testdata.csv")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--source", default="data/llm_result")
+    parser.add_argument("--retriever-candidate-k", type=int, default=eval_defaults["candidate_k"])
+    parser.add_argument("--retriever-top-k", type=int, default=eval_defaults["top_k"])
+    parser.add_argument("--retriever-rerank-max-k", type=int, default=eval_defaults["rerank_max_k"])
+    args = parser.parse_args()
+
+    output = Path(args.output)
     if not output.is_absolute():
         output = EVAL_DIR / output
     output.parent.mkdir(parents=True, exist_ok=True)
 
     generate_dataset(
-        num_samples=20,
-        limit=200,
+        num_samples=args.num_samples,
+        limit=args.limit,
         output=output,
-        seed=42,
-        source="data/llm_result",
+        seed=args.seed,
+        source=args.source,
+        retriever_candidate_k=args.retriever_candidate_k,
+        retriever_top_k=args.retriever_top_k,
+        retriever_rerank_max_k=args.retriever_rerank_max_k,
     )
 
     # eval_ragas(output)

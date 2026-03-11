@@ -120,6 +120,11 @@ export interface TodayRecommendationItem {
     prompt: string;
 }
 
+export interface DeleteChatRoomResult {
+    ok: boolean;
+    room_id: number;
+}
+
 export type AutoStartChatMode = "trip_context" | "selected_places" | "combined" | "greeting";
 
 export interface AutoStartTripContextPayload {
@@ -142,11 +147,28 @@ export interface AutoStartChatRoomRequestPayload {
 }
 
 type StreamCallbacks = {
-    onToken: (token: string) => void;
-    onStep: (step: string, status: string) => void;
-    onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void;
-    onRoomTitle?: (roomTitle: string) => void;
-    onError?: (error: string) => void;
+    onToken: (token: string) => void | Promise<void>;
+    onStep: (step: string, status: string) => void | Promise<void>;
+    onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void | Promise<void>;
+    onRoomTitle?: (roomTitle: string) => void | Promise<void>;
+    onBufferingChange?: (reason: string | null) => void | Promise<void>;
+    onError?: (error: string) => void | Promise<void>;
+};
+
+export const resolveStreamApiBaseUrl = (
+    runtimeLocation?: Pick<Location, "hostname" | "protocol">
+): string => {
+    const streamApiUrl = process.env.NEXT_PUBLIC_STREAM_API_URL;
+    if (streamApiUrl) return streamApiUrl;
+    if (typeof window === "undefined") return API_URL;
+    if (API_URL !== "/api") return API_URL;
+
+    const { hostname, protocol } = runtimeLocation ?? window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return `${protocol}//${hostname}:8000/api`;
+    }
+
+    return API_URL;
 };
 
 const refreshAccessToken = async () => {
@@ -315,6 +337,13 @@ export const fetchRoom = async (roomId: number): Promise<ChatRoom> => {
     return response.json();
 };
 
+export const deleteRoom = async (roomId: number): Promise<DeleteChatRoomResult> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}`, {
+        method: "DELETE",
+    });
+    return response.json();
+};
+
 export const updateRoomBookmark = async (roomId: number, bookmark: boolean): Promise<ChatRoom> => {
     const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/bookmark?bookmark=${bookmark}`, {
         method: 'PATCH'
@@ -367,6 +396,7 @@ export const sendChatMessageStream = async (
         location,
         saveUserMessage: options?.saveUserMessage ?? true,
     });
+    const streamApiBaseUrl = resolveStreamApiBaseUrl();
 
     const streamFetch = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -375,7 +405,7 @@ export const sendChatMessageStream = async (
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
-        return fetch(`${API_URL}/chat/rooms/${roomId}/ask/stream`, {
+        return fetch(`${streamApiBaseUrl}/chat/rooms/${roomId}/ask/stream`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -390,6 +420,11 @@ const streamSseRequest = async (
     streamFetch: () => Promise<Response>,
     callbacks: StreamCallbacks
 ): Promise<void> => {
+    const yieldToUI = async () => {
+        if (typeof window === "undefined") return;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 16));
+    };
+
     let response = await streamFetch();
     if (!response.ok) {
         const apiError = await parseApiError(response);
@@ -400,20 +435,20 @@ const streamSseRequest = async (
                 await refreshAccessToken();
                 response = await streamFetch();
             } catch {
-                callbacks.onError?.('Session expired');
+                await callbacks.onError?.('Session expired');
                 return;
             }
         } else if (action === 'redirect') {
-            callbacks.onError?.('Session expired');
+            await callbacks.onError?.('Session expired');
             return;
         } else {
-            callbacks.onError?.(apiError.message || response.statusText);
+            await callbacks.onError?.(apiError.message || response.statusText);
             return;
         }
     }
 
     if (!response.ok) {
-        callbacks.onError?.(response.statusText);
+        await callbacks.onError?.(response.statusText);
         return;
     }
 
@@ -428,7 +463,7 @@ const streamSseRequest = async (
     let lastCreatedAt = '';
     let lastRoomTitle: string | undefined;
     let lastPlaces: ChatPlaceItem[] | undefined;
-    const handleEvent = (rawEvent: string) => {
+    const handleEvent = async (rawEvent: string) => {
         const lines = rawEvent
             .split('\n')
             .filter((line) => line.startsWith('data: '))
@@ -438,11 +473,15 @@ const streamSseRequest = async (
         try {
             const data = JSON.parse(payload);
             if (data.token) {
-                callbacks.onToken(data.token);
+                await callbacks.onToken(data.token);
+                await yieldToUI();
             } else if (data.step) {
-                callbacks.onStep(data.step, data.status);
+                await callbacks.onStep(data.step, data.status);
+                await yieldToUI();
+            } else if ("buffering" in data) {
+                await callbacks.onBufferingChange?.(data.buffering ?? null);
             } else if (data.room_title && !data.done) {
-                callbacks.onRoomTitle?.(data.room_title);
+                await callbacks.onRoomTitle?.(data.room_title);
             } else if (data.done) {
                 receivedDone = true;
                 lastFullMessage = data.full_message || '';
@@ -450,7 +489,7 @@ const streamSseRequest = async (
                 lastCreatedAt = data.created_at || '';
                 lastRoomTitle = data.room_title;
                 lastPlaces = data.places;
-                callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+                await callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
             }
         } catch {
             // JSON 파싱 실패 무시
@@ -468,17 +507,17 @@ const streamSseRequest = async (
         buffer = events.pop() || '';
 
         for (const rawEvent of events) {
-            handleEvent(rawEvent);
+            await handleEvent(rawEvent);
         }
     }
 
     if (buffer.trim()) {
-        handleEvent(buffer);
+        await handleEvent(buffer);
     }
 
     // 네트워크 경계로 done 이벤트가 누락/파싱 실패한 경우를 대비한 최종 보정
     if (!receivedDone && (lastFullMessage || lastMessageId > 0)) {
-        callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
+        await callbacks.onDone(lastFullMessage, lastMessageId, lastCreatedAt, lastRoomTitle, lastPlaces);
     }
 };
 
@@ -491,6 +530,7 @@ export const sendAutoStartChatRoomStream = async (
         ...payload,
         save_user_message: payload.save_user_message ?? false,
     };
+    const streamApiBaseUrl = resolveStreamApiBaseUrl();
 
     const streamFetch = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -498,7 +538,7 @@ export const sendAutoStartChatRoomStream = async (
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
-        return fetch(`${API_URL}/chat/rooms/${roomId}/autostart/stream`, {
+        return fetch(`${streamApiBaseUrl}/chat/rooms/${roomId}/autostart/stream`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -527,6 +567,15 @@ export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<
 
 export const resetCurrentUserProfilePictureToGoogle = async (): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/users/me/reset-profile-picture`, { method: "POST" });
+    return response.json();
+};
+
+export const deactivateCurrentUser = async (): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/users/me/deactivate`, { method: "POST" });
+    if (!response.ok) {
+        const apiError = await parseApiError(response);
+        throw new Error(apiError.message || `Deactivate failed: ${apiError.error_code}`);
+    }
     return response.json();
 };
 
@@ -578,8 +627,117 @@ export type ReservationPayload = {
     image_path?: string | null;
 };
 
+export interface DiaryLinkedRoom {
+    id: number;
+    title: string;
+    created_at: string;
+}
+
+export interface DiaryLinkedPlace {
+    id: number;
+    chat_place_id?: number | null;
+    place_id?: number | null;
+    name?: string | null;
+    adress?: string | null;
+    image_path?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
+    created_at?: string | null;
+}
+
+export interface DiaryLinkedPlaceInput {
+    name?: string | null;
+    adress: string;
+    image_path?: string | null;
+    longitude: number;
+    latitude: number;
+    place_id?: number | null;
+    chat_place_id?: number | null;
+}
+
+export interface DiaryListItem {
+    id: number;
+    title: string;
+    content: string;
+    entry_date: string;
+    cover_image_path?: string | null;
+    linked_places_count: number;
+    created_at?: string | null;
+    updated_at?: string | null;
+}
+
+export interface DiaryDetail extends DiaryListItem {
+    user_id: number;
+    linked_chat_room?: DiaryLinkedRoom | null;
+    linked_places: DiaryLinkedPlace[];
+}
+
+export type DiaryPayload = {
+    title: string;
+    content: string;
+    entry_date: string;
+    cover_image_path?: string | null;
+    linked_places?: DiaryLinkedPlaceInput[];
+};
+
+export interface DiaryPlaceSearchResult {
+    name?: string | null;
+    adress: string;
+    latitude: number;
+    longitude: number;
+}
+
 export const fetchReservations = async (): Promise<ReservationRecord[]> => {
     const response = await fetchWithAuth(`${API_URL}/reservations`);
+    return response.json();
+};
+
+export const fetchDiaries = async (params?: {
+    query?: string;
+    date_from?: string;
+    date_to?: string;
+}): Promise<DiaryListItem[]> => {
+    const qs = new URLSearchParams();
+    if (params?.query) qs.set("query", params.query);
+    if (params?.date_from) qs.set("date_from", params.date_from);
+    if (params?.date_to) qs.set("date_to", params.date_to);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const response = await fetchWithAuth(`${API_URL}/diaries${suffix}`);
+    return response.json();
+};
+
+export const fetchDiary = async (diaryId: number): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`);
+    return response.json();
+};
+
+export const createDiary = async (payload: DiaryPayload): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries`, { method: "POST", body: payload });
+    return response.json();
+};
+
+export const updateDiary = async (diaryId: number, payload: Partial<DiaryPayload>): Promise<DiaryDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "PATCH", body: payload });
+    return response.json();
+};
+
+export const deleteDiary = async (diaryId: number): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "DELETE" });
+    return response.json();
+};
+
+export const searchDiaryPlaces = async (query: string): Promise<DiaryPlaceSearchResult[]> => {
+    const qs = new URLSearchParams({ query });
+    const response = await fetchWithAuth(`${API_URL}/diaries/place-search?${qs.toString()}`);
+    return response.json();
+};
+
+export const reverseGeocodeDiaryPlace = async (latitude: number, longitude: number): Promise<DiaryPlaceSearchResult> => {
+    const qs = new URLSearchParams({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+    });
+    const response = await fetchWithAuth(`${API_URL}/diaries/reverse-geocode?${qs.toString()}`);
     return response.json();
 };
 
@@ -617,8 +775,20 @@ export const fetchCategoryPlaces = async (userPrefs: string): Promise<Record<str
     return response.json();
 };
 
-export const fetchRandomExplorePlaces = async (): Promise<Record<string, CategoryPlaceItem[]>> => {
-    const response = await fetchWithAuth(`${API_URL}/explore/random-places`);
+export const fetchRandomExplorePlaces = async (
+    categories?: string,
+    limit?: number
+): Promise<Record<string, CategoryPlaceItem[]>> => {
+    let url = `${API_URL}/explore/random-places`;
+    const params = new URLSearchParams();
+    if (categories) params.append("categories", categories);
+    if (limit) params.append("limit", limit.toString());
+
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+
+    const response = await fetchWithAuth(url);
     return response.json();
 };
 
