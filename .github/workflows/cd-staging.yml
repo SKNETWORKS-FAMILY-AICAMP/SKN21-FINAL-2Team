@@ -177,12 +177,51 @@ jobs:
           script: |
             set -eu
             cd "${{ secrets.STAGING_APP_DIR }}"
+            REQUIRED_FILES=".env.staging .env.backend.staging .env.frontend.staging docker-compose.ec2.yml"
+            MISSING_FILES=""
+            for file in $REQUIRED_FILES; do
+              if [ ! -f "$file" ]; then
+                MISSING_FILES="$MISSING_FILES $file"
+              fi
+            done
+            if [ -n "$MISSING_FILES" ]; then
+              echo "Missing required deployment files:$MISSING_FILES"
+              echo "Expected files under: ${{ secrets.STAGING_APP_DIR }}"
+              exit 1
+            fi
+            echo "Initial disk usage"
+            df -h
+            echo "Initial docker disk usage"
+            docker system df || true
+            echo "Cleaning unused Docker resources before pull"
+            docker container prune -f || true
+            docker image prune -f || true
+            docker builder prune -af || true
+            docker image prune -af --filter \"until=168h\" || true
+            echo "Disk usage after cleanup"
+            df -h
+            echo "Docker disk usage after cleanup"
+            docker system df || true
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             export BACKEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-backend:${IMAGE_TAG}"
             export FRONTEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-frontend:${IMAGE_TAG}"
             export NGINX_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-nginx:${IMAGE_TAG}"
+            echo "Stopping current stack to free image references before pull"
+            docker compose --env-file .env.staging -f docker-compose.ec2.yml down --remove-orphans || true
+            echo "Cleaning Docker resources after stack shutdown"
+            docker container prune -f || true
+            docker image prune -af || true
+            docker builder prune -af || true
+            echo "Disk usage after shutdown cleanup"
+            df -h
+            echo "Docker disk usage after shutdown cleanup"
+            docker system df || true
             docker compose --env-file .env.staging -f docker-compose.ec2.yml pull
             docker compose --env-file .env.staging -f docker-compose.ec2.yml up -d --remove-orphans
+            echo "Disk usage after deploy"
+            df -h
+            echo "Docker disk usage after deploy"
+            docker system df || true
             echo "Waiting for services to be ready..."
             for i in $(seq 1 10); do
               if curl -fsS http://127.0.0.1/api/healthz; then

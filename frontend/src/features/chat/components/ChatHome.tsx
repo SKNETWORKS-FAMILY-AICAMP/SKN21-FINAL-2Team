@@ -102,8 +102,6 @@ export function ChatHome() {
         updateRoomTitle,
         handleToggleRoomBookmark
     } = useChatRooms({
-        parsedRouteRoomId,
-        fromDestinationParam,
         setShowTripModal,
         setIsTripLoading,
         mergeHydratedMessages: (rId, nextMsgs) => mergeHydratedMessages(rId, nextMsgs),

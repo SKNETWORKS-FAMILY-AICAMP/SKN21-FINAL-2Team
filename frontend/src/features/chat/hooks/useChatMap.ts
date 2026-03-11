@@ -11,13 +11,14 @@ export function useChatMap({
     messages: ChatMessage[];
     placeCardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }) {
-    const [selectedMapPlaceId, setSelectedMapPlaceId] = useState<string | null>(null);
+    const [selectedMapPlaceIdRaw, setSelectedMapPlaceId] = useState<string | null>(null);
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
-    const [isMapPanelOpen, setIsMapPanelOpenRaw] = useState(false);
+    const [isMapPanelOpenRaw, setIsMapPanelOpenRaw] = useState(true);
     const [isMapResizing, setIsMapResizing] = useState(false);
     const [mapPanelWidth, setMapPanelWidth] = useState(DEFAULT_MAP_PANEL_WIDTH);
     const resizeStartXRef = useRef(0);
     const resizeStartWidthRef = useRef(DEFAULT_MAP_PANEL_WIDTH);
+    const stopMapResizeDragRef = useRef<() => void>(() => {});
 
     const toMapId = useCallback((place: ChatPlaceItem) => {
         if (typeof place.place_id === "number" && Number.isFinite(place.place_id) && place.place_id > 0) {
@@ -95,24 +96,15 @@ export function useChatMap({
         return groups;
     }, [messages, mapPlaces, toMapId]);
 
-    useEffect(() => {
-        if (mapPlaces.length > 0 && messages.length > 0) {
-            setIsMapPanelOpenRaw(true);
-        } else if (mapPlaces.length === 0) {
-            setIsMapPanelOpenRaw(false);
+    const hasMapPlaces = mapPlaces.length > 0 && messages.length > 0;
+    const isMapPanelOpen = hasMapPlaces && isMapPanelOpenRaw;
+    const selectedMapPlaceId = useMemo(() => {
+        if (!mapPlaces.length) return null;
+        if (selectedMapPlaceIdRaw && mapPlaces.some((place) => place.mapId === selectedMapPlaceIdRaw)) {
+            return selectedMapPlaceIdRaw;
         }
-    }, [mapPlaces.length, messages.length]);
-
-    useEffect(() => {
-        if (!mapPlaces.length) {
-            setSelectedMapPlaceId(null);
-            return;
-        }
-        setSelectedMapPlaceId((prev) => {
-            if (prev && mapPlaces.some((p) => p.mapId === prev)) return prev;
-            return mapPlaces[0].mapId;
-        });
-    }, [mapPlaces]);
+        return mapPlaces[0].mapId;
+    }, [mapPlaces, selectedMapPlaceIdRaw]);
 
     const handleMapResizeDrag = useCallback((e: MouseEvent) => {
         const deltaX = e.clientX - resizeStartXRef.current;
@@ -139,10 +131,14 @@ export function useChatMap({
     const stopMapResizeDrag = useCallback(() => {
         setIsMapResizing(false);
         document.removeEventListener("mousemove", handleMapResizeDrag);
-        document.removeEventListener("mouseup", stopMapResizeDrag);
+        document.removeEventListener("mouseup", stopMapResizeDragRef.current);
         document.body.style.cursor = "default";
         document.body.style.userSelect = "";
     }, [handleMapResizeDrag]);
+
+    useEffect(() => {
+        stopMapResizeDragRef.current = stopMapResizeDrag;
+    }, [stopMapResizeDrag]);
 
     const startMapResizeDrag = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
