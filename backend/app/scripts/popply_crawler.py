@@ -33,51 +33,52 @@ class PopplyCrawler:
         return driver
 
     def get_popup_links(self, date_from: str, date_to: str, location_filter: str = "서울") -> List[str]:
-        # Construct URL with date range
-        # Note: Address filter might need to be clicked manually if URL param doesn't work, 
-        # but the user provided URL suggests it works: address1=서울
         url = f"{self.base_url}/popup?fromDate={date_from}&toDate={date_to}&address1={location_filter}"
         print(f"📍 Accessing List Page: {url}")
         self.driver.get(url)
-        
-        # Wait for list to load
+
         wait = WebDriverWait(self.driver, 20)
+
+        # 진입 시 나타나는 모달(페르소나 테스트 등) 닫기
         try:
-            # Wait for any item container
-            # Based on user HTML, class names were hashed (e.g. Contents_container__o5o3O). 
-            # We use partial match or generic structure.
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[class*='Contents_container']")))
-            
-            # Scroll to load more if needed (Popply might use infinite scroll)
-            last_height = self.driver.execute_script("return document.body.scrollHeight")
-            for _ in range(3): # Scroll a few times to be safe
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
-                new_height = self.driver.execute_script("return document.body.scrollHeight")
-                if new_height == last_height:
-                    break
-                last_height = new_height
-                
+            close_btn = wait.until(EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "button.modal-close, button[class*='close'], .popup-close")
+            ))
+            close_btn.click()
+            time.sleep(1)
+            print("   모달 닫기 완료")
+        except Exception:
+            pass  # 모달이 없으면 그냥 진행
+
+        # 팝업 목록 컨테이너 대기 (실제 클래스: calendar-popup-list)
+        try:
+            wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR, ".calendar-popup-list, .popuplist-board")
+            ))
         except Exception as e:
             print(f"⚠️ List loading timeout or error: {e}")
 
-        # Extract links
+        # 무한 스크롤 처리
+        last_height = self.driver.execute_script("return document.body.scrollHeight")
+        for _ in range(5):
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+
+        # 링크 추출
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
         links = []
-        
-        # Find all ID-based links or links containing /popup/
-        # Strategy: Look for 'a' tags that wrap the content or are inside the container
-        # Since structure is complex, we look for hrefs directly.
         for a in soup.find_all('a', href=True):
-            href = a['href']
-            if '/popup/' in href and href != '/popup' and href not in links:
-                # Ensure it's a detail link (usually ends with numbers)
-                if re.search(r'/popup/\d+', href):
-                    full_link = self.base_url + href if href.startswith('/') else href
-                    links.append(full_link)
-        
-        # Remove duplicates
-        links = list(set(links))
+            href = str(a['href'])
+            if re.search(r'/popup/\d+', href) and href not in links:
+                full_link = self.base_url + href if href.startswith('/') else href
+                links.append(full_link)
+
+        # 중복 제거
+        links = list(dict.fromkeys(links))  # 순서 유지하며 중복 제거
         print(f"✅ Found {len(links)} popup links.")
         return links
 

@@ -17,8 +17,12 @@ import re
 import sys
 import os
 import time
+import unicodedata
+import requests
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
+from bs4 import BeautifulSoup
 
 # ── 경로 설정 ──────────────────────────────────────────────────────────────────
 ROOT_DIR = Path(__file__).resolve().parent.parent          # backend/
@@ -43,9 +47,21 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 from app.utils.geocoder import GeoCoder
 
 # ── 상수 ────────────────────────────────────────────────────────────────────────
-TODAY = datetime(2026, 3, 4).date()          # 기간 만료 기준일
+TODAY = datetime.today().date()              # 기간 만료 기준일 (실행 시점 날짜)
 CONTENTID_START = 9000001                    # 9로 시작하는 7자리, 순번 증가
 RAW_FILE = DATA_DIR / "99_팝업스토어.json"
+
+# 네이버 검색 API
+NAVER_CLIENT_ID     = os.getenv("NAVER_SEARCH_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_SEARCH_CLIENT_SECRET")
+NAVER_WEBKR_URL     = "https://openapi.naver.com/v1/search/webkr.json"
+CRAWL_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    )
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 유틸 함수
@@ -232,63 +248,213 @@ def step3_geocode(data: list) -> list:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 4단계: llm_text 생성 (GPT-4o-mini)
+# 4단계: llm_text 생성 (네이버 웹문서 검색 + 크롤링 + introduction → GPT-4o-mini)
 # ──────────────────────────────────────────────────────────────────────────────
 
-LLM_SYSTEM_PROMPT = """당신은 한국 팝업스토어 정보를 자연스럽고 생동감 있는 홍보 문장으로 변환하는 전문가입니다.
-아래 정보를 바탕으로 해당 팝업스토어를 방문하고 싶게 만드는 설명문을 작성하세요.
+LLM_SYSTEM_PROMPT = """
+당신은 한국 팝업스토어 정보를 검색 최적화된 설명문으로 변환하는 전문가입니다.
+이 설명문은 VectorDB에 저장되어 사용자의 팝업스토어 관련 질문에 대한 검색 결과로 활용됩니다.
 
-규칙:
-- 2~4개 문단, 총 150~300자 분량
-- 이모지 사용 금지
-- 장소, 기간, 운영시간 등 핵심 정보를 자연스럽게 녹여낼 것
-- 관광지 안내문과 동일한 공식적이면서도 친근한 톤 유지
-- 마케팅 표현(최대 규모, 놓치지 마세요 등) 최소화"""
+### 작성 규칙
+1. **필수 반영**: 팝업스토어명, 위치(addr), 운영기간을 반드시 포함하세요.
+2. **내용 풍부화**: 제공된 [팝플리 소개] 및 [웹 컨텍스트]에서 콘셉트, 전시 구성, 굿즈, 체험 요소 등을 자연스럽게 녹여내세요.
+3. **검색 최적화**: 사용자가 검색할 법한 키워드(데이트 코스, 팝업 추천, 한정판 굿즈 등)를 포함하세요.
+4. **형식 제약**:
+   - 자연스러운 한국어 산문체로 작성 (목록/표/이모지 금지)
+   - 300~500자 내외
+   - 마케팅 과장 표현 최소화
+""".strip()
 
 
-def build_user_prompt(item: dict) -> str:
-    lines = [f"팝업스토어명: {item.get('title', '')}"]
-    if item.get("addr"):
-        lines.append(f"위치: {item['addr']}")
-    if item.get("start_date") and item.get("end_date"):
-        lines.append(f"운영기간: {item['start_date']} ~ {item['end_date']}")
-    if item.get("usetime"):
-        lines.append(f"운영시간: {item['usetime']}")
-    if item.get("fee"):
-        lines.append(f"입장료: {item['fee']}")
-    if item.get("parking"):
-        lines.append(f"주차: {item['parking']}")
-    if item.get("introduction"):
-        intro = item["introduction"][:500]  # 너무 길면 잘라냄
-        lines.append(f"소개:\n{intro}")
-    return "\n".join(lines)
+# ── 네이버 웹문서 검색 유틸 ────────────────────────────────────────────────────
+
+def _clean_html(text: str) -> str:
+    """HTML 태그 및 엔티티 제거"""
+    text = re.sub(r"<[^>]+>", "", text)
+    for ent, ch in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                    ("&quot;", '"'), ("&#39;", "'"), ("&nbsp;", " ")]:
+        text = text.replace(ent, ch)
+    return text.strip()
+
+
+def _clean_crawled(text: str) -> str:
+    """크롤링 텍스트 정제"""
+    text = unicodedata.normalize("NFC", text)
+    for ch in ["\u200b", "\u200c", "\u200d", "\ufeff", "\xa0"]:
+        text = text.replace(ch, " ")
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"www\.\S+", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _tokenize(text: str) -> list[str]:
+    """간단 토큰화 (2자 이상)"""
+    return [t for t in re.findall(r"[A-Za-z0-9가-힣]+", text or "") if len(t) >= 2]
+
+
+def _search_web(query: str, display: int = 5) -> list[dict]:
+    """네이버 웹문서 검색 API 호출"""
+    headers = {
+        "X-Naver-Client-Id": NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
+    }
+    params = {"query": query, "display": display, "sort": "sim"}
+    try:
+        resp = requests.get(NAVER_WEBKR_URL, headers=headers, params=params, timeout=8)
+        resp.raise_for_status()
+        items = resp.json().get("items", [])
+        return [
+            {
+                "title": _clean_html(it.get("title", "")),
+                "description": _clean_html(it.get("description", "")),
+                "link": it.get("link", ""),
+            }
+            for it in items
+        ]
+    except Exception as e:
+        print(f"    [웹문서 검색 오류] {query[:40]}... → {e}")
+        return []
+
+
+def _score_result(result: dict, title_tokens: list[str], addr_tokens: list[str]) -> float:
+    """검색 결과 관련성 점수 계산"""
+    text = f"{result['title']} {result['description']}".lower()
+    score = 0.0
+    for token in title_tokens:
+        if token.lower() in text:
+            score += 2.0
+    for token in addr_tokens:
+        if token.lower() in text:
+            score += 0.5
+    return score
+
+
+def _crawl_page(url: str, max_chars: int = 2000) -> str:
+    """웹페이지 본문 추출"""
+    try:
+        resp = requests.get(url, headers=CRAWL_HEADERS, timeout=10)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "header", "footer"]):
+            tag.decompose()
+        body = soup.get_text(separator=" ", strip=True)
+        return _clean_crawled(body)[:max_chars]
+    except Exception:
+        return ""
+
+
+def collect_context(item: dict) -> str:
+    """
+    팝업스토어 1건에 대한 컨텍스트 수집:
+    1) 네이버 웹문서 검색 (description)
+    2) 관련성 높은 상위 1~2개 페이지 크롤링
+    3) 팝플리 introduction 텍스트
+    → 세 소스를 결합하여 반환
+    """
+    title = item.get("title", "")
+    addr  = item.get("addr", "")
+    title_tokens = _tokenize(title)
+    addr_tokens  = _tokenize(addr)
+
+    # 검색 쿼리 2종
+    queries = [
+        f'"{title}" 팝업스토어 소개 체험',
+        f'"{title}" 팝업 후기 굿즈',
+    ]
+
+    all_results: list[dict] = []
+    seen_links: set[str] = set()
+    for query in queries:
+        for r in _search_web(query, display=5):
+            if r["link"] not in seen_links:
+                seen_links.add(r["link"])
+                r["score"] = _score_result(r, title_tokens, addr_tokens)
+                all_results.append(r)
+        time.sleep(0.3)
+
+    all_results.sort(key=lambda x: x["score"], reverse=True)
+
+    context_parts: list[str] = []
+
+    # 관련성 높은 상위 결과 → description 수집
+    top_desc = [r for r in all_results if r["score"] >= 1.5][:5]
+    for r in top_desc:
+        if r["description"]:
+            context_parts.append(f"[웹문서 요약] {r['description']}")
+
+    # 관련성 상위 1~2개 → 본문 크롤링
+    top_crawl = [r for r in all_results if r["score"] >= 3.0][:2]
+    for r in top_crawl:
+        print(f"    크롤링 중: {r['link'][:60]}...")
+        body = _crawl_page(r["link"])
+        if body and len(body) > 100:
+            context_parts.append(f"[웹문서 본문] {body}")
+        time.sleep(0.5)
+
+    # 팝플리 introduction 추가
+    intro = item.get("introduction", "")
+    if intro:
+        context_parts.append(f"[팝플리 소개] {intro[:800]}")
+
+    return "\n\n".join(context_parts)
+
+
+def generate_llm_text(item: dict, context: str) -> str:
+    """컨텍스트를 바탕으로 GPT-4o-mini로 llm_text 생성"""
+    item_summary = {
+        "title":      item.get("title", ""),
+        "addr":       item.get("addr", ""),
+        "start_date": item.get("start_date", ""),
+        "end_date":   item.get("end_date", ""),
+        "usetime":    item.get("usetime", ""),
+        "fee":        item.get("fee", ""),
+        "parking":    item.get("parking", ""),
+    }
+    user_msg = (
+        f"아래 팝업스토어 정보와 컨텍스트를 바탕으로 검색 최적화된 설명문을 작성해줘.\n\n"
+        f"[팝업스토어 정보]\n{json.dumps(item_summary, ensure_ascii=False, indent=2)}\n\n"
+        f"[수집된 컨텍스트]\n{context[:3000] if context else '(수집된 정보 없음)'}"
+    )
+    try:
+        resp = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": LLM_SYSTEM_PROMPT},
+                {"role": "user",   "content": user_msg},
+            ],
+            max_tokens=600,
+            temperature=0.7,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"    [LLM 오류] {item.get('title', '')} → {e}")
+        return ""
 
 
 def step4_generate_llm_text(data: list) -> list:
-    print("\n[4단계] llm_text 생성 시작 (GPT-4o-mini)")
+    print("\n[4단계] llm_text 생성 시작 (네이버 웹문서 검색 + 크롤링 + introduction → GPT-4o-mini)")
     result = []
     failed = 0
 
     for i, item in enumerate(data):
         enriched = dict(item)
-        prompt = build_user_prompt(item)
-        try:
-            response = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": LLM_SYSTEM_PROMPT},
-                    {"role": "user",   "content": prompt},
-                ],
-                max_tokens=600,
-                temperature=0.7,
-            )
-            llm_text = response.choices[0].message.content.strip()
+        title = item.get("title", "")
+        print(f"  [{i+1}/{len(data)}] '{title}'")
+
+        # 1. 컨텍스트 수집
+        context = collect_context(item)
+        print(f"    컨텍스트 수집: {len(context)}자")
+
+        # 2. llm_text 생성
+        llm_text = generate_llm_text(item, context)
+        if llm_text:
             enriched["llm_text"] = llm_text
-            print(f"  [{i+1}/{len(data)}] ✓ '{item['title']}'")
-        except Exception as e:
+            print(f"    llm_text: {len(llm_text)}자")
+        else:
             failed += 1
-            print(f"  [{i+1}/{len(data)}] ✗ 실패 '{item['title']}': {e}")
-            enriched["llm_text"] = ""  # 빈 값으로 유지 (5단계에서 제외 여부 결정)
+            enriched["llm_text"] = ""
+            print(f"    ✗ llm_text 생성 실패")
 
         result.append(enriched)
         time.sleep(0.5)  # rate limit 대응
