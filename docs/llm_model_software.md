@@ -268,7 +268,7 @@ class LLMFactory:
 |----------|------|------|
 | `INTENT_PROMPT` | `services/prompts.py` | 의도 분석 + 슬롯 추출 (Structured Output) |
 | `PLANNER_PROMPT` | `services/prompts.py` | 여행 일정 생성 (day/time_slot) |
-| `EXECUTOR_PROMPT` | `services/executor_prompt.py` | 장소 추천 + 네이버 지도 링크 포함 응답 |
+| `EXECUTOR_PROMPT` | `services/executor_prompt.py` | 장소 추천 + 네이버 지도 링크 + ID 태깅(`[IDs: ...]`) 응답 |
 | `EXECUTOR_MISSING_INFO_PROMPT` | `services/executor_prompt.py` | 부족 정보 질문 생성 |
 | `EXECUTOR_GENERAL_PROMPT` | `services/executor_prompt.py` | 일반 대화 응답 |
 | `IMAGE_TO_EMOTIONAL_PROMPT` | `services/vision.py` | 이미지 → 감성 텍스트 변환 |
@@ -319,6 +319,8 @@ class LLMFactory:
 > **연남동 카페거리**에 있는 '앤트러사이트 연남'은 넓은 공간과 빈티지한 인테리어로 유명해요. 오래된 공장을 개조한 독특한 분위기가 매력적이고, 창가 자리에서 여유롭게 시간을 보내기 좋답니다. [앤트러사이트 연남](https://map.naver.com/...)
 >
 > [IDs: 126508, 2733967]
+
+※ **ID 태깅**: 답변에서 추출된 `[IDs: ...]` 태그는 프론트엔드에서 지도 핀을 띄우는 데 사용되며, 본문 노출 전 자동으로 정제됩니다.
 
 ## 시나리오 2: 여행 일정 생성
 

@@ -223,7 +223,7 @@ def update_diary(
     update_data = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else payload.dict(exclude_unset=True)
 
     if "linked_places" in update_data:
-        _apply_manual_place_snapshots(item, update_data["linked_places"] or [])
+        _apply_manual_place_snapshots(item, payload.linked_places or [])
 
     for field in ("title", "content", "entry_date", "cover_image_path"):
         if field in update_data:
