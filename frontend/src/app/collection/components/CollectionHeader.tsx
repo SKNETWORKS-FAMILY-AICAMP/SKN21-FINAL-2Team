@@ -16,9 +16,9 @@ export function CollectionHeader({
     <header className="mb-6 flex flex-none items-end justify-between border-b border-gray-100 pb-4">
       <div>
         <h1 className="page-title mb-1 flex items-center gap-2 text-gray-900">
-          Collection <Grid size={16} className="text-gray-400" />
+          Moments <Grid size={16} className="text-gray-400" />
         </h1>
-        <p className="page-subtitle">Inspirations & Moments</p>
+        <p className="page-subtitle">Inspirations & Memories</p>
       </div>
 
       <div className="flex items-center gap-3">

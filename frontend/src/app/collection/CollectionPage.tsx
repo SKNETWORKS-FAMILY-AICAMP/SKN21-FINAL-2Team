@@ -39,6 +39,8 @@ export function CollectionPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+    // [Feature] Diary 저장 성공 후 확인 팝업 상태
+    const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
 
     const loadDiaries = async (nextQuery = "") => {
         setLoading(true);
@@ -181,7 +183,8 @@ export function CollectionPage() {
             await loadDiaries(query);
             hydrateEditor(detail);
             setSelectedDiaryId(detail.id);
-            setIsModalOpen(true);
+            // [Feature] 저장 성공 → 확인 팝업 표시 (모달은 팝업에서 닫음)
+            setIsSaveConfirmOpen(true);
         } catch {
             setError("일기 저장에 실패했습니다.");
         } finally {
@@ -217,6 +220,13 @@ export function CollectionPage() {
             }],
         }));
         setIsLocationPickerOpen(false);
+    };
+
+    // [Feature] 저장 확인 팝업에서 "확인" 클릭 → Diary 모달 닫기
+    const handleSaveConfirmClose = () => {
+        setIsSaveConfirmOpen(false);
+        setIsModalOpen(false);
+        setError(null);
     };
 
     return (
@@ -302,6 +312,29 @@ export function CollectionPage() {
                             className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
                         >
                             Close
+                        </button>
+                    </div>
+                </div>
+            </SimpleModal>
+
+            {/* [Feature] Diary 저장 성공 확인 팝업 */}
+            <SimpleModal
+                open={isSaveConfirmOpen}
+                title="Moment Saved"
+                onClose={handleSaveConfirmClose}
+                maxWidth="sm"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm leading-6 text-gray-600">
+                        당신의 Moments가 저장되었습니다!
+                    </p>
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleSaveConfirmClose}
+                            className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                        >
+                            확인
                         </button>
                     </div>
                 </div>

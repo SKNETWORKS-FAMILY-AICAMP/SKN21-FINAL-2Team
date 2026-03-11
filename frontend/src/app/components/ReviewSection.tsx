@@ -13,7 +13,7 @@ const reviews = [
     {
         id: 2, name: "Alex Kim", role: "Photography Enthusiast", location: "Seoul, South Korea",
         image: "https://images.unsplash.com/photo-1661854236305-b02cef4aa0af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxrb3JlYW4lMjBtYW4lMjBwb3J0cmFpdCUyMHN0eWxpc2glMjBtaW5pbWFsfGVufDF8fHx8MTc3MTQ4Mjg4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-        rating: 5, text: "As a photographer, I'm always chasing the perfect light and aesthetic. Triver's 'Collection' feature is a game-changer.",
+        rating: 5, text: "As a photographer, I'm always chasing the perfect light and aesthetic. Triver's 'Moments' feature is a game-changer.",
     },
     {
         id: 3, name: "Sarah Jenkins", role: "Food Blogger", location: "New York, USA",
@@ -28,7 +28,7 @@ const reviews = [
     {
         id: 5, name: "Yuna Choi", role: "Travel Influencer", location: "Jeju, South Korea",
         image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHBvcnRyYWl0JTIwYXNpYW4lMjBuYXR1cmFsfGVufDF8fHx8MTc3MTQ4Mjg4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-        rating: 5, text: "Triver's bookmark and collection features help me organize content ideas effortlessly. My followers love the unique spots I discover!",
+        rating: 5, text: "Triver's bookmark and moments features help me organize content ideas effortlessly. My followers love the unique spots I discover!",
     },
     {
         id: 6, name: "Daniel Park", role: "Business Traveler", location: "Toronto, Canada",
