@@ -59,7 +59,9 @@ services:
 
   frontend:
     platform: linux/amd64
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev
     ports:
       - "3000:3000"
     env_file:
