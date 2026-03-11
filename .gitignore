@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!**/src/lib/
 lib64/
 parts/
 sdist/
@@ -243,7 +244,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# CI/CD
+/staging/
+/production/
 
+#########
 backend/data/prefer/*
 backend/evaluation/result
 backend/tmp

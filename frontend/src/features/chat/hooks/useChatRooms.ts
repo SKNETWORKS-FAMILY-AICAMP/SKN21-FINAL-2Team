@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import {
+    ChatMessage,
     ChatRoom,
-    fetchRooms,
     createRoom,
     fetchRoom,
     updateRoomBookmark
@@ -14,19 +14,15 @@ import {
 import { type TripContext } from "@/features/chat/components/TripContextModal";
 
 export function useChatRooms({
-    parsedRouteRoomId,
-    fromDestinationParam,
     setShowTripModal,
     setIsTripLoading,
     mergeHydratedMessages,
     setMessages
 }: {
-    parsedRouteRoomId: number | null;
-    fromDestinationParam: string | null;
     setShowTripModal: (show: boolean) => void;
     setIsTripLoading: (loading: boolean) => void;
-    mergeHydratedMessages: (roomId: number, nextMessages: any[]) => void;
-    setMessages: (messages: any[] | ((prev: any[]) => any[])) => void;
+    mergeHydratedMessages: (roomId: number, nextMessages: ChatMessage[]) => void;
+    setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
 }) {
     const router = useRouter();
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
