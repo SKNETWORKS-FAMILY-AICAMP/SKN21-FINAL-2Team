@@ -11,7 +11,8 @@ type MomentsHeaderProps = {
 export function MomentsHeader({
   query,
   onQueryChange,
-  uploadInputRef,
+  onCreate,
+  onDeleteSelect,
 }: MomentsHeaderProps) {
   return (
     <header className="mb-6 flex flex-none items-end justify-between border-b border-gray-100 pb-4">

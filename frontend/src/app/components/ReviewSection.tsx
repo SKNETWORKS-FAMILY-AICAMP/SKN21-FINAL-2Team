@@ -28,11 +28,7 @@ const reviews = [
     {
         id: 5, name: "Yuna Choi", role: "Travel Influencer", location: "Jeju, South Korea",
         image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHBvcnRyYWl0JTIwYXNpYW4lMjBuYXR1cmFsfGVufDF8fHx8MTc3MTQ4Mjg4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-<<<<<<< HEAD
-        rating: 5, text: "Triver's bookmark and moments features help me organize content ideas effortlessly. My followers love the unique spots I discover!",
-=======
         rating: 5, text: "Triver's bookmark and Moments features help me organize content ideas effortlessly. My followers love the unique spots I discover!",
->>>>>>> codex/refact/front
     },
     {
         id: 6, name: "Daniel Park", role: "Business Traveler", location: "Toronto, Canada",
