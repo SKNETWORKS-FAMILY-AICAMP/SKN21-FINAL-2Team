@@ -37,12 +37,13 @@
 - `backend`, `frontend`, `nginx` 이미지를 GHCR에 푸시
 - 스테이징 EC2에 SSH 접속 후 다음 순서로 배포
   - 배포 디렉토리 이동 후 `.env.staging`, `.env.backend.staging`, `.env.frontend.staging`, `docker-compose.ec2.yml` 존재 여부 확인
+  - `.env.staging`에서 `NGINX_PORT`를 읽고, 미설정 시 기본값 `80` 사용
   - `df -h`, `docker system df`로 초기 상태 출력
   - 미사용 컨테이너/이미지/build cache 및 7일 이상 지난 미사용 이미지 정리
   - 디스크 부족 위험이 있으면 현재 compose 스택을 `down` 한 뒤 이미지 참조를 해제하고 한 번 더 정리
   - `docker compose pull && docker compose up -d`
   - 배포 후 다시 `df -h`, `docker system df` 출력
-- 배포 후 `http://127.0.0.1/api/healthz` 최대 10회 retry 확인
+- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 10회 retry 확인
 
 ### 2.3 운영 배포
 
@@ -52,7 +53,7 @@
 - 동일한 2단계 병렬 검증 수행
 - 운영용 이미지를 GHCR에 푸시
 - 운영 EC2에 SSH 접속 후 스테이징과 동일한 정리/검사 절차를 거쳐 재배포
-- 배포 후 `http://127.0.0.1/api/healthz` 최대 10회 retry 확인
+- 배포 후 `http://127.0.0.1:${NGINX_PORT}/api/healthz` 최대 10회 retry 확인
 
 ## 3. 자동배포 트리거
 
