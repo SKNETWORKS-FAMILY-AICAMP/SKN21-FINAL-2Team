@@ -312,13 +312,13 @@ export function ExplorePage() {
 
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                                {/* [Fix] 카드 높이 고정 — 새로고침 시 사이즈 변동 방지 */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2">
+                                {/* [Fix] 카드가 남은 공간을 꽉 채우도록 flex + flex-1 적용 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2 h-full">
                                     {hotPlaces.map((place) => (
                                         <motion.div
                                             key={place.id}
                                             whileHover={{ scale: 1.02 }}
-                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-[140px]"
+                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 min-h-[120px]"
                                             onClick={() => handleHotPlaceCardClick(place)}
                                         >
                                             <img
