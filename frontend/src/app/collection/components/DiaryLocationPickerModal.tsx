@@ -25,6 +25,11 @@ type DiaryLocationPickerModalProps = {
 const SEOUL_CITY_HALL = { latitude: 37.5665, longitude: 126.978 };
 type NaverMapClickEvent = { coord?: NaverLatLng };
 
+const isNaverMapClickEvent = (value: unknown): value is NaverMapClickEvent => {
+  if (!value || typeof value !== "object") return false;
+  return "coord" in value;
+};
+
 export function DiaryLocationPickerModal({
   isOpen,
   initialPlace,
@@ -130,7 +135,9 @@ export function DiaryLocationPickerModal({
         maxZoom: 18,
       });
 
-      naver.maps.Event.addListener(mapInstanceRef.current, "click", (event: NaverMapClickEvent) => {
+      naver.maps.Event.addListener(mapInstanceRef.current, "click", (...args: unknown[]) => {
+        const event = args[0];
+        if (!isNaverMapClickEvent(event)) return;
         const lat = event?.coord?.lat?.();
         const lng = event?.coord?.lng?.();
         if (typeof lat !== "number" || typeof lng !== "number") return;
