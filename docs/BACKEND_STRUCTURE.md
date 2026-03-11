@@ -147,7 +147,7 @@ app/
 ### 3-9. `app/scripts/`
 
 - 데이터 전처리, 팝업스토어 수집, LLM 보강, Qdrant 적재 스크립트 제공
-- 대표 스크립트: `preprocess_data.py`, `preprocess_popup.py`, `enrich_llm.py`, `enrich_with_tavily.py`, `qdrant_setup.py`
+- 대표 스크립트: `preprocess_data.py`, `tour_api/run_sync.py`, `enrich_llm.py`, `enrich_with_tavily.py`, `qdrant_setup.py`
 
 ### 3-10. `app/utils/`
 
