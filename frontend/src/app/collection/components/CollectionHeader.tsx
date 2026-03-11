@@ -1,16 +1,18 @@
-import { RefObject } from "react";
-import { Grid, Plus, Search } from "lucide-react";
+﻿// [Feature] Add Memory + Delete Memory(쓰레기통 아이콘) 버튼
+import { Search, Grid, Plus, Trash2 } from "lucide-react";
 
 type CollectionHeaderProps = {
   query: string;
   onQueryChange: (value: string) => void;
-  uploadInputRef: RefObject<HTMLInputElement | null>;
+  onCreate: () => void;
+  onDeleteSelect: () => void;
 };
 
 export function CollectionHeader({
   query,
   onQueryChange,
-  uploadInputRef,
+  onCreate,
+  onDeleteSelect,
 }: CollectionHeaderProps) {
   return (
     <header className="mb-6 flex flex-none items-end justify-between border-b border-gray-100 pb-4">
@@ -32,10 +34,18 @@ export function CollectionHeader({
           />
         </label>
         <button
-          onClick={() => uploadInputRef.current?.click()}
+          onClick={onCreate}
           className="flex items-center gap-1.5 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
         >
           <Plus size={14} /> Add Memory
+        </button>
+        {/* [Feature] Delete Memory - 쓰레기통 아이콘만 표시 */}
+        <button
+          onClick={onDeleteSelect}
+          className="flex items-center justify-center rounded-full border border-gray-200 p-2.5 text-gray-400 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+          title="Delete Memory"
+        >
+          <Trash2 size={16} />
         </button>
       </div>
     </header>

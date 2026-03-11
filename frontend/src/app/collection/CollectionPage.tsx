@@ -13,6 +13,7 @@ import {
     fetchDiary,
     fetchDiaries,
     DiaryPlaceSearchResult,
+    deleteDiary,
     updateDiary,
     uploadImageDataUrl,
 } from "@/services/api";
@@ -25,7 +26,6 @@ import { EditorState } from "./types";
 import { emptyEditorState, readFileAsDataUrl } from "./utils";
 
 export function CollectionPage() {
-    const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
     // [Feature] 모달 열 때 에디터 스냅샷 (수정 여부 판단용)
     const initialEditorRef = useRef<string>("");
@@ -43,6 +43,10 @@ export function CollectionPage() {
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     // [Feature] 저장 확인 팝업 상태
     const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+    // [Feature] 삭제 모드 + 확인 팝업 상태
+    const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [deletingDiaryId, setDeletingDiaryId] = useState<number | null>(null);
 
     const loadDiaries = async (nextQuery = "") => {
         setLoading(true);
@@ -235,6 +239,41 @@ export function CollectionPage() {
         setIsLocationPickerOpen(false);
     };
 
+
+    // [Feature] Delete Memory - 쓰레기통 클릭 -> 삭제 모드 토글
+    const handleToggleDeleteMode = () => {
+        setIsDeleteMode((prev) => !prev);
+    };
+
+    // [Feature] 삭제 모드에서 카드 클릭 -> 확인 팝업
+    const handleGallerySelect = (diaryId: number) => {
+        if (isDeleteMode) {
+            setDeletingDiaryId(diaryId);
+            setIsDeleteConfirmOpen(true);
+        } else {
+            void openDiaryModal(diaryId);
+        }
+    };
+
+    // [Feature] 삭제 확인 -> 실제 삭제 실행
+    const handleConfirmDelete = async () => {
+        if (deletingDiaryId === null) return;
+        try {
+            await deleteDiary(deletingDiaryId);
+            if (selectedDiaryId === deletingDiaryId) {
+                setSelectedDiaryId(null);
+                setEditor(emptyEditorState());
+            }
+            await loadDiaries(query);
+        } catch {
+            setError("일기 삭제에 실패했습니다.");
+        } finally {
+            setDeletingDiaryId(null);
+            setIsDeleteConfirmOpen(false);
+            setIsDeleteMode(false);
+        }
+    };
+
     // [Feature] 저장 확인 팝업에서 "확인" 클릭 → Diary 모달 닫기
     const handleSaveConfirmClose = () => {
         setIsSaveConfirmOpen(false);
@@ -252,15 +291,10 @@ export function CollectionPage() {
                 <CollectionHeader
                     query={query}
                     onQueryChange={setQuery}
-                    uploadInputRef={uploadInputRef}
+                    onCreate={() => openCreateModal()}
+                    onDeleteSelect={handleToggleDeleteMode}
                 />
-                <input
-                    ref={uploadInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => void handleSelectImage(event, "create")}
-                />
+
 
                 <div className="flex-1 overflow-y-auto">
                     {loading ? (
@@ -273,7 +307,8 @@ export function CollectionPage() {
                         <DiaryGallery
                             diaries={diaries}
                             selectedDiaryId={selectedDiaryId}
-                            onSelect={(diaryId) => void openDiaryModal(diaryId)}
+                            onSelect={handleGallerySelect}
+                            isDeleteMode={isDeleteMode}
                         />
                     )}
                 </div>
@@ -349,6 +384,35 @@ export function CollectionPage() {
                             className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
                         >
                             확인
+                        </button>
+                    </div>
+                </div>
+            </SimpleModal>
+            {/* [Feature] Delete Memory - 삭제 확인 팝업 */}
+            <SimpleModal
+                open={isDeleteConfirmOpen}
+                title="Delete Memory"
+                onClose={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
+                maxWidth="sm"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm leading-6 text-gray-600">
+                        정말로 추억을 지우시겠습니까?
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
+                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                        >
+                            아니요
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void handleConfirmDelete()}
+                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                        >
+                            네
                         </button>
                     </div>
                 </div>
