@@ -54,7 +54,7 @@ app/
 - 전역 예외 핸들러 등록
 - CORS 설정
 - 업로드 파일 정적 경로 마운트
-- 라우터 등록(`auth`, `users`, `chat`, `prefer`, `common`, `explore`, `attractions`, `restaurants`, `reservations`, `hot_place`)
+- 라우터 등록(`auth`, `users`, `chat`, `prefer`, `common`, `explore`, `reservations`, `diaries`)
 - HTTP 요청 단위 로깅 미들웨어 적용
 
 ### 3-2. `app/api/`
@@ -92,7 +92,9 @@ app/
 - `intent.py`: 의도 분석 + 대화 요약
 - `planner.py`: 일정 초안 및 후속 질문 생성
 - `retriever.py`: RAG 후보 검색 및 검색 스코프 선택
-- `executor.py`: 최종 답변 생성, 네이버 지도 링크 포함, 후보가 없을 때 Tavily fallback 수행
+- `executor.py`: 최종 답변 생성 (ID 태깅, 지도 링크, Tavily fallback, 멀티모달 지원)
+- `executor_missing (in executor.py): 누락 정보 재질문 생성`
+- `executor_general (in executor.py): 일상 대화 응답 생성`
 - `grapy_route.py`: 노드 라우팅
 - `models/state.py`: 그래프 상태 정의
 - `models/output.py`: intent/planner 출력 스키마 정의
@@ -202,6 +204,7 @@ tests/
 ├── test_auth.py
 ├── test_chat.py
 ├── test_chat_stream.py
+├── test_diaries.py
 ├── test_graph_routing.py
 ├── test_retriever_selection.py
 ├── test_retriever_regression.py
@@ -209,8 +212,12 @@ tests/
 ├── test_executor_selected_id_validation.py
 ├── test_retrieval_profile_config.py
 ├── test_image_url_utils.py
+├── test_llm_streaming.py
+├── test_place_id_utils.py
+├── test_preprocess_addr_tokens.py
+├── test_user_deactivate.py
 ├── test_evaluation_*.py
-└── 보조 점검 스크립트(check_qdrant.py, debug_search.py)
+└── 보조 점검 스크립트(check_qdrant.py, debug_search.py, test_fill_missing_images_*.py)
 ```
 
 - 인증/채팅/스트리밍/그래프 라우팅/검색 회귀/평가 스크립트까지 pytest 기반으로 검증

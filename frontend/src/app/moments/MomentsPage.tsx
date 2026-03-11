@@ -22,7 +22,7 @@ import { DiaryGallery } from "./components/DiaryGallery";
 import { DiaryLocationPickerModal } from "./components/DiaryLocationPickerModal";
 import { EmptyDiaryState } from "./components/EmptyDiaryState";
 import { EditorState } from "./types";
-import { emptyEditorState, readFileAsDataUrl } from "./utils";
+import { emptyEditorState, readExifGps, readFileAsDataUrl } from "./utils";
 
 export function MomentsPage() {
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -37,6 +37,7 @@ export function MomentsPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
     const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
 
@@ -114,11 +115,13 @@ export function MomentsPage() {
             cover_image_path: coverImagePath ?? null,
         });
         setError(null);
+        setIsEditMode(true);
         setIsModalOpen(true);
     };
 
     const openDiaryModal = async (diaryId: number) => {
         setSelectedDiaryId(diaryId);
+        setIsEditMode(false);
         setIsModalOpen(true);
         setDetailLoading(true);
         setError(null);
@@ -136,11 +139,48 @@ export function MomentsPage() {
         const file = event.target.files?.[0];
         if (!file) return;
         try {
-            const dataUrl = await readFileAsDataUrl(file);
+            const [dataUrl, gps] = await Promise.all([
+                readFileAsDataUrl(file),
+                readExifGps(file),
+            ]);
+
+            // EXIF GPS 있으면 Kakao 역지오코딩으로 장소 자동 첨부
+            if (gps?.latitude && gps?.longitude) {
+                const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY ?? "";
+                try {
+                    const res = await fetch(
+                        `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${gps.longitude}&y=${gps.latitude}`,
+                        { headers: { Authorization: `KakaoAK ${kakaoKey}` } }
+                    );
+                    const data = await res.json();
+                    const doc = data.documents?.[0];
+                    const adress = doc?.road_address?.address_name || doc?.address?.address_name;
+                    if (adress) {
+                        const autoPlace: DiaryPlaceSearchResult = {
+                            name: null,
+                            adress,
+                            latitude: gps.latitude,
+                            longitude: gps.longitude,
+                        };
+                        if (target === "create" && !isModalOpen) {
+                            openCreateModal(dataUrl);
+                            setEditor((prev) => ({ ...prev, linked_places: [{ ...autoPlace, image_path: null, place_id: null, chat_place_id: null }] }));
+                        } else {
+                            setEditor((prev) => ({ ...prev, cover_image_path: dataUrl, linked_places: [{ ...autoPlace, image_path: null, place_id: null, chat_place_id: null }] }));
+                            setIsEditMode(true);
+                            setIsModalOpen(true);
+                        }
+                        return;
+                    }
+                } catch { /* 역지오코딩 실패 시 무시 */ }
+            }
+
+            // GPS 없거나 역지오코딩 실패: 기존 로직
             if (target === "create" && !isModalOpen) {
                 openCreateModal(dataUrl);
             } else {
                 setEditor((prev) => ({ ...prev, cover_image_path: dataUrl }));
+                setIsEditMode(true);
                 setIsModalOpen(true);
             }
         } catch {
@@ -173,15 +213,22 @@ export function MomentsPage() {
         try {
             setSaving(true);
             setError(null);
+            const isNew = editor.id === null;
             const payload = await buildPayload();
-            const detail = editor.id === null
+            const detail = isNew
                 ? await createDiary(payload)
-                : await updateDiary(editor.id, payload);
+                : await updateDiary(editor.id!, payload);
 
             await loadDiaries(query);
-            hydrateEditor(detail);
-            setSelectedDiaryId(detail.id);
-            setIsModalOpen(true);
+            if (isNew) {
+                setIsModalOpen(false);
+                setEditor(emptyEditorState());
+            } else {
+                hydrateEditor(detail);
+                setSelectedDiaryId(detail.id);
+                setIsEditMode(false);
+                setIsModalOpen(true);
+            }
         } catch {
             setError("일기 저장에 실패했습니다.");
         } finally {
@@ -191,12 +238,18 @@ export function MomentsPage() {
 
     const handleRequestClose = () => {
         if (saving) return;
+        if (!isEditMode) {
+            setIsModalOpen(false);
+            setError(null);
+            return;
+        }
         setIsCloseConfirmOpen(true);
     };
 
     const handleConfirmClose = () => {
         setIsCloseConfirmOpen(false);
         setIsModalOpen(false);
+        setIsEditMode(false);
         setError(null);
         if (selectedDiaryId === null) {
             setEditor(emptyEditorState());
@@ -258,6 +311,7 @@ export function MomentsPage() {
 
             <DiaryEditorModal
                 isOpen={isModalOpen}
+                isEditMode={isEditMode}
                 detailLoading={detailLoading}
                 saving={saving}
                 error={error}
@@ -265,6 +319,7 @@ export function MomentsPage() {
                 selectedDiarySummary={selectedDiarySummary}
                 modalImageInputRef={modalImageInputRef}
                 onClose={handleRequestClose}
+                onEnterEditMode={() => setIsEditMode(true)}
                 onImageChange={(event) => void handleSelectImage(event, "replace")}
                 onEditorChange={(updater) => setEditor(updater)}
                 onOpenLocationPicker={() => setIsLocationPickerOpen(true)}

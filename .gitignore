@@ -253,3 +253,5 @@ backend/tmp
 .claude/
 CLAUDE.md
 .gemini
+
+backend/data/uploads/

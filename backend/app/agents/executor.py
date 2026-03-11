@@ -69,8 +69,8 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
         lng = float(payload.get("mapx", "0"))
 
         # 네이버 지도 링크 생성
-        title = payload.get("title") or payload.get("name") or "Unknown"
-        contentid = get_place_id(c) or "Unknown"
+        title = payload.get("place") or payload.get("title") or ""
+        contentid = get_place_id(c) or ""
         
         if title:
             encoded = urllib.parse.quote(title)
