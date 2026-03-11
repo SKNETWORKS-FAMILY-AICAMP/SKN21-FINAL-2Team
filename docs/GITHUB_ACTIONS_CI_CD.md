@@ -39,6 +39,7 @@
   - 배포 디렉토리 이동 후 `.env.staging`, `.env.backend.staging`, `.env.frontend.staging`, `docker-compose.ec2.yml` 존재 여부 확인
   - `df -h`, `docker system df`로 초기 상태 출력
   - 미사용 컨테이너/이미지/build cache 및 7일 이상 지난 미사용 이미지 정리
+  - 디스크 부족 위험이 있으면 현재 compose 스택을 `down` 한 뒤 이미지 참조를 해제하고 한 번 더 정리
   - `docker compose pull && docker compose up -d`
   - 배포 후 다시 `df -h`, `docker system df` 출력
 - 배포 후 `http://127.0.0.1/api/healthz` 최대 10회 retry 확인
@@ -208,5 +209,6 @@ backend 서비스는 `/api/healthz` 엔드포인트로 헬스체크를 수행한
 - `GHCR_TOKEN` PAT는 만료 전 갱신하고 GitHub Secrets를 업데이트한다.
 - 배포 전후 서버에서 `df -h`, `docker system df`, `sudo du -sh /var/lib/containerd`로 용량을 점검하는 것을 권장한다.
 - 현재 자동 정리 정책은 미사용 컨테이너/이미지/build cache 및 7일 이상 지난 미사용 이미지를 정리한다.
+- 다만 실행 중 컨테이너가 기존 이미지를 참조 중이면 `docker image prune`만으로는 공간이 즉시 확보되지 않는다. 이 경우 현재 배포 스크립트처럼 `docker compose down` 후 재정리를 거쳐 새 이미지를 pull한다.
 - `docker volume prune`은 데이터 손실 위험 때문에 기본 배포 절차에 포함하지 않는다.
 - 루트 디스크 사용률이 80%를 넘기기 시작하면 EBS 증설을 검토한다. 29GB급 루트 디스크는 이미지 누적 시 재발 가능성이 높다.

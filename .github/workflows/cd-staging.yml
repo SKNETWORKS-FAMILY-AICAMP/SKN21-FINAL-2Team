@@ -206,6 +206,16 @@ jobs:
             export BACKEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-backend:${IMAGE_TAG}"
             export FRONTEND_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-frontend:${IMAGE_TAG}"
             export NGINX_IMAGE="ghcr.io/${IMAGE_NAMESPACE}/triver-nginx:${IMAGE_TAG}"
+            echo "Stopping current stack to free image references before pull"
+            docker compose --env-file .env.staging -f docker-compose.ec2.yml down --remove-orphans || true
+            echo "Cleaning Docker resources after stack shutdown"
+            docker container prune -f || true
+            docker image prune -af || true
+            docker builder prune -af || true
+            echo "Disk usage after shutdown cleanup"
+            df -h
+            echo "Docker disk usage after shutdown cleanup"
+            docker system df || true
             docker compose --env-file .env.staging -f docker-compose.ec2.yml pull
             docker compose --env-file .env.staging -f docker-compose.ec2.yml up -d --remove-orphans
             echo "Disk usage after deploy"
