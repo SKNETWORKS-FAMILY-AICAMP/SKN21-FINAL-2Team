@@ -207,8 +207,11 @@ class GeoCoder:
     def __init__(self) -> None:
         self.client_id = os.getenv("NAVER_CLIENT_ID")
         self.client_secret = os.getenv("NAVER_CLIENT_SECRET")
+        self.search_client_id = os.getenv("NAVER_SEARCH_CLIENT_ID")
+        self.search_client_secret = os.getenv("NAVER_SEARCH_CLIENT_SECRET")
         self.geocode_endpoint = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
         self.reverse_geocode_endpoint = "https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc"
+        self.local_search_endpoint = "https://openapi.naver.com/v1/search/local.json"
 
     def _headers(self) -> Dict[str, str]:
         return {
@@ -238,6 +241,32 @@ class GeoCoder:
         except Exception as e:
             print(f"API 요청 중 오류 발생: {e}")
             return None
+
+    def geocoder_many(self, location: str, limit: int = 5) -> list[Dict[str, Any]]:
+        params = {"query": location}
+        try:
+            response = requests.get(self.geocode_endpoint, headers=self._headers(), params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("status") != "OK" or not data.get("addresses"):
+                return []
+
+            results: list[Dict[str, Any]] = []
+            for target in data["addresses"][:limit]:
+                results.append(
+                    {
+                        "name": None,
+                        "lat": float(target["y"]),
+                        "lng": float(target["x"]),
+                        "road_address": target.get("roadAddress"),
+                        "jibun_address": target.get("jibunAddress"),
+                    }
+                )
+            return results
+        except Exception as e:
+            print(f"API 요청 중 오류 발생: {e}")
+            return []
 
     # Keep requested name for compatibility with existing callers if needed.
     def eocoder(self, location: str) -> Optional[Dict[str, Any]]:
@@ -278,6 +307,88 @@ class GeoCoder:
         except Exception as e:
             print(f"API 요청 중 오류 발생: {e}")
             return None
+
+    def search_places(self, query: str, limit: int = 5) -> list[Dict[str, Any]]:
+        results: list[Dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+
+        local_items = self.local_search_places(query, limit=limit)
+        print(f"[Moments] local_search query='{query}' count={len(local_items)}")
+
+        for item in local_items:
+            address = item.get("road_address") or item.get("jibun_address")
+            if not address:
+                continue
+            geocoded = self.geocoder(address)
+            if not geocoded:
+                continue
+            normalized = (
+                (item.get("name") or query).strip(),
+                (geocoded.get("road_address") or geocoded.get("jibun_address") or address).strip(),
+            )
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            results.append(
+                {
+                    "name": item.get("name") or query,
+                    "lat": geocoded.get("lat"),
+                    "lng": geocoded.get("lng"),
+                    "road_address": geocoded.get("road_address") or address,
+                    "jibun_address": geocoded.get("jibun_address") or address,
+                }
+            )
+            if len(results) >= limit:
+                return results
+
+        geocode_items = self.geocoder_many(query, limit=limit)
+        if not results:
+            print(f"[Moments] geocode_fallback query='{query}' count={len(geocode_items)}")
+
+        for item in geocode_items:
+            address = item.get("road_address") or item.get("jibun_address") or query
+            normalized = ((item.get("name") or query).strip(), address.strip())
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            results.append(item)
+            if len(results) >= limit:
+                break
+
+        return results
+
+    def local_search_places(self, query: str, limit: int = 5) -> list[Dict[str, Any]]:
+        if not self.search_client_id or not self.search_client_secret:
+            print("NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET is not configured.")
+            return []
+
+        headers = {
+            "X-Naver-Client-Id": self.search_client_id or "",
+            "X-Naver-Client-Secret": self.search_client_secret or "",
+        }
+        params = {"query": query, "display": max(1, min(limit, 10)), "sort": "comment"}
+
+        try:
+            response = requests.get(self.local_search_endpoint, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            items = data.get("items") or []
+            results: list[Dict[str, Any]] = []
+            for item in items:
+                title = re.sub(r"<[^>]+>", "", item.get("title") or "").strip()
+                road_address = (item.get("roadAddress") or "").strip() or None
+                jibun_address = (item.get("address") or "").strip() or None
+                results.append(
+                    {
+                        "name": title or query,
+                        "road_address": road_address,
+                        "jibun_address": jibun_address,
+                    }
+                )
+            return results
+        except Exception as e:
+            print(f"장소 검색 API 요청 중 오류 발생: {e}")
+            return []
 
     def _build_address_dict(self, data: Dict[str, Any]) -> Dict[str, Optional[str]]:
         region = data.get("region", {})

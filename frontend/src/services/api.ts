@@ -723,20 +723,6 @@ export const deleteDiary = async (diaryId: number): Promise<{ ok: boolean }> => 
     return response.json();
 };
 
-export const searchDiaryPlaces = async (query: string): Promise<DiaryPlaceSearchResult[]> => {
-    const qs = new URLSearchParams({ query });
-    const response = await fetchWithAuth(`${API_URL}/diaries/place-search?${qs.toString()}`);
-    return response.json();
-};
-
-export const reverseGeocodeDiaryPlace = async (latitude: number, longitude: number): Promise<DiaryPlaceSearchResult> => {
-    const qs = new URLSearchParams({
-        latitude: latitude.toString(),
-        longitude: longitude.toString(),
-    });
-    const response = await fetchWithAuth(`${API_URL}/diaries/reverse-geocode?${qs.toString()}`);
-    return response.json();
-};
 
 export const createReservation = async (payload: ReservationPayload): Promise<ReservationRecord> => {
     const response = await fetchWithAuth(`${API_URL}/reservations`, { method: "POST", body: payload });

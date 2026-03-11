@@ -162,19 +162,21 @@ def search_places(
     db: Session = Depends(db_manager.get_db),
 ):
     del current_user, db
-    result = GeoCoder().geocoder(query.strip())
-    if not result:
-        return []
-
-    address = result.get("road_address") or result.get("jibun_address") or query.strip()
-    return [
-        {
-            "name": query.strip(),
-            "adress": address,
-            "latitude": result.get("lat"),
-            "longitude": result.get("lng"),
-        }
-    ]
+    results = GeoCoder().search_places(query.strip())
+    serialized = []
+    for result in results:
+        address = result.get("road_address") or result.get("jibun_address") or query.strip()
+        if result.get("lat") is None or result.get("lng") is None:
+            continue
+        serialized.append(
+            {
+                "name": result.get("name") or query.strip(),
+                "adress": address,
+                "latitude": result.get("lat"),
+                "longitude": result.get("lng"),
+            }
+        )
+    return serialized
 
 
 @router.get("/reverse-geocode")
@@ -221,7 +223,7 @@ def update_diary(
     update_data = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else payload.dict(exclude_unset=True)
 
     if "linked_places" in update_data:
-        _apply_manual_place_snapshots(item, update_data["linked_places"] or [])
+        _apply_manual_place_snapshots(item, payload.linked_places or [])
 
     for field in ("title", "content", "entry_date", "cover_image_path"):
         if field in update_data:
