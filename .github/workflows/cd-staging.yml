@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - 'release/v*'
+  workflow_dispatch:
+    inputs:
+      apply_qdrant_snapshots:
+        description: 'Qdrant 스냅샷을 S3에서 다운로드하여 적용'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -168,12 +174,13 @@ jobs:
         env:
           IMAGE_NAMESPACE: ${{ needs.build-and-push.outputs.image_namespace }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          APPLY_SNAPSHOTS: ${{ inputs.apply_qdrant_snapshots || 'false' }}
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           port: ${{ secrets.STAGING_PORT }}
-          envs: IMAGE_NAMESPACE,IMAGE_TAG
+          envs: IMAGE_NAMESPACE,IMAGE_TAG,APPLY_SNAPSHOTS
           script: |
             set -eu
             cd "${{ secrets.STAGING_APP_DIR }}"
@@ -220,15 +227,42 @@ jobs:
             echo "Docker disk usage after shutdown cleanup"
             docker system df || true
             docker compose --env-file .env.staging -f docker-compose.ec2.yml pull
+
+            # RDS schema migration (앱 기동 전 실행)
+            docker compose --env-file .env.staging -f docker-compose.ec2.yml \
+              run --rm --no-deps backend alembic upgrade head
+
+            # 앱 기동
             docker compose --env-file .env.staging -f docker-compose.ec2.yml up -d --remove-orphans
-            echo "Disk usage after deploy"
-            df -h
-            echo "Docker disk usage after deploy"
-            docker system df || true
-            echo "Waiting for services to be ready via ${HEALTHCHECK_URL}..."
-            echo "Health check retry policy: 30 attempts, 10 seconds interval"
-            for i in $(seq 1 30); do
-              if curl -fsS "${HEALTHCHECK_URL}"; then
+
+            # Qdrant 스냅샷 적용 (workflow_dispatch에서 bool 옵션 선택 시)
+            if [ "${APPLY_SNAPSHOTS}" = "true" ]; then
+              echo "Applying Qdrant snapshots from S3..."
+              aws s3 cp s3://triver-assets-prod/private/snapshots/photos-382739127437433-2026-03-10-22-11-06.snapshot.tar /tmp/photos.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/places-382739127437433-2026-03-10-22-11-19.snapshot.tar /tmp/places.snapshot
+
+              echo "Waiting for Qdrant to be ready..."
+              for i in $(seq 1 12); do
+                if curl -fsS http://localhost:6333/healthz; then
+                  break
+                fi
+                echo "Attempt $i/12, waiting 5s..."
+                sleep 5
+              done
+
+              curl -fsS -X POST "http://localhost:6333/collections/photos/snapshots/upload?priority=snapshot" \
+                -H "Content-Type: multipart/form-data" \
+                -F "snapshot=@/tmp/photos.snapshot"
+              curl -fsS -X POST "http://localhost:6333/collections/places/snapshots/upload?priority=snapshot" \
+                -H "Content-Type: multipart/form-data" \
+                -F "snapshot=@/tmp/places.snapshot"
+
+              echo "Qdrant snapshots applied."
+            fi
+
+            echo "Waiting for services to be ready..."
+            for i in $(seq 1 10); do
+              if curl -fsS http://127.0.0.1/api/healthz; then
                 echo "Health check passed!"
                 break
               fi
