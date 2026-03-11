@@ -36,17 +36,21 @@ export function Features() {
 
     // [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정
     return (
-        <section id="features" className="py-16 bg-gray-50 overflow-hidden relative">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col items-center">
+        // [Fix] min-h + justify-center: 뷰포트 채움 + 세로 중앙, py-[3vh]: 패딩도 뷰포트 비율로 반응
+        <section id="features" className="py-[3vh] bg-gray-50 overflow-hidden relative min-h-[calc(100vh-64px)] flex flex-col justify-center">
+            {/* [Fix] max-w-7xl → xl:max-w-[90%]: 큰 화면에서 콘텐츠가 화면 너비에 맞게 유동 확장 */}
+            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8 flex flex-col items-center">
 
                 {/* 1단 (상단): 헤더 영역 */}
-                <div className="text-center mb-[47px]">
+                {/* [Fix] mb-[3vh]: 타이틀 하단 간격도 뷰포트 비율로 반응 */}
+                <div className="text-center mb-[3vh]">
                     <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">With  Triever</h2>
                     <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">Cutting-Edge Technology Meets Traveling</p>
                 </div>
 
                 {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) 통합 영역 */}
-                <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10">
+                {/* [Fix] max-w-6xl → xl:max-w-none: 내부 콘텐츠도 유동 확장 허용 */}
+                <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10">
 
                     {/* 이미지 영역 (좌측) */}
                     <div className="w-full lg:w-3/5 relative perspective-[1000px]">
@@ -57,7 +61,8 @@ export function Features() {
                                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
                                 exit={{ opacity: 0, x: 30, rotateY: -5 }}
                                 transition={{ duration: 0.5, ease: "easeOut" }}
-                                className="w-full aspect-[16/10] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
+                                // [Fix] max-h-[45vh]: 짧은 화면에서 이미지가 뷰포트에 맞게 축소
+                                className="w-full aspect-[16/10] max-h-[45vh] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
                             >
                                 <img
                                     src={activeFeature.mockupImage}

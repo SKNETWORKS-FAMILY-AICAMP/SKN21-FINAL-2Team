@@ -8,8 +8,8 @@ import { useRouter } from "next/navigation";
 import { fetchCurrentUser, type UserProfile } from "@/services/api";
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 
-// [Fix] 섹션 h2 제목이 뷰포트 상단에서 이 px만큼 아래에 위치하도록 스크롤
-const HEADING_OFFSET = 100;
+// [Fix] Header h-16 = 64px, 섹션 상단이 Header 바로 아래에 딱 맞도록 오프셋
+const HEADER_HEIGHT = 64;
 
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);
@@ -25,13 +25,11 @@ export function Header() {
     // [Fix] 현재 네비로 이동한 섹션 ID 추적 (리사이즈 시 자동 재정렬용)
     const activeSectionRef = useRef<string | null>(null);
 
-    // 공통 스크롤 함수: 섹션 내 h2 제목 기준으로 스크롤
+    // [Fix] 섹션 상단 기준 스크롤: 섹션이 뷰포트를 채우므로 상단만 맞추면 콘텐츠가 자동 중앙
     const scrollToSection = useCallback((sectionId: string, smooth = true) => {
         const section = document.getElementById(sectionId);
         if (!section) return;
-        const heading = section.querySelector("h2");
-        const target = heading || section;
-        const top = target.getBoundingClientRect().top + window.scrollY - HEADING_OFFSET;
+        const top = section.getBoundingClientRect().top + window.scrollY - HEADER_HEIGHT;
         window.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "instant" });
         activeSectionRef.current = sectionId;
     }, []);
@@ -69,7 +67,7 @@ export function Header() {
                     const el = document.getElementById(id);
                     if (!el) continue;
                     const rect = el.getBoundingClientRect();
-                    const dist = Math.abs(rect.top - HEADING_OFFSET);
+                    const dist = Math.abs(rect.top - HEADER_HEIGHT);
                     if (dist < minDist) {
                         minDist = dist;
                         closest = id;

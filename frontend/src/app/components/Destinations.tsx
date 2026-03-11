@@ -214,8 +214,10 @@ export function Destinations() {
     return (
         <>
             {/* [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정 */}
-            <section id="destinations" className="py-24 bg-gray-50/30">
-                <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            {/* [Fix] min-h-[calc(100vh-64px)] + flex justify-center: Header(64px) 제외 뷰포트 채움 + 세로 중앙 */}
+            <section id="destinations" className="py-24 bg-gray-50/30 min-h-[calc(100vh-64px)] flex flex-col justify-center">
+                {/* [Fix] max-w-7xl → xl:max-w-[90%]: 큰 화면에서 콘텐츠가 화면 너비에 맞게 유동 확장 */}
+                <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
                         <div>
                             <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
