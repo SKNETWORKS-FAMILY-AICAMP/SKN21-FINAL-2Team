@@ -232,11 +232,11 @@ export function ExplorePage() {
                                                     🍽️ Local Eats
                                                 </h4>
                                             </div>
-                                            {/* [Fix] 카드 높이 고정 — h-[220px]으로 새로고침 시 사이즈 변동 방지 */}
+                                            {/* [Fix] 이미지를 aspect-ratio 기반으로 변경하여 화면 크기에 맞게 유동 확장 */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.restaurants.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="h-[150px] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
@@ -256,7 +256,7 @@ export function ExplorePage() {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tourist.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="h-[150px] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
@@ -276,7 +276,7 @@ export function ExplorePage() {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.activities.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="h-[150px] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
