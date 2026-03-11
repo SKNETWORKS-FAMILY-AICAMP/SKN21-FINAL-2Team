@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
-import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile } from "@/services/api";
+import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile, type CategoryPlaceItem } from "@/services/api";
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 
