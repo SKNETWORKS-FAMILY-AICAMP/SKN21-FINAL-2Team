@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -27,6 +27,8 @@ import { emptyEditorState, readFileAsDataUrl } from "./utils";
 export function CollectionPage() {
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
+    // [Feature] 모달 열 때 에디터 스냅샷 (수정 여부 판단용)
+    const initialEditorRef = useRef<string>("");
 
     const [diaries, setDiaries] = useState<DiaryListItem[]>([]);
     const [selectedDiaryId, setSelectedDiaryId] = useState<number | null>(null);
@@ -39,7 +41,7 @@ export function CollectionPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
-    // [Feature] Diary 저장 성공 후 확인 팝업 상태
+    // [Feature] 저장 확인 팝업 상태
     const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
 
     const loadDiaries = async (nextQuery = "") => {
@@ -117,6 +119,8 @@ export function CollectionPage() {
         });
         setError(null);
         setIsModalOpen(true);
+        // [Feature] 초기 상태 스냅샷 저장
+        initialEditorRef.current = JSON.stringify({ ...emptyEditorState(), cover_image_path: coverImagePath ?? null });
     };
 
     const openDiaryModal = async (diaryId: number) => {
@@ -127,6 +131,8 @@ export function CollectionPage() {
         try {
             const detail = await fetchDiary(diaryId);
             hydrateEditor(detail);
+            // [Feature] 기존 일기 초기 상태 스냅샷 저장
+            initialEditorRef.current = JSON.stringify({ id: detail.id, title: detail.title, content: detail.content, entry_date: detail.entry_date, cover_image_path: detail.cover_image_path ?? null, linked_places: detail.linked_places });
         } catch {
             setError("일기 상세 정보를 불러오지 못했습니다.");
         } finally {
@@ -194,6 +200,13 @@ export function CollectionPage() {
 
     const handleRequestClose = () => {
         if (saving) return;
+        // [Fix] 수정하지 않고 보기만 한 경우  바로 닫기 (Unsaved 팝업 없이)
+        const isDirty = JSON.stringify(editor) !== initialEditorRef.current;
+        if (!isDirty) {
+            setIsModalOpen(false);
+            setError(null);
+            return;
+        }
         setIsCloseConfirmOpen(true);
     };
 
@@ -290,6 +303,7 @@ export function CollectionPage() {
             <SimpleModal
                 open={isCloseConfirmOpen}
                 title="Unsaved Diary"
+                maxWidth="sm"
                 onClose={() => setIsCloseConfirmOpen(false)}
             >
                 <div className="space-y-4">
