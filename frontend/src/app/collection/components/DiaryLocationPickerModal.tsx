@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Loader2, MapPin, Search, X } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Loader2, Search, X } from "lucide-react";
 
 import {
   DiaryPlaceSearchResult,
@@ -23,6 +23,7 @@ type DiaryLocationPickerModalProps = {
 };
 
 const SEOUL_CITY_HALL = { latitude: 37.5665, longitude: 126.978 };
+type NaverMapClickEvent = { coord?: NaverLatLng };
 
 export function DiaryLocationPickerModal({
   isOpen,
@@ -72,6 +73,46 @@ export function DiaryLocationPickerModal({
     return () => window.cancelAnimationFrame(rafId);
   }, [isOpen, naver, status]);
 
+  const moveMarkerTo = useCallback((latLng: NaverLatLng) => {
+    if (!naver?.maps || !mapInstanceRef.current) return;
+
+    mapInstanceRef.current.setCenter(latLng);
+    mapInstanceRef.current.setZoom(15);
+
+    if (!markerRef.current) {
+      markerRef.current = new naver.maps.Marker({
+        position: latLng,
+        map: mapInstanceRef.current,
+      });
+      return;
+    }
+
+    markerRef.current.setPosition(latLng);
+    markerRef.current.setMap(mapInstanceRef.current);
+  }, [naver]);
+
+  const handleSelectFromMap = useCallback(async (location: NaverLatLng) => {
+    if (!naver?.maps) return;
+
+    try {
+      setResolving(true);
+      setError(null);
+      moveMarkerTo(location);
+      const result = await reverseGeocodeDiaryPlace(location.lat(), location.lng());
+      if (!result) {
+        setError("선택한 위치의 주소를 찾지 못했습니다.");
+        return;
+      }
+
+      setSelectedPlace(result);
+      setSearchQuery(result.adress);
+    } catch {
+      setError("선택한 위치의 주소를 찾지 못했습니다.");
+    } finally {
+      setResolving(false);
+    }
+  }, [moveMarkerTo, naver]);
+
   useEffect(() => {
     if (!isOpen || status !== "ready" || !naver?.maps || !mapRef.current) return;
 
@@ -89,7 +130,7 @@ export function DiaryLocationPickerModal({
         maxZoom: 18,
       });
 
-      naver.maps.Event.addListener(mapInstanceRef.current, "click", (event: any) => {
+      naver.maps.Event.addListener(mapInstanceRef.current, "click", (event: NaverMapClickEvent) => {
         const lat = event?.coord?.lat?.();
         const lng = event?.coord?.lng?.();
         if (typeof lat !== "number" || typeof lng !== "number") return;
@@ -102,7 +143,7 @@ export function DiaryLocationPickerModal({
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(seed.latitude, seed.longitude));
       });
     }
-  }, [initialPlace, isOpen, naver, selectedPlace, status]);
+  }, [handleSelectFromMap, initialPlace, isOpen, naver, selectedPlace, status]);
 
   useEffect(() => {
     if (!isOpen || status !== "ready" || !naver?.maps || !mapInstanceRef.current) return;
@@ -138,24 +179,6 @@ export function DiaryLocationPickerModal({
     }
   }, [initialPlace, isOpen, naver, selectedPlace, status]);
 
-  const moveMarkerTo = (latLng: NaverLatLng) => {
-    if (!naver?.maps || !mapInstanceRef.current) return;
-
-    mapInstanceRef.current.setCenter(latLng);
-    mapInstanceRef.current.setZoom(15);
-
-    if (!markerRef.current) {
-      markerRef.current = new naver.maps.Marker({
-        position: latLng,
-        map: mapInstanceRef.current,
-      });
-      return;
-    }
-
-    markerRef.current.setPosition(latLng);
-    markerRef.current.setMap(mapInstanceRef.current);
-  };
-
   const handleSearch = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
     const keyword = searchQuery.trim();
@@ -178,28 +201,6 @@ export function DiaryLocationPickerModal({
       setError("장소 검색에 실패했습니다.");
     } finally {
       setSearching(false);
-    }
-  };
-
-  const handleSelectFromMap = async (location: { lat: () => number; lng: () => number }) => {
-    if (!naver?.maps) return;
-
-    try {
-      setResolving(true);
-      setError(null);
-      moveMarkerTo(location);
-      const result = await reverseGeocodeDiaryPlace(location.lat(), location.lng());
-      if (!result) {
-        setError("선택한 위치의 주소를 찾지 못했습니다.");
-        return;
-      }
-
-      setSelectedPlace(result);
-      setSearchQuery(result.adress);
-    } catch {
-      setError("선택한 위치의 주소를 찾지 못했습니다.");
-    } finally {
-      setResolving(false);
     }
   };
 

@@ -40,15 +40,15 @@ export type NaverMapsNamespace = {
       };
       geocode: (
         options: { address: string },
-        callback: (status: number, response?: any) => void
+        callback: (status: number, response?: unknown) => void
       ) => void;
       reverseGeocode: (
         options: { location: NaverLatLng },
-        callback: (status: number, response?: any) => void
+        callback: (status: number, response?: unknown) => void
       ) => void;
     };
     Event: {
-      addListener: (target: unknown, eventName: string, listener: (...args: any[]) => void) => void;
+      addListener: (target: unknown, eventName: string, listener: (...args: unknown[]) => void) => void;
       trigger: (target: unknown, eventName: string) => void;
     };
   };

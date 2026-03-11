@@ -592,7 +592,7 @@ function SidebarContent() {
                         <div className="mb-5">
                             <h3 className="text-lg font-semibold tracking-tight text-gray-900">채팅방 삭제</h3>
                             <p className="mt-2 text-sm leading-6 text-gray-500">
-                                <span className="font-medium text-gray-700">"{pendingDeleteRoom.title || "새 채팅"}"</span>을 삭제할까요?
+                                <span className="font-medium text-gray-700">&quot;{pendingDeleteRoom.title || "새 채팅"}&quot;</span>을 삭제할까요?
                                 삭제하면 대화 내용과 추천 장소 기록도 함께 사라집니다.
                             </p>
                         </div>
