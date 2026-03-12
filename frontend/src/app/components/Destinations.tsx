@@ -215,8 +215,7 @@ export function Destinations() {
             {/* [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정 */}
             {/* [Fix] min-h-[calc(100vh-64px)] + flex justify-center: Header(64px) 제외 뷰포트 채움 + 세로 중앙 */}
             <section id="destinations" className="py-24 bg-gray-50/30 min-h-[calc(100vh-64px)] flex flex-col justify-center">
-                {/* [Fix] max-w-7xl → xl:max-w-[90%]: 큰 화면에서 콘텐츠가 화면 너비에 맞게 유동 확장 */}
-                <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8">
+                <div className="w-full mx-auto px-20 lg:px-32">
                     <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
                         <div>
                             <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
@@ -251,11 +250,11 @@ export function Destinations() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.4 }}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
+                                className="grid grid-cols-3 gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-[380px] h-[380px]">
-                                        <div className="relative w-full h-[200px] overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-full aspect-[11/10]">
+                                        <div className="relative w-full h-[52.5%] overflow-hidden bg-gray-100 flex-shrink-0">
                                             {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
                                             {place.image && place.image.trim() !== "" ? (
                                                 <img
@@ -295,17 +294,17 @@ export function Destinations() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-4 flex flex-col w-full h-[180px] overflow-hidden">
-                                            <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 overflow-hidden">{place.name}</h3>
-                                            <div className="flex items-center gap-2 text-gray-500 text-xs mb-2 overflow-hidden">
+                                        <div className="p-3 md:p-4 flex flex-col flex-1 overflow-hidden">
+                                            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-2 line-clamp-2 overflow-hidden">{place.name}</h3>
+                                            <div className="flex items-center gap-2 text-gray-500 text-xs overflow-hidden mb-2">
                                                 <div className="flex items-center gap-1 min-w-0 flex-1"><MapPin size={12} className="text-gray-400 flex-shrink-0" /><span className="truncate">{place.address}</span></div>
                                             </div>
                                             <div className="mt-auto flex items-center justify-end pt-2 border-t border-gray-50">
                                                 <button
                                                     onClick={(e) => handlePlanTripClick(place, e)}
-                                                    className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
+                                                    className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
                                                 >
-                                                    <CalendarPlus size={14} />Plan Trip
+                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />Plan Trip
                                                 </button>
                                             </div>
                                         </div>
