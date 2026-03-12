@@ -251,11 +251,11 @@ export function Destinations() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.4 }}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full">
-                                        <div className="relative w-full h-48 sm:h-56 overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-[380px] h-[380px]">
+                                        <div className="relative w-full h-[200px] overflow-hidden bg-gray-100 flex-shrink-0">
                                             {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
                                             {place.image && place.image.trim() !== "" ? (
                                                 <img
@@ -295,17 +295,17 @@ export function Destinations() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-4 flex flex-col flex-grow">
-                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{place.name}</h3>
-                                            <div className="flex items-center gap-4 text-gray-500 text-sm mb-2 font-mono">
-                                                <div className="flex items-center gap-1"><MapPin size={14} className="text-gray-400" /><span>{place.address}</span></div>
+                                        <div className="p-4 flex flex-col w-full h-[180px] overflow-hidden">
+                                            <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 overflow-hidden">{place.name}</h3>
+                                            <div className="flex items-center gap-2 text-gray-500 text-xs mb-2 overflow-hidden">
+                                                <div className="flex items-center gap-1 min-w-0 flex-1"><MapPin size={12} className="text-gray-400 flex-shrink-0" /><span className="truncate">{place.address}</span></div>
                                             </div>
-                                            <div className="mt-auto flex items-center justify-end pt-4 border-t border-gray-50">
+                                            <div className="mt-auto flex items-center justify-end pt-2 border-t border-gray-50">
                                                 <button
                                                     onClick={(e) => handlePlanTripClick(place, e)}
-                                                    className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
+                                                    className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
                                                 >
-                                                    <CalendarPlus size={16} />Plan Trip
+                                                    <CalendarPlus size={14} />Plan Trip
                                                 </button>
                                             </div>
                                         </div>
