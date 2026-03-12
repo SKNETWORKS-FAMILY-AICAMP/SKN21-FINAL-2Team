@@ -25,6 +25,7 @@ export interface UserProfile {
     extra_prefer3?: string | null;
 
     country_code?: string | null;
+    language?: "en" | "ko" | "ja" | "zh" | null;
     is_join?: boolean | null;
     is_prefer?: boolean | null;
 }

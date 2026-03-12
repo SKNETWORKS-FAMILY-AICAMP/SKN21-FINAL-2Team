@@ -6,12 +6,15 @@ import { Check, ArrowRight, User, Globe, MessageSquare, LogOut } from "lucide-re
 import { useRouter } from "next/navigation";
 import { fetchCountries, updateCurrentUser } from "@/services/api";
 import { getNicknameValidationError, type GenderType } from "./utils/validation";
+import { useTranslation } from "@/i18n/useTranslation";
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
 
 export function SignUpProfilePage() {
   const router = useRouter();
+  const { t, language, setLanguage } = useTranslation();
   const [agreed, setAgreed] = useState(false);
   const [nickname, setNickname] = useState("");
-  const [nicknameError, setNicknameError] = useState(""); // 닉네임 에러 메시지 상태 추가
+  const [nicknameError, setNicknameError] = useState(""); // 닉네임 에러 키
   const [gender, setGender] = useState("");
 
   // 사용자 정보 State
@@ -42,20 +45,27 @@ export function SignUpProfilePage() {
   // 에러가 없을 때만 폼이 유효하도록 조건 추가
   const isFormValid = nickname && !nicknameError && gender && agreed && countryCode;
 
+  const genderOptions: { key: GenderType; labelKey: string }[] = [
+    { key: "male", labelKey: "profile.genderMale" },
+    { key: "female", labelKey: "profile.genderFemale" },
+    { key: "other", labelKey: "profile.genderOther" },
+  ];
+
   const handleComplete = async () => {
     try {
       const token = localStorage.getItem("access_token");
       if (!token) {
-        alert("로그인이 필요합니다.");
+        alert(t("signup.loginRequired"));
         router.push("/signup");
         return;
       }
 
-      const genderValue: GenderType = gender.toLowerCase() as GenderType;
+      const genderValue: GenderType = gender as GenderType;
       await updateCurrentUser({
         nickname,
         gender: genderValue,
         country_code: countryCode,
+        language,
       });
 
       // 성공 시 설문 조사 페이지로 이동
@@ -63,7 +73,7 @@ export function SignUpProfilePage() {
 
     } catch (error) {
       console.error("Profile Update Failed:", error);
-      alert("프로필 저장에 실패했습니다.");
+      alert(t("signup.profileSaveFailed"));
     }
   };
 
@@ -75,6 +85,8 @@ export function SignUpProfilePage() {
     localStorage.removeItem("user_email");
     router.replace("/signup");
   };
+
+  const firstName = userInfo.name.split(" ")[0];
 
   return (
     <div className="min-h-screen w-full bg-white flex items-center justify-center p-6">
@@ -89,10 +101,10 @@ export function SignUpProfilePage() {
             <img src={userInfo.picture} alt="Profile" className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-2 border-white shadow-md" />
           )}
           <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            One last step, {userInfo.name.split(" ")[0]}
+            {t("profile.title").replace("{name}", firstName)}
           </h1>
           <p className="text-sm text-gray-500 font-normal">
-            Help us personalize your travel experience.
+            {t("profile.subtitle")}
           </p>
         </div>
 
@@ -100,13 +112,13 @@ export function SignUpProfilePage() {
           {/* Read-only Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-60 pointer-events-none grayscale">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Full Name</label>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">{t("profile.fullName")}</label>
               <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
                 {userInfo.name}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Email Address</label>
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">{t("profile.email")}</label>
               <div className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 font-medium">
                 {userInfo.email}
               </div>
@@ -120,38 +132,37 @@ export function SignUpProfilePage() {
             {/* Nickname */}
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                <User size={12} /> Nickname
+                <User size={12} /> {t("profile.nickname")}
               </label>
               <input
                 type="text"
                 value={nickname}
                 onChange={handleNicknameChange}
-                placeholder="How should we call you?"
-                // 에러 발생 시 테두리 색상 등을 붉은색으로 변경하여 시각적 피드백 제공
+                placeholder={t("profile.nicknamePlaceholder")}
                 className={`w-full bg-white border rounded-xl px-4 py-3.5 text-sm focus:outline-none transition-all placeholder:text-gray-300 placeholder:font-normal ${nicknameError
                   ? "border-red-500 text-red-900 focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
                   : "border-gray-200 text-gray-900 focus:border-black focus:ring-1 focus:ring-black/10"
                   }`}
               />
               {nicknameError && (
-                <p className="text-xs text-red-500 mt-1 pl-1">{nicknameError}</p>
+                <p className="text-xs text-red-500 mt-1 pl-1">{t(nicknameError)}</p>
               )}
             </div>
 
             {/* Gender */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide">Gender</label>
+              <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide">{t("profile.gender")}</label>
               <div className="grid grid-cols-3 gap-3">
-                {["Male", "Female", "Other"].map((option) => (
+                {genderOptions.map((option) => (
                   <button
-                    key={option}
-                    onClick={() => setGender(option)}
-                    className={`py-3 px-4 rounded-xl text-sm font-medium transition-all border ${gender === option
+                    key={option.key}
+                    onClick={() => setGender(option.key)}
+                    className={`py-3 px-4 rounded-xl text-sm font-medium transition-all border ${gender === option.key
                       ? "bg-black text-white border-black shadow-md"
                       : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                       }`}
                   >
-                    {option}
+                    {t(option.labelKey)}
                   </button>
                 ))}
               </div>
@@ -161,14 +172,14 @@ export function SignUpProfilePage() {
               {/* Country */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                  <Globe size={12} /> Country
+                  <Globe size={12} /> {t("profile.country")}
                 </label>
                 <div className="relative">
                   <select
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer"
-                    onChange={(e) => setCountryCode(e.target.value)} // State update
+                    onChange={(e) => setCountryCode(e.target.value)}
                   >
-                    <option value="">Select Country</option>
+                    <option value="">{t("profile.countryPlaceholder")}</option>
                     {countries.map((c) => (
                       <option key={c.code} value={c.code}>{c.name}</option>
                     ))}
@@ -184,15 +195,17 @@ export function SignUpProfilePage() {
               {/* Language */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                  <MessageSquare size={12} /> Language
+                  <MessageSquare size={12} /> {t("profile.language")}
                 </label>
                 <div className="relative">
-                  {/* [Feature] 언어 선택지 — 순서: 한국어/영어/중국어/일본어 */}
-                  <select className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer">
-                    <option value="ko">Korean</option>
-                    <option value="en">English (US)</option>
-                    <option value="zh">Chinese</option>
-                    <option value="ja">Japanese</option>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer"
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>{lang.label}</option>
+                    ))}
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -212,8 +225,8 @@ export function SignUpProfilePage() {
                 {agreed && <Check size={12} className="text-white" />}
               </div>
               <p className="text-[11px] text-gray-500 leading-relaxed select-none">
-                I agree to the collection and use of personal information for service provision.
-                <span className="block mt-1 text-gray-400">Your data is secured and will never be shared without consent.</span>
+                {t("profile.privacyConsent")}
+                <span className="block mt-1 text-gray-400">{t("profile.privacyNote")}</span>
               </p>
             </div>
           </div>
@@ -226,7 +239,7 @@ export function SignUpProfilePage() {
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
           >
-            Continue to Persona Setup <ArrowRight size={16} />
+            {t("profile.continueButton")} <ArrowRight size={16} />
           </button>
         </div>
 
@@ -236,10 +249,7 @@ export function SignUpProfilePage() {
             className="flex items-center gap-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
           >
             <LogOut size={14} />
-            다른 구글 계정으로 로그인하기
-          </button>
-          <button className="text-[11px] font-bold text-gray-300 hover:text-gray-500 uppercase tracking-widest transition-colors hidden cursor-default">
-            Skip setup (Demo only)
+            {t("signup.switchAccount")}
           </button>
         </div>
       </motion.div>

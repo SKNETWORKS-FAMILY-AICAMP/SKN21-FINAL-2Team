@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
 
 from app.models.orm import BaseModel
-from app.models.enums import GenderType
+from app.models.enums import GenderType, LanguageType
 from app.models.country import Country
 
 class User(BaseModel):
@@ -28,6 +28,7 @@ class User(BaseModel):
     extra_prefer3 = Column(String(255), nullable=True)
 
     country_code = Column(String(10), nullable=True, comment="ISO Country Code")
+    language = Column(Enum(LanguageType), default=LanguageType.en, nullable=False, comment="UI Language Preference")
     is_join = Column(Boolean, default=False)
     is_prefer = Column(Boolean, default=False)
 

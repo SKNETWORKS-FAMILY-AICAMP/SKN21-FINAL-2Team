@@ -1,0 +1,36 @@
+{
+  "common.back": "返回",
+  "common.continue": "继续",
+
+  "signup.welcomeTitle": "欢迎来到Triver",
+  "signup.welcomeSubtitle": "开始您的个性化旅行规划",
+  "signup.continueGoogle": "使用Google继续",
+  "signup.termsPrefix": "创建账户即表示您同意我们的",
+  "signup.termsOfService": "服务条款",
+  "signup.and": "和",
+  "signup.privacyPolicy": "隐私政策",
+  "signup.loginRequired": "需要登录。",
+  "signup.profileSaveFailed": "保存个人资料失败。",
+  "signup.signupFailed": "Google注册失败",
+  "signup.switchAccount": "使用其他Google账号登录",
+
+  "profile.title": "最后一步，{name}",
+  "profile.subtitle": "请输入信息以定制您的旅行体验。",
+  "profile.fullName": "姓名",
+  "profile.email": "电子邮箱",
+  "profile.nickname": "昵称",
+  "profile.nicknamePlaceholder": "我们该怎么称呼您？",
+  "profile.gender": "性别",
+  "profile.genderMale": "男",
+  "profile.genderFemale": "女",
+  "profile.genderOther": "其他",
+  "profile.country": "国籍",
+  "profile.countryPlaceholder": "选择国家",
+  "profile.language": "语言",
+  "profile.privacyConsent": "我同意为提供服务而收集和使用个人信息。",
+  "profile.privacyNote": "您的数据受到安全保护，未经同意不会被共享。",
+  "profile.continueButton": "继续设置偏好",
+
+  "validation.nicknameSpecialChar": "昵称只能包含字母和数字。",
+  "validation.nicknameTooLong": "昵称不能超过16个字符。"
+}

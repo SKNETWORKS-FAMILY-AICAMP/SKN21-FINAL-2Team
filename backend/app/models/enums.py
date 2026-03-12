@@ -8,3 +8,9 @@ class GenderType(str, enum.Enum):
 class RoleType(str, enum.Enum):
     human = "human"
     ai = "ai"
+
+class LanguageType(str, enum.Enum):
+    en = "en"
+    ko = "ko"
+    ja = "ja"
+    zh = "zh"

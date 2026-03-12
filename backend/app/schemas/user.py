@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
-from app.models.enums import GenderType
+from app.models.enums import GenderType, LanguageType
 
 
 class UserBase(BaseModel):
@@ -21,6 +21,7 @@ class UserBase(BaseModel):
     extra_prefer3: Optional[str] = None
 
     country_code: Optional[str] = None
+    language: Optional[LanguageType] = None
     is_join: Optional[bool] = None
     is_prefer: Optional[bool] = None
 
@@ -41,6 +42,7 @@ class UserUpdate(BaseModel):
     extra_prefer3: Optional[str] = None
 
     country_code: Optional[str] = None
+    language: Optional[LanguageType] = None
     is_join: Optional[bool] = None
     is_prefer: Optional[bool] = None
 

@@ -23,6 +23,13 @@ Enum role_type {
   ai
 }
 
+Enum language_type {
+  en
+  ko
+  ja
+  zh
+}
+
 Table country {
     code varchar [primary key]
     name varchar
@@ -37,6 +44,7 @@ Table users {
   profile_picture varchar
   gender gender_type // 정의한 Enum 사용
   country_code varchar
+  language language_type [not null, default: 'en']
 
   // Google Login
   social_provider varchar

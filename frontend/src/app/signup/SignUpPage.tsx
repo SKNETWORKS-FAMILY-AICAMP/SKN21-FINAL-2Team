@@ -7,6 +7,8 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { Logo } from "@/components/common/Logo";
 import { Button } from "./components/SignUpButton";
 import { useState, useEffect } from "react";
+import { useTranslation } from "@/i18n/useTranslation";
+import type { SupportedLanguage } from "@/i18n";
 
 const BACKGROUND_IMAGES = [
   "https://images.unsplash.com/photo-1448523183439-d2ac62aca997?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
@@ -17,6 +19,7 @@ const BACKGROUND_IMAGES = [
 
 export function SignUpPage() {
   const router = useRouter();
+  const { t, setLanguage } = useTranslation();
 
   const [bgImage, setBgImage] = useState("");
 
@@ -36,17 +39,21 @@ export function SignUpPage() {
       try {
         const user = await fetchCurrentUser();
         if (user) {
+          // 서버에 저장된 언어 설정 복원
+          if (user.language && ["en", "ko", "ja", "zh"].includes(user.language)) {
+            setLanguage(user.language as SupportedLanguage);
+          }
           const targetPath = getPostLoginPath(user);
-          router.replace(targetPath); // 유효한 세션이 있으면 해당 페이지로 이동
+          router.replace(targetPath);
         }
       } catch (err) {
         console.warn("Invalid session detected on signup page entry, clearing auth.");
-        clearAuth(); // 검증 실패(꼬인 데이터) 시에만 정리
+        clearAuth();
       }
     };
 
     checkSession();
-  }, [router]);
+  }, [router, setLanguage]);
 
   const handleSignUp = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -73,7 +80,6 @@ export function SignUpPage() {
         if (name) localStorage.setItem("user_name", name);
         if (email) localStorage.setItem("user_email", email);
 
-        // API로 사용자 정보 조회 전 토큰이 정상적으로 저장되었는지 확인
         const { fetchCurrentUser, getPostLoginPath } = await import("@/services/api");
 
         let user;
@@ -81,7 +87,6 @@ export function SignUpPage() {
           user = await fetchCurrentUser();
         } catch (fetchError) {
           console.error("Failed to fetch user after signup:", fetchError);
-          // 실패 시 알림 없이 초기화 후 가입 페이지 유지
           const { clearAuth } = await import("@/services/errorHandler");
           clearAuth();
           return;
@@ -93,22 +98,23 @@ export function SignUpPage() {
           return;
         }
 
-        const targetPath = getPostLoginPath(user);
+        // 서버에 저장된 언어 설정 복원
+        if (user.language && ["en", "ko", "ja", "zh"].includes(user.language)) {
+          setLanguage(user.language as SupportedLanguage);
+        }
 
-        // 주의: pendingDestination이 있으면 getPostLoginPath가 "/chatbot?fromDestination=1"을 반환합니다.
-        // 챗봇 페이지에서 pendingDestination을 읽어 TripContextModal을 표시합니다.
+        const targetPath = getPostLoginPath(user);
         router.push(targetPath);
 
       } catch (error) {
         console.error("SignUp Failed:", error);
-        // 인증 시도 중 에러 발생 시(네트워크 등) 알림 없이 조용히 토큰 정리
         const { clearAuth } = await import("@/services/errorHandler");
         clearAuth();
       }
     },
     onError: () => {
       console.log("SignUp Failed");
-      alert("Google Sign up Failed");
+      alert(t("signup.signupFailed"));
     },
     flow: "auth-code",
   });
@@ -162,7 +168,7 @@ export function SignUpPage() {
           onClick={handleBack}
           className="absolute top-8 left-8 lg:hidden flex items-center gap-2 text-[13px] font-medium text-gray-400 hover:text-black transition-colors"
         >
-          <ArrowLeft size={16} /> Back
+          <ArrowLeft size={16} /> {t("common.back")}
         </button>
 
         <motion.div
@@ -173,10 +179,10 @@ export function SignUpPage() {
         >
           <div className="mb-8">
             <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
-              Welcome to Triver
+              {t("signup.welcomeTitle")}
             </h1>
             <p className="text-[13px] text-gray-500 font-normal">
-              Join Triver for personalized travel planning
+              {t("signup.welcomeSubtitle")}
             </p>
           </div>
 
@@ -192,16 +198,16 @@ export function SignUpPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              Continue with Google
+              {t("signup.continueGoogle")}
             </Button>
           </div>
 
           <div className="mt-8 pt-8 border-t border-gray-100">
             <p className="text-[10px] text-gray-400 leading-relaxed">
-              By creating an account, you agree to our{" "}
-              <a href="#" className="underline hover:text-black decoration-gray-300">Terms of Service</a>{" "}
-              and{" "}
-              <a href="#" className="underline hover:text-black decoration-gray-300">Privacy Policy</a>.
+              {t("signup.termsPrefix")}{" "}
+              <a href="#" className="underline hover:text-black decoration-gray-300">{t("signup.termsOfService")}</a>{" "}
+              {t("signup.and")}{" "}
+              <a href="#" className="underline hover:text-black decoration-gray-300">{t("signup.privacyPolicy")}</a>.
             </p>
           </div>
         </motion.div>

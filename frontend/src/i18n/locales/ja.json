@@ -1,0 +1,36 @@
+{
+  "common.back": "戻る",
+  "common.continue": "続ける",
+
+  "signup.welcomeTitle": "Triverへようこそ",
+  "signup.welcomeSubtitle": "パーソナライズされた旅行プランを始めましょう",
+  "signup.continueGoogle": "Googleで続ける",
+  "signup.termsPrefix": "アカウントを作成すると、以下に同意したことになります：",
+  "signup.termsOfService": "利用規約",
+  "signup.and": "および",
+  "signup.privacyPolicy": "プライバシーポリシー",
+  "signup.loginRequired": "ログインが必要です。",
+  "signup.profileSaveFailed": "プロフィールの保存に失敗しました。",
+  "signup.signupFailed": "Googleサインアップに失敗しました",
+  "signup.switchAccount": "別のGoogleアカウントでログイン",
+
+  "profile.title": "あと少しです、{name}",
+  "profile.subtitle": "旅行体験をカスタマイズするための情報を入力してください。",
+  "profile.fullName": "氏名",
+  "profile.email": "メールアドレス",
+  "profile.nickname": "ニックネーム",
+  "profile.nicknamePlaceholder": "何とお呼びしましょうか？",
+  "profile.gender": "性別",
+  "profile.genderMale": "男性",
+  "profile.genderFemale": "女性",
+  "profile.genderOther": "その他",
+  "profile.country": "国籍",
+  "profile.countryPlaceholder": "国を選択",
+  "profile.language": "言語",
+  "profile.privacyConsent": "サービス提供のための個人情報の収集・利用に同意します。",
+  "profile.privacyNote": "お客様のデータは安全に保護され、同意なく共有されることはありません。",
+  "profile.continueButton": "ペルソナ設定へ進む",
+
+  "validation.nicknameSpecialChar": "ニックネームには文字と数字のみ使用できます。",
+  "validation.nicknameTooLong": "ニックネームは16文字以内で入力してください。"
+}

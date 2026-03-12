@@ -1,0 +1,36 @@
+{
+  "common.back": "Back",
+  "common.continue": "Continue",
+
+  "signup.welcomeTitle": "Welcome to Triver",
+  "signup.welcomeSubtitle": "Join Triver for personalized travel planning",
+  "signup.continueGoogle": "Continue with Google",
+  "signup.termsPrefix": "By creating an account, you agree to our",
+  "signup.termsOfService": "Terms of Service",
+  "signup.and": "and",
+  "signup.privacyPolicy": "Privacy Policy",
+  "signup.loginRequired": "Login is required.",
+  "signup.profileSaveFailed": "Failed to save profile.",
+  "signup.signupFailed": "Google Sign up Failed",
+  "signup.switchAccount": "Sign in with a different Google account",
+
+  "profile.title": "One last step, {name}",
+  "profile.subtitle": "Help us personalize your travel experience.",
+  "profile.fullName": "Full Name",
+  "profile.email": "Email Address",
+  "profile.nickname": "Nickname",
+  "profile.nicknamePlaceholder": "How should we call you?",
+  "profile.gender": "Gender",
+  "profile.genderMale": "Male",
+  "profile.genderFemale": "Female",
+  "profile.genderOther": "Other",
+  "profile.country": "Country",
+  "profile.countryPlaceholder": "Select Country",
+  "profile.language": "Language",
+  "profile.privacyConsent": "I agree to the collection and use of personal information for service provision.",
+  "profile.privacyNote": "Your data is secured and will never be shared without consent.",
+  "profile.continueButton": "Continue to Persona Setup",
+
+  "validation.nicknameSpecialChar": "Nickname can only contain letters and numbers.",
+  "validation.nicknameTooLong": "Nickname must be 10 Korean characters or 16 alphanumeric characters or less."
+}

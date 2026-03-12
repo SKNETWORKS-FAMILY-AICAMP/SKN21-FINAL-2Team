@@ -1,4 +1,4 @@
-export type AppLanguage = "en" | "ko" | "ja";
+export type AppLanguage = "en" | "ko" | "ja" | "zh";
 
 export type TripSummary = {
     id: string;

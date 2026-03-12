@@ -13,11 +13,11 @@ export function getNicknameValidationError(value: string): string {
   }
 
   if (hasSpecialChar) {
-    return "닉네임은 한글, 영문, 숫자만 입력 가능합니다.";
+    return "validation.nicknameSpecialChar";
   }
 
   if (length > 16) {
-    return "닉네임은 한글 10자, 영문/숫자 16자 이내로 입력해주세요.";
+    return "validation.nicknameTooLong";
   }
 
   return "";
