@@ -14,12 +14,18 @@ const nextConfig: NextConfig = {
     return config;
   },
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000'}/api/:path*`
-      },
-    ];
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const backendBase = apiUrl.startsWith('http')
+      ? apiUrl
+      : 'http://backend:8000/api';
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path*",
+          destination: `${backendBase}/:path*`,
+        },
+      ],
+    };
   },
 };
 

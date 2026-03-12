@@ -21,7 +21,7 @@ async def intent_node(state: TravelState):
     prefs_info = state.get("prefs_info", "[DEBUG] PREFS_INFO_MISSING_IN_STATE")
 
     user_input = state.get("user_input")
-    image_path = state.get("image_path")
+    image_path = state.get("input_image")
     summary_title = state.get("summary_title", "제목 없음")
     summary_message = state.get("summary_message", "아직 대화 요약 없음")
     
@@ -69,14 +69,19 @@ async def intent_node(state: TravelState):
 
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
     slots = result.slots
-    if slots and slots.location:
-        norm = normalize_location(slots.location)
-        if norm.normalized_location != slots.location:
-            print(
-                f"[Intent] location normalized: {slots.location!r} → {norm.normalized_location!r} "
-                f"(canonical={norm.canonical_matched})"
-            )
-        slots = slots.model_copy(update={"location": norm.normalized_location})
+    # if slots and slots.location:
+    #     location = slots.location
+    #     if location.name and location.lat is None and location.lon is None:
+    #         norm = normalize_location(location.name)
+    #         if norm.normalized_location != location.name:
+    #             # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
+    #             location.name = norm.normalized_location
+    #             location.lat = norm.lat
+    #             location.lon = norm.lon
+    #             print(
+    #                 f"[Intent] location normalized: {location.name!r} → {norm.normalized_location!r} "
+    #                 f"(canonical={norm.canonical_matched})"
+    #             )
 
     # State에 결과 저장
     return {
