@@ -274,20 +274,20 @@ export function DiaryLocationPickerModal({
               <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
                 장소 또는 주소 검색
               </label>
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="서울시청, 성수, 제주공항"
-                className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
-              />
-              <div className="flex justify-end">
+              <div className="relative">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="서울시청, 성수, 제주공항"
+                  className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 pl-4 pr-12 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+                />
                 <button
                   type="submit"
                   disabled={searching}
-                  className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                  aria-label="검색"
                 >
-                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={14} />}
-                  검색
+                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={16} />}
                 </button>
               </div>
             </form>
