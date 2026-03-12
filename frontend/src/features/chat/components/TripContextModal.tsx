@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Users, ArrowRight, CalendarDays, Loader2 } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export interface TripContext {
     travelDuration: string; // "2026-03-03 ~ 2026-03-07"
@@ -24,6 +25,7 @@ const today = (() => {
 })();
 
 export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }: TripContextModalProps) {
+    const { t } = useTranslation();
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [adultCount, setAdultCount] = useState<number>(1);
@@ -80,7 +82,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                             {loading && (
                                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-3xl gap-3">
                                     <Loader2 className="w-7 h-7 animate-spin text-black" />
-                                    <p className="text-xs font-medium text-gray-500">채팅방을 만드는 중...</p>
+                                    <p className="text-xs font-medium text-gray-500">{t("chat.creatingRoom")}</p>
                                 </div>
                             )}
 
@@ -96,16 +98,16 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     <CalendarDays size={14} className="text-gray-600" />
                                 </div>
                                 <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
-                                    Trip Context
+                                    {t("tripContext.label")}
                                 </span>
                             </div>
                             <h2 className="text-xl font-medium text-gray-900 mb-1">
-                                여행 날짜와 인원을 선택해주세요
+                                {t("tripContext.heading")}
                             </h2>
                             <div className="grid grid-cols-2 gap-3 mt-4">
                                 <div>
                                     <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
-                                        출발
+                                        {t("tripContext.departure")}
                                     </label>
                                     <input
                                         type="date"
@@ -123,7 +125,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
-                                        귀국
+                                        {t("tripContext.return")}
                                     </label>
                                     <input
                                         type="date"
@@ -141,14 +143,14 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                         <Users size={14} className="text-gray-600" />
                                     </div>
                                     <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
-                                        Travelers
+                                        {t("tripContext.travelers")}
                                     </span>
                                 </div>
 
                                 <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">성인</p>
-                                        <p className="text-[11px] font-medium text-gray-400">만 13세 이상</p>
+                                        <p className="text-sm font-medium text-gray-900">{t("tripContext.adults")}</p>
+                                        <p className="text-[11px] font-medium text-gray-400">{t("tripContext.adultsAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
@@ -169,8 +171,8 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
 
                                 <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">어린이</p>
-                                        <p className="text-[11px] font-medium text-gray-400">만 12세 이하</p>
+                                        <p className="text-sm font-medium text-gray-900">{t("tripContext.children")}</p>
+                                        <p className="text-[11px] font-medium text-gray-400">{t("tripContext.childrenAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
@@ -198,7 +200,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     : "bg-gray-100 text-gray-300 cursor-not-allowed"
                                     }`}
                             >
-                                채팅 시작하기
+                                {t("tripContext.startChat")}
                                 <ArrowRight size={15} />
                             </button>
 
@@ -209,7 +211,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                 }}
                                 className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"
                             >
-                                건너뛰고 바로 시작하기
+                                {t("tripContext.skipAndStart")}
                                 <ArrowRight size={12} />
                             </button>
                         </div>

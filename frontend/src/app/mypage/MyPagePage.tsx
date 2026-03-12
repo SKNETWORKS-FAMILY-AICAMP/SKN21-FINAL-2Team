@@ -45,6 +45,8 @@ import {
   type TodayRecommendationItem,
 } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
+import { useTranslation } from "@/i18n/useTranslation";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
 function formatKstDate(dateLike?: string | null) {
   if (!dateLike) return "-";
@@ -95,6 +97,7 @@ function ReservationLogo({ category }: { category: ReservationItem["category"] }
 
 export function MyPagePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [userProfile, setUserProfile] = useState({
     nickname: "",
     bio: "",
@@ -339,7 +342,7 @@ export function MyPagePage() {
       window.location.href = "/";
     } catch (error) {
       console.error("Failed to deactivate account", error);
-      setDeactivateError("회원 탈퇴에 실패했습니다.");
+      setDeactivateError(t("mypage.deactivateFailed"));
       setDeactivateConfirmOpen(false);
     } finally {
       setDeactivateSubmitting(false);
@@ -392,11 +395,11 @@ export function MyPagePage() {
   const handleSaveManualReservation = async () => {
     const trimmedName = addReservationName.trim();
     if (!trimmedName) {
-      setAddReservationError("Please enter reservation name.");
+      setAddReservationError(t("mypage.enterReservationName"));
       return;
     }
     if (!addReservationImage) {
-      setAddReservationError("Please attach reservation image.");
+      setAddReservationError(t("mypage.attachReservationImage"));
       return;
     }
 
@@ -415,7 +418,7 @@ export function MyPagePage() {
       setAddReservationOpen(false);
     } catch (error) {
       console.error("Failed to create reservation", error);
-      setAddReservationError("Failed to save reservation.");
+      setAddReservationError(t("mypage.reservationSaveFailed"));
     }
   };
 
@@ -476,17 +479,17 @@ export function MyPagePage() {
       <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
         <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">
-            <h1 className="page-title text-gray-900 mb-2">My Page</h1>
-            <p className="page-subtitle">Traveler Profile</p>
+            <h1 className="page-title text-gray-900 mb-2">{t("mypage.title")}</h1>
+            <p className="page-subtitle">{t("mypage.subtitle")}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
-                Rooms {trips.length}
+                {t("mypage.rooms")} {trips.length}
               </span>
               <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
-                Saved Rooms {bookmarkedRoomCount}
+                {t("mypage.savedRooms")} {bookmarkedRoomCount}
               </span>
               <span className="px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
-                Reservations {reservations.length}
+                {t("mypage.reservations")} {reservations.length}
               </span>
             </div>
           </header>
@@ -527,7 +530,7 @@ export function MyPagePage() {
                     onClick={handleOpenSettings}
                     className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
                   >
-                    Settings
+                    {t("mypage.settings")}
                   </button>
                 </div>
 
@@ -536,7 +539,7 @@ export function MyPagePage() {
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight">{t("mypage.travelPreferences")}</h3>
                       <div className="flex items-center gap-2">
                         {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
                         {isEditingPreferences && (
@@ -545,7 +548,7 @@ export function MyPagePage() {
                             onClick={handleCancelPreferenceEdit}
                             className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
                           >
-                            Cancel
+                            {t("common.cancel")}
                           </button>
                         )}
                         <button
@@ -557,20 +560,20 @@ export function MyPagePage() {
                             : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                             }`}
                         >
-                          {isEditingPreferences ? (isSavingPreferences ? "Saving..." : "Done") : "Edit"}
+                          {isEditingPreferences ? (isSavingPreferences ? t("common.saving") : t("mypage.done")) : t("mypage.edit")}
                         </button>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-500">여행 계획에 반영되는 사용자님의 선호도를 설정해보세요!</p>
+                    <p className="text-sm text-gray-500">{t("mypage.travelPreferencesDesc")}</p>
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Traveler Snapshot</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">{t("mypage.travelerSnapshot")}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
-                        { key: "plan" as const, label: SURVEY_ITEM_LABELS.plan, value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
-                        { key: "vibe" as const, label: SURVEY_ITEM_LABELS.vibe, value: isEditingPreferences ? draftInsight.vibePrefer : userInsight.vibePrefer },
-                        { key: "places" as const, label: SURVEY_ITEM_LABELS.places, value: isEditingPreferences ? draftInsight.placesPrefer : userInsight.placesPrefer },
+                        { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
+                        { key: "vibe" as const, label: t("mypage.surveyVibe"), value: isEditingPreferences ? draftInsight.vibePrefer : userInsight.vibePrefer },
+                        { key: "places" as const, label: t("mypage.surveyPlaces"), value: isEditingPreferences ? draftInsight.placesPrefer : userInsight.placesPrefer },
                       ].map((item) => {
                         const imageSrc = SURVEY_IMAGE_MAP[item.value] ?? "/image/noplan.png";
                         return (
@@ -618,11 +621,11 @@ export function MyPagePage() {
 
                   {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Additional Preference</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">{t("mypage.additionalPreference")}</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
-                        : (userProfile.preferences.length ? userProfile.preferences : ["No preference selected"])).map((pref) => (
+                        : (userProfile.preferences.length ? userProfile.preferences : [t("mypage.noPreference")])).map((pref) => (
                           <button
                             key={pref}
                             type="button"
@@ -640,7 +643,7 @@ export function MyPagePage() {
                         ))}
                     </div>
                     {isEditingPreferences && (
-                      <p className="mt-2 text-[11px] text-gray-500">Up to 3 selections</p>
+                      <p className="mt-2 text-[11px] text-gray-500">{t("mypage.upTo3")}</p>
                     )}
                   </div>
                 </div>
@@ -658,7 +661,7 @@ export function MyPagePage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
                     <Sparkles size={20} className="text-white" />
-                    Today&apos;s Recommendation
+                    {t("mypage.todayRecommendation")}
                   </div>
                   {todayRecommendations.length > 0 ? (
                     <>
@@ -695,13 +698,13 @@ export function MyPagePage() {
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4">
                       <h2 className="text-lg font-semibold mb-1 tracking-tight leading-tight">
-                        No recommendation yet
+                        {t("mypage.noRecommendation")}
                       </h2>
                       <p className="text-white/80 text-[13px] leading-relaxed">
-                        Start a chat first. We will suggest new topics from your saved conversation summaries.
+                        {t("mypage.noRecommendationDesc")}
                       </p>
                       <p className="text-white/50 text-[10px] mt-2">
-                        Recommendations appear when chat history summary is stored.
+                        {t("mypage.noRecommendationHint")}
                       </p>
                     </div>
                   )}
@@ -713,7 +716,7 @@ export function MyPagePage() {
                   className="relative z-10 w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl text-xs font-semibold hover:bg-gray-200 transition-all uppercase tracking-[0.12em] mt-4"
                 >
                   <MessageSquare size={16} />
-                  {todayRecommendations.length > 0 ? "Start Planning" : "Start Chat"}
+                  {todayRecommendations.length > 0 ? t("mypage.startPlanning") : t("mypage.startChat")}
                 </button>
               </motion.div>
 
@@ -726,14 +729,14 @@ export function MyPagePage() {
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                     <Ticket size={20} />
-                    Reservation
+                    {t("mypage.reservation")}
                   </h3>
                   <button
                     type="button"
                     onClick={handleAddReservation}
                     className="text-[11px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
                   >
-                    Add
+                    {t("mypage.add")}
                   </button>
                 </div>
 
@@ -770,14 +773,14 @@ export function MyPagePage() {
                             onClick={() => requestDeleteReservation(res)}
                             className="text-[10px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
                           >
-                            Delete
+                            {t("common.delete")}
                           </button>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="h-full min-h-[120px] flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-[11px] text-gray-400 font-medium">
-                      No reservations yet.
+                      {t("mypage.noReservations")}
                     </div>
                   )}
                 </div>
@@ -848,7 +851,7 @@ export function MyPagePage() {
             >
               <div className="p-6">
                 <div className="text-lg font-semibold text-gray-900">
-                  Are you sure you wanna delete this reservation?
+                  {t("mypage.deleteReservationConfirm")}
                 </div>
                 <div className="mt-5 flex items-center justify-end gap-3">
                   <button
@@ -856,14 +859,14 @@ export function MyPagePage() {
                     onClick={cancelDeleteReservation}
                     className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
                   >
-                    No
+                    {t("common.no")}
                   </button>
                   <button
                     type="button"
                     onClick={confirmDeleteReservation}
                     className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                   >
-                    Yes
+                    {t("common.yes")}
                   </button>
                 </div>
               </div>
@@ -872,7 +875,7 @@ export function MyPagePage() {
         )}
       </AnimatePresence>
 
-      <SimpleModal open={addReservationOpen} title="Add Reservation" onClose={() => setAddReservationOpen(false)}>
+      <SimpleModal open={addReservationOpen} title={t("mypage.addReservation")} onClose={() => setAddReservationOpen(false)}>
         <div className="space-y-4">
           <input
             ref={addReservationPhotoInputRef}
@@ -896,7 +899,7 @@ export function MyPagePage() {
 
               if (!isSupported) {
                 setAddReservationImage("");
-                setAddReservationError("Only supported image formats can be uploaded: JPG, PNG, WEBP, GIF.");
+                setAddReservationError(t("mypage.imageFormatError"));
                 e.currentTarget.value = "";
                 return;
               }
@@ -910,7 +913,7 @@ export function MyPagePage() {
               };
               reader.onerror = () => {
                 setAddReservationImage("");
-                setAddReservationError("Failed to read this image file. Please try a different image.");
+                setAddReservationError(t("mypage.imageReadError"));
               };
               reader.readAsDataURL(file);
               e.currentTarget.value = "";
@@ -928,13 +931,13 @@ export function MyPagePage() {
               </div>
             ) : (
               <div className="h-40 flex items-center justify-center text-sm text-gray-500 font-medium">
-                Click to attach image
+                {t("mypage.clickToAttachImage")}
               </div>
             )}
           </button>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Reservation Name</label>
+            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.reservationName")}</label>
             <input
               value={addReservationName}
               onChange={(e) => {
@@ -942,7 +945,7 @@ export function MyPagePage() {
                 setAddReservationError("");
               }}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-              placeholder="e.g. Seoul > Busan train ticket"
+              placeholder={t("mypage.reservationNamePlaceholder")}
             />
           </div>
 
@@ -956,14 +959,14 @@ export function MyPagePage() {
               onClick={() => setAddReservationOpen(false)}
               className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="button"
               onClick={handleSaveManualReservation}
               className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
             >
-              Save
+              {t("common.save")}
             </button>
           </div>
         </div>
@@ -972,7 +975,7 @@ export function MyPagePage() {
       <SimpleModal
         open={settingsOpen}
         // [Feature] Settings 모달 타이틀 — 설정 뷰와 회원탈퇴 뷰를 구분
-        title={settingsModalView === "settings" ? "Settings" : "회원 탈퇴"}
+        title={settingsModalView === "settings" ? t("mypage.settings") : t("mypage.deactivateTitle")}
         onClose={closeSettingsModal}
       >
         {settingsModalView === "settings" ? (
@@ -1006,13 +1009,13 @@ export function MyPagePage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Profile Photo</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">{t("mypage.profilePhoto")}</p>
                   <button
                     type="button"
                     onClick={() => settingsPhotoInputRef.current?.click()}
                     className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
                   >
-                    Change Photo
+                    {t("mypage.changePhoto")}
                   </button>
                   <button
                     type="button"
@@ -1020,7 +1023,7 @@ export function MyPagePage() {
                     disabled={settingsResettingPhoto}
                     className="h-9 ml-2 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
                   >
-                    {settingsResettingPhoto ? "Restoring..." : "Use Google Photo"}
+                    {settingsResettingPhoto ? t("mypage.restoringPhoto") : t("mypage.useGooglePhoto")}
                   </button>
                 </div>
               </div>
@@ -1028,29 +1031,34 @@ export function MyPagePage() {
 
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Nickname</label>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.nickname")}</label>
                 <input
                   value={settingsDraft.nickname}
                   onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-                  placeholder="Nickname"
+                  placeholder={t("mypage.nickname")}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Country</label>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.country")}</label>
                 <select
                   value={settingsDraft.countryCode}
                   onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
                 >
-                  <option value="">Select country</option>
+                  <option value="">{t("mypage.selectCountry")}</option>
                   {countryOptions.map((country) => (
                     <option key={country.code} value={country.code}>
                       {country.name} ({country.code})
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("profile.language")}</label>
+                <LanguageSwitcher variant="select" />
               </div>
             </div>
 
@@ -1061,7 +1069,7 @@ export function MyPagePage() {
                   onClick={handleOpenDeactivateAccount}
                   className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  회원 탈퇴
+                  {t("mypage.deactivateAccount")}
                 </button>
               </div>
               <div className="flex justify-end gap-2">
@@ -1070,7 +1078,7 @@ export function MyPagePage() {
                   onClick={closeSettingsModal}
                   className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -1078,7 +1086,7 @@ export function MyPagePage() {
                   disabled={settingsSaving}
                   className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
                 >
-                  {settingsSaving ? "Saving..." : "Save"}
+                  {settingsSaving ? t("common.saving") : t("common.save")}
                 </button>
               </div>
             </div>
@@ -1089,9 +1097,9 @@ export function MyPagePage() {
             {/* [Feature] Google 계정 확인 체크박스 — 본인 계정이 맞는지 확인 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google 계정 확인</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.googleAccountConfirm")}</p>
                 <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
-                  {userProfile.bio || "알 수 없는 계정"}
+                  {userProfile.bio || t("mypage.unknownAccount")}
                 </p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
@@ -1101,18 +1109,18 @@ export function MyPagePage() {
                   checked={deactivateGoogleConfirmed}
                   onChange={(e) => setDeactivateGoogleConfirmed(e.target.checked)}
                 />
-                <span>본인의 Google 계정이 맞음을 확인합니다.</span>
+                <span>{t("mypage.confirmGoogleAccount")}</span>
               </label>
               {deactivateSubmitAttempted && !deactivateGoogleConfirmed && (
-                <div className="text-xs font-semibold text-red-600">Google 계정을 확인해 주세요.</div>
+                <div className="text-xs font-semibold text-red-600">{t("mypage.pleaseConfirmGoogle")}</div>
               )}
             </div>
 
             {/* [Feature] 탈퇴 약관 동의 체크박스 — 동의 없이는 탈퇴 진행 불가 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">탈퇴 약관 동의</p>
-                <p className="text-xs text-gray-500 mt-1">탈퇴를 진행하기 전에 반드시 동의해 주세요.</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.deactivateAgreement")}</p>
+                <p className="text-xs text-gray-500 mt-1">{t("mypage.deactivateAgreementDesc")}</p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
                 <input
@@ -1121,10 +1129,10 @@ export function MyPagePage() {
                   checked={deactivateAgreementConfirmed}
                   onChange={(e) => setDeactivateAgreementConfirmed(e.target.checked)}
                 />
-                <span>회원 탈퇴 약관에 동의합니다.</span>
+                <span>{t("mypage.agreeToDeactivate")}</span>
               </label>
               {deactivateSubmitAttempted && !deactivateAgreementConfirmed && (
-                <div className="text-xs font-semibold text-red-600">탈퇴 약관에 동의해 주세요.</div>
+                <div className="text-xs font-semibold text-red-600">{t("mypage.pleaseAgreeDeactivate")}</div>
               )}
             </div>
 
@@ -1138,7 +1146,7 @@ export function MyPagePage() {
                 onClick={handleCancelDeactivateAccount}
                 className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                취소
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -1146,7 +1154,7 @@ export function MyPagePage() {
                 disabled={deactivateSubmitting}
                 className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
               >
-                탈퇴하기
+                {t("mypage.deactivateButton")}
               </button>
             </div>
           </div>
@@ -1156,17 +1164,17 @@ export function MyPagePage() {
       {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 경고 + 확인 */}
       <SimpleModal
         open={deactivateConfirmOpen}
-        title="회원 탈퇴 확인"
+        title={t("mypage.deactivateConfirmTitle")}
         onClose={handleCancelDeactivateConfirm}
         zIndex={60}
         maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-900">정말 탈퇴하시겠습니까?</p>
+          <p className="text-sm font-bold text-gray-900">{t("mypage.deactivateConfirmMessage")}</p>
           <div className="text-xs text-gray-500 leading-relaxed space-y-1">
-            <p>• 탈퇴 즉시 모든 계정 정보가 삭제되며 <span className="font-semibold text-red-500">복구가 불가능</span>합니다.</p>
-            <p>• 저장된 여행 기록, 예약 내역, 선호도 데이터가 영구 삭제됩니다.</p>
-            <p>• 동일 계정으로 재가입하더라도 이전 데이터는 복원되지 않습니다.</p>
+            <p>• {t("mypage.deactivateWarning1")}</p>
+            <p>• {t("mypage.deactivateWarning2")}</p>
+            <p>• {t("mypage.deactivateWarning3")}</p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -1175,7 +1183,7 @@ export function MyPagePage() {
               disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
             >
-              아니요
+              {t("common.no")}
             </button>
             <button
               type="button"
@@ -1183,7 +1191,7 @@ export function MyPagePage() {
               disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-red-600 bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60 transition-all"
             >
-              {deactivateSubmitting ? "탈퇴 중..." : "탈퇴하기"}
+              {deactivateSubmitting ? t("mypage.deactivating") : t("mypage.deactivateButton")}
             </button>
           </div>
         </div>
@@ -1192,19 +1200,19 @@ export function MyPagePage() {
       {/* [Feature] 선호도 수정 완료 확인 팝업 — Done 클릭 후 저장 성공 시 표시 */}
       <SimpleModal
         open={showPreferenceSavedPopup}
-        title="선호도 저장 완료"
+        title={t("mypage.preferenceSavedTitle")}
         onClose={() => setShowPreferenceSavedPopup(false)}
         zIndex={60}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700">선호도가 성공적으로 수정되었습니다.</p>
+          <p className="text-sm text-gray-700">{t("mypage.preferenceSavedMessage")}</p>
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setShowPreferenceSavedPopup(false)}
               className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
             >
-              확인
+              {t("common.confirm")}
             </button>
           </div>
         </div>
@@ -1213,20 +1221,20 @@ export function MyPagePage() {
       {/* [Feature] Settings 회원정보 수정 완료 확인 팝업 — Save 클릭 후 저장 성공 시 표시 */}
       <SimpleModal
         open={showSettingsSavedPopup}
-        title="회원정보 저장 완료"
+        title={t("mypage.settingsSavedTitle")}
         onClose={() => setShowSettingsSavedPopup(false)}
         zIndex={60}
         maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-700">회원정보가 성공적으로 수정되었습니다.</p>
+          <p className="text-sm text-gray-700">{t("mypage.settingsSavedMessage")}</p>
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => setShowSettingsSavedPopup(false)}
               className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
             >
-              확인
+              {t("common.confirm")}
             </button>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { Features } from "@/app/components/Features";
 import { Destinations } from "@/app/components/Destinations";
 import { ReviewSection } from "@/app/components/ReviewSection";
 import { Footer } from "@/app/components/Footer";
+import { LanguageBanner } from "@/components/common/LanguageBanner";
 
 export function HomePage() {
   return (
@@ -16,6 +17,7 @@ export function HomePage() {
         <ReviewSection />
       </main>
       <Footer />
+      <LanguageBanner />
     </div>
   );
 }

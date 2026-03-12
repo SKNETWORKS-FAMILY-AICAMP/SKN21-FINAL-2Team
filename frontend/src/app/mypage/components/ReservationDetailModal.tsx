@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { ReservationItem } from "../types";
 
 export function ReservationDetailModal({
@@ -18,6 +19,7 @@ export function ReservationDetailModal({
     onSavePhoto: (nextUrl: string | null) => Promise<void> | void;
     onClose: () => void;
 }) {
+    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     // undefined: unchanged, string: new image, null: removed
     const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null | undefined>(undefined);
@@ -68,7 +70,7 @@ export function ReservationDetailModal({
                             >
                                 <X size={16} />
                             </button>
-                            <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 text-center">{t("mypage.reservationDetails")}</h2>
                         </div>
 
                         <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
@@ -109,8 +111,8 @@ export function ReservationDetailModal({
                                     </div>
                                 ) : (
                                     <div className="h-[180px] flex flex-col items-center justify-center">
-                                        <div className="text-lg font-bold">Reservation Image</div>
-                                        <div className="text-xs text-gray-700 mt-1">(Click here to upload if no image is available)</div>
+                                        <div className="text-lg font-bold">{t("mypage.reservationImage")}</div>
+                                        <div className="text-xs text-gray-700 mt-1">{t("mypage.uploadImageHint")}</div>
                                     </div>
                                 )}
                             </button>
@@ -124,7 +126,7 @@ export function ReservationDetailModal({
                                     }}
                                     className="text-[11px] font-semibold text-gray-600 hover:text-black"
                                 >
-                                    Change Image
+                                    {t("mypage.changeImage")}
                                 </button>
                                 {!!previewPhotoUrl && (
                                     <button
@@ -135,7 +137,7 @@ export function ReservationDetailModal({
                                         }}
                                         className="text-[11px] font-semibold text-gray-600 hover:text-black"
                                     >
-                                        Remove photo
+                                        {t("mypage.removePhoto")}
                                     </button>
                                 )}
                             </div>
@@ -150,7 +152,7 @@ export function ReservationDetailModal({
                                 }}
                                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
                             >
-                                Save
+                                {t("common.save")}
                             </button>
                         </div>
                     </motion.div>

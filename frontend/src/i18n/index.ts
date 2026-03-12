@@ -28,8 +28,18 @@ const dictionaries: Record<SupportedLanguage, Record<string, string>> = {
  * 번역 키로 현재 언어의 텍스트를 가져옵니다.
  * 해당 언어에 없으면 영어 → 키 자체 순서로 fallback합니다.
  */
-export function getTranslation(lang: SupportedLanguage, key: string): string {
-  return dictionaries[lang]?.[key] ?? dictionaries.en[key] ?? key;
+export function getTranslation(
+  lang: SupportedLanguage,
+  key: string,
+  params?: Record<string, string | number>,
+): string {
+  let text = dictionaries[lang]?.[key] ?? dictionaries.en[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return text;
 }
 
 /**

@@ -4,32 +4,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Calendar, MapPin, Sparkles, X, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-
-const features = [
-    {
-        title: "Hyper personalized",
-        shortTitle: "당신의 취향을 반영한 여행",
-        description: "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 \n맞춤 여행지를 추천합니다.",
-        icon: Sparkles,
-        mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Dashboard/User page mock
-    },
-    {
-        title: "Smart itinerary",
-        shortTitle: "최적의 코스로 스마트한 여행",
-        description: "가고 싶은 장소들을 선택만 해도,\n 최적의 루트로 동선을 계획해요.\nTriever와 함께 간편하게 \n여행 코스를 만들어보세요.",
-        icon: Calendar,
-        mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Chatbot/Search mock
-    },
-    {
-        title: "Integrated booking",
-        shortTitle: "준비도, 관리도 간편한 여행",
-        description: "여기저기 흩어져 있던 예약 일정과 티켓들.\n일일이 사이트와 앱을 켜서\n확인하는 건 이제 그만.\n모두 모아서 한번에 확인할 수 있어요.",
-        icon: MapPin,
-        mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop", // Calendar/Schedule mock
-    },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function Features() {
+    const { t } = useTranslation();
+
+    const features = [
+        {
+            title: t("features.hyperPersonalized.title"),
+            shortTitle: t("features.hyperPersonalized.shortTitle"),
+            description: t("features.hyperPersonalized.description"),
+            icon: Sparkles,
+            mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            title: t("features.smartItinerary.title"),
+            shortTitle: t("features.smartItinerary.shortTitle"),
+            description: t("features.smartItinerary.description"),
+            icon: Calendar,
+            mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            title: t("features.integratedBooking.title"),
+            shortTitle: t("features.integratedBooking.shortTitle"),
+            description: t("features.integratedBooking.description"),
+            icon: MapPin,
+            mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop",
+        },
+    ];
+
     // 선택된 탭(카드)의 인덱스를 관리하는 상태 (기본값: 0번째 항목)
     const [activeIndex, setActiveIndex] = useState(0);
     const activeFeature = features[activeIndex];
@@ -44,8 +47,8 @@ export function Features() {
                 {/* 1단 (상단): 헤더 영역 */}
                 {/* [Fix] mb-[3vh]: 타이틀 하단 간격도 뷰포트 비율로 반응 */}
                 <div className="text-center mb-[3vh]">
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">With  Triever</h2>
-                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">Cutting-Edge Technology Meets Traveling</p>
+                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">{t("features.heading")}</h2>
+                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">{t("features.subheading")}</p>
                 </div>
 
                 {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) 통합 영역 */}

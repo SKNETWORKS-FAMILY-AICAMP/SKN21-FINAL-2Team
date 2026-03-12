@@ -7,11 +7,14 @@ import { Logo } from "@/components/common/Logo";
 import { useRouter } from "next/navigation";
 import { fetchCurrentUser, type UserProfile } from "@/services/api";
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
+import { useTranslation } from "@/i18n/useTranslation";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
 // [Fix] Header h-16 = 64px, 섹션 상단이 Header 바로 아래에 딱 맞도록 오프셋
 const HEADER_HEIGHT = 64;
 
 export function Header() {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -145,28 +148,33 @@ export function Header() {
 
                 {/* [Fix] 네비 클릭 시 h2 기준 스크롤 + 리사이즈 시 자동 재정렬 */}
                 <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-                    {["Features", "Destinations", "Reviews"].map((item) => (
+                    {[
+                        { label: t("header.features"), id: "features" },
+                        { label: t("header.destinations"), id: "destinations" },
+                        { label: t("header.reviews"), id: "reviews" },
+                    ].map((item) => (
                         <button
-                            key={item}
-                            onClick={() => scrollToSection(item.toLowerCase())}
+                            key={item.id}
+                            onClick={() => scrollToSection(item.id)}
                             className="text-sm font-medium text-gray-500 hover:text-black transition-colors cursor-pointer"
                         >
-                            {item}
+                            {item.label}
                         </button>
                     ))}
                 </nav>
 
                 <div className="hidden md:flex items-center gap-4">
+                    <LanguageSwitcher variant="dropdown" />
                     {/* 로그인 상태 & 가입 완료(is_join, is_prefer): 프로필 사진 | 비로그인 or 가입 미완료: Get Started 버튼 */}
                     {profilePicture && !imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                         <button
                             onClick={handleNavigation}
                             className="w-9 h-9 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105"
-                            title="내 프로필로 이동"
+                            title={t("header.goToProfile")}
                         >
                             <img
                                 src={profilePicture}
-                                alt="프로필"
+                                alt={t("header.profileAlt")}
                                 className="w-full h-full object-cover"
                                 onError={() => setImgError(true)}
                             />
@@ -176,7 +184,7 @@ export function Header() {
                         <button
                             onClick={handleNavigation}
                             className="w-9 h-9 rounded-full bg-indigo-500 text-white text-sm font-bold border-2 border-gray-200 shadow-sm transition-transform hover:scale-105"
-                            title="내 프로필로 이동"
+                            title={t("header.goToProfile")}
                         >
                             {userInitial}
                         </button>
@@ -185,7 +193,7 @@ export function Header() {
                             onClick={handleNavigation}
                             className="bg-black text-white text-sm font-medium px-4 py-2 rounded-full hover:bg-gray-800 transition-colors"
                         >
-                            Get Started
+                            {t("header.getStarted")}
                         </button>
                     )}
                 </div>
@@ -204,33 +212,38 @@ export function Header() {
                 >
                     <nav className="flex flex-col gap-4">
                         {/* [Fix] 모바일 네비도 동일 스크롤 + 리사이즈 자동 재정렬 */}
-                        {["Features", "Destinations", "Reviews"].map((item) => (
+                        {[
+                            { label: t("header.features"), id: "features" },
+                            { label: t("header.destinations"), id: "destinations" },
+                            { label: t("header.reviews"), id: "reviews" },
+                        ].map((item) => (
                             <button
-                                key={item}
+                                key={item.id}
                                 className="text-base font-medium text-gray-500 hover:text-black text-left"
                                 onClick={() => {
                                     setIsOpen(false);
-                                    setTimeout(() => scrollToSection(item.toLowerCase()), 100);
+                                    setTimeout(() => scrollToSection(item.id), 100);
                                 }}
                             >
-                                {item}
+                                {item.label}
                             </button>
                         ))}
                         <hr className="my-2 border-gray-100" />
+                        <LanguageSwitcher variant="dropdown" />
                         {/* 모바일 메뉴: 로그인 상태에서도 동일하게 프로필 처리 */}
                         {profilePicture && !imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                             <button
                                 onClick={() => { setIsOpen(false); handleNavigation(); }}
                                 className="flex items-center gap-3 w-full"
-                                title="내 프로필로 이동"
+                                title={t("header.goToProfile")}
                             >
                                 <img
                                     src={profilePicture}
-                                    alt="프로필"
+                                    alt={t("header.profileAlt")}
                                     className="w-9 h-9 rounded-full object-cover border-2 border-gray-200"
                                     onError={() => setImgError(true)}
                                 />
-                                <span className="text-base font-medium text-gray-700">내 프로필로 이동</span>
+                                <span className="text-base font-medium text-gray-700">{t("header.goToProfile")}</span>
                             </button>
                         ) : profilePicture && imgError && userProfile?.is_join && userProfile?.is_prefer ? (
                             <button
@@ -240,14 +253,14 @@ export function Header() {
                                 <span className="w-9 h-9 rounded-full bg-indigo-500 text-white text-sm font-bold flex items-center justify-center border-2 border-gray-200">
                                     {userInitial}
                                 </span>
-                                <span className="text-base font-medium text-gray-700">내 프로필로 이동</span>
+                                <span className="text-base font-medium text-gray-700">{t("header.goToProfile")}</span>
                             </button>
                         ) : (
                             <button
                                 onClick={() => { setIsOpen(false); handleNavigation(); }}
                                 className="bg-black text-white text-base font-medium px-4 py-2 rounded-full"
                             >
-                                Get Started
+                                {t("header.getStarted")}
                             </button>
                         )}
                     </nav>

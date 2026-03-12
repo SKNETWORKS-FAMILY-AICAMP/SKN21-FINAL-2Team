@@ -12,7 +12,7 @@ import {
 interface LanguageContextValue {
   language: SupportedLanguage;
   setLanguage: (lang: SupportedLanguage) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 export const LanguageContext = createContext<LanguageContextValue>({
@@ -67,7 +67,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string) => getTranslation(language, key),
+    (key: string, params?: Record<string, string | number>) => getTranslation(language, key, params),
     [language]
   );
 

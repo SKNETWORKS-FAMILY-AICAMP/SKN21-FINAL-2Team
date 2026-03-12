@@ -9,12 +9,7 @@ import { TripContextModal, type TripContext } from "@/features/chat/components/T
 import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile, type CategoryPlaceItem } from "@/services/api";
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
-
-const categories = [
-    { id: "hot-places", label: "Hot Places" },
-    { id: "tourist-spot", label: "Tourist Spot" },
-    { id: "foods", label: "Foods" },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 // ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
 export interface Destination {
@@ -44,7 +39,14 @@ const staticDestinations: Record<string, Destination[]> = {
 // image: API 응답 이미지 URL
 // address: hot_place: adress(오타) | 나머지: address 로 통일
 export function Destinations() {
+    const { t } = useTranslation();
     const router = useRouter();
+
+    const categories = [
+        { id: "hot-places", label: t("destinations.hotPlaces") },
+        { id: "tourist-spot", label: t("destinations.touristSpot") },
+        { id: "foods", label: t("destinations.foods") },
+    ];
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -218,8 +220,8 @@ export function Destinations() {
                 <div className="w-full mx-auto px-20 lg:px-32">
                     <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
                         <div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
-                            <p className="text-gray-500 text-lg max-w-xl font-light">From historic palaces to neon-lit streets, find your perfect spot.</p>
+                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">{t("destinations.heading")}</h2>
+                            <p className="text-gray-500 text-lg max-w-xl font-light">{t("destinations.subheading")}</p>
                         </div>
                         <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-lg overflow-hidden backdrop-blur-sm border border-gray-200">
                             {categories.map((category) => (
@@ -239,7 +241,7 @@ export function Destinations() {
                             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Refreshing...</span>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t("destinations.refreshing")}</span>
                                 </div>
                             </div>
                         )}
@@ -290,7 +292,7 @@ export function Destinations() {
                                                     ) : (
                                                         <MapPin size={40} className="text-gray-300" />
                                                     )}
-                                                    <span className="text-xs font-medium text-gray-400">No Image</span>
+                                                    <span className="text-xs font-medium text-gray-400">{t("destinations.noImage")}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -304,7 +306,7 @@ export function Destinations() {
                                                     onClick={(e) => handlePlanTripClick(place, e)}
                                                     className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
                                                 >
-                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />Plan Trip
+                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />{t("destinations.planTrip")}
                                                 </button>
                                             </div>
                                         </div>

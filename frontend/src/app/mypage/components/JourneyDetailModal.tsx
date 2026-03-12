@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { TripSummary, ChatTranscriptMessage } from "../types";
 
 export function JourneyDetailModal({
@@ -13,6 +14,7 @@ export function JourneyDetailModal({
     trip: TripSummary | null;
     onClose: () => void;
 }) {
+    const { t } = useTranslation();
     const transcript = useMemo(() => {
         if (!trip) return [] as ChatTranscriptMessage[];
         return trip.messages;
@@ -47,7 +49,7 @@ export function JourneyDetailModal({
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     >
                         <div className="p-6 pb-4">
-                            <h2 className="text-3xl font-bold text-gray-900 text-center">Journey Detail</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 text-center">{t("mypage.journeyDetail")}</h2>
                         </div>
 
                         <div className="px-6 pb-4">
@@ -59,7 +61,7 @@ export function JourneyDetailModal({
                                     className="space-y-2"
                                 >
                                     {transcript.length === 0 && (
-                                        <div className="text-xs text-gray-500 text-center py-6">No chat history in this room.</div>
+                                        <div className="text-xs text-gray-500 text-center py-6">{t("mypage.noChatHistory")}</div>
                                     )}
                                     {transcript.map((m, idx) => {
                                         const isUser = m.role === "user";
@@ -93,7 +95,7 @@ export function JourneyDetailModal({
                                 onClick={onClose}
                                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
                             >
-                                Menu
+                                {t("mypage.menu")}
                             </button>
                         </div>
                     </motion.div>
