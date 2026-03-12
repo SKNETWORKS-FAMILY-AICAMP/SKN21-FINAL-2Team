@@ -65,8 +65,8 @@ def reset_user_profile_picture_to_google(
         token_res = req.post(
             token_endpoint,
             data={
-                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET", ""),
                 "refresh_token": current_user.social_refresh_token,
                 "grant_type": "refresh_token",
             },
