@@ -150,7 +150,7 @@ export function DiaryEditorModal({
                       {linkedPlace ? (
                         <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                           <MapPin size={13} className="shrink-0" />
-                          <span className="truncate">{linkedPlace.adress}</span>
+                          <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
                           <button
                             type="button"
                             onClick={(event) => {
@@ -193,7 +193,7 @@ export function DiaryEditorModal({
                     linkedPlace && (
                       <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                         <MapPin size={13} className="shrink-0" />
-                        <span className="truncate">{linkedPlace.adress}</span>
+                        <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
                       </div>
                     )
                   )}
@@ -253,7 +253,7 @@ export function DiaryEditorModal({
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-zinc-300">Linked place</p>
-                            <p className="mt-1 text-xs leading-5 text-zinc-500">{linkedPlace.adress}</p>
+                            <p className="mt-1 text-xs leading-5 text-zinc-500">{linkedPlace.name || linkedPlace.adress}</p>
                           </div>
                         </div>
                       </div>
