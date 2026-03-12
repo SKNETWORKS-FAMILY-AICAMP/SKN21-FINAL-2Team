@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+// [Feature] 모달 transition animation 적용
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, MapPin, Search, X } from "lucide-react";
 
 import { DiaryPlaceSearchResult } from "@/services/api";
@@ -247,11 +249,26 @@ export function DiaryLocationPickerModal({
     onConfirm(selectedPlace);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-zinc-800 bg-black shadow-2xl">
+    // [Feature] 부드러운 페이드 인/아웃 애니메이션
+    <AnimatePresence>
+      {isOpen && (
+        // [Feature] 배경 오버레이 - 페이드 애니메이션
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          {/* [Feature] 모달 창 - 페이드 + 스케일 애니메이션 */}
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-zinc-800 bg-black shadow-2xl"
+          >
         <div className="flex flex-none items-center justify-between border-b border-zinc-800 px-6 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">Location</p>
@@ -274,6 +291,7 @@ export function DiaryLocationPickerModal({
               <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
                 장소 또는 주소 검색
               </label>
+              {/* [Feature] 인라인 검색 버튼 - 입력창 오른쪽에 돋보기 아이콘 배치 */}
               <div className="relative">
                 <input
                   value={searchQuery}
@@ -390,7 +408,9 @@ export function DiaryLocationPickerModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
