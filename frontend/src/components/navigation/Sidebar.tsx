@@ -23,7 +23,7 @@ const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
     en: {
         home: "Home",
-        collection: "Collection",
+        moments: "Moments",
         bookmark: "Bookmark",
         newChat: "+ New Chat",
         recentChats: "Recent Chats",
@@ -32,7 +32,7 @@ const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
     },
     ko: {
         home: "홈",
-        collection: "컬렉션",
+        moments: "Moments",
         bookmark: "북마크",
         newChat: "+ 새 채팅",
         recentChats: "최근 채팅",
@@ -41,7 +41,7 @@ const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
     },
     ja: {
         home: "ホーム",
-        collection: "コレクション",
+        moments: "Moments",
         bookmark: "ブックマーク",
         newChat: "+ 新規チャット",
         recentChats: "最近のチャット",
@@ -252,7 +252,7 @@ function SidebarContent() {
 
     const menuItems = [
         { icon: Home, label: dict.home, path: "/explore" },
-        { icon: Grid, label: dict.collection, path: "/collection" },
+        { icon: Grid, label: dict.moments, path: "/moments" },
         { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
     ];
 

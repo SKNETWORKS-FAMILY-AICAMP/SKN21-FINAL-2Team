@@ -81,13 +81,8 @@ export function SurveyPage() {
     };
 
     const handleFinalizeSignup = () => {
-        // 완료 화면에서 'Signup' 버튼을 눌렀을 때의 동작
-        const pending = localStorage.getItem("pendingDestination");
-        if (pending) {
-            router.push("/chatbot?fromDestination=1");
-        } else {
-            router.push("/explore");
-        }
+        // [Feature] 설문 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
+        router.push("/explore");
     };
 
     const handlePrevious = () => {
@@ -172,10 +167,10 @@ export function SurveyPage() {
 
                         <button
                             onClick={handleFinalizeSignup}
-                            // 주의: 사용자의 피드백에 맞춰 시각적으로 가입이 완료되는 느낌을 주기 위해 버튼명을 SignUp으로 설정했습니다.
+                            // [Feature] 버튼명 Sign Up → Start 변경 — 설문 완료 후 서비스 시작 의미 전달
                             className="w-full sm:w-auto px-12 py-4 bg-black text-white text-lg font-semibold rounded-full hover:bg-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
                         >
-                            Sign Up <ArrowRight size={20} />
+                            Start <ArrowRight size={20} />
                         </button>
                     </motion.div>
                 ) : (

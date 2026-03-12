@@ -3,11 +3,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { verifyAndRefreshToken } from "@/services/api";
+import { verifyAndRefreshToken, fetchCurrentUser } from "@/services/api";
+// [Feature] 가입/설문 미완료 시 경고 팝업 — Destinations.tsx와 동일한 IncompleteSignupModal 재사용
+import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 
 export function Hero() {
     const router = useRouter();
     const [isNavigating, setIsNavigating] = useState(false);
+
+    // [Feature] Start 버튼 클릭 시 가입 미완료 사용자에게 경고 모달 표시
+    const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+    const [warningStep, setWarningStep] = useState<"profile" | "survey" | null>(null);
 
     const handleNavigation = async () => {
         // 중복 클릭 방지
@@ -25,7 +31,21 @@ export function Hero() {
         try {
             // 주의: localStorage에 토큰이 있어도 만료되었을 수 있으므로 서버 검증 필수
             await verifyAndRefreshToken();
-            // 검증 성공 → explore 이동
+
+            // [Feature] 토큰 유효 → 가입/설문 완료 여부 확인 후 미완료 시 팝업 표시
+            const user = await fetchCurrentUser();
+            if (!user.is_join) {
+                setWarningStep("profile");
+                setIsWarningModalOpen(true);
+                return;
+            }
+            if (!user.is_prefer) {
+                setWarningStep("survey");
+                setIsWarningModalOpen(true);
+                return;
+            }
+
+            // 가입 + 설문 모두 완료된 사용자만 explore 이동
             router.push("/explore");
         } catch {
             // 토큰 만료 또는 유효하지 않은 경우 → 정리 후 로그인
@@ -37,7 +57,18 @@ export function Hero() {
         }
     };
 
+    // [Feature] 경고 모달에서 "확인" 클릭 시 미완료 단계로 이동
+    const confirmWarning = () => {
+        setIsWarningModalOpen(false);
+        if (warningStep === "profile") {
+            router.push("/signup/profile");
+        } else if (warningStep === "survey") {
+            router.push("/survey");
+        }
+    };
+
     return (
+        <>
         <section className="relative w-full h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 z-0">
                 <img
@@ -103,5 +134,14 @@ export function Hero() {
                 <div className="w-[1px] h-16 bg-white/50" />
             </motion.div>
         </section>
+
+        {/* [Feature] 가입/설문 미완료 경고 모달 — Start 버튼에서 미완료 사용자 감지 시 표시 */}
+        <IncompleteSignupModal
+            isOpen={isWarningModalOpen}
+            missingStep={warningStep}
+            onClose={() => setIsWarningModalOpen(false)}
+            onConfirm={confirmWarning}
+        />
+        </>
     );
 }

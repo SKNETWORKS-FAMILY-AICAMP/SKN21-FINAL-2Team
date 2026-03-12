@@ -120,6 +120,10 @@ export function MyPagePage() {
   const [isEditingPreferences, setIsEditingPreferences] = useState<boolean>(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState<boolean>(false);
   const [draftExtraPreferences, setDraftExtraPreferences] = useState<string[]>([]);
+  // [Feature] 선호도 수정 확인 팝업 상태
+  const [showPreferenceSavedPopup, setShowPreferenceSavedPopup] = useState<boolean>(false);
+  // [Feature] Settings 회원정보 수정 확인 팝업 상태
+  const [showSettingsSavedPopup, setShowSettingsSavedPopup] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
   const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
@@ -288,6 +292,7 @@ export function MyPagePage() {
     setSettingsOpen(true);
   };
 
+  // [Feature] 회원탈퇴 — Settings 뷰에서 탈퇴 뷰로 전환
   const handleOpenDeactivateAccount = () => {
     setSettingsModalView("deactivate");
     setDeactivateGoogleConfirmed(false);
@@ -298,6 +303,7 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 탈퇴 뷰에서 취소하고 Settings 뷰로 복귀
   const handleCancelDeactivateAccount = () => {
     setSettingsModalView("settings");
     setDeactivateGoogleConfirmed(false);
@@ -308,6 +314,7 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 체크박스 검증 후 최종 확인 팝업 열기
   const handleRequestDeactivateAccount = () => {
     setDeactivateSubmitAttempted(true);
     setDeactivateError("");
@@ -315,10 +322,12 @@ export function MyPagePage() {
     setDeactivateConfirmOpen(true);
   };
 
+  // [Feature] 회원탈퇴 — 최종 확인 팝업에서 "아니요" 클릭 시 팝업 닫기
   const handleCancelDeactivateConfirm = () => {
     setDeactivateConfirmOpen(false);
   };
 
+  // [Feature] 회원탈퇴 — 최종 확인 후 서버 탈퇴 API 호출 → 로그아웃 → 랜딩페이지 이동
   const handleConfirmDeactivateAccount = async () => {
     setDeactivateSubmitting(true);
     setDeactivateError("");
@@ -330,13 +339,14 @@ export function MyPagePage() {
       window.location.href = "/";
     } catch (error) {
       console.error("Failed to deactivate account", error);
-      setDeactivateError("Failed to deactivate account.");
+      setDeactivateError("회원 탈퇴에 실패했습니다.");
       setDeactivateConfirmOpen(false);
     } finally {
       setDeactivateSubmitting(false);
     }
   };
 
+  // [Feature] Settings 회원정보 수정 완료 시 확인 팝업 표시
   const handleSaveSettingsPopup = async () => {
     setSettingsSaving(true);
     try {
@@ -356,6 +366,7 @@ export function MyPagePage() {
       }));
       window.dispatchEvent(new Event("triver:profile-updated"));
       setSettingsOpen(false);
+      setShowSettingsSavedPopup(true);
     } catch (error) {
       console.error("Failed to update user settings", error);
     } finally {
@@ -416,6 +427,7 @@ export function MyPagePage() {
     });
   };
 
+  // [Feature] 선호도 수정 완료 시 확인 팝업 표시
   const handleTogglePreferenceEdit = async () => {
     if (!isEditingPreferences) {
       setDraftInsight(userInsight);
@@ -438,11 +450,19 @@ export function MyPagePage() {
       setUserInsight(draftInsight);
       setUserProfile((prev) => ({ ...prev, preferences: draftExtraPreferences }));
       setIsEditingPreferences(false);
+      setShowPreferenceSavedPopup(true);
     } catch (error) {
       console.error("Failed to update preferences", error);
     } finally {
       setIsSavingPreferences(false);
     }
+  };
+
+  // [Feature] 선호도 수정 Cancel — 편집 내용 폐기 후 뷰 모드로 복귀
+  const handleCancelPreferenceEdit = () => {
+    setDraftInsight(userInsight);
+    setDraftExtraPreferences(userProfile.preferences);
+    setIsEditingPreferences(false);
   };
 
   return (
@@ -452,8 +472,9 @@ export function MyPagePage() {
           <Sidebar />
         </div>
       </div>
-      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900">
-        <div className="p-4 sm:p-6">
+      {/* [Fix] 화면 사이즈에 따른 유동적 레이아웃 — 큰 화면에서 공백 없이 남은 높이 전부 채움 */}
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
+        <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">
             <h1 className="page-title text-gray-900 mb-2">My Page</h1>
             <p className="page-subtitle">Traveler Profile</p>
@@ -470,16 +491,17 @@ export function MyPagePage() {
             </div>
           </header>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-8">
-            <div className="xl:col-span-2">
+          {/* [Fix] 그리드가 남은 높이를 전부 채우도록 flex-1 적용 */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-8 flex-1">
+            <div className="xl:col-span-2 flex flex-col">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 sm:p-6 sm:pb-4 rounded-3xl border border-gray-200 bg-white shadow-sm flex flex-col"
+                className="p-4 sm:p-6 sm:pb-4 rounded-3xl border border-gray-200 bg-white shadow-sm flex flex-col flex-1"
               >
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 xl:w-20 xl:h-20 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                       {userProfile.profile_picture ? (
                         <img
                           src={userProfile.profile_picture}
@@ -515,17 +537,29 @@ export function MyPagePage() {
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
                       <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
-                      <button
-                        type="button"
-                        onClick={handleTogglePreferenceEdit}
-                        disabled={isSavingPreferences}
-                        className={`h-10 px-4 rounded-full border text-xs font-bold transition-all disabled:opacity-60 ${isEditingPreferences
-                          ? "border-gray-900 bg-black text-white hover:opacity-90"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          }`}
-                      >
-                        {isEditingPreferences ? (isSavingPreferences ? "Saving..." : "Done") : "Edit"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
+                        {isEditingPreferences && (
+                          <button
+                            type="button"
+                            onClick={handleCancelPreferenceEdit}
+                            className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleTogglePreferenceEdit}
+                          disabled={isSavingPreferences}
+                          className={`h-10 px-4 rounded-full border text-xs font-bold transition-all disabled:opacity-60 ${isEditingPreferences
+                            ? "border-gray-900 bg-black text-white hover:opacity-90"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                            }`}
+                        >
+                          {isEditingPreferences ? (isSavingPreferences ? "Saving..." : "Done") : "Edit"}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-gray-500">여행 계획에 반영되는 사용자님의 선호도를 설정해보세요!</p>
                   </div>
@@ -541,7 +575,8 @@ export function MyPagePage() {
                         const imageSrc = SURVEY_IMAGE_MAP[item.value] ?? "/image/noplan.png";
                         return (
                           <div key={item.key} className="space-y-2">
-                            <div className="relative h-48 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                            {/* [Fix] 이미지 높이를 aspect-ratio로 변경하여 화면 사이즈에 비례하여 유동 확장 */}
+                            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                               <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 p-4">
@@ -581,8 +616,9 @@ export function MyPagePage() {
                     </div>
                   </div>
 
+                  {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Extra Prefer</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Additional Preference</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
@@ -685,7 +721,7 @@ export function MyPagePage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.35 }}
-                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm overflow-hidden"
+                className="p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white flex flex-col flex-1 shadow-sm overflow-hidden min-h-0"
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -935,7 +971,8 @@ export function MyPagePage() {
 
       <SimpleModal
         open={settingsOpen}
-        title={settingsModalView === "settings" ? "Settings" : "Deactivate Account"}
+        // [Feature] Settings 모달 타이틀 — 설정 뷰와 회원탈퇴 뷰를 구분
+        title={settingsModalView === "settings" ? "Settings" : "회원 탈퇴"}
         onClose={closeSettingsModal}
       >
         {settingsModalView === "settings" ? (
@@ -1024,7 +1061,7 @@ export function MyPagePage() {
                   onClick={handleOpenDeactivateAccount}
                   className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  Deactivate Account
+                  회원 탈퇴
                 </button>
               </div>
               <div className="flex justify-end gap-2">
@@ -1047,12 +1084,14 @@ export function MyPagePage() {
             </div>
           </div>
         ) : (
+          /* [Feature] 회원탈퇴 뷰 — Google 계정 확인 + 탈퇴 동의 체크 후 탈퇴 요청 */
           <div className="space-y-5">
+            {/* [Feature] Google 계정 확인 체크박스 — 본인 계정이 맞는지 확인 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google Account Confirmation</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Google 계정 확인</p>
                 <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
-                  {userProfile.bio || "Unknown account"}
+                  {userProfile.bio || "알 수 없는 계정"}
                 </p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
@@ -1062,17 +1101,18 @@ export function MyPagePage() {
                   checked={deactivateGoogleConfirmed}
                   onChange={(e) => setDeactivateGoogleConfirmed(e.target.checked)}
                 />
-                <span>I confirm my Google account.</span>
+                <span>본인의 Google 계정이 맞음을 확인합니다.</span>
               </label>
               {deactivateSubmitAttempted && !deactivateGoogleConfirmed && (
-                <div className="text-xs font-semibold text-red-600">Please confirm your Google account</div>
+                <div className="text-xs font-semibold text-red-600">Google 계정을 확인해 주세요.</div>
               )}
             </div>
 
+            {/* [Feature] 탈퇴 약관 동의 체크박스 — 동의 없이는 탈퇴 진행 불가 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Termination Agreement</p>
-                <p className="text-xs text-gray-500 mt-1">You must agree before proceeding.</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">탈퇴 약관 동의</p>
+                <p className="text-xs text-gray-500 mt-1">탈퇴를 진행하기 전에 반드시 동의해 주세요.</p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">
                 <input
@@ -1081,22 +1121,24 @@ export function MyPagePage() {
                   checked={deactivateAgreementConfirmed}
                   onChange={(e) => setDeactivateAgreementConfirmed(e.target.checked)}
                 />
-                <span>I agree to the account termination agreement.</span>
+                <span>회원 탈퇴 약관에 동의합니다.</span>
               </label>
               {deactivateSubmitAttempted && !deactivateAgreementConfirmed && (
-                <div className="text-xs font-semibold text-red-600">Please confirm the account termination agreement</div>
+                <div className="text-xs font-semibold text-red-600">탈퇴 약관에 동의해 주세요.</div>
               )}
             </div>
 
+            {/* [Feature] 탈퇴 실패 시 에러 메시지 표시 */}
             {!!deactivateError && <div className="text-xs font-semibold text-red-600">{deactivateError}</div>}
 
+            {/* [Feature] 취소 / 탈퇴하기 버튼 */}
             <div className="pt-1 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={handleCancelDeactivateAccount}
                 className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
               >
-                Cancel
+                취소
               </button>
               <button
                 type="button"
@@ -1104,37 +1146,87 @@ export function MyPagePage() {
                 disabled={deactivateSubmitting}
                 className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
               >
-                Deactivate
+                탈퇴하기
               </button>
             </div>
           </div>
         )}
       </SimpleModal>
 
+      {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 경고 + 확인 */}
       <SimpleModal
         open={deactivateConfirmOpen}
-        title="Confirm"
+        title="회원 탈퇴 확인"
         onClose={handleCancelDeactivateConfirm}
         zIndex={60}
+        maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-900">Are you sure?</p>
-          <div className="flex justify-end gap-2">
+          <p className="text-sm font-bold text-gray-900">정말 탈퇴하시겠습니까?</p>
+          <div className="text-xs text-gray-500 leading-relaxed space-y-1">
+            <p>• 탈퇴 즉시 모든 계정 정보가 삭제되며 <span className="font-semibold text-red-500">복구가 불가능</span>합니다.</p>
+            <p>• 저장된 여행 기록, 예약 내역, 선호도 데이터가 영구 삭제됩니다.</p>
+            <p>• 동일 계정으로 재가입하더라도 이전 데이터는 복원되지 않습니다.</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleCancelDeactivateConfirm}
               disabled={deactivateSubmitting}
               className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
             >
-              No
+              아니요
             </button>
             <button
               type="button"
               onClick={handleConfirmDeactivateAccount}
               disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+              className="h-10 px-4 rounded-full border border-red-600 bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60 transition-all"
             >
-              {deactivateSubmitting ? "Deactivating..." : "Yes"}
+              {deactivateSubmitting ? "탈퇴 중..." : "탈퇴하기"}
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
+
+      {/* [Feature] 선호도 수정 완료 확인 팝업 — Done 클릭 후 저장 성공 시 표시 */}
+      <SimpleModal
+        open={showPreferenceSavedPopup}
+        title="선호도 저장 완료"
+        onClose={() => setShowPreferenceSavedPopup(false)}
+        zIndex={60}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">선호도가 성공적으로 수정되었습니다.</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowPreferenceSavedPopup(false)}
+              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      </SimpleModal>
+
+      {/* [Feature] Settings 회원정보 수정 완료 확인 팝업 — Save 클릭 후 저장 성공 시 표시 */}
+      <SimpleModal
+        open={showSettingsSavedPopup}
+        title="회원정보 저장 완료"
+        onClose={() => setShowSettingsSavedPopup(false)}
+        zIndex={60}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">회원정보가 성공적으로 수정되었습니다.</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowSettingsSavedPopup(false)}
+              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
+            >
+              확인
             </button>
           </div>
         </div>
