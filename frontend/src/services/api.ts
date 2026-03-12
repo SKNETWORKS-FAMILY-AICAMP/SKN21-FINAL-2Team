@@ -35,6 +35,7 @@ export interface PreferItem {
 }
 
 export const getPostLoginPath = (user: UserProfile): string => {
+    if (!user) return "/"; // Safety fallback
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
     // [Feature] 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
