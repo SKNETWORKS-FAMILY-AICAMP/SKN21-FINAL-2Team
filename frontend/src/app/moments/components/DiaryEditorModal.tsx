@@ -203,6 +203,9 @@ export function DiaryEditorModal({
               );
             })()}
 
+            {/* [Feature] 좌우 영역 구분선 */}
+            <div className="hidden md:block h-full w-[2px] bg-zinc-700" />
+
             <div className="flex w-full flex-col overflow-hidden bg-zinc-950 p-5 md:w-[360px]">
               <div className="mb-4 flex flex-none items-center justify-between">
                 <div className="text-sm font-semibold text-zinc-200">Diary</div>
