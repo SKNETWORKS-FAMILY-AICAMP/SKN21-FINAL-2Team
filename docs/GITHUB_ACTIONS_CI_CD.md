@@ -198,7 +198,10 @@ nginx (포트 80 노출)
 frontend (내부 3000)
   ↓
 backend (내부 8000, healthcheck 포함)
+adminer (포트 8080 노출, DB 관리용)
 ```
+
+adminer 서비스는 `http://도메인:8080`을 통해 접속하여 RDS를 관리할 수 있다. 접속 시 서버(System)는 `MySQL`을 선택하고, 호스트는 서버의 `.env.backend.*`에 설정된 `MYSQL_HOST` 값을 입력한다.
 
 backend 서비스는 `/api/healthz` 엔드포인트로 헬스체크를 수행한다.
 
