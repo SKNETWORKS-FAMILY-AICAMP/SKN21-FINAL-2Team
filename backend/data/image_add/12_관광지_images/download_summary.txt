@@ -1,6 +1,0 @@
-total=685
-downloaded_files=678
-retried_success=225
-final_failed=7
-output_dir=backend/data/image_add/12_관광지_images
-failure_file=backend/data/image_add/12_관광지_images/download_retry_failures.jsonl

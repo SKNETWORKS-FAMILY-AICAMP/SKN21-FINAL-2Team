@@ -23,19 +23,12 @@ from app.utils.error_handler import (
     internal_exception_handler,
     http_exception_handler,
 )
-from app.database.connection import Base, get_engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 서버 시작 시 실행될 로직
     print("[INFO] Starting up: Loading models...")
-    try:
-        Base.metadata.create_all(bind=get_engine())
-        print("[INFO] Database tables ensured.")
-    except Exception as e:
-        print(f"[ERROR] Failed to ensure database tables: {e}")
-
     try:
         # CLIP 모델 로드 (PlaceRetriever 초기화)
         PlaceRetriever.get_instance()
