@@ -261,7 +261,7 @@ export function DiaryLocationPickerModal({
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
-            aria-label="Close location picker"
+            aria-label="위치 선택 창 닫기"
           >
             <X size={16} />
           </button>
@@ -272,12 +272,12 @@ export function DiaryLocationPickerModal({
             <div className="flex-1 p-5">
             <form className="space-y-3" onSubmit={handleSearch}>
               <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
-                Search place or address
+                장소 또는 주소 검색
               </label>
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Seoul City Hall, Seongsu, Jeju Airport"
+                placeholder="서울시청, 성수, 제주공항"
                 className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
               />
               <div className="flex justify-end">
@@ -287,13 +287,13 @@ export function DiaryLocationPickerModal({
                   className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
                 >
                   {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={14} />}
-                  Search
+                  검색
                 </button>
               </div>
             </form>
 
             <p className="mt-4 text-xs leading-5 text-zinc-500">
-              Search first, choose one result, then confirm the location for this diary.
+              먼저 검색하고, 결과를 선택한 후 일기 위치를 확정하세요.
             </p>
 
             {selectedPlace && (
@@ -302,9 +302,9 @@ export function DiaryLocationPickerModal({
                   <MapPin className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">Selected</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">선택됨</p>
                   <p className="mt-0.5 text-sm font-medium text-zinc-100 truncate">
-                    {selectedPlace.name?.trim() || "Pinned location"}
+                    {selectedPlace.name?.trim() || "고정된 위치"}
                   </p>
                   <p className="text-xs leading-5 text-zinc-400 truncate">{selectedPlace.adress}</p>
                 </div>
@@ -313,7 +313,7 @@ export function DiaryLocationPickerModal({
                   onClick={handleConfirm}
                   disabled={resolving}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                  aria-label="Use this location"
+                  aria-label="이 위치 사용"
                 >
                   {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
                 </button>
@@ -323,7 +323,7 @@ export function DiaryLocationPickerModal({
             {searchResults.length > 0 && (
               <div className="mt-4">
                 <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-                  Search Results
+                  검색 결과
                 </p>
                 <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                   {searchResults.map((result, index) => {
@@ -343,7 +343,7 @@ export function DiaryLocationPickerModal({
                             : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900"
                         }`}
                       >
-                        <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || "Search result"}</p>
+                        <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || "검색 결과"}</p>
                         <p className="mt-1 text-xs leading-5 text-zinc-400">{result.adress}</p>
                       </button>
                     );
@@ -364,7 +364,7 @@ export function DiaryLocationPickerModal({
                   onClick={retry}
                   className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900"
                 >
-                  Retry map
+                  지도 다시 로드
                 </button>
               </div>
             )}
@@ -374,7 +374,7 @@ export function DiaryLocationPickerModal({
             {status === "loading" && (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading map...
+                지도 로딩 중...
               </div>
             )}
             {status === "ready" && <div ref={mapRef} className="absolute inset-0 h-full w-full" />}
