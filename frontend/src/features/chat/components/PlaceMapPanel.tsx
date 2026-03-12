@@ -60,7 +60,7 @@ export function PlaceMapPanel({
   panelWidth,
   isResizing = false,
 }: PlaceMapPanelProps) {
-  const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const { status, error, naver, retry } = useNaverMap(clientId);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
