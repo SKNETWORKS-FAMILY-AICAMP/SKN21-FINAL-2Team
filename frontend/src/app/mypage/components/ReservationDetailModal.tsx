@@ -91,7 +91,7 @@ export function ReservationDetailModal({
                 >
                     <motion.button
                         type="button"
-                        aria-label="Close"
+                        aria-label="닫기"
                         className="absolute inset-0 bg-black/40"
                         onClick={handleClose}
                         initial={{ opacity: 0 }}
@@ -110,19 +110,19 @@ export function ReservationDetailModal({
                         <div className="relative p-6 pb-4">
                             <button
                                 type="button"
-                                aria-label="Close"
+                                aria-label="닫기"
                                 onClick={handleClose}
                                 className="absolute right-4 top-4 w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors"
                             >
                                 <X size={16} />
                             </button>
-                            <h2 className="text-3xl font-bold text-gray-900 text-center">Reservation Details</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 text-center pr-12">예약 상세</h2>
                         </div>
 
                         <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
                             {/* [추가] 예약 제목 편집 섹션 */}
                             <div className="mb-4">
-                                <label className="block text-xs font-semibold text-gray-600 mb-2">Reservation Title</label>
+                                <label className="block text-xs font-semibold text-gray-600 mb-2">예약 제목</label>
                                 {editingTitle ? (
                                     <input
                                         type="text"
@@ -177,16 +177,16 @@ export function ReservationDetailModal({
                                     fileInputRef.current?.click();
                                 }}
                                 className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
-                                aria-label="Upload reservation image"
+                                aria-label="예약 이미지 업로드"
                             >
                                 {previewPhotoUrl ? (
                                     <div className="h-[220px] bg-gray-100 flex items-center justify-center">
-                                        <img src={previewPhotoUrl} alt="Reservation" className="w-full h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="예약 이미지" className="w-full h-full object-contain" />
                                     </div>
                                 ) : (
                                     <div className="h-[180px] flex flex-col items-center justify-center">
-                                        <div className="text-lg font-bold">Reservation Image</div>
-                                        <div className="text-xs text-gray-700 mt-1">(Click here to upload if no image is available)</div>
+                                        <div className="text-lg font-bold">예약 이미지</div>
+                                        <div className="text-xs text-gray-700 mt-1">(이미지 없을 시 클릭하여 업로드)</div>
                                     </div>
                                 )}
                             </button>
@@ -200,7 +200,7 @@ export function ReservationDetailModal({
                                     }}
                                     className="text-[11px] font-semibold text-gray-600 hover:text-black"
                                 >
-                                    Change Image
+                                    이미지 변경
                                 </button>
                                 {!!previewPhotoUrl && (
                                     <button
@@ -211,7 +211,7 @@ export function ReservationDetailModal({
                                         }}
                                         className="text-[11px] font-semibold text-gray-600 hover:text-black"
                                     >
-                                        Remove photo
+                                        사진 삭제
                                     </button>
                                 )}
                             </div>
@@ -224,7 +224,7 @@ export function ReservationDetailModal({
                                 disabled={showSuccessMessage}
                                 className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50 transition-opacity"
                             >
-                                Save
+                                저장
                             </button>
                         </div>
                         
@@ -303,7 +303,7 @@ export function ReservationDetailModal({
                             >
                                 <button
                                     type="button"
-                                    aria-label="Close preview"
+                                    aria-label="미리보기 닫기"
                                     className="absolute inset-0 bg-black/75"
                                     onClick={() => setPreviewOpen(false)}
                                 />
@@ -315,14 +315,14 @@ export function ReservationDetailModal({
                                 >
                                     <button
                                         type="button"
-                                        aria-label="Close preview"
+                                        aria-label="미리보기 닫기"
                                         onClick={() => setPreviewOpen(false)}
                                         className="absolute right-3 top-3 w-8 h-8 rounded-full border border-white/30 text-white bg-black/40 flex items-center justify-center"
                                     >
                                         <X size={14} />
                                     </button>
                                     <div className="w-full h-[80vh] max-h-[80vh] flex items-center justify-center">
-                                        <img src={previewPhotoUrl} alt="Original reservation" className="max-w-full max-h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="원본 예약 이미지" className="max-w-full max-h-full object-contain" />
                                     </div>
                                 </motion.div>
                             </motion.div>
