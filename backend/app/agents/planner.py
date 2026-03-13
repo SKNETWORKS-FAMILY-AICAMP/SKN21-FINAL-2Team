@@ -16,6 +16,8 @@ async def planner_node(state: TravelState):
     print("--- Planner Agent ---")
 
     user_input = get_effective_user_input(state)
+    user_lat = state.get("input_lat")
+    user_long = state.get("input_long")
     messages = state.get("messages", [])[-10:]
     slots = state.get("slots")
     prefs_info = state.get("prefs_info", "")
@@ -45,6 +47,7 @@ async def planner_node(state: TravelState):
         result = await chain.ainvoke({
             "messages": messages,
             "user_input": user_input,
+            "user_geo": f"위도: {user_lat}, 경도: {user_long}",
             "slots_info": slots_info or "없음",
             "prefs_info": prefs_info,
         })
@@ -71,5 +74,5 @@ async def planner_node(state: TravelState):
         print(f"[Planner] Error: {e}")
         return {
             "itinerary": [],
-            "missing_slots": [PlannerNeedType.DATES, PlannerNeedType.PARTY_SIZE],
+            "missing_slots": [],
         }

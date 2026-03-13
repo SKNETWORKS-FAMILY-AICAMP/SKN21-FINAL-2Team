@@ -139,7 +139,7 @@ async def _search_for_trip_planning(
     retriever = PlaceRetriever.get_instance()
 
     itinerary = state.get("itinerary", [])
-    image_path = state.get("image_path")
+    image_path = state.get("input_image")
 
     if not itinerary:
         return []
@@ -164,9 +164,9 @@ async def _search_for_trip_planning(
                     candidate_k=max(10, candidate_k // 3),
                     categories=[item_category] if item_category else None,
                     emotional_text=emotional_text,
-                    user_latitude=state.get("latitude"),
-                    user_longitude=state.get("longitude"),
-                    preferred_location=getattr_safe(state.get("slots"), "location"),
+                    user_latitude=state.get("input_lat"),
+                    user_longitude=state.get("input_long"),
+                    preferred_location=getattr_safe(state.get("slots"), "location").name if getattr_safe(state.get("slots"), "location") else None,
                     enable_bm25=True,
                     enable_rerank=True,
                     rerank_top_k=min(rerank_max_k, max(10, candidate_k // 3)),
@@ -191,9 +191,9 @@ async def _search_for_general(
     retriever = PlaceRetriever.get_instance()
 
     user_input = get_effective_user_input(state)
-    image_path = state.get("image_path")
-    latitude = state.get("latitude")
-    longitude = state.get("longitude")
+    image_path = state.get("input_image")
+    latitude = state.get("input_lat")
+    longitude = state.get("input_long")
     slots = state.get("slots")
 
     print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
@@ -210,11 +210,13 @@ async def _search_for_general(
             print(f"[Retriever] Geocoding error: {e}")
 
     categories = None
+    location_obj = None
     raw_location = None
     if slots:
         # 다중 카테고리(리스트) 우선, 없을 경우 단일 카테고리 사용
         categories = getattr_safe(slots, "categories")
-        raw_location = getattr_safe(slots, "location")
+        location_obj = getattr_safe(slots, "location")
+        raw_location = location_obj.name if location_obj else None
 
     # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
     anchor_lat = anchor_lon = anchor_radius_m = None
@@ -299,7 +301,7 @@ async def retriever_node(state: TravelState):
     primary_intent = state.get("primary_intent")
     print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
-    image_path = state.get("image_path")
+    image_path = state.get("input_image")
     emotional_text = None
     if image_path:
         print("[Retriever] Image detected. Fetching description once...")
@@ -376,7 +378,8 @@ async def retriever_node(state: TravelState):
 
     # location diagnostics 보강
     slots = state.get("slots")
-    norm_location = getattr_safe(slots, "location") if slots else None
+    location_obj = getattr_safe(slots, "location") if slots else None
+    norm_location = location_obj.name if location_obj else None
     canonical_matched = norm_location in LANDMARK_DICTIONARY if norm_location else False
     diagnostics["normalized_location"] = norm_location
     diagnostics["location_canonical_matched"] = canonical_matched

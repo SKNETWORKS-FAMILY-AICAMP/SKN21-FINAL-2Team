@@ -50,9 +50,15 @@ class PlannerNeedType(str, Enum): # 계획 필수 타입
     PARTY_SIZE = "여행 인원"
 
 
+class IntentLocation(BaseModel):
+    name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
+    lat: Optional[float] = Field(default=None, description="location 위도")
+    lon: Optional[float] = Field(default=None, description="location 경도")
+
+
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
-    location: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
+    location: Optional[IntentLocation] = Field(default=None, description="도시나 지역 여행지, 주소등 장소 정보")
     categories: Optional[List[CategoryType]] = Field(default=None, description="사용자 입력에서 추출된 여러 카테고리 리스트")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")

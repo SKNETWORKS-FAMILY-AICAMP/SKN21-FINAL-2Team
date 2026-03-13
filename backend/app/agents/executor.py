@@ -144,7 +144,7 @@ def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeo
                     web_lines.append(f"- {r.get('content', '')[:200]}")
                 else:
                     web_lines.append(f"- {str(r)[:200]}")
-            web_context = "".join(web_lines)
+            web_context = "\n".join(web_lines)
             print(f"[Executor] Tavily fallback results: {len(web_results)}")
     except concurrent.futures.TimeoutError:
         print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
@@ -206,7 +206,7 @@ async def executor_node(state: TravelState, config=None):
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
-    image_path = state.get("image_path") # 이미지 경로 가져오기
+    image_path = state.get("input_image") # 이미지 경로 가져오기
     follow_up_questions = state.get("follow_up_questions", [])
 
     if not candidate_pool:

@@ -30,7 +30,7 @@ export function DiaryLocationPickerModal({
   onClose,
   onConfirm,
 }: DiaryLocationPickerModalProps) {
-  const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const { language } = useTranslation();
   const { status, error: mapError, naver, retry } = useNaverMap(clientId, { language });
 
@@ -271,145 +271,144 @@ export function DiaryLocationPickerModal({
             onClick={(e) => e.stopPropagation()}
             className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-zinc-800 bg-black shadow-2xl"
           >
-        <div className="flex flex-none items-center justify-between border-b border-zinc-800 px-6 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">Location</p>
-            <h3 className="mt-1 text-lg font-semibold text-white">Pick a place on the map</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
-            aria-label="위치 선택 창 닫기"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="flex flex-col overflow-y-auto border-b border-zinc-800 md:border-b-0 md:border-r">
-            <div className="flex-1 p-5">
-            <form className="space-y-3" onSubmit={handleSearch}>
-              <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
-                장소 또는 주소 검색
-              </label>
-              {/* [Feature] 인라인 검색 버튼 - 입력창 오른쪽에 돋보기 아이콘 배치 */}
-              <div className="relative">
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="서울시청, 성수, 제주공항"
-                  className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 pl-4 pr-12 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
-                />
-                <button
-                  type="submit"
-                  disabled={searching}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                  aria-label="검색"
-                >
-                  {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={16} />}
-                </button>
+            <div className="flex flex-none items-center justify-between border-b border-zinc-800 px-6 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">Location</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">Pick a place on the map</h3>
               </div>
-            </form>
-
-            <p className="mt-4 text-xs leading-5 text-zinc-500">
-              먼저 검색하고, 결과를 선택한 후 일기 위치를 확정하세요.
-            </p>
-
-            {selectedPlace && (
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-950/80 p-3">
-                <div className="rounded-full border border-zinc-800 bg-white/5 p-2 text-zinc-200 shrink-0">
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">선택됨</p>
-                  <p className="mt-0.5 text-sm font-medium text-zinc-100 truncate">
-                    {selectedPlace.name?.trim() || "고정된 위치"}
-                  </p>
-                  <p className="text-xs leading-5 text-zinc-400 truncate">{selectedPlace.adress}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  disabled={resolving}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                  aria-label="이 위치 사용"
-                >
-                  {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
-                </button>
-              </div>
-            )}
-
-            {searchResults.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-                  검색 결과
-                </p>
-                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                  {searchResults.map((result, index) => {
-                    const isActive =
-                      selectedPlace?.adress === result.adress &&
-                      selectedPlace?.latitude === result.latitude &&
-                      selectedPlace?.longitude === result.longitude;
-
-                    return (
-                      <button
-                        key={`${result.adress}-${result.latitude}-${result.longitude}-${index}`}
-                        type="button"
-                        onClick={() => handlePreviewPlace(result)}
-                        className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                          isActive
-                            ? "border-white/30 bg-white/10"
-                            : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900"
-                        }`}
-                      >
-                        <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || "검색 결과"}</p>
-                        <p className="mt-1 text-xs leading-5 text-zinc-400">{result.adress}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {(error || mapError || mapInitError) && (
-              <p className="mt-4 text-sm text-rose-400">{error || mapError || mapInitError}</p>
-            )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
+                aria-label="위치 선택 창 닫기"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            {status === "error" && (
-              <div className="flex flex-none justify-end border-t border-zinc-800 p-4">
-                <button
-                  type="button"
-                  onClick={retry}
-                  className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900"
-                >
-                  지도 다시 로드
-                </button>
-              </div>
-            )}
-          </div>
+            <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="flex flex-col overflow-y-auto border-b border-zinc-800 md:border-b-0 md:border-r">
+                <div className="flex-1 p-5">
+                  <form className="space-y-3" onSubmit={handleSearch}>
+                    <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+                      장소 또는 주소 검색
+                    </label>
+                    {/* [Feature] 인라인 검색 버튼 - 입력창 오른쪽에 돋보기 아이콘 배치 */}
+                    <div className="relative">
+                      <input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="서울시청, 성수, 제주공항"
+                        className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 pl-4 pr-12 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+                      />
+                      <button
+                        type="submit"
+                        disabled={searching}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                        aria-label="검색"
+                      >
+                        {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={16} />}
+                      </button>
+                    </div>
+                  </form>
 
-          <div className="relative min-h-[380px] bg-zinc-950">
-            {status === "loading" && (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                지도 로딩 중...
+                  <p className="mt-4 text-xs leading-5 text-zinc-500">
+                    먼저 검색하고, 결과를 선택한 후 일기 위치를 확정하세요.
+                  </p>
+
+                  {selectedPlace && (
+                    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-950/80 p-3">
+                      <div className="rounded-full border border-zinc-800 bg-white/5 p-2 text-zinc-200 shrink-0">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">선택됨</p>
+                        <p className="mt-0.5 text-sm font-medium text-zinc-100 truncate">
+                          {selectedPlace.name?.trim() || "고정된 위치"}
+                        </p>
+                        <p className="text-xs leading-5 text-zinc-400 truncate">{selectedPlace.adress}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleConfirm}
+                        disabled={resolving}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
+                        aria-label="이 위치 사용"
+                      >
+                        {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
+                      </button>
+                    </div>
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+                        검색 결과
+                      </p>
+                      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                        {searchResults.map((result, index) => {
+                          const isActive =
+                            selectedPlace?.adress === result.adress &&
+                            selectedPlace?.latitude === result.latitude &&
+                            selectedPlace?.longitude === result.longitude;
+
+                          return (
+                            <button
+                              key={`${result.adress}-${result.latitude}-${result.longitude}-${index}`}
+                              type="button"
+                              onClick={() => handlePreviewPlace(result)}
+                              className={`w-full rounded-2xl border px-3 py-3 text-left transition ${isActive
+                                  ? "border-white/30 bg-white/10"
+                                  : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900"
+                                }`}
+                            >
+                              <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || "검색 결과"}</p>
+                              <p className="mt-1 text-xs leading-5 text-zinc-400">{result.adress}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {(error || mapError || mapInitError) && (
+                    <p className="mt-4 text-sm text-rose-400">{error || mapError || mapInitError}</p>
+                  )}
+                </div>
+
+                {status === "error" && (
+                  <div className="flex flex-none justify-end border-t border-zinc-800 p-4">
+                    <button
+                      type="button"
+                      onClick={retry}
+                      className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900"
+                    >
+                      지도 다시 로드
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-            {status === "ready" && <div ref={mapRef} className="absolute inset-0 h-full w-full" />}
-            {status === "ready" && mapInitError && (
-              <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-500">
-                {mapInitError}
+
+              <div className="relative min-h-[380px] bg-zinc-950">
+                {status === "loading" && (
+                  <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    지도 로딩 중...
+                  </div>
+                )}
+                {status === "ready" && <div ref={mapRef} className="absolute inset-0 h-full w-full" />}
+                {status === "ready" && mapInitError && (
+                  <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-500">
+                    {mapInitError}
+                  </div>
+                )}
+                {status === "error" && (
+                  <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-500">
+                    {mapError}
+                  </div>
+                )}
               </div>
-            )}
-            {status === "error" && (
-              <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-500">
-                {mapError}
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

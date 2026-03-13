@@ -9,9 +9,10 @@ class TravelState(TypedDict, total=False):
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
     room_id: int
-    latitude: float | None
-    longitude: float | None
-    image_path: str | None
+
+    input_lat: float | None
+    input_long: float | None
+    input_image: str | None
 
     # 대화 관리
     user_input: str

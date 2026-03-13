@@ -205,10 +205,10 @@ LANDMARK_DESC: str = _build_landmark_desc()
 
 class GeoCoder:
     def __init__(self) -> None:
-        self.client_id = os.getenv("NAVER_CLIENT_ID")
-        self.client_secret = os.getenv("NAVER_CLIENT_SECRET")
-        self.search_client_id = os.getenv("NAVER_SEARCH_CLIENT_ID")
-        self.search_client_secret = os.getenv("NAVER_SEARCH_CLIENT_SECRET")
+        self.client_id = os.getenv("NAVER_CLIENT_ID", "")
+        self.client_secret = os.getenv("NAVER_CLIENT_SECRET", "")
+        self.search_client_id = os.getenv("NAVER_SEARCH_CLIENT_ID", "")
+        self.search_client_secret = os.getenv("NAVER_SEARCH_CLIENT_SECRET", "")
         self.geocode_endpoint = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
         self.reverse_geocode_endpoint = "https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc"
         self.local_search_endpoint = "https://openapi.naver.com/v1/search/local.json"
