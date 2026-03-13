@@ -246,10 +246,11 @@ type FetchOpts = {
     body?: unknown;
     headers?: HeadersInit;
     cache?: RequestCache;
+    errorLogLevel?: "error" | "warn" | "silent";
 };
 
 const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
-    const { method = 'GET', body, headers, cache } = opts;
+    const { method = 'GET', body, headers, cache, errorLogLevel = "error" } = opts;
 
     const doFetch = async () => fetch(url, {
         method,
@@ -262,7 +263,7 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     let res = await doFetch();
     if (!res.ok) {
         const apiError = await parseApiError(res);
-        const action = handleApiError(apiError);
+        const action = handleApiError(apiError, { logLevel: errorLogLevel });
 
         if (action === 'retry') {
             // 토큰 refresh 후 재시도
@@ -771,7 +772,7 @@ export const fetchRandomExplorePlaces = async (
         url += `?${params.toString()}`;
     }
 
-    const response = await fetchWithAuth(url);
+    const response = await fetchWithAuth(url, { errorLogLevel: "warn" });
     return response.json();
 };
 

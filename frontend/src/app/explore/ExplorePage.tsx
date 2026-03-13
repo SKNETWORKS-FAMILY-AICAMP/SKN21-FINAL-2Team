@@ -176,7 +176,7 @@ export function ExplorePage() {
                     window.location.href = "/signup";
                     return;
                 }
-                console.error("Failed to fetch explore data:", error);
+                console.warn("Failed to fetch explore data:", error);
             } finally {
                 setIsLoading(false);
             }

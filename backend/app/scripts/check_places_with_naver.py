@@ -369,7 +369,7 @@ class LocalSearchCandidate:
             return None
 
     @property
-    def lon(self) -> float | None:
+    def long(self) -> float | None:
         if not self.mapx:
             return None
         if "." in self.mapx:
@@ -568,12 +568,12 @@ class NaverPlaceChecker:
             tel_similarity = 1.0 if tel_digits and tel_digits == only_digits(candidate.telephone) else 0.0
 
             candidate_lat = candidate.lat
-            candidate_lon = candidate.lon
-            if (candidate_lat is None or candidate_lon is None) and candidate.best_address:
+            candidate_long = candidate.long
+            if (candidate_lat is None or candidate_long is None) and candidate.best_address:
                 geocoded = self.geocode(candidate.best_address)
                 if geocoded:
                     candidate_lat = geocoded.get("lat")
-                    candidate_lon = geocoded.get("lon")
+                    candidate_long = geocoded.get("long")
 
             candidate_distance = distance_meters(input_lat, input_lon, candidate_lat, candidate_lon)
             distance_score = 0.0
@@ -705,8 +705,8 @@ def apply_match_result(
         updated["addr"] = best_address
     if candidate.telephone:
         updated["tel"] = candidate.telephone
-    if candidate.lon is not None:
-        updated["mapx"] = f"{candidate.lon:.7f}"
+    if candidate.long is not None:
+        updated["mapx"] = f"{candidate.long:.7f}"
     if candidate.lat is not None:
         updated["mapy"] = f"{candidate.lat:.7f}"
 

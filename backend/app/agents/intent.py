@@ -58,11 +58,9 @@ async def intent_node(state: TravelState):
     result = await chain.ainvoke({
             "messages": messages,
             "user_input": user_input,
-            "prefs_info": prefs_info,
             "category_desc": CategoryType.description(),
             "summary_title": summary_title,
             "summary_message": summary_message,
-            "landmark_desc": LANDMARK_DESC,
         })
 
     print("Intent Result : ", result)
@@ -71,10 +69,22 @@ async def intent_node(state: TravelState):
 
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
     slots = result.slots
-    if slots and slots.location and slots.location.lat and slots.location.lon:
-        geocode_data = GeoCoder().reverse_geocoder(slots.location.lat, slots.location.lon)
-        if geocode_data:
-            update_user_input = geocode_data.get("road_address", "") + " " + update_user_input
+    if slots and slots.location and slots.location.name:
+        norm = normalize_location(slots.location.name)
+        if norm.normalized_location != slots.location.name:
+            # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
+            slots.location.name = norm.normalized_location
+            slots.location.lat = norm.lat
+            slots.location.lon = norm.lon
+            print(
+                f"[Intent] location normalized: {slots.location.name!r} → {norm.normalized_location!r} "
+                f"(canonical={norm.canonical_matched})"
+            )
+        
+        if slots.location.lat and slots.location.long:
+            geocode_data = GeoCoder().reverse_geocoder(slots.location.lat, slots.location.long)
+            if geocode_data:
+                update_user_input = geocode_data.get("road_address", "") + " 근처, " + update_user_input
 
     # State에 결과 저장
     return {

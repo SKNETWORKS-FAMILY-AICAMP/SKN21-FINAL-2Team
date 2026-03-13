@@ -219,19 +219,19 @@ async def _search_for_general(
         raw_location = location_obj.name if location_obj else None
 
     # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
-    anchor_lat = anchor_lon = anchor_radius_m = None
+    anchor_lat = anchor_long = anchor_radius_m = None
     if raw_location and raw_location in LANDMARK_DICTIONARY:
         entry = LANDMARK_DICTIONARY[raw_location]
         anchor_lat = entry["lat"]
-        anchor_lon = entry["lon"]
+        anchor_long = entry["long"]
         anchor_radius_m = entry["radius_m"]
-        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
+        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_long} r={anchor_radius_m}m")
     elif raw_location:
         # 만약 intent_node 후처리를 거치지 않은 경우에도 대비한 안전망
         norm = normalize_location(raw_location)
         if norm.canonical_matched and norm.lat is not None:
             anchor_lat = norm.lat
-            anchor_lon = norm.lon
+            anchor_long = norm.long
             anchor_radius_m = norm.radius_m
             print(f"[Retriever] landmark anchor (fallback normalize): {raw_location!r} → {norm.normalized_location!r}")
 
@@ -251,7 +251,7 @@ async def _search_for_general(
             rerank_top_k=min(rerank_max_k, candidate_k),
             search_scope=search_scope,
             location_anchor_lat=anchor_lat,
-            location_anchor_lon=anchor_lon,
+            location_anchor_long=anchor_long,
             location_radius_m=anchor_radius_m,
         )
     except Exception as e:
