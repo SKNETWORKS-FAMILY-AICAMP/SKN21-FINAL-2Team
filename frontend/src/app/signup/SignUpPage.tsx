@@ -152,12 +152,12 @@ export function SignUpPage() {
             </h2>
             <div className="h-[1px] w-12 bg-white/30 my-6"></div>
             <p className="text-white/50 text-sm font-normal leading-relaxed">
-              Start your journey with Triver today. Curated experiences awaiting.
+              Start your journey with <span className="font-brand pr-[1px]">Triver</span> today.<br></br>Curated experiences awaiting.
             </p>
           </motion.div>
 
           <div className="text-[10px] text-white/30 font-medium tracking-widest uppercase">
-            © 2026 Triver Inc.
+            © 2026 <span className="font-brand pr-[1px] tracking-normal lowercase capitalize">Triver</span> Inc.
           </div>
         </div>
       </div>
@@ -204,7 +204,8 @@ export function SignUpPage() {
 
           <div className="mt-8 pt-8 border-t border-gray-100">
             <p className="text-[10px] text-gray-400 leading-relaxed">
-              {t("signup.termsPrefix")}{" "}
+                {t("signup.termsPrefix")}
+                <br />
               <a href="#" className="underline hover:text-black decoration-gray-300">{t("signup.termsOfService")}</a>{" "}
               {t("signup.and")}{" "}
               <a href="#" className="underline hover:text-black decoration-gray-300">{t("signup.privacyPolicy")}</a>.

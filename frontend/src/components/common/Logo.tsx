@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Plus_Jakarta_Sans } from "next/font/google";
 
 // 로고 컴포넌트 (타입 지정, 색상 모드 종류 지정)
 interface LogoProps {
@@ -17,13 +16,6 @@ interface BrandMarkProps {
     tone?: "dark" | "light";
     size?: number;
 }
-
-// 워드마크는 아이콘의 곡선형 실루엣과 충돌하지 않도록
-// 대비가 강한 세리프 대신 단단한 산세리프로 맞춘다.
-const wordmarkFont = Plus_Jakarta_Sans({
-    subsets: ["latin"],
-    weight: ["800"],
-});
 
 // icon 전용 함수
 // 톤에 따라 파일 선택
@@ -58,13 +50,11 @@ export function Logo({
                 <div className="inline-flex items-center gap-2">  {/* 아이콘과 워드마크 표시 */}
                     <BrandMark tone={tone} size={size} />
                     <span
-                        className={cn(wordmarkFont.className, tone === "light" ? "text-white" : "text-black")}
+                        className={cn("font-brand", tone === "light" ? "text-white" : "text-black")}
                         style={{
                             fontSize: Math.round(size * 0.84),
-                            fontWeight: 800,
-                            lineHeight: 1,
-                            letterSpacing: "-0.03em",
                             transform: "translateY(-1px)",
+                            paddingLeft: "4px"
                         }}
                     >
                         Triver

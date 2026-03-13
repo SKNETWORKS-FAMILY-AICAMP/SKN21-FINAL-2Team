@@ -10,6 +10,7 @@ import { TripContextModal, type TripContext } from "@/features/chat/components/T
 import { clearAuth } from "@/services/errorHandler";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 import { useTranslation } from "@/i18n/useTranslation";
+import { SIDEBAR_MENUS } from "@/config/navigation";
 
 interface SidebarUserProfile {
     name: string;
@@ -202,11 +203,18 @@ function SidebarContent() {
         };
     }, [isDesktop, isMobileOpen]);
 
-    const menuItems = [
-        { icon: Home, label: t("sidebar.home"), path: "/explore" },
-        { icon: Grid, label: t("sidebar.moments"), path: "/moments" },
-        { icon: Bookmark, label: t("sidebar.bookmark"), path: "/bookmark" },
-    ];
+    // 아이콘 매핑용
+    const getMenuIcon = (id: string) => {
+        if (id === "home") return Home;
+        if (id === "moments") return Grid;
+        return Bookmark;
+    };
+
+    const menuItems = SIDEBAR_MENUS.map(menu => ({
+        ...menu,
+        icon: getMenuIcon(menu.id),
+        label: menu.isTranslated ? t(menu.labelKey) : menu.labelKey
+    }));
 
     // + 새 채팅 버튼 클릭 → 모달에서 컨텍스트 수집 후 방 생성
     const handleModalConfirm = async (context: TripContext) => {

@@ -14,29 +14,34 @@ html {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* font-sans는 inline 밖에서 선언해야 :lang(ko) 오버라이드 가능 */
+@theme {
+  --font-sans: var(--font-noto-sans);
 }
 
 html {
   background: var(--background);
 }
 
-/* 기본: Noto Sans (en, ja, zh) */
+/* 글로벌 폰트 스택: 영문(라틴) 및 한국어는 Pretendard, 그 외 언어(일어, 중어 등)는 시스템 폴백 폰트 적용 */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-noto-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-/* 한국어: Noto Sans KR */
-:lang(ko) body,
-html:lang(ko) body {
-  font-family: var(--font-noto-sans-kr), var(--font-noto-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, var(--font-noto-sans-kr), var(--font-noto-sans), system-ui, sans-serif;
 }
 
 .font-serif-korean {
   font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.font-brand {
+  font-family: Georgia, var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Cambria, "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 600; /* font-semibold */
+  letter-spacing: -0.025em; /* tracking-tight */
 }
 
 /* Utility tweaks to align with imported UI kit vibes */

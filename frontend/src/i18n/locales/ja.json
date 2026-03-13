@@ -38,13 +38,13 @@
   "common.deleting": "削除中...",
   "common.cancel": "キャンセル",
 
-  "sidebar.home": "ホーム",
+  "sidebar.home": "Home",
   "sidebar.moments": "Moments",
-  "sidebar.bookmark": "ブックマーク",
-  "sidebar.newChat": "+ 新規チャット",
-  "sidebar.recentChats": "最近のチャット",
-  "sidebar.profile": "プロフィール",
-  "sidebar.signOut": "ログアウト",
+  "sidebar.bookmark": "Bookmark",
+  "sidebar.newChat": "+ New Chat",
+  "sidebar.recentChats": "Recent Chats",
+  "sidebar.profile": "Profile",
+  "sidebar.signOut": "Sign Out",
   "sidebar.deleteRoom": "チャットルーム削除",
   "sidebar.deleteRoomTitle": "チャットルーム削除",
   "sidebar.deleteRoomMessage": "「{title}」を削除しますか？会話内容とおすすめスポットの記録も一緒に削除されます。",
@@ -184,10 +184,10 @@
   "survey.historicalSites": "歴史的名所",
   "survey.kCulture": "K-culture",
 
-  "header.features": "機能",
-  "header.destinations": "旅行先",
-  "header.reviews": "レビュー",
-  "header.getStarted": "始めましょう",
+  "header.features": "Features",
+  "header.destinations": "Destinations",
+  "header.reviews": "Reviews",
+  "header.getStarted": "Get Started",
   "header.goToProfile": "マイプロフィールへ",
   "header.profileAlt": "プロフィール",
 
@@ -200,7 +200,7 @@
   "hero.start": "スタート",
   "hero.scroll": "スクロール",
 
-  "features.heading": "なぜTriver？",
+  "features.heading": "WITH TRIVER",
   "features.subheading": "AIが旅行プランニングのすべてのステップを、シームレスでパーソナルな体験に変えます。",
   "features.hyperPersonalized.title": "超パーソナライズ推薦",
   "features.hyperPersonalized.shortTitle": "パーソナライズ",
@@ -212,7 +212,7 @@
   "features.integratedBooking.shortTitle": "簡単予約",
   "features.integratedBooking.description": "航空券、ホテル、体験を一か所で予約。リアルタイムの料金と空室情報をすぐに確認できます。",
 
-  "destinations.heading": "ソウル探索",
+  "destinations.heading": "EXPLORE SEOUL",
   "destinations.subheading": "AIが厳選したソウルのベストスポットを発見しましょう",
   "destinations.hotPlaces": "ホットスポット",
   "destinations.touristSpot": "観光スポット",
@@ -228,7 +228,7 @@
 
   "footer.copyright": "© {year} Triver. All rights reserved.",
 
-  "reviews.heading": "旅行者の声",
+  "reviews.heading": "Traveler Stories",
   "reviews.subheading": "Triverでの旅行体験についてコミュニティの声をご覧ください。",
   "reviews.previousReview": "前のレビュー",
   "reviews.nextReview": "次のレビュー",

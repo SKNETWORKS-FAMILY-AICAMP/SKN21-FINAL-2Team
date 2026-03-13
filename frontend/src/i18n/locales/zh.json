@@ -38,13 +38,13 @@
   "common.deleting": "删除中...",
   "common.cancel": "取消",
 
-  "sidebar.home": "首页",
+  "sidebar.home": "Home",
   "sidebar.moments": "Moments",
-  "sidebar.bookmark": "收藏",
-  "sidebar.newChat": "+ 新聊天",
-  "sidebar.recentChats": "最近聊天",
-  "sidebar.profile": "个人资料",
-  "sidebar.signOut": "退出登录",
+  "sidebar.bookmark": "Bookmark",
+  "sidebar.newChat": "+ New Chat",
+  "sidebar.recentChats": "Recent Chats",
+  "sidebar.profile": "Profile",
+  "sidebar.signOut": "Sign Out",
   "sidebar.deleteRoom": "删除聊天室",
   "sidebar.deleteRoomTitle": "删除聊天室",
   "sidebar.deleteRoomMessage": "删除「{title}」？对话内容和推荐地点记录也将一并删除。",
@@ -200,7 +200,7 @@
   "hero.start": "开始",
   "hero.scroll": "滚动",
 
-  "features.heading": "为什么选择Triver？",
+  "features.heading": "WITH TRIVER",
   "features.subheading": "了解AI如何将旅行规划的每一步转变为无缝、个性化的体验。",
   "features.hyperPersonalized.title": "超个性化推荐",
   "features.hyperPersonalized.shortTitle": "个性推荐",
@@ -212,7 +212,7 @@
   "features.integratedBooking.shortTitle": "便捷预订",
   "features.integratedBooking.description": "在一个平台预订机票、酒店和体验。实时价格和可用性尽在掌中。",
 
-  "destinations.heading": "探索首尔",
+  "destinations.heading": "EXPLORE SEOUL",
   "destinations.subheading": "发现AI精选的首尔最佳去处",
   "destinations.hotPlaces": "热门地点",
   "destinations.touristSpot": "旅游景点",
@@ -228,7 +228,7 @@
 
   "footer.copyright": "© {year} Triver. 保留所有权利。",
 
-  "reviews.heading": "旅行者故事",
+  "reviews.heading": "Traveler Stories",
   "reviews.subheading": "看看我们的社区对Triver旅行体验的评价。",
   "reviews.previousReview": "上一条评价",
   "reviews.nextReview": "下一条评价",

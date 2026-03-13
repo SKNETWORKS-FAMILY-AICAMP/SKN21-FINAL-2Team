@@ -41,6 +41,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+        />
+      </head>
       <body
         className={`${notoSans.variable} ${notoSansKr.variable} ${geistMono.variable} ${notoSerifKr.variable} antialiased bg-slate-50 text-slate-900`}
       >
