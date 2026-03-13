@@ -174,10 +174,12 @@ FRONTEND_ENV_FILE=.env.frontend.staging
 
 ```env
 # 쉼표로 구분하여 복수 도메인 허용
-CORS_ORIGINS=http://localhost:3000,https://your-domain.com
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,https://triver-s.com,https://www.triver-s.com
+# 필요 시 서브도메인 패턴 허용
+CORS_ORIGIN_REGEX=https://.*\.triver-s\.com
 ```
 
-미설정 시 `http://localhost:3000` 만 허용된다.
+미설정 시에도 로컬 개발 주소와 운영 기본 도메인(`triver-s.com`, `www.triver-s.com`)은 허용되도록 구성한다.
 
 ## 7. 이미지 태깅 규칙
 

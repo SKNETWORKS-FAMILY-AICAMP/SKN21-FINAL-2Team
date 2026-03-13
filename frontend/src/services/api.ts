@@ -159,14 +159,13 @@ export const resolveStreamApiBaseUrl = (
     const streamApiUrl = process.env.NEXT_PUBLIC_STREAM_API_URL;
     if (streamApiUrl) return streamApiUrl;
     if (typeof window === "undefined") return API_URL;
-    if (API_URL !== "/api") return API_URL;
 
-    const { hostname, protocol } = runtimeLocation ?? window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return `${protocol}//${hostname}:8000/api`;
+    // 브라우저에서는 환경과 무관하게 Next.js /api rewrite를 우선 사용해 CORS preflight를 피한다.
+    if (API_URL.startsWith("http://") || API_URL.startsWith("https://")) {
+        return "/api";
     }
-
-    return API_URL;
+    if (API_URL !== "/api") return API_URL;
+    return runtimeLocation ? "/api" : API_URL;
 };
 
 const refreshAccessToken = async () => {
