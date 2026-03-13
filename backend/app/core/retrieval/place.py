@@ -86,7 +86,7 @@ class PlaceRetriever(PlaceScorer):
                 FieldCondition(
                     key="geo",
                     geo_radius={
-                        "center": {"lat": float(anchor_lat), "lon": float(anchor_lon)},
+                        "center": {"lat": float(anchor_lat), "long": float(anchor_lon)},
                         "radius": float(radius_m),
                     },
                 )
@@ -524,7 +524,7 @@ class PlaceRetriever(PlaceScorer):
                         FieldCondition(
                             key="geo",
                             geo_radius={
-                                "center": {"lat": float(lat), "lon": float(lng)},
+                                "center": {"lat": float(lat), "long": float(lng)},
                                 "radius": radius_m,
                             },
                         )

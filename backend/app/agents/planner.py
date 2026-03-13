@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.agents.models.state import TravelState, get_effective_user_input
+from app.agents.models.state import TravelState, get_effective_user_input, get_slots_info
 from app.agents.prompts.prompts import PLANNER_PROMPT
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import PlannerOutput, PlannerNeedType
@@ -19,17 +19,11 @@ async def planner_node(state: TravelState):
     user_lat = state.get("input_lat")
     user_long = state.get("input_long")
     messages = state.get("messages", [])[-10:]
-    slots = state.get("slots")
+    slots_info = get_slots_info(state)
     prefs_info = state.get("prefs_info", "")
 
     if not user_input:
         return state
-
-    # 슬롯 정보를 텍스트로 변환
-    slots_info = ""
-    if slots:
-        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
-        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
 
     try:
         # LLM으로 여행 일정 초안 생성

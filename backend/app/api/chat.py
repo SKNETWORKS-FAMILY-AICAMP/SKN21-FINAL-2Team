@@ -541,7 +541,7 @@ def _build_streaming_response(
         streamed_visible_text = ""
         buffering_reason = None
         in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
-        selected_ids = []
+        place_info_list = []
         candidates = []
 
         try:
@@ -567,9 +567,9 @@ def _build_streaming_response(
                         in_executor = False
                         # executor 노드 종료 시 결과 캡처
                         output = event.get("data", {}).get("output", {})
-                        if "selected_ids" in output:
-                            selected_ids = output["selected_ids"]
-                            print(f"[SSE] Captured selected_ids: {selected_ids}")
+                        if "place_info_list" in output:
+                            place_info_list = output["place_info_list"]
+                            print(f"[SSE] Captured place_info_list: {len(place_info_list)} items")
                         if "answer" in output:
                             full_answer = output["answer"]
                     
@@ -636,60 +636,21 @@ def _build_streaming_response(
 
         # ChatPlace 저장 및 반환용 리스트 구성
         final_places = []
-        if candidates:
-            def _normalize_text(value: str) -> str:
-                return re.sub(r"\s+", "", (value or "")).lower()
-            def _infer_candidates_from_answer(answer_text: str):
-                if not answer_text:
-                    return []
-                inferred = []
-                link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
-                for raw_name in link_names:
-                    name_key = _normalize_text(raw_name)
-                    candidate = next(
-                        (
-                            c for c in candidates
-                            if _normalize_text((c.get("payload", {}) or {}).get("title") or (c.get("payload", {}) or {}).get("name") or "")
-                            and (
-                                name_key in _normalize_text((c.get("payload", {}) or {}).get("title") or (c.get("payload", {}) or {}).get("name") or "")
-                                or _normalize_text((c.get("payload", {}) or {}).get("title") or (c.get("payload", {}) or {}).get("name") or "") in name_key
-                            )
-                        ),
-                        None,
-                    )
-                    if candidate and candidate not in inferred:
-                        inferred.append(candidate)
-                return inferred
-
-            # 우선순위: LLM이 선택한 ID 순서 -> 답변 링크/이름 매칭
-            ordered_candidates = []
-            if selected_ids:
-                for cid in selected_ids:
-                    candidate = next((c for c in candidates if get_place_id(c) == str(cid).strip()), None)
-                    if candidate and candidate not in ordered_candidates:
-                        ordered_candidates.append(candidate)
-
-            if not ordered_candidates:
-                cleaned_for_match = re.sub(r"\[\s*ids?\s*:\s*.*?\]", "", full_answer, flags=re.IGNORECASE).strip()
-                ordered_candidates = _infer_candidates_from_answer(cleaned_for_match)
-
-            for candidate in ordered_candidates[:3]:
-                payload = candidate.get("payload", {})
-                candidate_pid = get_place_id(candidate)
+        if place_info_list:
+            for info in place_info_list:
+                try:
+                    place_id_int = int(info.place_id) if (info.place_id or "").isdigit() else 0
+                except (AttributeError, ValueError):
+                    place_id_int = 0
                 new_place = ChatPlace(
                     messages_id=ai_message.id,
-                    place_id=int(candidate_pid) if candidate_pid.isdigit() else 0,
-                    name=payload.get("title") or payload.get("name"),
-                    adress=payload.get("address") or payload.get("addr") or payload.get("road_address"),
-                    image_path=(
-                        payload.get("image")
-                        or payload.get("image_url")
-                        or payload.get("firstimage")
-                        or payload.get("firstimage2")
-                    ),
-                    longitude=_normalize_float_or_zero(payload.get("mapx")),
-                    latitude=_normalize_float_or_zero(payload.get("mapy")),
-                    bookmark_yn=False
+                    place_id=place_id_int,
+                    name=info.name or None,
+                    adress=info.address or None,      # ORM 컬럼명 오타(adress) 유지
+                    image_path=info.image_path or None,
+                    longitude=info.longitude,
+                    latitude=info.latitude,
+                    bookmark_yn=False,
                 )
                 db.add(new_place)
                 final_places.append(new_place)

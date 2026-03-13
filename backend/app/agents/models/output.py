@@ -45,10 +45,6 @@ class CategoryType(str, Enum):
         lines = [f"- {item.value}: {hints.get(item.value, item.name)}" for item in cls]
         return "\n".join(lines)
 
-class PlannerNeedType(str, Enum): # 계획 필수 타입 
-    DATES = "여행 날짜"
-    PARTY_SIZE = "여행 인원"
-
 
 class IntentLocation(BaseModel):
     name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
@@ -80,6 +76,11 @@ class IntentOutput(BaseModel):
 
 
 # # Planner Output
+class PlannerNeedType(str, Enum): # 계획 필수 타입 
+    DATES = "여행 날짜"
+    PARTY_SIZE = "여행 인원"
+
+
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
@@ -98,3 +99,13 @@ class PlannerOutput(BaseModel):
             "항상 생성되는 후속 질문 1문장. duration 누락 시 여행 기간을 재질문하고 문장에 반드시 '여행일정'을 포함"
         )
     )
+
+
+class PlaceInfo(BaseModel):
+    """Executor 노드가 구성한 장소 정보 (DB 저장 전 중간 표현)"""
+    place_id: str = ""       # contentid (Qdrant) 또는 "" (Tavily)
+    name: str = ""
+    address: str = ""        # ORM 컬럼명은 adress(오타) — chat.py에서만 매핑
+    image_path: str = ""
+    longitude: float = 0.0
+    latitude: float = 0.0

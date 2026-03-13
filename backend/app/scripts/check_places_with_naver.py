@@ -475,7 +475,7 @@ class NaverPlaceChecker:
             target = addresses[0]
             result = {
                 "lat": to_float(target.get("y")),
-                "lon": to_float(target.get("x")),
+                "long": to_float(target.get("x")),
                 "road_address": normalize_space(target.get("roadAddress") or ""),
                 "jibun_address": normalize_space(target.get("jibunAddress") or ""),
             }

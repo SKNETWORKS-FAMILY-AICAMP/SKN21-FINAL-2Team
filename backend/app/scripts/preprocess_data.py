@@ -148,7 +148,7 @@ def enrich_payload_geo_and_addr_tokens(payload: dict) -> dict:
         and -180.0 <= lng <= 180.0
         and not (abs(lat) < 1e-9 and abs(lng) < 1e-9)
     ):
-        payload["geo"] = {"lat": lat, "lon": lng}
+        payload["geo"] = {"lat": lat, "long": lng}
 
     payload["addr_tokens"] = build_addr_tokens(payload)
     return payload

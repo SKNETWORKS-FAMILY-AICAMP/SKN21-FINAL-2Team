@@ -75,7 +75,7 @@ async def intent_node(state: TravelState):
             # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
             slots.location.name = norm.normalized_location
             slots.location.lat = norm.lat
-            slots.location.lon = norm.lon
+            slots.location.long = norm.long
             print(
                 f"[Intent] location normalized: {slots.location.name!r} → {norm.normalized_location!r} "
                 f"(canonical={norm.canonical_matched})"
@@ -97,5 +97,5 @@ async def intent_node(state: TravelState):
         "prefs_info": prefs_info,
         "candidates": [],
         "candidate_pool": [],
-        "selected_ids": [],
+        "place_info_list": [],
     }

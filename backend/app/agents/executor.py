@@ -3,13 +3,14 @@ import os
 import base64
 import mimetypes
 import concurrent.futures
+import math
 import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from app.agents.models.state import TravelState, get_effective_user_input
-from app.agents.models.output import IntentType
+from app.agents.models.output import IntentType, PlaceInfo
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.core.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
@@ -56,6 +57,98 @@ def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str,
                     inferred_ids.append(cid)
 
     return inferred_ids
+
+def _build_place_info_from_selected(
+    selected_ids: List[str],
+    candidates: List[Dict[str, Any]],
+    candidate_pool: List[Dict[str, Any]],
+) -> List[PlaceInfo]:
+    """selected_ids와 일치하는 candidates에서 PlaceInfo 구성.
+    selected_ids가 비면 모든 candidates를 사용 (fallback).
+    """
+    all_pool = {
+        get_place_id(c): c
+        for c in (candidates or []) + (candidate_pool or [])
+        if get_place_id(c)
+    }
+    ordered = []
+    if selected_ids:
+        for sid in selected_ids:
+            c = all_pool.get(str(sid).strip())
+            if c and c not in ordered:
+                ordered.append(c)
+    if not ordered:
+        ordered = candidates or []
+
+    result = []
+    for c in ordered:
+        payload = c.get("payload", {}) or {}
+        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        address = (
+            payload.get("addr1") or payload.get("address")
+            or payload.get("addr") or payload.get("road_address") or ""
+        ).strip()
+        try:
+            lng = float(payload.get("mapx") or 0)
+            lat = float(payload.get("mapy") or 0)
+        except (TypeError, ValueError):
+            lng = lat = 0.0
+        valid_coords = math.isfinite(lng) and math.isfinite(lat) and not (lng == 0.0 and lat == 0.0)
+        if not name or (not address and not valid_coords):
+            continue
+        result.append(PlaceInfo(
+            place_id=get_place_id(c) or "",
+            name=name,
+            address=address,
+            image_path=(
+                payload.get("firstimage") or payload.get("image")
+                or payload.get("image_url") or payload.get("firstimage2") or ""
+            ),
+            longitude=lng,
+            latitude=lat,
+        ))
+    return result
+
+
+def _build_tavily_place_info(answer_text: str, timeout_sec: float = 2.0) -> List[PlaceInfo]:
+    """Tavily 기반 답변에서 장소명 파싱 → GeoCoder.search_places()로 좌표/주소 획득."""
+    from app.utils.geocoder import GeoCoder
+
+    # 마크다운 링크에서 장소명 추출: [장소명](https://...)
+    names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
+    # 링크 없으면 볼드 텍스트 시도: **장소명**
+    if not names:
+        names = re.findall(r"\*\*([^*]+)\*\*", answer_text)
+    # 순서 유지 중복 제거
+    names = list(dict.fromkeys(n.strip() for n in names if n.strip()))
+
+    result = []
+    geocoder = GeoCoder()
+    for name in names:
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(geocoder.search_places, name, 1)
+                places = future.result(timeout=timeout_sec)
+            if not places:
+                continue
+            p = places[0]
+            lat = float(p.get("lat") or p.get("latitude") or 0)
+            lng = float(p.get("lng") or p.get("longitude") or 0)
+            address = (p.get("road_address") or p.get("jibun_address") or p.get("address") or "").strip()
+            if not name or (not address and not (lat and lng)):
+                continue
+            result.append(PlaceInfo(
+                place_id="",
+                name=name,
+                address=address,
+                image_path="",
+                longitude=lng,
+                latitude=lat,
+            ))
+        except Exception as e:
+            print(f"[Executor] Tavily geocode failed for '{name}': {e}")
+    return result
+
 
 def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
     """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
@@ -318,10 +411,24 @@ async def executor_node(state: TravelState, config=None):
     if invalid_ids:
         print(f"[Executor] Invalid selected IDs filtered: {invalid_ids}")
 
-    print(f"[Executor] Selected IDs: {selected_ids}")
+    print(f"[Executor] Selected IDs (local): {selected_ids}")
     print(f"[Executor] Answer length: {len(cleaned_answer)}")
 
-    return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
+    # PlaceInfo 목록 구성 (Qdrant path: selected_ids 기반, Tavily path: 답변 파싱 + 지오코딩)
+    if candidates:
+        place_info_list = _build_place_info_from_selected(
+            selected_ids, candidates, candidate_pool or []
+        )
+    else:
+        place_info_list = _build_tavily_place_info(cleaned_answer)
+
+    print(f"[Executor] place_info_list: {len(place_info_list)} items")
+
+    return {
+        "messages": AIMessage(content=cleaned_answer),
+        "answer": cleaned_answer,
+        "place_info_list": place_info_list,
+    }
 
 
 async def executor_missing_node(state: TravelState, config=None):

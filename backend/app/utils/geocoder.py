@@ -10,73 +10,73 @@ LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
     "홍대": {
         "canonical_name": "홍대",
         "aliases": ["홍대입구", "홍대거리", "홍익대", "홍익대학교", "홍대앞"],
-        "lat": 37.5575, "lon": 126.9245, "radius_m": 1500,
+        "lat": 37.5575, "long": 126.9245, "radius_m": 1500,
         "description": "홍대입구역 중심 서교동/연남동 일대",
     },
     "건대": {
         "canonical_name": "건대",
         "aliases": ["건국대", "건국대학교", "건대입구", "화양동"],
-        "lat": 37.5404, "lon": 127.0692, "radius_m": 1000,
+        "lat": 37.5404, "long": 127.0692, "radius_m": 1000,
         "description": "건대입구역 중심 화양동 일대",
     },
     "가로수길": {
         "canonical_name": "가로수길",
         "aliases": ["신사동가로수길", "신사동 가로수길", "신사가로수길"],
-        "lat": 37.5203, "lon": 127.0231, "radius_m": 800,
+        "lat": 37.5203, "long": 127.0231, "radius_m": 800,
         "description": "신사동 가로수길 메인 로드 주변",
     },
     "샤로수길": {
         "canonical_name": "샤로수길",
         "aliases": ["서울대입구", "서울대입구역", "관악로"],
-        "lat": 37.4791, "lon": 126.9535, "radius_m": 600,
+        "lat": 37.4791, "long": 126.9535, "radius_m": 600,
         "description": "서울대입구역 인근 관악로 일대",
     },
     "송리단길": {
         "canonical_name": "송리단길",
         "aliases": ["석촌호수 맛집", "송파동 카페거리", "방이동 먹자골목"],
-        "lat": 37.5098, "lon": 127.1068, "radius_m": 800,
+        "lat": 37.5098, "long": 127.1068, "radius_m": 800,
         "description": "석촌호수 동호 남측, 송파동 일대의 카페 및 맛집 밀집 지역"
     },
     "서촌": {
         "canonical_name": "서촌",
         "aliases": ["세종마을", "통의동", "옥인동", "체부동", "경복궁 서측"],
-        "lat": 37.5800, "lon": 126.9690, "radius_m": 900,
+        "lat": 37.5800, "long": 126.9690, "radius_m": 900,
         "description": "경복궁 서쪽 효자동, 통의동 일대 한옥과 갤러리가 많은 동네"
     },
     "북촌": {
         "canonical_name": "북촌",
         "aliases": ["북촌한옥마을", "가회동", "삼청동", "계동"],
-        "lat": 37.5828, "lon": 126.9835, "radius_m": 1000,
+        "lat": 37.5828, "long": 126.9835, "radius_m": 1000,
         "description": "경복궁과 창덕궁 사이 한옥 보존 지구 및 관광 명소"
     },
     "성수동 카페거리": {
         "canonical_name": "성수동",
         "aliases": ["연무장길", "성수핫플", "서울숲 카페거리"],
-        "lat": 37.5445, "lon": 127.0560, "radius_m": 1500,
+        "lat": 37.5445, "long": 127.0560, "radius_m": 1500,
         "description": "폐공장을 개조한 카페와 브랜드 팝업스토어가 밀집한 성수역~서울숲 일대"
     },
     "망리단길": {
         "canonical_name": "망리단길",
         "aliases": ["망원시장", "망원동 카페거리", "희우정로"],
-        "lat": 37.5560, "lon": 126.9015, "radius_m": 800,
+        "lat": 37.5560, "long": 126.9015, "radius_m": 800,
         "description": "망원시장 인근 포은로를 중심으로 형성된 개성 있는 상권"
     },
     "힙지로": {
         "canonical_name": "을지로",
         "aliases": ["을지로 노가리골목", "을지로3가", "을지로4가"],
-        "lat": 37.5661, "lon": 126.9916, "radius_m": 1000,
+        "lat": 37.5661, "long": 126.9916, "radius_m": 1000,
         "description": "오래된 인쇄소와 철공소 사이 감각적인 바와 카페가 들어선 을지로 일대"
     },
     "경리단길": {
         "canonical_name": "경리단길",
         "aliases": ["이태원 경리단", "회나무로"],
-        "lat": 37.5385, "lon": 126.9870, "radius_m": 700,
+        "lat": 37.5385, "long": 126.9870, "radius_m": 700,
         "description": "이태원동 국군재정관리단부터 남산 하얏트 호텔까지의 언덕 상권"
     },
     "해방촌": {
         "canonical_name": "해방촌",
         "aliases": ["HBC", "용산동2가", "신흥시장"],
-        "lat": 37.5420, "lon": 126.9840, "radius_m": 700,
+        "lat": 37.5420, "long": 126.9840, "radius_m": 700,
         "description": "남산 아래 첫 동네로 이국적인 루프탑과 카페가 많은 용산동 일대"
     },
 }
@@ -92,7 +92,7 @@ class NormalizedLocationResult:
     normalized_location: Optional[str]  # 표준명 or 원문 or None
     canonical_matched: bool             # LANDMARK_DICTIONARY 매칭 여부
     lat: Optional[float] = None
-    lon: Optional[float] = None
+    long: Optional[float] = None
     radius_m: Optional[float] = None
 
 
@@ -124,7 +124,7 @@ def _lookup_landmark(text: str) -> Optional[NormalizedLocationResult]:
             normalized_location=text,
             canonical_matched=True,
             lat=entry["lat"],
-            lon=entry["lon"],
+            long=entry["long"],
             radius_m=entry["radius_m"],
         )
     # Step 4: alias exact match
@@ -135,7 +135,7 @@ def _lookup_landmark(text: str) -> Optional[NormalizedLocationResult]:
                 normalized_location=canonical,
                 canonical_matched=True,
                 lat=entry["lat"],
-                lon=entry["lon"],
+                long=entry["long"],
                 radius_m=entry["radius_m"],
             )
     return None
