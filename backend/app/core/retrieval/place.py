@@ -187,7 +187,7 @@ class PlaceRetriever(PlaceScorer):
         rerank_top_k: int | None = None,
         search_scope: str = "auto",
         location_anchor_lat: float | None = None,
-        location_anchor_lon: float | None = None,
+        location_anchor_long: float | None = None,
         location_radius_m: float | None = None,
     ):
         """
@@ -209,13 +209,13 @@ class PlaceRetriever(PlaceScorer):
         apply_geo = (
             ENABLE_GEO_FILTER
             and location_anchor_lat is not None
-            and location_anchor_lon is not None
+            and location_anchor_long is not None
             and location_radius_m is not None
         )
         places_filter = self._build_query_filter(
             categories,
             anchor_lat=location_anchor_lat if apply_geo else None,
-            anchor_lon=location_anchor_lon if apply_geo else None,
+            anchor_lon=location_anchor_long if apply_geo else None,
             radius_m=location_radius_m if apply_geo else None,
         )
         photos_filter = self._build_query_filter(categories)  # geo 없이 category만
@@ -390,7 +390,7 @@ class PlaceRetriever(PlaceScorer):
         if apply_geo and not score_map:
             print(
                 f"[INFO] search_hybrid: geo filter returned 0 candidates "
-                f"(lat={location_anchor_lat} lon={location_anchor_lon} r={location_radius_m}), "
+                f"(lat={location_anchor_lat} lon={location_anchor_long} r={location_radius_m}), "
                 f"retrying without geo filter"
             )
             return await self.search_hybrid(
@@ -409,7 +409,7 @@ class PlaceRetriever(PlaceScorer):
                 search_scope=search_scope,
                 # anchor None → 재귀 방지
                 location_anchor_lat=None,
-                location_anchor_lon=None,
+                location_anchor_long=None,
                 location_radius_m=None,
             )
 
@@ -426,7 +426,7 @@ class PlaceRetriever(PlaceScorer):
 
         # geo proximity boost anchor: 사용자 좌표 우선, 없으면 landmark anchor 사용
         prox_lat = user_latitude if user_latitude else location_anchor_lat
-        prox_lon = user_longitude if user_longitude else location_anchor_lon
+        prox_long = user_longitude if user_longitude else location_anchor_long
 
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
@@ -435,7 +435,7 @@ class PlaceRetriever(PlaceScorer):
             geo_proximity_boost = self._geo_proximity_bonus(
                 payload=payload,
                 anchor_lat=prox_lat,
-                anchor_lng=prox_lon,
+                anchor_lng=prox_long,
                 radius_km=GEO_PROXIMITY_RADIUS_KM,  # config 기반 반경 (#9)
             )
             payload_addr_tokens = self._payload_addr_tokens(payload)

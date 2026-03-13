@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()
-import os                                               # 추가
+import os
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -49,21 +49,40 @@ async def lifespan(app: FastAPI):
     # 서버 종료 시 실행될 로직
     print("[INFO] Shutting down...")
 
+def _parse_csv_env(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _build_cors_settings() -> tuple[list[str], str | None]:
+    # EC2/로컬 공통 기본값. 미설정 시에도 운영 도메인과 로컬 개발 도메인을 함께 허용한다.
+    default_origins = [
+        "http://localhost",
+        "http://localhost:3000",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "https://triver-s.com",
+        "https://www.triver-s.com",
+    ]
+    configured_origins = _parse_csv_env(os.environ.get("CORS_ORIGINS"))
+    origins = list(dict.fromkeys(configured_origins or default_origins))
+    origin_regex = os.environ.get("CORS_ORIGIN_REGEX", "").strip() or None
+    return origins, origin_regex
+
+
 app = FastAPI(lifespan=lifespan)
 app.add_exception_handler(AppException, app_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(Exception, internal_exception_handler)
 
-# CORS 설정
-# CORS_ORIGINS 환경변수에 쉼표로 구분된 도메인 목록을 설정 (예: http://example.com,http://www.example.com)
-# 미설정 시 localhost:3000 만 허용
-_cors_env = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
-origins = [origin.strip() for origin in _cors_env.split(",") if origin.strip()]
+origins, origin_regex = _build_cors_settings()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,6 +130,16 @@ class RequestLoggingMiddleware:
         method = scope.get("method", "")
         path = scope.get("path", "")
         status_code = 500
+        origin = ""
+        acr_method = ""
+        acr_headers = ""
+        for key, value in scope.get("headers", []):
+            if key == b"origin":
+                origin = value.decode("latin-1")
+            elif key == b"access-control-request-method":
+                acr_method = value.decode("latin-1")
+            elif key == b"access-control-request-headers":
+                acr_headers = value.decode("latin-1")
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code
@@ -122,7 +151,13 @@ class RequestLoggingMiddleware:
             await self.app(scope, receive, send_wrapper)
         finally:
             duration_ms = (time.time() - start) * 1000
-            logger.info(f"{method} {path} -> {status_code} ({duration_ms:.1f} ms)")
+            if method == "OPTIONS" and origin:
+                logger.info(
+                    f"{method} {path} -> {status_code} ({duration_ms:.1f} ms) "
+                    f"origin={origin} acr_method={acr_method or '-'} acr_headers={acr_headers or '-'}"
+                )
+            else:
+                logger.info(f"{method} {path} -> {status_code} ({duration_ms:.1f} ms)")
 
 
 app.add_middleware(RequestLoggingMiddleware)

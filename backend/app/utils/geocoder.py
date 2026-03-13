@@ -284,7 +284,7 @@ class GeoCoder:
             response.raise_for_status()
             data = response.json()
 
-            if data.get("status") != "OK" or not data.get("results"):
+            if data.get("status", {}).get("code") != 0 or not data.get("results"):
                 print(f"검색 결과가 없습니다: lat={latitude}, lng={longitude}")
                 return None
 

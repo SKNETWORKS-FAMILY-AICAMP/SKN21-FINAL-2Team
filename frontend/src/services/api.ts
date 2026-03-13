@@ -168,14 +168,13 @@ export const resolveStreamApiBaseUrl = (
     const streamApiUrl = process.env.NEXT_PUBLIC_STREAM_API_URL;
     if (streamApiUrl) return streamApiUrl;
     if (typeof window === "undefined") return API_URL;
-    if (API_URL !== "/api") return API_URL;
 
-    const { hostname, protocol } = runtimeLocation ?? window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return `${protocol}//${hostname}:8000/api`;
+    // 브라우저에서는 환경과 무관하게 Next.js /api rewrite를 우선 사용해 CORS preflight를 피한다.
+    if (API_URL.startsWith("http://") || API_URL.startsWith("https://")) {
+        return "/api";
     }
-
-    return API_URL;
+    if (API_URL !== "/api") return API_URL;
+    return runtimeLocation ? "/api" : API_URL;
 };
 
 const refreshAccessToken = async () => {
@@ -256,10 +255,11 @@ type FetchOpts = {
     body?: unknown;
     headers?: HeadersInit;
     cache?: RequestCache;
+    errorLogLevel?: "error" | "warn" | "silent";
 };
 
 const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
-    const { method = 'GET', body, headers, cache } = opts;
+    const { method = 'GET', body, headers, cache, errorLogLevel = "error" } = opts;
 
     const doFetch = async () => fetch(url, {
         method,
@@ -272,7 +272,7 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     let res = await doFetch();
     if (!res.ok) {
         const apiError = await parseApiError(res);
-        const action = handleApiError(apiError);
+        const action = handleApiError(apiError, { logLevel: errorLogLevel });
 
         if (action === 'retry') {
             // 토큰 refresh 후 재시도
@@ -781,7 +781,7 @@ export const fetchRandomExplorePlaces = async (
         url += `?${params.toString()}`;
     }
 
-    const response = await fetchWithAuth(url);
+    const response = await fetchWithAuth(url, { errorLogLevel: "warn" });
     return response.json();
 };
 
