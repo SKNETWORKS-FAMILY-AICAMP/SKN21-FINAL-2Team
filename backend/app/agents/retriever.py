@@ -218,6 +218,26 @@ async def _search_for_general(
         location_obj = getattr_safe(slots, "location")
         raw_location = location_obj.name if location_obj else None
 
+    def _in_seoul_bbox(lat, lng) -> bool:
+        return (37.413 <= lat <= 37.701) and (126.734 <= lng <= 127.269)
+
+    def _resolve_seoul_anchor(name: str, lat, lng, radius_m):
+        """anchor 좌표가 서울 bbox 밖이면 Naver Local Search로 서울 내 좌표 재검색."""
+        if lat and lng and not _in_seoul_bbox(lat, lng):
+            print(f"[Retriever] anchor '{name}' outside Seoul bbox ({lat}, {lng}) — retrying with Seoul search")
+            try:
+                results = GeoCoder().search_places(f"{name} 서울", 1)
+                if results:
+                    new_lat = results[0].get("lat")
+                    new_lng = results[0].get("lng")
+                    if new_lat and new_lng and _in_seoul_bbox(new_lat, new_lng):
+                        print(f"[Retriever] anchor resolved to Seoul: ({new_lat}, {new_lng})")
+                        return new_lat, new_lng, radius_m
+            except Exception as e:
+                print(f"[Retriever] Seoul anchor re-search failed for '{name}': {e}")
+            return None, None, None
+        return lat, lng, radius_m
+
     # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
     anchor_lat = anchor_long = anchor_radius_m = None
     if raw_location and raw_location in LANDMARK_DICTIONARY:
@@ -234,6 +254,21 @@ async def _search_for_general(
             anchor_long = norm.long
             anchor_radius_m = norm.radius_m
             print(f"[Retriever] landmark anchor (fallback normalize): {raw_location!r} → {norm.normalized_location!r}")
+        else:
+            # LANDMARK_DICTIONARY 미매칭 → Naver Search로 서울 내 좌표 직접 검색
+            print(f"[Retriever] '{raw_location}' not in landmark dict — searching Seoul coords via Naver")
+            try:
+                results = GeoCoder().search_places(f"{raw_location} 서울", 1)
+                if results:
+                    anchor_lat = results[0].get("lat")
+                    anchor_long = results[0].get("lng")
+                    print(f"[Retriever] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_long})")
+            except Exception as e:
+                print(f"[Retriever] Naver search anchor failed for '{raw_location}': {e}")
+
+    anchor_lat, anchor_long, anchor_radius_m = _resolve_seoul_anchor(
+        raw_location or "", anchor_lat, anchor_long, anchor_radius_m
+    )
 
     try:
         return await retriever.search_hybrid(

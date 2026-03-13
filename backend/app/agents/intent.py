@@ -94,6 +94,7 @@ async def intent_node(state: TravelState):
         "update_user_input": update_user_input,
         "summary_title": result.summary_title,
         "summary_message": result.summary_message,
+        "input_tags": result.input_tags,
         "prefs_info": prefs_info,
         "candidates": [],
         "candidate_pool": [],

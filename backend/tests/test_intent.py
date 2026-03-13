@@ -15,6 +15,7 @@ async def test_intent_node_uses_update_user_input_from_structured_output():
         slots=IntentSlots(input_type=InputType.TEXT),
         summary_title="제주 여행",
         summary_message="제주도 여행 코스 추천 요청",
+        input_tags=["제주도", "여행 코스"],
     )
 
     mock_llm = AsyncMock()
@@ -36,3 +37,4 @@ async def test_intent_node_uses_update_user_input_from_structured_output():
 
     assert result["update_user_input"] == "제주도에서 2박 3일 여행 코스를 추천해줘"
     assert result["primary_intent"] == IntentType.TRIP_PLANNING
+    assert result["input_tags"] == ["제주도", "여행 코스"]

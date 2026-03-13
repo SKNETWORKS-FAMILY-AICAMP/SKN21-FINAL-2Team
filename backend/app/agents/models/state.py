@@ -25,6 +25,7 @@ class TravelState(TypedDict, total=False):
     update_user_input: str | None
     summary_title: str
     summary_message: str
+    input_tags: List[str]
     user_preferences: Dict[str, Any]           # 선호도 조사
     prefs_info: str
     

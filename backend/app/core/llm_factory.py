@@ -17,5 +17,5 @@ class LLMFactory:
     def get_tavily(cls, max_result = 3):
         key = int(max_result)
         if key not in cls._tavily_instances:
-            cls._tavily_instances[key] = TavilySearchResults(max_results=max_result)
+            cls._tavily_instances[key] = TavilySearchResults(max_results=max_result, include_images=True)
         return cls._tavily_instances[key]

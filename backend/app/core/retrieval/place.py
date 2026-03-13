@@ -4,7 +4,8 @@ import asyncio
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Filter, FieldCondition, MatchValue, MatchAny, SparseVector
+    Filter, FieldCondition, MatchValue, MatchAny, SparseVector,
+    GeoBoundingBox, GeoPoint,
 )
 from sentence_transformers import SentenceTransformer
 
@@ -17,6 +18,7 @@ from app.utils.config import (
     BOOST_WEIGHT,
     CANDIDATE_LIMIT_MULTIPLIER,
     GEO_PROXIMITY_RADIUS_KM,
+    MAX_DISTANCE_KM,
     RRF_SCORE_MAX, FUSED_SCORE_MAX, MAX_BOOST_SUM,
     get_retrieval_params,
 )
@@ -59,12 +61,13 @@ class PlaceRetriever(PlaceScorer):
         anchor_lat: float | None = None,
         anchor_lon: float | None = None,
         radius_m: float | None = None,
+        bbox: tuple[float, float, float, float] | None = None,
     ) -> Filter | None:
         """카테고리, 이미지 유무, Geo 조건을 합성한 Qdrant 필터 생성.
 
         - category / has_image: PLACES_COLLECTION, PHOTOS_COLLECTION 공용
-        - anchor_lat/lon/radius_m: PLACES_COLLECTION 전용 geo 조건 (hard filter)
-          지정하지 않으면 geo 조건 없이 빌드.
+        - bbox (min_lat, max_lat, min_lng, max_lng): union bounding box geo filter (우선)
+        - anchor_lat/lon/radius_m: circle geo filter (bbox 없을 때 사용)
         """
         must_conditions = []
         must_not_conditions = []
@@ -81,7 +84,19 @@ class PlaceRetriever(PlaceScorer):
             from qdrant_client.models import IsEmptyCondition, PayloadField
             must_not_conditions.append(IsEmptyCondition(is_empty=PayloadField(key="image")))
 
-        if anchor_lat is not None and anchor_lon is not None and radius_m is not None:
+        if bbox is not None:
+            min_lat, max_lat, min_lng, max_lng = bbox
+            must_conditions.append(
+                FieldCondition(
+                    key="geo",
+                    geo_bounding_box=GeoBoundingBox(
+                        top_left=GeoPoint(lat=float(max_lat), lon=float(min_lng)),
+                        bottom_right=GeoPoint(lat=float(min_lat), lon=float(max_lng)),
+                    ),
+                )
+            )
+            print(f"[INFO] geo bbox filter: lat=[{min_lat:.4f},{max_lat:.4f}] lng=[{min_lng:.4f},{max_lng:.4f}]")
+        elif anchor_lat is not None and anchor_lon is not None and radius_m is not None:
             must_conditions.append(
                 FieldCondition(
                     key="geo",
@@ -91,7 +106,7 @@ class PlaceRetriever(PlaceScorer):
                     },
                 )
             )
-            print(f"[INFO] geo filter added: lat={anchor_lat} lon={anchor_lon} radius_m={radius_m}")
+            print(f"[INFO] geo circle filter: lat={anchor_lat} lon={anchor_lon} radius_m={radius_m}")
 
         if not must_conditions and not must_not_conditions:
             return None
@@ -100,7 +115,7 @@ class PlaceRetriever(PlaceScorer):
             must=must_conditions if must_conditions else None,
             must_not=must_not_conditions if must_not_conditions else None,
         )
-        print(f"[INFO] query_filter built: category={categories} values={category_values} geo={'yes' if anchor_lat else 'no'}")
+        print(f"[INFO] query_filter built: category={categories} values={category_values} geo={'bbox' if bbox else 'circle' if anchor_lat else 'no'}")
         return built
 
     def search_text(self, query: str, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
@@ -206,17 +221,46 @@ class PlaceRetriever(PlaceScorer):
         defaults = get_retrieval_params()
 
         # geo filter는 PLACES_COLLECTION 전용. PHOTOS_COLLECTION에는 geo 필드가 없으므로 분리.
-        apply_geo = (
-            ENABLE_GEO_FILTER
-            and location_anchor_lat is not None
+        # 두 좌표가 모두 있으면 union bounding box, 하나만 있으면 circle filter 사용.
+        import math as _math
+
+        def _km_to_bbox(lat, lng, r_km):
+            """중심 좌표 + 반경(km)을 위경도 bbox (min_lat, max_lat, min_lng, max_lng)로 변환."""
+            r_lat = r_km / 111.0
+            r_lng = r_km / (111.0 * _math.cos(_math.radians(lat)))
+            return lat - r_lat, lat + r_lat, lng - r_lng, lng + r_lng
+
+        geo_bbox = None
+        apply_geo = ENABLE_GEO_FILTER
+        has_gps = user_latitude is not None and user_longitude is not None
+        has_anchor = (
+            location_anchor_lat is not None
             and location_anchor_long is not None
             and location_radius_m is not None
         )
+
+        if apply_geo and has_gps and has_anchor:
+            # 두 좌표 모두 있을 때: union bbox
+            gps_bbox = _km_to_bbox(user_latitude, user_longitude, MAX_DISTANCE_KM)
+            anchor_bbox = _km_to_bbox(location_anchor_lat, location_anchor_long, location_radius_m / 1000.0)
+            geo_bbox = (
+                min(gps_bbox[0], anchor_bbox[0]),  # min_lat
+                max(gps_bbox[1], anchor_bbox[1]),  # max_lat
+                min(gps_bbox[2], anchor_bbox[2]),  # min_lng
+                max(gps_bbox[3], anchor_bbox[3]),  # max_lng
+            )
+            print(f"[INFO] union bbox from GPS+anchor: {geo_bbox}")
+        elif apply_geo and has_gps:
+            # GPS만 있을 때: GPS 기준 bbox
+            geo_bbox = _km_to_bbox(user_latitude, user_longitude, MAX_DISTANCE_KM)
+            print(f"[INFO] GPS-only bbox: {geo_bbox}")
+
         places_filter = self._build_query_filter(
             categories,
-            anchor_lat=location_anchor_lat if apply_geo else None,
-            anchor_lon=location_anchor_long if apply_geo else None,
-            radius_m=location_radius_m if apply_geo else None,
+            anchor_lat=location_anchor_lat if (apply_geo and has_anchor and not has_gps) else None,
+            anchor_lon=location_anchor_long if (apply_geo and has_anchor and not has_gps) else None,
+            radius_m=location_radius_m if (apply_geo and has_anchor and not has_gps) else None,
+            bbox=geo_bbox,
         )
         photos_filter = self._build_query_filter(categories)  # geo 없이 category만
 

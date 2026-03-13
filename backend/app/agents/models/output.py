@@ -71,6 +71,7 @@ class IntentOutput(BaseModel):
     intents: List[IntentType] = Field(description="사용자의 의도")
     primary_intent: IntentType = Field(description="사용자의 주요 의도")
     slots: IntentSlots = Field(description="사용자 입력에서 추출된 슬롯")
+    input_tags: List[str] = Field(description="사용자 입력에서 추출된 태그 (장소, 카테고리, 키워드 등)")
     summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
     summary_message: str = Field(default="", description="대화 요약")
 
