@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -11,19 +11,38 @@ export function ReservationDetailModal({
     reservation,
     photoUrl,
     onSavePhoto,
+    onSaveTitle, // [추가] 예약 제목 저장 함수
     onClose,
 }: {
     open: boolean;
     reservation: ReservationItem | null;
     photoUrl?: string;
     onSavePhoto: (nextUrl: string | null) => Promise<void> | void;
+    onSaveTitle?: (newTitle: string) => Promise<void> | void; // [추가] 제목 저장 prop
     onClose: () => void;
 }) {
     const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     // undefined: unchanged, string: new image, null: removed
     const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null | undefined>(undefined);
+    
+    // [추가] 제목 편집 상태 관리
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [draftTitle, setDraftTitle] = useState(reservation?.title || "");
+    
     const [previewOpen, setPreviewOpen] = useState(false);
+    
+    // [추가] 닫기 경고 및 저장 완료 메시지 상태
+    const [showCloseWarning, setShowCloseWarning] = useState(false);
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+    
+    // [추가] reservation이 변경될 때 제목 업데이트
+    useEffect(() => {
+        if (reservation?.title) {
+            setDraftTitle(reservation.title);
+        }
+    }, [reservation?.title]);
+    
     const initialPhotoUrl = (typeof photoUrl === "string" && photoUrl.trim().length
         ? photoUrl
         : (typeof reservation?.reservationImageUrl === "string" && reservation.reservationImageUrl.trim().length
@@ -32,6 +51,35 @@ export function ReservationDetailModal({
 
     const effectivePhotoUrl = draftPhotoUrl === undefined ? initialPhotoUrl : draftPhotoUrl;
     const previewPhotoUrl = effectivePhotoUrl || undefined;
+    
+    // [추가] 수정사항 확인 함수
+    const hasChanges = () => {
+        const photoChanged = draftPhotoUrl !== undefined;
+        const titleChanged = draftTitle !== (reservation?.title || "");
+        return photoChanged || titleChanged;
+    };
+    
+    // [추가] 모달 닫기 핸들러 (수정사항 체크)
+    const handleClose = () => {
+        if (hasChanges()) {
+            setShowCloseWarning(true);
+        } else {
+            onClose();
+        }
+    };
+    
+    // [추가] 저장 후 닫기 핸들러
+    const handleSave = async () => {
+        await onSavePhoto(effectivePhotoUrl ?? null);
+        if (onSaveTitle && draftTitle !== reservation?.title) {
+            await onSaveTitle(draftTitle);
+        }
+        setShowSuccessMessage(true);
+        setTimeout(() => {
+            setShowSuccessMessage(false);
+            onClose();
+        }, 1500);
+    };
 
     return (
         <AnimatePresence>
@@ -45,9 +93,9 @@ export function ReservationDetailModal({
                 >
                     <motion.button
                         type="button"
-                        aria-label="Close"
+                        aria-label="닫기"
                         className="absolute inset-0 bg-black/40"
-                        onClick={onClose}
+                        onClick={handleClose}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -64,8 +112,8 @@ export function ReservationDetailModal({
                         <div className="relative p-6 pb-4">
                             <button
                                 type="button"
-                                aria-label="Close"
-                                onClick={onClose}
+                                aria-label="닫기"
+                                onClick={handleClose}
                                 className="absolute right-4 top-4 w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors"
                             >
                                 <X size={16} />
@@ -74,6 +122,34 @@ export function ReservationDetailModal({
                         </div>
 
                         <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
+                            {/* [추가] 예약 제목 편집 섹션 */}
+                            <div className="mb-4">
+                                <label className="block text-xs font-semibold text-gray-600 mb-2">예약 제목</label>
+                                {editingTitle ? (
+                                    <input
+                                        type="text"
+                                        value={draftTitle}
+                                        onChange={(e) => setDraftTitle(e.target.value)}
+                                        onBlur={() => setEditingTitle(false)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setEditingTitle(false);
+                                            }
+                                        }}
+                                        autoFocus
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                                        placeholder="예약 제목을 입력하세요"
+                                    />
+                                ) : (
+                                    <div
+                                        onClick={() => setEditingTitle(true)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-colors"
+                                    >
+                                        <p className="text-sm font-medium text-gray-900">{draftTitle || "클릭하여 제목 입력"}</p>
+                                    </div>
+                                )}
+                            </div>
+                            
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -103,11 +179,11 @@ export function ReservationDetailModal({
                                     fileInputRef.current?.click();
                                 }}
                                 className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
-                                aria-label="Upload reservation image"
+                                aria-label="예약 이미지 업로드"
                             >
                                 {previewPhotoUrl ? (
                                     <div className="h-[220px] bg-gray-100 flex items-center justify-center">
-                                        <img src={previewPhotoUrl} alt="Reservation" className="w-full h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="예약 이미지" className="w-full h-full object-contain" />
                                     </div>
                                 ) : (
                                     <div className="h-[180px] flex flex-col items-center justify-center">
@@ -146,16 +222,78 @@ export function ReservationDetailModal({
                         <div className="px-6 pb-6">
                             <button
                                 type="button"
-                                onClick={async () => {
-                                    await onSavePhoto(effectivePhotoUrl ?? null);
-                                    onClose();
-                                }}
-                                className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold"
+                                onClick={handleSave}
+                                disabled={showSuccessMessage}
+                                className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50 transition-opacity"
                             >
                                 {t("common.save")}
                             </button>
                         </div>
+                        
+                        {/* [추가] 저장 완료 메시지 */}
+                        <AnimatePresence>
+                            {showSuccessMessage && (
+                                <motion.div
+                                    className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 rounded-xl"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    <div className="text-center">
+                                        <div className="mb-2 text-4xl">✅</div>
+                                        <p className="text-lg font-semibold text-gray-900">변경하신 내역이 저장되었습니다!</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
+                    
+                    {/* [추가] 닫기 경고 팝업 */}
+                    <AnimatePresence>
+                        {showCloseWarning && (
+                            <motion.div
+                                className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                            >
+                                <div className="absolute inset-0 bg-black/60" onClick={() => setShowCloseWarning(false)} />
+                                <motion.div
+                                    className="relative z-10 w-full max-w-xs rounded-xl bg-white p-6 shadow-2xl"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                >
+                                    <h3 className="text-lg font-bold text-gray-900 mb-3 text-center">저장 확인</h3>
+                                    <p className="text-sm text-gray-600 mb-6 text-center">
+                                        저장하지 않은 변경사항이 있습니다.<br />저장하시겠습니까?
+                                    </p>
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setShowCloseWarning(false);
+                                                await handleSave();
+                                            }}
+                                            className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
+                                        >
+                                            네
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowCloseWarning(false);
+                                                onClose();
+                                            }}
+                                            className="flex-1 bg-gray-200 text-gray-900 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
+                                        >
+                                            아니요
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <AnimatePresence>
                         {previewOpen && !!effectivePhotoUrl && (
@@ -167,7 +305,7 @@ export function ReservationDetailModal({
                             >
                                 <button
                                     type="button"
-                                    aria-label="Close preview"
+                                    aria-label="미리보기 닫기"
                                     className="absolute inset-0 bg-black/75"
                                     onClick={() => setPreviewOpen(false)}
                                 />
@@ -179,14 +317,14 @@ export function ReservationDetailModal({
                                 >
                                     <button
                                         type="button"
-                                        aria-label="Close preview"
+                                        aria-label="미리보기 닫기"
                                         onClick={() => setPreviewOpen(false)}
                                         className="absolute right-3 top-3 w-8 h-8 rounded-full border border-white/30 text-white bg-black/40 flex items-center justify-center"
                                     >
                                         <X size={14} />
                                     </button>
                                     <div className="w-full h-[80vh] max-h-[80vh] flex items-center justify-center">
-                                        <img src={previewPhotoUrl} alt="Original reservation" className="max-w-full max-h-full object-contain" />
+                                        <img src={previewPhotoUrl} alt="원본 예약 이미지" className="max-w-full max-h-full object-contain" />
                                     </div>
                                 </motion.div>
                             </motion.div>

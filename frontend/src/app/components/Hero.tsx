@@ -21,6 +21,9 @@ export function Hero() {
         // 중복 클릭 방지
         if (isNavigating) return;
 
+        // [Feature] 일반 버튼(Start)을 통한 진입이므로 Plan Trip 플로우 플래그 제거
+        localStorage.removeItem("planTripFlow");
+
         const token = localStorage.getItem("access_token");
 
         // 토큰 자체가 없으면 바로 로그인 페이지로
