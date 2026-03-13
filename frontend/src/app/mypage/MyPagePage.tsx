@@ -565,7 +565,7 @@ export function MyPagePage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Traveler Snapshot</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Traveling Style</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: SURVEY_ITEM_LABELS.plan, value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },

@@ -38,7 +38,16 @@ export const getPostLoginPath = (user: UserProfile): string => {
     if (!user) return "/"; // Safety fallback
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    // [Feature] 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
+    
+    // [Feature] Plan Trip 버튼을 통한 로그인/가입 시에만 챗봇으로 직행
+    const isPlanTripFlow = typeof window !== "undefined" && localStorage.getItem("planTripFlow") === "true";
+    const hasPendingDestination = typeof window !== "undefined" && localStorage.getItem("pendingDestination");
+    
+    if (isPlanTripFlow && hasPendingDestination) {
+        return "/chatbot?fromDestination=1";
+    }
+    
+    // [Feature] 일반 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
     return "/explore";
 };
 
