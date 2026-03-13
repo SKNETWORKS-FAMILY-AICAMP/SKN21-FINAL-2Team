@@ -107,5 +107,6 @@ class PlaceInfo(BaseModel):
     name: str = ""
     address: str = ""        # ORM 컬럼명은 adress(오타) — chat.py에서만 매핑
     image_path: str = ""
+    map_url: str = ""
     longitude: float = 0.0
     latitude: float = 0.0
