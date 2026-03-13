@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MapPin, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { NaverInfoWindow, NaverMapInstance, NaverMarker, useNaverMap } from "../hooks/useNaverMap";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export type ChatMapPlace = {
   mapId: string;
@@ -61,7 +62,8 @@ export function PlaceMapPanel({
   isResizing = false,
 }: PlaceMapPanelProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
-  const { status, error, naver, retry } = useNaverMap(clientId);
+  const { language } = useTranslation();
+  const { status, error, naver, retry } = useNaverMap(clientId, { language });
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<NaverMapInstance | null>(null);

@@ -182,5 +182,68 @@
   "survey.quietNature": "宁静自然",
   "survey.restaurants": "美食",
   "survey.historicalSites": "历史名胜",
-  "survey.kCulture": "K-culture"
+  "survey.kCulture": "K-culture",
+
+  "header.features": "功能",
+  "header.destinations": "目的地",
+  "header.reviews": "评价",
+  "header.getStarted": "开始使用",
+  "header.goToProfile": "前往我的资料",
+  "header.profileAlt": "个人资料",
+
+  "hero.badge": "AI驱动旅行规划",
+  "hero.titleLine1": "你的旅程，",
+  "hero.titleLine2": "重新定义",
+  "hero.descriptionLine1": "体验人工智能打造的旅行规划。",
+  "hero.descriptionLine2": "专为您量身定制的个性化行程。",
+  "hero.placeholder": "你想去哪里？",
+  "hero.start": "开始",
+  "hero.scroll": "滚动",
+
+  "features.heading": "为什么选择Triver？",
+  "features.subheading": "了解AI如何将旅行规划的每一步转变为无缝、个性化的体验。",
+  "features.hyperPersonalized.title": "超个性化推荐",
+  "features.hyperPersonalized.shortTitle": "个性推荐",
+  "features.hyperPersonalized.description": "AI分析您的偏好、过往行程和旅行风格，推荐完美匹配您兴趣的目的地和活动。",
+  "features.smartItinerary.title": "智能行程构建器",
+  "features.smartItinerary.shortTitle": "智能规划",
+  "features.smartItinerary.description": "自动生成考虑出行时间、营业时间和您精力水平的最优每日行程。",
+  "features.integratedBooking.title": "一站式预订体验",
+  "features.integratedBooking.shortTitle": "便捷预订",
+  "features.integratedBooking.description": "在一个平台预订机票、酒店和体验。实时价格和可用性尽在掌中。",
+
+  "destinations.heading": "探索首尔",
+  "destinations.subheading": "发现AI精选的首尔最佳去处",
+  "destinations.hotPlaces": "热门地点",
+  "destinations.touristSpot": "旅游景点",
+  "destinations.foods": "美食",
+  "destinations.refreshing": "刷新中...",
+  "destinations.noImage": "暂无图片",
+  "destinations.planTrip": "旅行计划",
+
+  "cta.heading": "准备好开始你的",
+  "cta.headingHighlight": "冒险了吗？",
+  "cta.description": "加入数千名通过Triver AI旅行规划发现完美旅程的旅行者。",
+  "cta.button": "免费开始",
+
+  "footer.copyright": "© {year} Triver. 保留所有权利。",
+
+  "reviews.heading": "旅行者故事",
+  "reviews.subheading": "看看我们的社区对Triver旅行体验的评价。",
+  "reviews.previousReview": "上一条评价",
+  "reviews.nextReview": "下一条评价",
+
+  "incomplete.profileTitle": "请完善您的资料",
+  "incomplete.surveyTitle": "请完成问卷",
+  "incomplete.profileDescription": "请完善资料以使用所有功能。",
+  "incomplete.surveyDescription": "请完成旅行偏好问卷以获取个性化推荐。",
+  "incomplete.profileButton": "完善资料",
+  "incomplete.surveyButton": "完成问卷",
+  "incomplete.later": "稍后",
+  "incomplete.switchAccount": "使用其他账号登录",
+
+  "banner.switchPrompt": "是否切换到{language}？",
+  "banner.switch": "切换",
+
+  "languageSwitcher.label": "语言"
 }

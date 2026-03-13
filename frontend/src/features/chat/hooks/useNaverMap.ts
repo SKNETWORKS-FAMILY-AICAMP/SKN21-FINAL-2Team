@@ -56,9 +56,18 @@ export type NaverMapsNamespace = {
 
 const NAVER_MAP_SCRIPT_ID = "triver-naver-map-sdk";
 
-export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boolean }) {
+// 네이버 지도 API 언어 코드 매핑 (앱 언어 → 네이버 지도 언어)
+const NAVER_LANG_MAP: Record<string, string> = {
+  ko: "ko",
+  en: "en",
+  ja: "ja",
+  zh: "zh",
+};
+
+export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boolean; language?: string }) {
   const normalizedClientId = clientId?.trim() || "";
   const requireGeocoder = options?.requireGeocoder ?? false;
+  const mapLang = NAVER_LANG_MAP[options?.language ?? ""] ?? "ko";
   const [status, setStatus] = useState<NaverMapStatus>("idle");
   const [error, setError] = useState<string>("");
   const [retryCount, setRetryCount] = useState(0);
@@ -85,6 +94,17 @@ export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boo
     };
 
     const naverWindow = window as Window & { naver?: NaverMapsNamespace };
+
+    // 언어가 바뀌면 기존 스크립트를 제거하고 새로 로드
+    const existingScript = document.getElementById(NAVER_MAP_SCRIPT_ID) as HTMLScriptElement | null;
+    if (existingScript) {
+      const currentLang = new URL(existingScript.src).searchParams.get("language");
+      if (currentLang && currentLang !== mapLang) {
+        existingScript.parentNode?.removeChild(existingScript);
+        delete naverWindow.naver;
+      }
+    }
+
     const naver = naverWindow.naver;
     if (naver?.maps) {
       commit("ready");
@@ -119,7 +139,7 @@ export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boo
 
     const script = document.createElement("script");
     script.id = NAVER_MAP_SCRIPT_ID;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(normalizedClientId)}${requireGeocoder ? "&submodules=geocoder" : ""}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(normalizedClientId)}&language=${mapLang}${requireGeocoder ? "&submodules=geocoder" : ""}`;
     script.async = true;
 
     script.onload = () => {
@@ -139,7 +159,7 @@ export function useNaverMap(clientId?: string, options?: { requireGeocoder?: boo
     };
 
     document.head.appendChild(script);
-  }, [normalizedClientId, requireGeocoder, retryCount]);
+  }, [normalizedClientId, requireGeocoder, retryCount, mapLang]);
 
   const naver = useMemo<NaverMapsNamespace | null>(() => {
     if (typeof window === "undefined") return null;

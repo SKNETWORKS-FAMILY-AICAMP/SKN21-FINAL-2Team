@@ -182,5 +182,68 @@
   "survey.quietNature": "Quiet Nature",
   "survey.restaurants": "Restaurants",
   "survey.historicalSites": "Historical Sites",
-  "survey.kCulture": "K-culture"
+  "survey.kCulture": "K-culture",
+
+  "header.features": "Features",
+  "header.destinations": "Destinations",
+  "header.reviews": "Reviews",
+  "header.getStarted": "Get Started",
+  "header.goToProfile": "Go to My Profile",
+  "header.profileAlt": "Profile",
+
+  "hero.badge": "AI-Powered Travel Planning",
+  "hero.titleLine1": "Your Journey,",
+  "hero.titleLine2": "Reimagined",
+  "hero.descriptionLine1": "Experience travel planning powered by artificial intelligence.",
+  "hero.descriptionLine2": "Personalized itineraries crafted just for you.",
+  "hero.placeholder": "Where do you want to go?",
+  "hero.start": "Start",
+  "hero.scroll": "Scroll",
+
+  "features.heading": "Why Triver?",
+  "features.subheading": "Discover how AI transforms every step of your travel planning into a seamless, personalized experience.",
+  "features.hyperPersonalized.title": "Hyper-Personalized Recommendations",
+  "features.hyperPersonalized.shortTitle": "Personalized",
+  "features.hyperPersonalized.description": "Our AI analyzes your preferences, past trips, and travel style to suggest destinations and activities that perfectly match your interests.",
+  "features.smartItinerary.title": "Smart Itinerary Builder",
+  "features.smartItinerary.shortTitle": "Smart Planning",
+  "features.smartItinerary.description": "Automatically generates optimized day-by-day itineraries considering travel time, opening hours, and your energy levels.",
+  "features.integratedBooking.title": "Integrated Booking Experience",
+  "features.integratedBooking.shortTitle": "Easy Booking",
+  "features.integratedBooking.description": "Seamlessly book flights, hotels, and experiences in one place. Real-time pricing and availability at your fingertips.",
+
+  "destinations.heading": "Explore Seoul",
+  "destinations.subheading": "Discover the best places in Seoul curated by AI",
+  "destinations.hotPlaces": "Hot Places",
+  "destinations.touristSpot": "Tourist Spots",
+  "destinations.foods": "Foods",
+  "destinations.refreshing": "Refreshing...",
+  "destinations.noImage": "No Image",
+  "destinations.planTrip": "Plan Trip",
+
+  "cta.heading": "Ready to Start Your",
+  "cta.headingHighlight": "Adventure?",
+  "cta.description": "Join thousands of travelers who have discovered their perfect trip with Triver's AI-powered planning.",
+  "cta.button": "Start for Free",
+
+  "footer.copyright": "© {year} Triver. All rights reserved.",
+
+  "reviews.heading": "Traveler Stories",
+  "reviews.subheading": "See what our community has to say about their experiences with Triver.",
+  "reviews.previousReview": "Previous review",
+  "reviews.nextReview": "Next review",
+
+  "incomplete.profileTitle": "Complete Your Profile",
+  "incomplete.surveyTitle": "Complete Your Survey",
+  "incomplete.profileDescription": "Please complete your profile to use all features.",
+  "incomplete.surveyDescription": "Please complete the travel preference survey to get personalized recommendations.",
+  "incomplete.profileButton": "Complete Profile",
+  "incomplete.surveyButton": "Complete Survey",
+  "incomplete.later": "Later",
+  "incomplete.switchAccount": "Sign in with a different account",
+
+  "banner.switchPrompt": "Would you like to switch to {language}?",
+  "banner.switch": "Switch",
+
+  "languageSwitcher.label": "Language"
 }

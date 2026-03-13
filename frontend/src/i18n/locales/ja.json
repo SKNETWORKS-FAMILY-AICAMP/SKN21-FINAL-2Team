@@ -182,5 +182,68 @@
   "survey.quietNature": "静かな自然",
   "survey.restaurants": "グルメ",
   "survey.historicalSites": "歴史的名所",
-  "survey.kCulture": "K-culture"
+  "survey.kCulture": "K-culture",
+
+  "header.features": "機能",
+  "header.destinations": "旅行先",
+  "header.reviews": "レビュー",
+  "header.getStarted": "始めましょう",
+  "header.goToProfile": "マイプロフィールへ",
+  "header.profileAlt": "プロフィール",
+
+  "hero.badge": "AI搭載の旅行プランニング",
+  "hero.titleLine1": "あなたの旅を、",
+  "hero.titleLine2": "新しく描く",
+  "hero.descriptionLine1": "AIが創る、あなただけの旅行プランを体験してください。",
+  "hero.descriptionLine2": "パーソナライズされた旅程をご提案します。",
+  "hero.placeholder": "どこへ行きたいですか？",
+  "hero.start": "スタート",
+  "hero.scroll": "スクロール",
+
+  "features.heading": "なぜTriver？",
+  "features.subheading": "AIが旅行プランニングのすべてのステップを、シームレスでパーソナルな体験に変えます。",
+  "features.hyperPersonalized.title": "超パーソナライズ推薦",
+  "features.hyperPersonalized.shortTitle": "パーソナライズ",
+  "features.hyperPersonalized.description": "AIがあなたの好み、過去の旅行、旅行スタイルを分析し、興味にぴったり合った目的地やアクティビティを提案します。",
+  "features.smartItinerary.title": "スマート旅程ビルダー",
+  "features.smartItinerary.shortTitle": "スマート計画",
+  "features.smartItinerary.description": "移動時間、営業時間、体力レベルを考慮した最適な日別旅程を自動生成します。",
+  "features.integratedBooking.title": "統合予約体験",
+  "features.integratedBooking.shortTitle": "簡単予約",
+  "features.integratedBooking.description": "航空券、ホテル、体験を一か所で予約。リアルタイムの料金と空室情報をすぐに確認できます。",
+
+  "destinations.heading": "ソウル探索",
+  "destinations.subheading": "AIが厳選したソウルのベストスポットを発見しましょう",
+  "destinations.hotPlaces": "ホットスポット",
+  "destinations.touristSpot": "観光スポット",
+  "destinations.foods": "グルメ",
+  "destinations.refreshing": "更新中...",
+  "destinations.noImage": "画像なし",
+  "destinations.planTrip": "旅行計画",
+
+  "cta.heading": "旅を始める",
+  "cta.headingHighlight": "準備はできましたか？",
+  "cta.description": "Triverの AI搭載旅行プランで完璧な旅を発見した数千人の旅行者に加わりましょう。",
+  "cta.button": "無料で始める",
+
+  "footer.copyright": "© {year} Triver. All rights reserved.",
+
+  "reviews.heading": "旅行者の声",
+  "reviews.subheading": "Triverでの旅行体験についてコミュニティの声をご覧ください。",
+  "reviews.previousReview": "前のレビュー",
+  "reviews.nextReview": "次のレビュー",
+
+  "incomplete.profileTitle": "プロフィールを完成させてください",
+  "incomplete.surveyTitle": "アンケートを完成させてください",
+  "incomplete.profileDescription": "すべての機能をご利用いただくには、プロフィールを完成させてください。",
+  "incomplete.surveyDescription": "パーソナライズされた推薦を受けるには、旅行嗜好アンケートを完成させてください。",
+  "incomplete.profileButton": "プロフィールを完成",
+  "incomplete.surveyButton": "アンケートを完成",
+  "incomplete.later": "後で",
+  "incomplete.switchAccount": "別のアカウントでログイン",
+
+  "banner.switchPrompt": "{language}に切り替えますか？",
+  "banner.switch": "切替",
+
+  "languageSwitcher.label": "言語"
 }

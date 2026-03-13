@@ -12,6 +12,7 @@ import {
   NaverMarker,
   useNaverMap,
 } from "@/features/chat/hooks/useNaverMap";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type DiaryLocationPickerModalProps = {
   isOpen: boolean;
@@ -30,7 +31,8 @@ export function DiaryLocationPickerModal({
   onConfirm,
 }: DiaryLocationPickerModalProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
-  const { status, error: mapError, naver, retry } = useNaverMap(clientId);
+  const { language } = useTranslation();
+  const { status, error: mapError, naver, retry } = useNaverMap(clientId, { language });
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<NaverMapInstance | null>(null);
