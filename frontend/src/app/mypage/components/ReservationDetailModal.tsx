@@ -202,18 +202,6 @@ export function ReservationDetailModal({
                                 >
                                     이미지 변경
                                 </button>
-                                {!!previewPhotoUrl && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPreviewOpen(false);
-                                            setDraftPhotoUrl(null);
-                                        }}
-                                        className="text-[11px] font-semibold text-gray-600 hover:text-black"
-                                    >
-                                        사진 삭제
-                                    </button>
-                                )}
                             </div>
                         </div>
 
