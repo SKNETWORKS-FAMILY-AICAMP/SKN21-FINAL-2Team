@@ -118,7 +118,7 @@ export function Hero() {
                         <button
                             onClick={handleNavigation}
                             disabled={isNavigating}
-                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                         >
                             {isNavigating ? "..." : t("hero.start")}
                         </button>

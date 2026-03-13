@@ -14,7 +14,7 @@ html {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-noto-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,10 +22,17 @@ html {
   background: var(--background);
 }
 
+/* 기본: Noto Sans (en, ja, zh) */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-noto-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* 한국어: Noto Sans KR */
+:lang(ko) body,
+html:lang(ko) body {
+  font-family: var(--font-noto-sans-kr), var(--font-noto-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 .font-serif-korean {

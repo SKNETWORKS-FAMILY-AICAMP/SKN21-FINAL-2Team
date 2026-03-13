@@ -242,8 +242,8 @@
   "incomplete.later": "다음에 할게요",
   "incomplete.switchAccount": "다른 구글 계정으로 로그인하기",
 
-  "banner.switchPrompt": "{language}(으)로 전환하시겠습니까?",
-  "banner.switch": "전환",
+  "banner.switchPrompt": "다른 언어로 설정할까요?",
+  "banner.switch": "설정",
 
   "languageSwitcher.label": "언어"
 }

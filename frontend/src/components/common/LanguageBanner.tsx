@@ -2,31 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
-import {
-  detectBrowserLanguage,
-  SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
-} from "@/i18n";
+import { detectBrowserLanguage } from "@/i18n";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 const DISMISS_KEY = "triver:lang-banner-dismissed";
 
-function getLanguageName(code: SupportedLanguage): string {
-  return SUPPORTED_LANGUAGES.find((l) => l.code === code)?.label ?? code;
-}
-
 export function LanguageBanner() {
-  const { language, setLanguage, t } = useTranslation();
+  const { language, t } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [detectedLang, setDetectedLang] = useState<SupportedLanguage>("en");
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem(DISMISS_KEY);
     if (dismissed) return;
 
     const detected = detectBrowserLanguage();
-    setDetectedLang(detected);
 
     if (detected !== language) {
       setVisible(true);
@@ -34,9 +24,10 @@ export function LanguageBanner() {
   }, [language]);
 
   const handleSwitch = () => {
-    setLanguage(detectedLang);
+    // 배너 닫고 LanguageSwitcher 드롭다운 열기
     sessionStorage.setItem(DISMISS_KEY, "true");
     setVisible(false);
+    window.dispatchEvent(new CustomEvent("triver:open-language-switcher"));
   };
 
   const handleDismiss = () => {
@@ -44,29 +35,21 @@ export function LanguageBanner() {
     setVisible(false);
   };
 
-  const detectedName = getLanguageName(detectedLang);
-
-  // Build prompt text: use translation key if available, otherwise fallback
-  const promptText =
-    t("banner.switchPrompt") !== "banner.switchPrompt"
-      ? t("banner.switchPrompt").replace("{language}", detectedName)
-      : `Switch to ${detectedName}?`;
-
-  const switchLabel =
-    t("banner.switch") !== "banner.switch" ? t("banner.switch") : "Switch";
+  const promptText = t("banner.switchPrompt");
+  const switchLabel = t("banner.switch");
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ y: 100, opacity: 0 }}
+          initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
+          exit={{ y: -50, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md"
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-50"
         >
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-900 px-4 py-3 text-white shadow-lg">
-            <p className="text-sm">{promptText}</p>
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-gray-900 px-4 py-3 text-white shadow-lg whitespace-nowrap">
+            <p className="text-sm shrink-0">{promptText}</p>
 
             <div className="flex items-center gap-2 shrink-0">
               <button

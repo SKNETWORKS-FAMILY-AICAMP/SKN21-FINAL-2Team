@@ -242,8 +242,8 @@
   "incomplete.later": "Later",
   "incomplete.switchAccount": "Sign in with a different account",
 
-  "banner.switchPrompt": "Would you like to switch to {language}?",
-  "banner.switch": "Switch",
+  "banner.switchPrompt": "Switch to another language?",
+  "banner.switch": "Settings",
 
   "languageSwitcher.label": "Language"
 }

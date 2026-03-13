@@ -35,6 +35,18 @@ export function LanguageSwitcher({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [variant]);
 
+  // LanguageBanner에서 "전환" 클릭 시 드롭다운 자동 열기
+  useEffect(() => {
+    if (variant !== "dropdown") return;
+
+    function handleOpenSwitcher() {
+      setOpen(true);
+    }
+
+    window.addEventListener("triver:open-language-switcher", handleOpenSwitcher);
+    return () => window.removeEventListener("triver:open-language-switcher", handleOpenSwitcher);
+  }, [variant]);
+
   const handleChange = (lang: SupportedLanguage) => {
     setLanguage(lang);
     updateCurrentUser({ language: lang }).catch(() => {});

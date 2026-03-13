@@ -192,8 +192,8 @@
   "header.profileAlt": "个人资料",
 
   "hero.badge": "AI驱动旅行规划",
-  "hero.titleLine1": "你的旅程，",
-  "hero.titleLine2": "重新定义",
+  "hero.titleLine1": "Your Journey,",
+  "hero.titleLine2": "Reimagined",
   "hero.descriptionLine1": "体验人工智能打造的旅行规划。",
   "hero.descriptionLine2": "专为您量身定制的个性化行程。",
   "hero.placeholder": "你想去哪里？",
@@ -221,8 +221,8 @@
   "destinations.noImage": "暂无图片",
   "destinations.planTrip": "旅行计划",
 
-  "cta.heading": "准备好开始你的",
-  "cta.headingHighlight": "冒险了吗？",
+  "cta.heading": "Ready to Start Your",
+  "cta.headingHighlight": "Adventure?",
   "cta.description": "加入数千名通过Triver AI旅行规划发现完美旅程的旅行者。",
   "cta.button": "免费开始",
 
@@ -242,8 +242,8 @@
   "incomplete.later": "稍后",
   "incomplete.switchAccount": "使用其他账号登录",
 
-  "banner.switchPrompt": "是否切换到{language}？",
-  "banner.switch": "切换",
+  "banner.switchPrompt": "要切换到其他语言吗？",
+  "banner.switch": "设置",
 
   "languageSwitcher.label": "语言"
 }
