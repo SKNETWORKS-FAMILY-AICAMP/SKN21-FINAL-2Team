@@ -5,7 +5,7 @@ from app.agents.prompts.prompts import INTENT_PROMPT
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
-from app.utils.geocoder import LANDMARK_DESC, normalize_location
+from app.utils.geocoder import LANDMARK_DESC, normalize_location, GeoCoder
 
 async def intent_node(state: TravelState):
     """
@@ -58,37 +58,40 @@ async def intent_node(state: TravelState):
     result = await chain.ainvoke({
             "messages": messages,
             "user_input": user_input,
-            "prefs_info": prefs_info,
             "category_desc": CategoryType.description(),
             "summary_title": summary_title,
             "summary_message": summary_message,
-            "landmark_desc": LANDMARK_DESC,
         })
 
     print("Intent Result : ", result)
 
+    update_user_input = result.update_user_input or ""
+
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
     slots = result.slots
-    # if slots and slots.location:
-    #     location = slots.location
-    #     if location.name and location.lat is None and location.lon is None:
-    #         norm = normalize_location(location.name)
-    #         if norm.normalized_location != location.name:
-    #             # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
-    #             location.name = norm.normalized_location
-    #             location.lat = norm.lat
-    #             location.lon = norm.lon
-    #             print(
-    #                 f"[Intent] location normalized: {location.name!r} → {norm.normalized_location!r} "
-    #                 f"(canonical={norm.canonical_matched})"
-    #             )
+    if slots and slots.location and slots.location.name:
+        norm = normalize_location(slots.location.name)
+        if norm.normalized_location != slots.location.name:
+            # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
+            slots.location.name = norm.normalized_location
+            slots.location.lat = norm.lat
+            slots.location.lon = norm.lon
+            print(
+                f"[Intent] location normalized: {slots.location.name!r} → {norm.normalized_location!r} "
+                f"(canonical={norm.canonical_matched})"
+            )
+        
+        if slots.location.lat and slots.location.long:
+            geocode_data = GeoCoder().reverse_geocoder(slots.location.lat, slots.location.long)
+            if geocode_data:
+                update_user_input = geocode_data.get("road_address", "") + " 근처, " + update_user_input
 
     # State에 결과 저장
     return {
         "intents": result.intents,
         "primary_intent": result.primary_intent,
         "slots": slots,
-        "update_user_input": result.update_user_input,
+        "update_user_input": update_user_input,
         "summary_title": result.summary_title,
         "summary_message": result.summary_message,
         "prefs_info": prefs_info,

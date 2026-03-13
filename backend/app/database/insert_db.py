@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+ROOT_DIR = Path(__file__).resolve().parents[2] # backend 폴더 위치
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import json
 from pathlib import Path
 from typing import Any, Iterable
@@ -162,6 +168,8 @@ def insert_hot_place() -> dict[str, int]:
     finally:
         db.close()
 
+# # ec2 환경에서 docker rds 세팅
+# docker compose run --rm --no-deps backend python -m app.database.insert_db
 def insert_data():
     # Country 데이터 삽입
     cntry_res = insert_country()

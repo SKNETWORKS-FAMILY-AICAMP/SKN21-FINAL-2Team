@@ -197,7 +197,7 @@ export function Destinations() {
                     }
                 }
             } catch (error) {
-                console.error("Failed to fetch random places on tab change:", error);
+                console.warn("Failed to fetch random places on tab change:", error);
                 // 에러 발생 시 더미 데이터 폴백
                 if (activeTab === "tourist-spot") {
                     setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));

@@ -5,9 +5,16 @@ from pathlib import Path
 import pymysql
 from pydbml import PyDBML
 from dotenv import load_dotenv
-from app.database.insert_db import insert_data
 
 load_dotenv(override=True) # .env 로드
+
+import sys
+from pathlib import Path
+ROOT_DIR = Path(__file__).resolve().parents[2] # backend 폴더 위치
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from app.database.insert_db import insert_data
 
 # 1. DBML 파일 내용 (위에서 작성한 내용을 string으로 넣거나 파일을 읽음)
 dbml_content = """
@@ -326,6 +333,8 @@ def deploy_db_from_dbml():
         if connection:
             connection.close()
 
+# # 테이블 생성 (필요 시) > ec2 환경에서 docker rds 세팅
+# docker compose run --rm --no-deps backend python -m app.database.create_db
 if __name__ == "__main__":
     print(f"[INFO] dbml deploy start")
     deploy_db_from_dbml()

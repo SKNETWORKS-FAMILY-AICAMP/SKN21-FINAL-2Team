@@ -113,6 +113,8 @@ frontend/
 ### `src/services/`
 
 - `api.ts`: 프론트-백엔드 API 통신 래퍼
+  - 스트리밍 요청은 브라우저에서 same-origin `/api` 경로를 우선 사용해 Next.js rewrite를 타도록 설계
+  - 이유: `Authorization` 헤더와 JSON `POST` 조합에서 발생하는 CORS preflight 실패를 배포 환경에서 줄이기 위함
 - `authError.ts`: 인증 오류 처리
 - `errorHandler.ts`: 공통 에러 처리 로직
 

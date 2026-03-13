@@ -7,9 +7,6 @@ INTENT_PROMPT = """
 
 # 입력 정보
 
-사용자의 선호도:
-{prefs_info}
-
 기존 채팅 제목:
 {summary_title}
 
@@ -72,14 +69,9 @@ INTENT_PROMPT = """
 {category_desc}
 
 ### location 추출 규칙
-아래 표준 장소 목록을 참고하여 location을 추출하십시오.
-형식: `표준명: 별칭1, 별칭2, ...`
-
-{landmark_desc}
-
-- 사용자 입력이 위 목록의 별칭이면 반드시 표준명으로 변환하십시오. 예: "압구정" → "압구정로데오"
-- 목록에 없지만 명확한 지명(예: "상수동 카페거리", "딥커피")이면 원문 그대로 반환하십시오.
-- 장소가 불명확하거나 없으면 None으로 설정하십시오.
+- 사용자 입력에 장소(예: "성수동", "서울역")나 명확한 지명(예: "상수동 카페거리", "딥커피")이 있으면 location의 name에 담으십시오.
+- location name을 찾았다면, 그 장소의 위도와 경도를 알 수 있는지 확인하십시오. 알 수 있다면 location의 lat과 long에 담으십시오.
+- 장소가 불명확하거나 서울을 벗어난 장소면 None으로 설정하십시오.
 
 ---
 
@@ -94,27 +86,17 @@ summary_title과 summary_message를 대화 내용만 보고 추출하십시오.
 - 채팅방의 제목으로 사용될 예정입니다.
 - 예: "홍대, 종로 1박2일 여행 일정", "강남역 핫플 추천"
 
+
 ### summary_message
 - 이전 요약 내용을 참고하여 사용자의 최근 대화 내용을 포함하여 요약하십시오.
 - 제공된 이전 대화보다 오래된 대화들을 기억하기 위한 요약입니다.
 - 사용자 말투를 반영하여 100자 이내로 요약하십시오.
 
+---
+
 # 중요 규칙
 - 반드시 IntentOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
 - 스키마 description을 반드시 따르십시오.
-
-## IntentOutput
-- intents: IntentType 리스트
-- primary_intent: IntentType
-- slots: IntentSlots
-- update_user_input: str | null
-- summary_title: str
-- summary_message: str
-
-## primary_intent
-primary_intent는 intents 중 사용자 의도가 가장 강한 intent를 선택하십시오.
-
-
 """
 
 

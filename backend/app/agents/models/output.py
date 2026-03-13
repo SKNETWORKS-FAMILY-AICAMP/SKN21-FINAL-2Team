@@ -53,7 +53,7 @@ class PlannerNeedType(str, Enum): # 계획 필수 타입
 class IntentLocation(BaseModel):
     name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
     lat: Optional[float] = Field(default=None, description="location 위도")
-    lon: Optional[float] = Field(default=None, description="location 경도")
+    long: Optional[float] = Field(default=None, description="location 경도")
 
 
 class IntentSlots(BaseModel):
