@@ -299,6 +299,47 @@ class PlaceScorer:
 
         return min(0.10, 0.03 * hit_count)
 
+    def _tag_match_bonus(
+        self,
+        input_tags: list[str],
+        payload: dict,
+        max_boost: float = 0.10,
+    ) -> float:
+        """input_tags ↔ payload.tags 부분 문자열 매칭 보너스.
+
+        input_tags:   ["건대", "카페"]          — 사용자 요청 키워드
+        payload.tags: ["건대카페", "힙카페", …]  — 장소에 붙은 복합 태그
+
+        각 input_tag에 대해 어떤 payload_tag와 양방향 포함 관계이면 hit 처리.
+        예) "건대" in "건대카페" → hit / "카페" in "힙카페" → hit
+        """
+        if not input_tags:
+            return 0.0
+        raw_tags = payload.get("tags") or []
+        if not raw_tags:
+            return 0.0
+
+        def _norm(t: str) -> str:
+            return re.sub(r"\s+", "", str(t).lower())
+
+        payload_tags_norm = [_norm(t) for t in raw_tags if t]
+        if not payload_tags_norm:
+            return 0.0
+
+        hit_count = 0
+        for itag in input_tags:
+            itag_norm = _norm(itag)
+            if not itag_norm or len(itag_norm) < 2:
+                continue
+            for ptag in payload_tags_norm:
+                if len(ptag) < 2:
+                    continue
+                if itag_norm in ptag or ptag in itag_norm:
+                    hit_count += 1
+                    break  # 이 input_tag는 한 번만 카운트
+
+        return min(max_boost, 0.04 * hit_count)
+
     def _geo_proximity_bonus(
         self,
         payload: dict,

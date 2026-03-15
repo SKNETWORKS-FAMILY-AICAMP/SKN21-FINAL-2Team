@@ -8,6 +8,12 @@ import httpx
 
 # canonical key = 표준 장소명. aliases = 사용자 입력 변형 목록.
 LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
+    "고대": {
+        "canonical_name": "고대",
+        "aliases": ["고려대", "고려대학교", "고대입구", "고대앞"],
+        "lat": 37.5895, "lon": 127.0325, "radius_m": 1500,
+        "description": "고려대학교 중심 안암동 일대",
+    },
     "홍대": {
         "canonical_name": "홍대",
         "aliases": ["홍대입구", "홍대거리", "홍익대", "홍익대학교", "홍대앞"],
@@ -28,7 +34,7 @@ LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
     },
     "샤로수길": {
         "canonical_name": "샤로수길",
-        "aliases": ["서울대입구", "서울대입구역", "관악로"],
+        "aliases": ["서울대입구", "서울대입구역", "관악로", "샤로수길카페거리", "서울대 샤로수길", "관악 카페거리"],
         "lat": 37.4791, "lon": 126.9535, "radius_m": 600,
         "description": "서울대입구역 인근 관악로 일대",
     },
@@ -52,7 +58,7 @@ LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
     },
     "성수동 카페거리": {
         "canonical_name": "성수동",
-        "aliases": ["연무장길", "성수핫플", "서울숲 카페거리"],
+        "aliases": ["성수동", "성수", "연무장길", "성수핫플", "서울숲 카페거리", "성수역", "뚝섬"],
         "lat": 37.5445, "lon": 127.0560, "radius_m": 1500,
         "description": "폐공장을 개조한 카페와 브랜드 팝업스토어가 밀집한 성수역~서울숲 일대"
     },
@@ -64,7 +70,7 @@ LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
     },
     "힙지로": {
         "canonical_name": "을지로",
-        "aliases": ["을지로 노가리골목", "을지로3가", "을지로4가"],
+        "aliases": ["을지로", "을지로 노가리골목", "을지로3가", "을지로4가", "을지로입구", "힙지로카페"],
         "lat": 37.5661, "lon": 126.9916, "radius_m": 1000,
         "description": "오래된 인쇄소와 철공소 사이 감각적인 바와 카페가 들어선 을지로 일대"
     },

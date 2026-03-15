@@ -33,6 +33,11 @@ class TravelState(TypedDict, total=False):
     # planner
     itinerary: List[Dict[str, Any]]         # 시간순/일차별 정렬된 데이터
     
+    # geocoder
+    location_anchor_lat: float | None         # LANDMARK_DICTIONARY 또는 Naver API로 확정된 anchor 위도
+    location_anchor_lon: float | None         # anchor 경도
+    location_anchor_radius_m: float | None    # anchor 검색 반경(m)
+
     # retriever
     candidate_k: int
     final_k: int
@@ -41,6 +46,11 @@ class TravelState(TypedDict, total=False):
     candidates: List[Dict[str, Any]]          # 최종 노출용 TopN 후보
     retrieval_diagnostics: Dict[str, Any]     # 채널별 hit/점수/순위 진단 정보
     selection_mode: str                       # deterministic | explore
+    retriever_retry_count: int                # 그래프 레벨 재검색 횟수 (0=초회, 1=재시도)
+
+    # web_search (Qdrant 결과 없을 때 fallback)
+    web_search_places: List[Any]              # web_search_node가 찾은 PlaceInfo 목록
+    web_search_context: str | None            # web_search_node 결과 텍스트 컨텍스트
 
     # final
     follow_up_questions: List[str]          # LLM이 생성한 후속 질문 목록   

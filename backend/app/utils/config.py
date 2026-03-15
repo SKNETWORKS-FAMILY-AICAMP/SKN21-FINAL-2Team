@@ -81,7 +81,10 @@ GEO_PROXIMITY_RADIUS_KM = 10.0
 MAX_DISTANCE_KM = 3.0
 
 # 위치 기반 검색 실패시 확장 범위 배수
-GEO_RETRY_MULTIPLIER = 3.0
+GEO_RETRY_MULTIPLIER = 2.0
+
+# Candidate threshold
+CANDIDATE_THRESHOLD = 0.4
 
 # Rerank 후 geo proximity 블렌딩 가중치
 # reranker(CrossEncoder)는 텍스트 유사도만 보므로, 거리 점수를 일부 반영해 근거리 장소 우선도를 유지.

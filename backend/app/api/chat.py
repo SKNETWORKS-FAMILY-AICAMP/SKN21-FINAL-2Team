@@ -563,6 +563,9 @@ def _build_streaming_response(
         buffering_reason = None
         in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
         place_info_list = []
+        # retriever 재시도 추적: 두 번째 실행부터 retriever_retry 로 표시
+        retriever_start_count = 0
+        retriever_in_retry = False
 
         try:
             graph_app = await get_graph_app()
@@ -577,9 +580,22 @@ def _build_streaming_response(
 
                 # 노드 시작/종료 이벤트
                 if kind == "on_chain_start" and node_name in graph_nodes:
-                    yield _encode_sse({"step": node_name, "status": "start"})
+                    if node_name == "retriever":
+                        retriever_start_count += 1
+                        if retriever_start_count > 1:
+                            # 그래프 레벨 재시도 → 별도 step으로 표시
+                            retriever_in_retry = True
+                            yield _encode_sse({"step": "retriever_retry", "status": "start"})
+                        else:
+                            yield _encode_sse({"step": node_name, "status": "start"})
+                    else:
+                        yield _encode_sse({"step": node_name, "status": "start"})
                 elif kind == "on_chain_end" and node_name in graph_nodes:
-                    yield _encode_sse({"step": node_name, "status": "done"})
+                    if node_name == "retriever" and retriever_in_retry:
+                        yield _encode_sse({"step": "retriever_retry", "status": "done"})
+                        retriever_in_retry = False
+                    else:
+                        yield _encode_sse({"step": node_name, "status": "done"})
 
                     output = _normalize_event_output(event.get("data", {}).get("output", {}))
                     print(f"[SSE] Node '{node_name}' finished. Output keys: {list(output.keys())}")

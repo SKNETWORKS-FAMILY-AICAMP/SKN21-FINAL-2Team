@@ -23,11 +23,13 @@ from app.agents.models.place import PlaceInfo
 from app.core.retrieval.tavily_search import TavilySearch
 
 def _extract_place_names_from_answer(answer_text: str) -> list[str]:
-    """답변 텍스트에서 장소명 추출 (마크다운 링크 → 볼드 텍스트 순)."""
-    names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
-    if not names:
-        names = re.findall(r"\*\*([^*]+)\*\*", answer_text)
-    return list(dict.fromkeys(n.strip() for n in names if n.strip()))
+    """
+    답변 텍스트에서 장소명 추출.
+    """
+    link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
+    bold_names = re.findall(r"\*\*([^*]+)\*\*", answer_text)
+    # 링크명 우선, 볼드명은 보완 (중복 제거는 dict.fromkeys로)
+    return list(dict.fromkeys(n.strip() for n in (link_names + bold_names) if n.strip()))
 
 
 def _normalize_place_name(value: str) -> str:
@@ -47,15 +49,19 @@ def _extract_previously_recommended_place_names(messages: List[BaseMessage]) -> 
 
 
 def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple[Dict[str, Any], PlaceInfo]]:
-    """유효한 candidate만 PlaceInfo와 함께 반환한다.
-    payload에 addr(또는 road_address), mapx, mapy가 전처리 시 보장되므로 GeoCoder 호출 없이 직접 사용."""
+    """
+    유효한 candidate만 PlaceInfo와 함께 반환한다.
+    """
     result: list[tuple[Dict[str, Any], PlaceInfo]] = []
     for c in (candidates or []):
         payload = c.get("payload", {}) or {}
         name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
         address = (payload.get("addr") or payload.get("road_address") or "").strip()
-        longitude = payload.get("mapx")
-        latitude = payload.get("mapy")
+
+        # 좌표: mapx/mapy 우선, 없으면 geo.lon/geo.lat 폴백
+        geo = payload.get("geo") or {}
+        longitude = payload.get("mapx") or geo.get("lon")
+        latitude = payload.get("mapy") or geo.get("lat")
 
         if not name or not address or not longitude or not latitude:
             continue
@@ -487,8 +493,12 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     candidate_places = []
     candidate_names = "없음"
     if not candidates:
-        print("[Executor] No candidates — trying hybrid Tavily+Naver fallback")
-        fallback_places, web_context = await _build_web_context(input_tags, slots, input_lat=input_lat, input_lon=input_lon)
+        # web_search_node가 미리 검색해 놓은 결과를 state에서 읽는다.
+        print("[Executor] No candidates — reading web_search results from state")
+        fallback_places = state.get("web_search_places") or []
+        web_context = state.get("web_search_context") or ""
+        if not fallback_places:
+            print("[Executor] web_search_places empty — no fallback results available")
     else:
         print(f"candidate_pool : {len(candidate_pool)}")
         print(f"candidates : {len(candidates)}")

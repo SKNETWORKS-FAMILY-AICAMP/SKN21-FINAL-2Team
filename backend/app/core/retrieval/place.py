@@ -250,6 +250,7 @@ class PlaceRetriever(PlaceScorer):
         location_anchor_lon: float | None = None,
         location_radius_m: float | None = None,
         geo_retry_count: int = 0,
+        input_tags: list[str] | None = None,
     ):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
@@ -478,47 +479,27 @@ class PlaceRetriever(PlaceScorer):
             except Exception as e:
                 print(f"[WARN] bm25 lexical channel failed: {e}")
 
-        # --- geo filter 0결과 fallback ---
-        # geo filter 적용 후 후보가 하나도 없으면 우선 반경을 GEO_RETRY_MULTIPLIER 배 넓혀서 다시 시도
+        # --- geo filter 0결과 ---
+        # geo_retry_count > 0 (이미 확장 반경)인데도 후보가 없으면 빈 결과 반환.
+        # geo_retry_count == 0 (초회)이면 그래프 레벨에서 retriever 노드를 재실행하며
+        # geo_retry_count=1 을 전달해 확장 반경 검색을 수행한다.
         if apply_geo and not score_map:
-            if geo_retry_count < 1:
-                base_gps_radius_km = MAX_DISTANCE_KM
-                expanded_gps_radius_km = MAX_DISTANCE_KM * GEO_RETRY_MULTIPLIER
-                base_anchor_radius_m = location_radius_m
-                expanded_anchor_radius_m = (location_radius_m * GEO_RETRY_MULTIPLIER) if location_radius_m else None
+            radius_info = (
+                f"anchor_lat={location_anchor_lat} anchor_lon={location_anchor_lon} "
+                f"anchor_radius_m={location_radius_m} gps_radius_km={MAX_DISTANCE_KM} "
+                f"geo_retry_count={geo_retry_count}"
+            )
+            if geo_retry_count == 0:
                 print(
-                    f"[INFO] search_hybrid: geo filter returned 0 candidates "
-                    f"(anchor_lat={location_anchor_lat} anchor_lon={location_anchor_lon} "
-                    f"anchor_radius_m={base_anchor_radius_m} gps_radius_km={base_gps_radius_km}). "
-                    f"Retrying with {GEO_RETRY_MULTIPLIER:.1f}x expanded radius "
-                    f"(expanded_anchor_radius_m={expanded_anchor_radius_m} "
-                    f"expanded_gps_radius_km={expanded_gps_radius_km}, retry_count={geo_retry_count + 1})"
-                )
-                return await self.search_hybrid(
-                    query=query,
-                    image_url=image_url,
-                    limit=limit,
-                    categories=categories,
-                    emotional_text=emotional_text,
-                    user_latitude=user_latitude,
-                    user_lon=user_lon,
-                    preferred_location=preferred_location,
-                    candidate_k=candidate_k,
-                    enable_bm25=enable_bm25,
-                    enable_rerank=enable_rerank,
-                    rerank_top_k=rerank_top_k,
-                    search_scope=search_scope,
-                    location_anchor_lat=location_anchor_lat,
-                    location_anchor_lon=location_anchor_lon,
-                    location_radius_m=location_radius_m,
-                    geo_retry_count=geo_retry_count + 1,
+                    f"[INFO] search_hybrid: geo filter returned 0 candidates ({radius_info}). "
+                    f"Returning empty — graph will retry with {GEO_RETRY_MULTIPLIER:.1f}x expanded radius."
                 )
             else:
                 print(
                     f"[INFO] search_hybrid: expanded geo filter still returned 0 candidates "
-                    f"(expanded_by={GEO_RETRY_MULTIPLIER:.1f}x). Returning empty."
+                    f"(expanded_by={GEO_RETRY_MULTIPLIER:.1f}x, {radius_info}). Returning empty."
                 )
-                return []
+            return []
 
         # --- C. Fusion & Boosting ---
         results = []
@@ -555,7 +536,14 @@ class PlaceRetriever(PlaceScorer):
                 if addr_sparse_boost > 0.0:
                     data["matches"].add("addr_sparse")
 
-            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost
+            # input_tags ↔ payload.tags 부분 문자열 매칭 보너스
+            tag_boost = 0.0
+            if input_tags:
+                tag_boost = self._tag_match_bonus(input_tags=input_tags, payload=payload)
+                if tag_boost > 0.0:
+                    data["matches"].add("tag_match")
+
+            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost + tag_boost
             # BOOST_WEIGHT로 스케일 보정: RRF first_stage_score(0.01~0.05) 대비
             # boost 합계(최대 0.65) 스케일 불균형 완화.
             # 적용 후 boost 최대 기여 ≈ 0.65 * 0.3 = 0.195
@@ -569,18 +557,33 @@ class PlaceRetriever(PlaceScorer):
                         "location_text": location_text_boost,
                         "geo_proximity": geo_proximity_boost,
                         "addr_sparse": addr_sparse_boost,
+                        "tag": tag_boost,
                         "total": boost,
                     },
                 )
             )
 
         fused.sort(key=lambda x: x[2], reverse=True)
+
+        # min-max 정규화: 고정 분모(FUSED_SCORE_MAX) 대신 결과셋 내 최솟값·최댓값 사용.
+        # 이전 방식은 FUSED_SCORE_MAX(0.20)보다 실제 max가 크면 상위 결과가 모두
+        # 1.0으로 clamp되어 점수 분포가 의미 없어지는 문제가 있었다.
+        if fused:
+            all_final   = [x[2]          for x in fused]
+            all_rrf     = [x[1]["score"] for x in fused]
+            fused_max   = all_final[0];   fused_min  = all_final[-1]
+            fused_range = max(fused_max - fused_min, 1e-9)
+            rrf_max     = max(all_rrf);   rrf_min    = min(all_rrf)
+            rrf_range   = max(rrf_max - rrf_min, 1e-9)
+        else:
+            fused_min = fused_range = rrf_min = rrf_range = 1.0
+
         for idx, (pid, data, final_score, boost_detail) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
-                # 모든 점수를 [0.0, 1.0] 범위로 정규화
-                "score":             round(min(1.0, final_score        / FUSED_SCORE_MAX), 4),
-                "first_stage_score": round(min(1.0, data["score"]      / RRF_SCORE_MAX),   4),
+                # min-max 정규화: 이 결과셋 내에서 [0.0, 1.0] 상대 점수
+                "score":             round((final_score    - fused_min) / fused_range, 4),
+                "first_stage_score": round((data["score"]  - rrf_min)   / rrf_range,  4),
                 "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"])),
@@ -588,6 +591,7 @@ class PlaceRetriever(PlaceScorer):
                 "location_text_boost":  boost_detail["location_text"],
                 "geo_proximity_boost":  boost_detail["geo_proximity"],
                 "addr_sparse_boost":    boost_detail["addr_sparse"],
+                "tag_match_boost":      boost_detail["tag"],
                 "score_boost_total":    round(min(1.0, boost_detail["total"] / MAX_BOOST_SUM), 4),
             })
 

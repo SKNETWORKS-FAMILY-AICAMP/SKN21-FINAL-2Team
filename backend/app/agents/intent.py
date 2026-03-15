@@ -70,20 +70,24 @@ async def intent_node(state: TravelState):
     update_user_input = result.update_user_input or ""
 
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
+    # 조건 기준: canonical_matched 여부 (이름 변경 여부 X)
+    # → LLM이 canonical key와 동일한 이름을 반환해도 lat/lon이 환각일 수 있으므로
+    #   사전 매칭이 성공한 경우 항상 사전 좌표로 덮어쓴다.
     slots = result.slots
     if slots and slots.location:
         if slots.location.name:
             norm = NormalizedLocation.normalize_location(slots.location.name)
-            if norm.normalized_location != slots.location.name:
-                # 지역 사전에 존재하는 장소인 경우, 우선으로 사용
-                slots.location.name = norm.normalized_location
+            if norm.canonical_matched and norm.lat is not None:
+                # 사전 매칭 성공 → 이름·좌표 모두 사전 값으로 확정
+                if norm.normalized_location and norm.normalized_location != slots.location.name:
+                    slots.location.name = norm.normalized_location
                 slots.location.lat = norm.lat
                 slots.location.lon = norm.lon
                 print(
-                    f"[Intent] location normalized: {slots.location.name!r} → {norm.normalized_location!r} "
-                    f"(canonical={norm.canonical_matched})"
+                    f"[Intent] location resolved from LANDMARK_DICTIONARY: {slots.location.name!r} "
+                    f"lat={norm.lat} lon={norm.lon} (canonical_matched=True)"
                 )
-        
+
         if slots.location.lat and slots.location.lon:
             if not in_seoul_bbox(slots.location.lat, slots.location.lon):
                 # 좌표가 서울 밖에 있으면 일반 검색으로 변경
