@@ -139,6 +139,90 @@ def merge_halal_dietary(result: dict) -> dict:
     return result
 
 
+# ── 숙박 전용 전처리 ──────────────────────────────────────
+
+def normalize_checkin_time(text: str) -> str:
+    """usetime 텍스트 정규화
+    - 입실/퇴실 → 체크인/체크아웃
+    - PM/AM/오전/오후 → 24시간제
+    - 구분자(콤마, 개행) → ' / '
+    """
+    text = re.sub(r"입실", "체크인", text)
+    text = re.sub(r"퇴실", "체크아웃", text)
+
+    def to24(m):
+        ampm = m.group(1).upper()
+        h = int(m.group(2))
+        mn = m.group(3) or "00"
+        if ampm in ("PM", "오후") and h < 12:
+            h += 12
+        elif ampm in ("AM", "오전") and h == 12:
+            h = 0
+        return f"{h:02d}:{mn}"
+
+    text = re.sub(r"(PM|AM|오후|오전)\s*(\d{1,2}):?(\d{2})?", to24, text, flags=re.IGNORECASE)
+    # "15시" 형태 → "15:00"
+    text = re.sub(r"(\d{1,2})시", lambda m: f"{int(m.group(1)):02d}:00", text)
+    # 구분자 통일: 콤마 또는 개행 → ' / '
+    text = re.sub(r"\s*[,\r\n]+\s*", " / ", text)
+    text = re.sub(r"[ \t]+", " ", text).strip()
+    return text
+
+
+def merge_accommodation_fields(result: dict) -> dict:
+    """숙박 전용 필드 정리
+    - checkin_time + checkout_time → usetime (기존 usetime 없을 때)
+    - usetime 텍스트 정규화 (입실/퇴실 통일, 시간 포맷)
+    - room_type: 요금 포함 라인 → 객실명만 남기고 요금은 fee로 이동
+    """
+    # 1. checkin_time / checkout_time → usetime 합성
+    checkin = result.pop("checkin_time", None)
+    checkout = result.pop("checkout_time", None)
+    if checkin or checkout:
+        if not result.get("usetime"):
+            ci_h = int(checkin) if checkin else None
+            co_h = int(checkout) if checkout else None
+            parts = []
+            if ci_h is not None:
+                parts.append(f"체크인 {ci_h + 12 if ci_h < 12 else ci_h:02d}:00")
+            if co_h is not None:
+                parts.append(f"체크아웃 {co_h:02d}:00")
+            result["usetime"] = " / ".join(parts)
+
+    # 2. usetime 텍스트 정규화
+    if result.get("usetime"):
+        result["usetime"] = normalize_checkin_time(result["usetime"])
+
+    # 3. room_type: 요금 포함 라인 분리
+    room_type = result.get("room_type")
+    if room_type and isinstance(room_type, str):
+        lines = re.split(r"[\r\n]+", room_type)
+        room_names = []
+        fee_parts = []
+        price_pattern = re.compile(r"(\d[\d,\s]*만?\s*원|\d[\d,]*\s*KRW)", re.IGNORECASE)
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if price_pattern.search(line):
+                # 요금 포함 라인: "객실명 : 가격 (설명)" 패턴에서 객실명 추출
+                name_part = re.split(r"\s*:\s*", line)[0].strip()
+                # 이름 부분에 숫자+원 패턴이 없을 때만 객실명으로 인정
+                if name_part and not price_pattern.search(name_part):
+                    room_names.append(name_part)
+                fee_parts.append(line)
+            else:
+                room_names.append(line)
+
+        result["room_type"] = ", ".join(room_names) if room_names else None
+        if fee_parts:
+            existing_fee = result.get("fee") or ""
+            extra = " / ".join(fee_parts)
+            result["fee"] = (existing_fee + " / " + extra).strip(" /") if existing_fee else extra
+
+    return result
+
+
 # ── 항목 변환 ─────────────────────────────────────────────
 def transform(item: dict) -> dict:
     result = {}
@@ -169,6 +253,10 @@ def transform(item: dict) -> dict:
     # halal/salam/dietary 통합 정리 (음식점 전용)
     if any(k in result for k in ("halal", "salam", "dietary")):
         result = merge_halal_dietary(result)
+
+    # 숙박 전용 필드 정리
+    if any(k in result for k in ("checkin_time", "checkout_time", "room_type")):
+        result = merge_accommodation_fields(result)
 
     # null 필드 제거
     result = {k: v for k, v in result.items() if v is not None and v != [] and v != ""}

@@ -48,6 +48,12 @@ def build_user_prompt(item: dict) -> str:
         parts.append(f"식이 유형: {v}")
     if v := item.get("menu"):
         parts.append(f"메뉴: {v[:200]}")
+    if v := item.get("room_type"):
+        parts.append(f"객실 유형: {v}")
+    if v := item.get("fee"):
+        parts.append(f"요금: {v[:200]}")
+    if v := item.get("usetime"):
+        parts.append(f"체크인/체크아웃: {v}")
     tags = item.get("tags") or []
     if tags:
         parts.append(f"태그: {', '.join(tags)}")

@@ -50,6 +50,12 @@ def build_user_prompt(item: dict) -> str:
         parts.append(f"식이 유형: {v}")
     if v := item.get("menu"):
         parts.append(f"메뉴: {v[:200]}")
+    if v := item.get("room_type"):
+        parts.append(f"객실 유형: {v}")
+    if v := item.get("fee"):
+        parts.append(f"요금: {v[:200]}")
+    if v := item.get("usetime"):
+        parts.append(f"체크인/체크아웃: {v}")
     tags = item.get("tags") or []
     if tags:
         parts.append(f"태그: {', '.join(tags)}")
@@ -70,6 +76,12 @@ def build_llm_text(item: dict, intro: str) -> str:
         lines.append(f"- 장소명: {title}")
     if addr := item.get("addr"):
         lines.append(f"- 주소: {addr}")
+    if v := item.get("usetime"):
+        lines.append(f"- 체크인/체크아웃: {v}")
+    if v := item.get("room_type"):
+        lines.append(f"- 객실 유형: {v}")
+    if v := item.get("fee"):
+        lines.append(f"- 요금: {v[:200]}")
     tags = item.get("tags") or []
     if tags:
         lines.append(f"- 주요 키워드: {', '.join(tags)}")
