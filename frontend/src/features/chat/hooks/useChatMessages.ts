@@ -367,6 +367,8 @@ export function useChatMessages({
         } finally {
             setIsTyping(false);
             setIsStreaming(false);
+            setShowPipeline(false);
+            setStreamingMsgId(null);
             isSendingRef.current = false;
         }
     }, [clearStreamTokenBuffer, hidePipeline, queueStreamToken, setMessages, updatePipelineStep, updateRoomTitle]);

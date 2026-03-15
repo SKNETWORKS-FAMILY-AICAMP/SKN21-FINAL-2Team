@@ -1,13 +1,14 @@
 import asyncio
 import random
+import re
 from typing import Dict, Any, List
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
 from app.core.retrieval.place import PlaceRetriever
-from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY, normalize_location
+from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY, NormalizedLocation
 from app.utils.vision import describe_image
-from app.utils.common import getattr_safe
+from app.utils.common import getattr_safe, in_seoul_bbox, normalize_text
 from app.utils.place_id import get_candidate_point_id, get_place_id
 
 from app.utils.config import get_retrieval_params
@@ -27,6 +28,22 @@ def _candidate_score(candidate: Dict[str, Any]) -> float:
         return max(float(candidate.get("score", 0.0)), 1e-6)
     except Exception:
         return 1e-6
+
+
+def _candidate_name(candidate: Dict[str, Any]) -> str:
+    """후보의 대표 장소명을 추출한다."""
+    payload = candidate.get("payload", {}) or {}
+    return str(
+        payload.get("place")
+        or payload.get("title")
+        or payload.get("name")
+        or ""
+    ).strip()
+
+
+def _candidate_name_signature(candidate: Dict[str, Any]) -> str:
+    """같은 장소 여부를 판별하기 위한 이름 시그니처."""
+    return _normalize_text(_candidate_name(candidate))
 
 
 def _resolve_search_scope(
@@ -69,17 +86,36 @@ def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], fin
     pool = list(candidates[: min(len(candidates), top_pool)])
     selected: List[Dict[str, Any]] = []
     used_categories = set()
+    used_name_signatures = set()
 
-    # 1차: 카테고리 중복 최소화
+    # 1차: 카테고리 중복은 줄이되, 동일 장소명은 반드시 제외
     for c in pool:
         cat = _candidate_category(c)
+        name_signature = _candidate_name_signature(c)
+        if not name_signature or name_signature in used_name_signatures:
+            continue
         if cat not in used_categories:
             selected.append(c)
             used_categories.add(cat)
+            used_name_signatures.add(name_signature)
             if len(selected) >= final_k:
                 return selected
 
-    # 2차: 남은 슬롯은 점수 순으로 채움
+    # 2차: 같은 카테고리여도 장소명이 다르면 채움
+    selected_ids = {get_place_id(c) for c in selected}
+    for c in pool:
+        cid = get_place_id(c)
+        name_signature = _candidate_name_signature(c)
+        if not name_signature or name_signature in used_name_signatures:
+            continue
+        if cid and cid not in selected_ids:
+            selected.append(c)
+            selected_ids.add(cid)
+            used_name_signatures.add(name_signature)
+            if len(selected) >= final_k:
+                return selected
+
+    # 3차: 남은 슬롯은 점수 순으로 채움
     selected_ids = {get_place_id(c) for c in selected}
     for c in pool:
         cid = get_place_id(c)
@@ -102,16 +138,30 @@ def _pick_diverse_candidates_explore(
     pool = list(candidates[: min(len(candidates), top_pool)])
     selected: List[Dict[str, Any]] = []
     used_categories = set()
+    used_name_signatures = set()
     rng = random.Random(seed)
 
     while pool and len(selected) < final_k:
-        unseen_pool = [c for c in pool if _candidate_category(c) not in used_categories]
-        source = unseen_pool if unseen_pool else pool
+        unseen_pool = [
+            c for c in pool
+            if _candidate_category(c) not in used_categories
+            and _candidate_name_signature(c)
+            and _candidate_name_signature(c) not in used_name_signatures
+        ]
+        unique_name_pool = [
+            c for c in pool
+            if _candidate_name_signature(c)
+            and _candidate_name_signature(c) not in used_name_signatures
+        ]
+        source = unseen_pool if unseen_pool else unique_name_pool if unique_name_pool else pool
         weights = [_candidate_score(c) for c in source]
         picked = rng.choices(source, weights=weights, k=1)[0]
 
         selected.append(picked)
         used_categories.add(_candidate_category(picked))
+        name_signature = _candidate_name_signature(picked)
+        if name_signature:
+            used_name_signatures.add(name_signature)
         pool.remove(picked)
 
     return selected
@@ -157,7 +207,7 @@ async def _search_for_trip_planning(
             try:
                 item_category = item.get("category")
                 # itinerary 항목별 검색은 전체 K를 쓰지 않고 상위 일부만 취합
-                return await retriever.search_hybrid(
+                results = await retriever.search_hybrid(
                     query=search_query,
                     image_url=image_path,
                     limit=max(10, candidate_k // 3),
@@ -165,13 +215,22 @@ async def _search_for_trip_planning(
                     categories=[item_category] if item_category else None,
                     emotional_text=emotional_text,
                     user_latitude=state.get("input_lat"),
-                    user_longitude=state.get("input_long"),
+                    user_lon=state.get("input_lon"),
                     preferred_location=getattr_safe(state.get("slots"), "location").name if getattr_safe(state.get("slots"), "location") else None,
                     enable_bm25=True,
                     enable_rerank=True,
                     rerank_top_k=min(rerank_max_k, max(10, candidate_k // 3)),
                     search_scope="place_only",
                 )
+                
+                # 일정 정보를 각 장소 결과 객체에 추가
+                for res in results:
+                    res["itinerary_day"] = item.get("day", 1)
+                    res["itinerary_time_slot"] = item.get("time_slot", "")
+                    res["itinerary_activity"] = item.get("activity", "")
+                    
+                return results
+
             except Exception as e:
                 print(f"[Retriever] Search error for '{search_query}': {e}")
                 return []
@@ -191,23 +250,27 @@ async def _search_for_general(
     retriever = PlaceRetriever.get_instance()
 
     user_input = get_effective_user_input(state)
+    input_tags = state.get("input_tags")
     image_path = state.get("input_image")
     latitude = state.get("input_lat")
-    longitude = state.get("input_long")
+    longitude = state.get("input_lon")
     slots = state.get("slots")
 
     print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
     query = user_input
     if latitude and longitude:
         try:
-            geocoder = GeoCoder()
-            geocode_data = geocoder.reverse_geocoder(latitude, longitude)
+            geocoder = GeoCoder.get_instance()
+            geocode_data = await geocoder.reverse_geocoder(latitude, longitude)
             if geocode_data:
                 road = (geocode_data.get("road_address") or "").strip()
                 if road:
                     query += f"\n현재 내 위치 주소: {road}"
         except Exception as e:
             print(f"[Retriever] Geocoding error: {e}")
+
+    if input_tags:
+        query += f"\n핵심 키워드: {', '.join(input_tags)}"
 
     categories = None
     location_obj = None
@@ -218,19 +281,17 @@ async def _search_for_general(
         location_obj = getattr_safe(slots, "location")
         raw_location = location_obj.name if location_obj else None
 
-    def _in_seoul_bbox(lat, lng) -> bool:
-        return (37.413 <= lat <= 37.701) and (126.734 <= lng <= 127.269)
 
-    def _resolve_seoul_anchor(name: str, lat, lng, radius_m):
+    async def _resolve_seoul_anchor(name: str, lat, lng, radius_m):
         """anchor 좌표가 서울 bbox 밖이면 Naver Local Search로 서울 내 좌표 재검색."""
-        if lat and lng and not _in_seoul_bbox(lat, lng):
+        if lat and lng and not in_seoul_bbox(lat, lng):
             print(f"[Retriever] anchor '{name}' outside Seoul bbox ({lat}, {lng}) — retrying with Seoul search")
             try:
-                results = GeoCoder().search_places(f"{name} 서울", 1)
+                results = await GeoCoder.get_instance().search_places(f"{name} 서울", 1)
                 if results:
                     new_lat = results[0].get("lat")
                     new_lng = results[0].get("lng")
-                    if new_lat and new_lng and _in_seoul_bbox(new_lat, new_lng):
+                    if new_lat and new_lng and in_seoul_bbox(new_lat, new_lng):
                         print(f"[Retriever] anchor resolved to Seoul: ({new_lat}, {new_lng})")
                         return new_lat, new_lng, radius_m
             except Exception as e:
@@ -239,35 +300,35 @@ async def _search_for_general(
         return lat, lng, radius_m
 
     # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
-    anchor_lat = anchor_long = anchor_radius_m = None
+    anchor_lat = anchor_lon = anchor_radius_m = None
     if raw_location and raw_location in LANDMARK_DICTIONARY:
         entry = LANDMARK_DICTIONARY[raw_location]
         anchor_lat = entry["lat"]
-        anchor_long = entry["long"]
+        anchor_lon = entry["lon"]
         anchor_radius_m = entry["radius_m"]
-        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_long} r={anchor_radius_m}m")
+        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
     elif raw_location:
         # 만약 intent_node 후처리를 거치지 않은 경우에도 대비한 안전망
-        norm = normalize_location(raw_location)
+        norm = NormalizedLocation.normalize_location(raw_location)
         if norm.canonical_matched and norm.lat is not None:
             anchor_lat = norm.lat
-            anchor_long = norm.long
+            anchor_lon = norm.lon
             anchor_radius_m = norm.radius_m
             print(f"[Retriever] landmark anchor (fallback normalize): {raw_location!r} → {norm.normalized_location!r}")
         else:
             # LANDMARK_DICTIONARY 미매칭 → Naver Search로 서울 내 좌표 직접 검색
             print(f"[Retriever] '{raw_location}' not in landmark dict — searching Seoul coords via Naver")
             try:
-                results = GeoCoder().search_places(f"{raw_location} 서울", 1)
+                results = await GeoCoder.get_instance().search_places(f"{raw_location} 서울", 1)
                 if results:
                     anchor_lat = results[0].get("lat")
-                    anchor_long = results[0].get("lng")
-                    print(f"[Retriever] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_long})")
+                    anchor_lon = results[0].get("lng")
+                    print(f"[Retriever] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_lon})")
             except Exception as e:
                 print(f"[Retriever] Naver search anchor failed for '{raw_location}': {e}")
 
-    anchor_lat, anchor_long, anchor_radius_m = _resolve_seoul_anchor(
-        raw_location or "", anchor_lat, anchor_long, anchor_radius_m
+    anchor_lat, anchor_lon, anchor_radius_m = await _resolve_seoul_anchor(
+        raw_location or "", anchor_lat, anchor_lon, anchor_radius_m
     )
 
     try:
@@ -279,14 +340,14 @@ async def _search_for_general(
             categories=categories,
             emotional_text=emotional_text,
             user_latitude=latitude,
-            user_longitude=longitude,
+            user_lon=longitude,
             preferred_location=raw_location,
             enable_bm25=True,
             enable_rerank=True,
             rerank_top_k=min(rerank_max_k, candidate_k),
             search_scope=search_scope,
             location_anchor_lat=anchor_lat,
-            location_anchor_long=anchor_long,
+            location_anchor_lon=anchor_lon,
             location_radius_m=anchor_radius_m,
         )
     except Exception as e:
@@ -330,8 +391,12 @@ async def retriever_node(state: TravelState):
     candidate_k = max(candidate_k, 1)
     final_k = max(final_k, 1)
     rerank_max_k = max(rerank_max_k, 1)
-    selection_mode = "deterministic"
-    selection_seed = 42
+    # 매 턴마다 다른 결과를 내기 위해 room_id + 대화 턴 수 기반 seed 사용.
+    # state에서 외부 오버라이드(selection_mode)가 있으면 그것을 존중한다.
+    selection_mode = state.get("selection_mode") or "explore"
+    room_id = state.get("room_id") or 0
+    turn_count = len(state.get("messages") or [])
+    selection_seed = (hash(str(room_id)) + turn_count) % (2 ** 31)
 
     primary_intent = state.get("primary_intent")
     print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
@@ -383,6 +448,7 @@ async def retriever_node(state: TravelState):
 
     # pool 기준 dedup + 점수 정렬
     candidate_dict: Dict[str, Dict[str, Any]] = {}
+    name_dedup_dict: Dict[str, Dict[str, Any]] = {}
     skipped = 0
     for c in candidate_pool:
         cid = get_place_id(c)
@@ -396,9 +462,19 @@ async def retriever_node(state: TravelState):
             continue
         if cid not in candidate_dict or _candidate_score(c) > _candidate_score(candidate_dict[cid]):
             candidate_dict[cid] = c
+        name_signature = _candidate_name_signature(c)
+        if name_signature and (
+            name_signature not in name_dedup_dict
+            or _candidate_score(c) > _candidate_score(name_dedup_dict[name_signature])
+        ):
+            name_dedup_dict[name_signature] = c
 
-    print(f"[Retriever] dedup: pool={len(candidate_pool)} skipped={skipped} unique={len(candidate_dict)}")
-    candidates = sorted(candidate_dict.values(), key=_candidate_score, reverse=True)[:candidate_k]
+    deduped_candidates = list(name_dedup_dict.values()) if name_dedup_dict else list(candidate_dict.values())
+    print(
+        f"[Retriever] dedup: pool={len(candidate_pool)} skipped={skipped} "
+        f"unique_id={len(candidate_dict)} unique_name={len(name_dedup_dict)}"
+    )
+    candidates = sorted(deduped_candidates, key=_candidate_score, reverse=True)[:candidate_k]
     print(f"[Retriever] final candidates={len(candidates)}")
 
     exposed_candidates = _pick_candidates(

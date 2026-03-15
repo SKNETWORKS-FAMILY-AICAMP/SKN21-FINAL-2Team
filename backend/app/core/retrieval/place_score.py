@@ -85,12 +85,15 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
-def _extract_place_id(point: Any, source_collection: str) -> int | None:
-    if source_collection == PHOTOS_COLLECTION:
-        cid = get_place_id_from_point(point, prefer_payload=True, fallback_to_point_id=False)
-    else:
-        cid = get_place_id_from_point(point, prefer_payload=False, fallback_to_point_id=True)
-    return _to_positive_int(cid)
+def _extract_place_id(point: Any, source_collection: str) -> str | None:
+    """Qdrant point에서 장소 식별자를 추출한다.
+
+    contentid가 숫자 문자열("1234")이든 비숫자 문자열("KOP5hau1h")이든 모두 허용.
+    - 두 컬렉션 모두 payload의 contentid를 우선 사용해 cross-collection RRF 융합이 가능하도록 한다.
+    - payload에 contentid가 없으면 point ID(UUID)로 폴백.
+    """
+    cid = get_place_id_from_point(point, prefer_payload=True, fallback_to_point_id=True)
+    return cid if cid else None
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +163,7 @@ class PlaceScorer:
         geo = payload.get("geo")
         if isinstance(geo, dict):
             geo_lat = _safe_float(geo.get("lat"))
-            geo_lng = _safe_float(geo.get("long"))
+            geo_lng = _safe_float(geo.get("lon"))
             if geo_lat is not None and geo_lng is not None:
                 if -90.0 <= geo_lat <= 90.0 and -180.0 <= geo_lng <= 180.0:
                     return geo_lat, geo_lng
@@ -300,21 +303,21 @@ class PlaceScorer:
         self,
         payload: dict,
         anchor_lat: float | None,
-        anchor_lng: float | None,
+        anchor_lon: float | None,
         radius_km: float = 20.0,
         max_boost: float = 0.20,
     ) -> float:
         """
         물리적 거리 기반 보너스
         """
-        if anchor_lat in (None, 0, 0.0) or anchor_lng in (None, 0, 0.0):
+        if anchor_lat in (None, 0, 0.0) or anchor_lon in (None, 0, 0.0):
             return 0.0
 
         point_lat, point_lng = self._payload_coordinates(payload)
         if point_lat is None or point_lng is None:
             return 0.0
 
-        dist_km = self._haversine(anchor_lat, anchor_lng, point_lat, point_lng)
+        dist_km = self._haversine(anchor_lat, anchor_lon, point_lat, point_lng)
         if dist_km > radius_km:
             return 0.0
 

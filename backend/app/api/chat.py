@@ -37,7 +37,6 @@ from app.agents.prompts.auto_start_prompt import (
     render_auto_start_greeting_prompt,
 )
 from app.core.llm_streaming import compute_visible_delta, extract_text_from_chunk
-from app.utils.place_id import get_place_id
 
 from langchain_core.messages import HumanMessage
 
@@ -78,6 +77,24 @@ def _encode_sse(payload: dict) -> str:
 def _encode_sse_padding() -> str:
     # 브라우저가 작은 초기 chunk를 늦게 flush하는 경우를 줄이기 위한 프리앰블 패딩
     return f": {' ' * 2048}\n\n"
+
+
+def _resolve_graph_event_node_name(event: dict) -> str:
+    metadata = event.get("metadata", {}) or {}
+    langgraph_node = metadata.get("langgraph_node")
+    if isinstance(langgraph_node, str) and langgraph_node:
+        return langgraph_node
+    return event.get("name", "")
+
+
+def _normalize_event_output(output: object) -> dict:
+    if isinstance(output, dict):
+        return output
+    if hasattr(output, "model_dump"):
+        return output.model_dump()
+    if hasattr(output, "dict"):
+        return output.dict()
+    return {}
 
 
 def _clean_history_text(value: str) -> str:
@@ -191,12 +208,15 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         user_id=user.id,
         room_id=room.id,
         input_lat=message_in.latitude,
-        input_long=message_in.longitude,
+        input_lon=message_in.longitude,
         input_image=message_in.image_path,
         prefs_info=user.build_preferences(),
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
+        # 매 턴마다 stale 상태 방지를 위해 명시적으로 초기화 (CLAUDE.md)
+        candidates=[],
+        candidate_pool=[],
         retrieval_diagnostics={},
         answer="",
     )
@@ -537,12 +557,12 @@ def _build_streaming_response(
 
     async def event_generator():
         yield _encode_sse_padding()
-        full_answer = ""
+        streamed_answer = ""
+        final_answer = ""
         streamed_visible_text = ""
         buffering_reason = None
         in_executor = False  # executor 노드 안에서만 LLM 토큰 전송
         place_info_list = []
-        candidates = []
 
         try:
             graph_app = await get_graph_app()
@@ -550,38 +570,30 @@ def _build_streaming_response(
             graph_nodes = {name for name in graph_app.nodes if not name.startswith("__")}
             async for event in graph_app.astream_events(inputs, config=config, version="v2"):
                 kind = event.get("event", "")
-                name = event.get("name", "")
+                node_name = _resolve_graph_event_node_name(event)
+                event_name = event.get("name", "")
+
+                _EXECUTOR_NODES = {"executor", "executor_missing", "executor_general"}
 
                 # 노드 시작/종료 이벤트
-                if kind == "on_chain_start" and name in graph_nodes:
-                    yield _encode_sse({"step": name, "status": "start"})
-                    if name in ("executor", "executor_missing", "executor_general"):
-                        in_executor = True
-                elif kind == "on_chain_end" and name in graph_nodes:
-                    yield _encode_sse({"step": name, "status": "done"})
-                    
-                    output = event.get("data", {}).get("output", {})
-                    print(f"[SSE] Node '{name}' finished. Output keys: {list(output.keys())}")
-                    
-                    if name in ("executor", "executor_missing", "executor_general"):
-                        in_executor = False
+                if kind == "on_chain_start" and node_name in graph_nodes:
+                    yield _encode_sse({"step": node_name, "status": "start"})
+                elif kind == "on_chain_end" and node_name in graph_nodes:
+                    yield _encode_sse({"step": node_name, "status": "done"})
+
+                    output = _normalize_event_output(event.get("data", {}).get("output", {}))
+                    print(f"[SSE] Node '{node_name}' finished. Output keys: {list(output.keys())}")
+
+                    if node_name in _EXECUTOR_NODES:
                         # executor 노드 종료 시 결과 캡처
-                        output = event.get("data", {}).get("output", {})
                         if "place_info_list" in output:
                             place_info_list = output["place_info_list"]
                             print(f"[SSE] Captured place_info_list: {len(place_info_list)} items")
                         if "answer" in output:
-                            full_answer = output["answer"]
-                    
-                    if name == "retriever":
-                        output = event.get("data", {}).get("output", {})
-                        if "candidates" in output:
-                            candidates = output["candidates"]
-                            print(f"[SSE] Captured {len(candidates)} candidates")
-                    
+                            final_answer = output["answer"]
+
                     # Intent 노드 종료 시점에 summary_title 제목 즉시 업데이트
-                    if name == "intent":
-                        output = event.get("data", {}).get("output")
+                    if node_name == "intent":
                         if should_update_title and output and _can_overwrite_room_title(room):
                             summary_title = output.get("summary_title")
                             if summary_title:
@@ -590,21 +602,19 @@ def _build_streaming_response(
                                     # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
                                     yield _encode_sse({"room_title": room.title})
 
-                # LLM 토큰 스트리밍 (executor 노드의 LLM만)
-                elif kind in ("on_chat_model_stream", "on_llm_stream") and in_executor:
-                    # executor 계열 노드는 custom token event를 표준 경로로 사용한다.
-                    # raw LLM stream 이벤트까지 함께 처리하면 중복 토큰이 발생할 수 있다.
-                    continue
-                elif kind == "on_custom_event" and name == "token" and in_executor:
-                    token_text = event.get("data", {}).get("token", "")
-                    if isinstance(token_text, str) and token_text:
-                        full_answer += token_text
-                        streamed_visible_text, delta, next_buffering_reason = compute_visible_delta(full_answer, streamed_visible_text)
-                        if next_buffering_reason != buffering_reason:
-                            buffering_reason = next_buffering_reason
-                            yield _encode_sse({"buffering": buffering_reason})
-                        if delta:
-                            yield _encode_sse({"token": delta})
+                # LLM 토큰 스트리밍 — metadata의 langgraph_node로 executor 여부 직접 판별
+                elif kind in ("on_chat_model_stream", "on_llm_stream") and node_name in _EXECUTOR_NODES:
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk is not None:
+                        token_text = extract_text_from_chunk(chunk)
+                        if token_text:
+                            streamed_answer += token_text
+                            streamed_visible_text, delta, next_buffering_reason = compute_visible_delta(streamed_answer, streamed_visible_text)
+                            if next_buffering_reason != buffering_reason:
+                                buffering_reason = next_buffering_reason
+                                yield _encode_sse({"buffering": buffering_reason})
+                            if delta:
+                                yield _encode_sse({"token": delta})
 
 
         except asyncio.CancelledError:
@@ -616,17 +626,19 @@ def _build_streaming_response(
             import traceback
             traceback.print_exc()
             db.rollback()
-            if not full_answer:
-                full_answer = "죄송합니다. 오류가 발생했습니다."
-                yield _encode_sse({"token": full_answer})
+            if not final_answer and not streamed_answer:
+                final_answer = "죄송합니다. 오류가 발생했습니다."
+                yield _encode_sse({"token": final_answer})
 
         # AI 메시지 DB 저장
-        if not full_answer:
-            full_answer = "죄송합니다. 답변을 생성하지 못했습니다."
+        if not final_answer:
+            final_answer = streamed_answer
+        if not final_answer:
+            final_answer = "죄송합니다. 답변을 생성하지 못했습니다."
 
         ai_message = ChatMessage(
             room_id=room_id,
-            message=full_answer,
+            message=final_answer,
             role=RoleType.ai,
             image_path=None,
         )
@@ -675,7 +687,7 @@ def _build_streaming_response(
         print(f"[SSE] Sending 'done' event with {len(places_data)} places")
         yield _encode_sse({
             "done": True,
-            "full_message": full_answer,
+            "full_message": final_answer,
             "message_id": ai_message.id,
             "created_at": ai_message.created_at.isoformat(),
             "room_title": room.title,

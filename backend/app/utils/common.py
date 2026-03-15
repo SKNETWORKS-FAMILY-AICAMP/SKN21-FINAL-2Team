@@ -1,32 +1,11 @@
-import json as _json
+import re
+import urllib.parse
 from typing import Any, Optional
 
 
-def _normalize_text(value: str) -> str:
-    return re.sub(r"\s+", "", (value or "")).lower()
-
-
-def parse_payload(payload: dict, exclude_keys: list = ["image", "image_urls", "mapx", "mapy", "map_url", "contentid", "id"]) -> str:
-    """
-    payload에서 LLM이 사용하지 않는 불필요한 키를 제거하고 JSON 문자열로 반환한다.
-    
-    Args:
-        payload (dict): payload
-
-    Returns:
-        str: JSON 문자열
-    """
-    filtered = {}
-    for k, v in payload.items():
-        if k in exclude_keys:
-            continue
-        if v is None or v == "" or v == [] or v == {}:
-            continue
-        filtered[k] = v
-
-    payload_str = _json.dumps(filtered, ensure_ascii=False)
-
-    return payload_str
+def normalize_text(value: str) -> str:
+    """비교용 문자열 정규화."""
+    return re.sub(r"\s+", "", str(value or "").strip().lower())
 
 
 def getattr_safe(obj: Any, key: str, default: Any = None) -> Any:
@@ -65,3 +44,14 @@ def to_client_image_url(value: Optional[str]) -> str:
     if text.startswith("/api/static/") or is_remote_image_url(text):
         return text
     return f"/api/static/{text.lstrip('/')}"
+
+
+def in_seoul_bbox(lat, lng) -> bool:
+    return (37.413 <= lat <= 37.701) and (126.734 <= lng <= 127.269)
+
+
+def build_naver_map_url(query: str, center_lat: float, center_lng: float) -> str:
+    """네이버 지도 검색 URL 생성."""
+    encoded_query = urllib.parse.quote(query)
+    return f"https://map.naver.com/v5/search/{encoded_query}?c=15.00,{center_lng},{center_lat},0,dh"
+

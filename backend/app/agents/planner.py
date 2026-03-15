@@ -1,12 +1,46 @@
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any, List
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.agents.models.state import TravelState, get_effective_user_input, get_slots_info
 from app.agents.prompts.prompts import PLANNER_PROMPT
 from app.core.llm_factory import LLMFactory
-from app.agents.models.output import PlannerOutput, PlannerNeedType
+from app.agents.models.output import PlannerOutput
+
+
+def build_current_itinerary_context(itinerary: List[Dict[str, Any]] | None) -> str:
+    """
+    기존 itinerary를 LLM 프롬프트에 넣기 쉬운 텍스트로 변환한다.
+
+    Args:
+        itinerary: state에 저장된 기존 여행 일정 목록.
+
+    Returns:
+        일차/시간대 기준으로 정렬된 일정 요약 문자열. 일정이 없으면 "없음"을 반환한다.
+    """
+    if not itinerary:
+        return "없음"
+
+    def _sort_key(item: Dict[str, Any]) -> tuple[int, int, str]:
+        slot_order = {"morning": 0, "afternoon": 1, "evening": 2}
+        return (
+            int(item.get("day", 1) or 1),
+            slot_order.get(str(item.get("time_slot", "")), 99),
+            str(item.get("activity", "")),
+        )
+
+    lines: List[str] = []
+    for item in sorted(itinerary, key=_sort_key):
+        day = item.get("day", 1)
+        time_slot = item.get("time_slot", "")
+        activity = item.get("activity", "")
+        category = item.get("category", "")
+        search_query = item.get("search_query", "")
+        lines.append(
+            f"{day}일차 {time_slot} - {activity} / 카테고리: {category} / 검색어: {search_query}"
+        )
+
+    return "\n".join(lines)
+
 
 async def planner_node(state: TravelState):
     """
@@ -17,10 +51,11 @@ async def planner_node(state: TravelState):
 
     user_input = get_effective_user_input(state)
     user_lat = state.get("input_lat")
-    user_long = state.get("input_long")
+    user_lon = state.get("input_lon")
     messages = state.get("messages", [])[-10:]
     slots_info = get_slots_info(state)
     prefs_info = state.get("prefs_info", "")
+    current_itinerary = build_current_itinerary_context(state.get("itinerary"))
 
     if not user_input:
         return state
@@ -41,9 +76,10 @@ async def planner_node(state: TravelState):
         result = await chain.ainvoke({
             "messages": messages,
             "user_input": user_input,
-            "user_geo": f"위도: {user_lat}, 경도: {user_long}",
+            "user_geo": f"위도: {user_lat}, 경도: {user_lon}",
             "slots_info": slots_info or "없음",
             "prefs_info": prefs_info,
+            "current_itinerary": current_itinerary,
         })
 
         print(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")

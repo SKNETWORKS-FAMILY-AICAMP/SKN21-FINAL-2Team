@@ -9,13 +9,13 @@ from app.agents.models.output import IntentOutput, IntentSlots, IntentType, Inpu
 async def test_intent_node_uses_update_user_input_from_structured_output():
     mock_structured_llm = AsyncMock()
     mock_structured_llm.ainvoke.return_value = IntentOutput(
-        update_user_input="제주도에서 2박 3일 여행 코스를 추천해줘",
+        update_user_input="서울에서 2박 3일 여행 코스를 추천해줘",
         intents=[IntentType.TRIP_PLANNING],
         primary_intent=IntentType.TRIP_PLANNING,
         slots=IntentSlots(input_type=InputType.TEXT),
-        summary_title="제주 여행",
-        summary_message="제주도 여행 코스 추천 요청",
-        input_tags=["제주도", "여행 코스"],
+        summary_title="서울 여행",
+        summary_message="서울 여행 코스 추천 요청",
+        input_tags=["서울", "여행 코스"],
     )
 
     mock_llm = AsyncMock()
@@ -35,6 +35,6 @@ async def test_intent_node_uses_update_user_input_from_structured_output():
                 }
             )
 
-    assert result["update_user_input"] == "제주도에서 2박 3일 여행 코스를 추천해줘"
+    assert result["update_user_input"] == "서울에서 2박 3일 여행 코스를 추천해줘"
     assert result["primary_intent"] == IntentType.TRIP_PLANNING
-    assert result["input_tags"] == ["제주도", "여행 코스"]
+    assert result["input_tags"] == ["서울", "여행 코스"]

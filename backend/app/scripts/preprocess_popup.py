@@ -13,6 +13,7 @@
 """
 
 import json
+import asyncio
 import re
 import sys
 import os
@@ -212,9 +213,9 @@ def step2_clean(data: list) -> list:
 # 3단계: Geocoding
 # ──────────────────────────────────────────────────────────────────────────────
 
-def step3_geocode(data: list) -> list:
+async def step3_geocode(data: list) -> list:
     print("\n[3단계] Geocoding 시작")
-    geocoder = GeoCoder()
+    geocoder = GeoCoder.get_instance()
     result = []
     failed = 0
 
@@ -223,7 +224,7 @@ def step3_geocode(data: list) -> list:
         geocoded = dict(item)
 
         if addr:
-            geo = geocoder.geocoder(addr)
+            geo = await geocoder.geocoder(addr)
             if geo:
                 geocoded["mapy"] = str(geo["lat"])
                 geocoded["mapx"] = str(geo["lng"])
@@ -518,7 +519,7 @@ def main():
     # 단계별 실행
     data = step1_normalize(raw)
     data = step2_clean(data)
-    data = step3_geocode(data)
+    data = asyncio.run(step3_geocode(data))
     data = step4_generate_llm_text(data)
     step5_save_jsonl(data)
 

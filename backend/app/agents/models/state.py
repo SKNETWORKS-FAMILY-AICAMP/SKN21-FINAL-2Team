@@ -1,6 +1,7 @@
 from typing import TypedDict, List, Dict, Any, Annotated
 from langgraph.graph.message import add_messages
-from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType, PlaceInfo
+from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType
+from app.agents.models.place import PlaceInfo
 from langchain_core.messages import BaseMessage
 
 class TravelState(TypedDict, total=False):
@@ -11,7 +12,7 @@ class TravelState(TypedDict, total=False):
     room_id: int
 
     input_lat: float | None
-    input_long: float | None
+    input_lon: float | None
     input_image: str | None
 
     # 대화 관리
@@ -43,7 +44,7 @@ class TravelState(TypedDict, total=False):
 
     # final
     follow_up_questions: List[str]          # LLM이 생성한 후속 질문 목록   
-    missing_slots: List[PlannerNeedType]                # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)
+    missing_slots: List[PlannerNeedType]    # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)
     answer: str
     place_info_list: List[PlaceInfo]        # executor가 구성한 장소 정보 목록 (Qdrant/Tavily 통합)
 

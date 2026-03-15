@@ -57,7 +57,7 @@ INTENT_PROMPT = """
 
 ### update_user_input
 - 사용자의 입력이 단답, 지시어형(예: "그럼 여기", "그중에", "두 번째", "1번"), 생략형(예: "비슷한 곳", "예약도")이거나 의도가 불명확하면 update_user_input을 생성하십시오.
-- update_user_input은 직전 AI 답변과 현재 사용자 입력을 바탕으로, 사용자가 실제로 요청한 내용을 한 문장으로 서술한 값이어야 합니다. 
+- update_user_input은 직전 AI 답변과 현재 사용자 입력을 바탕으로, 사용자가 실제로 요청한 내용을 한 문장으로 서술한 값이어야 합니다. (예: 2번 홍대에 대한 "2번 좋아" -> "홍대와 관련된 장소 추천해줘")
 - 특정 명사가 있으면 이전 대화와 사용자 입력을 통해 명사를 설명하는 문구와 함께 작성합니다.
 - update_user_input에는 대화에 없는 새 정보나 추측을 넣지 마십시오.
 - 의도가 이미 충분히 명확하면 update_user_input은 null로 두십시오.
@@ -65,7 +65,7 @@ INTENT_PROMPT = """
 
 ### categories 추출 규칙:
 사용자 입력(또는 update_user_input)에서 해당하는 카테고리를 아래 목록에서 골라 categories 리스트에 담으십시오.
-카테고리가 여러 개이면 모두 담으십시오. 명확하지 않으면 None으로 두십시오.
+예상되는 카테고리가 여러 개이면 유력한 순서대로 모두 담으십시오. 명확하지 않으면 None으로 두십시오.
 
 {category_desc}
 
@@ -114,6 +114,7 @@ PLANNER_PROMPT = """
 - 슬롯 정보: {slots_info}
 - 사용자 선호도: {prefs_info}
 - 사용자 위치 (위도, 경도): {user_geo}
+- 기존 itinerary: {current_itinerary}
 
 # 출력 규칙
 - 반드시 PlannerOutput 스키마만 반환하세요.
@@ -129,6 +130,12 @@ PLANNER_PROMPT = """
 5. itinerary에는 사용자 선호도를 반영한 장소를 최소 1개 포함하세요.
 6. itinerary에는 최소 1개 이상의 시간순/일차별 여행 일정 항목을 포함하세요.
 7. search_query는 Qdrant 장소 검색에 유리한 구체적인 한국어 키워드로 작성하세요.
+8. 기존 itinerary가 "없음"이면 새 itinerary를 생성하세요.
+9. 기존 itinerary가 있고 사용자가 변경 요청을 하면, 기존 itinerary를 기준으로 요청된 부분만 우선 수정하고 변경 지시가 없는 항목은 최대한 유지하세요.
+10. 사용자가 기존 itinerary를 "이어서" 요청하면 기존 일정의 흐름과 일차를 이어서 확장하세요.
+11. 사용자가 기존 itinerary를 "참고해서 다시" 요청하면 기존 itinerary를 참고하되 더 적합한 전체 itinerary로 재구성할 수 있습니다.
+12. 최신 사용자 요청이 기존 itinerary보다 우선합니다.
+13. 최종 출력은 항상 최신 전체 itinerary여야 합니다.
 """
 
 
