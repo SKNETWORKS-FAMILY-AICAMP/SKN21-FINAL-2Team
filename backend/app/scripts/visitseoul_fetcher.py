@@ -155,11 +155,8 @@ class VisitSeoulAPI:
     def get_contents_list(self, lang_code: str = "ko", category: str = None, page: int = 1, page_size: int = 100) -> dict | None:
         """콘텐츠 목록 조회 (1페이지)"""
         payload = {
-            "page": page,
-            "page_size": page_size,
             "page_no": page,
-            "pageNo": page,
-            "pageSize": page_size,
+            "page_size": page_size,
         }
 
         if lang_code:
@@ -252,7 +249,7 @@ class VisitSeoulAPI:
 
 
 def fetch_all_data(api_key: str, output_dir: Path, lang_codes_filter: list = None):
-    """메인 수집 로직 — 목록 + 상세를 병합하여 최종 데이터 생성"""
+    """메인 수집 로직 — 목록에서 CID 추출 후 상세 정보만 최종 저장"""
     client = VisitSeoulAPI(api_key)
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -292,42 +289,37 @@ def fetch_all_data(api_key: str, output_dir: Path, lang_codes_filter: list = Non
         elif isinstance(cat, str):
             cat_codes.append(cat)
 
-    # ─── Step 3: 콘텐츠 목록 전체 수집 ──────────────────
-    print("\n[3/4] 콘텐츠 목록 수집 중...")
+    # ─── Step 3: 목록에서 CID만 수집 ─────────────────────
+    print("\n[3/4] 콘텐츠 목록에서 CID 수집 중...")
 
-    all_contents = {}  # {lang_code: [items]}
     all_cids = set()
 
-    for lang in use_langs:
-        print(f"\n  === 언어: {lang} ===")
+    # ko 기준으로 CID만 추출 (다국어 상세는 별도 처리)
+    ref_lang = use_langs[0] if use_langs else "ko"
 
-        if cat_codes:
-            lang_items = []
-            for cat in cat_codes:
-                print(f"  카테고리: {cat}")
-                items = client.get_all_contents_list(lang_code=lang, category=cat)
-                lang_items.extend(items)
-        else:
-            lang_items = client.get_all_contents_list(lang_code=lang)
-
-        all_contents[lang] = lang_items
-        print(f"  → {lang} 총 {len(lang_items)}건 수집")
-
-        for item in lang_items:
+    if cat_codes:
+        for cat in cat_codes:
+            print(f"  카테고리: {cat}")
+            items = client.get_all_contents_list(lang_code=ref_lang, category=cat)
+            for item in items:
+                if isinstance(item, dict):
+                    cid = item.get("cid") or item.get("content_id") or item.get("id")
+                    if cid:
+                        all_cids.add(cid)
+    else:
+        items = client.get_all_contents_list(lang_code=ref_lang)
+        for item in items:
             if isinstance(item, dict):
                 cid = item.get("cid") or item.get("content_id") or item.get("id")
                 if cid:
                     all_cids.add(cid)
 
-        save_json(output_dir / f"contents_list_{lang}.json", lang_items)
-
     print(f"\n  총 고유 CID: {len(all_cids)}개")
 
-    # ─── Step 4: 상세 정보 수집 + 목록에 병합 ────────────
-    print(f"\n[4/4] 콘텐츠 상세 정보 수집 + 병합 중... ({len(all_cids)}건)")
+    # ─── Step 4: 상세 정보 수집 ───────────────────────────
+    print(f"\n[4/4] 콘텐츠 상세 정보 수집 중... ({len(all_cids)}건)")
 
-    # CID → 상세정보 매핑 딕셔너리
-    detail_map = {}
+    details = []
     cid_list = sorted(all_cids)
 
     for i, cid in enumerate(cid_list, 1):
@@ -336,44 +328,28 @@ def fetch_all_data(api_key: str, output_dir: Path, lang_codes_filter: list = Non
 
         detail = client.get_content_info(cid)
         if detail and isinstance(detail, dict):
-            detail_map[cid] = detail
+            details.append(detail)
             client.stats["items_fetched"] += 1
 
         # 100건마다 중간 저장
         if i % 100 == 0:
             save_json(
                 output_dir / f"contents_detail_partial_{i}.json",
-                list(detail_map.values())[-100:]
+                details[-100:]
             )
 
-    # 상세 정보만 별도 저장
-    save_json(output_dir / "contents_detail_all.json", list(detail_map.values()))
-    print(f"  → 상세 정보 {len(detail_map)}건 수집 완료")
-
-    # ─── 병합: 목록 항목 + 상세 정보 → 최종 통합 데이터 ──
-    print("\n[병합] 목록 + 상세 정보 통합 중...")
-
-    for lang, items in all_contents.items():
-        merged = []
-        for item in items:
-            if not isinstance(item, dict):
-                merged.append(item)
-                continue
-
-            cid = item.get("cid") or item.get("content_id") or item.get("id")
-            if cid and cid in detail_map:
-                # 목록 데이터를 기본으로, 상세 데이터를 덮어쓰기 병합
-                merged_item = {**item, **detail_map[cid]}
-                # 원본 목록의 키도 보존 (상세에 없는 필드)
-                for k, v in item.items():
-                    if k not in merged_item or merged_item[k] is None:
-                        merged_item[k] = v
-                merged.append(merged_item)
-            else:
-                merged.append(item)
-
-        save_json(output_dir / f"contents_merged_{lang}.json", merged)
-        print(f"  → {lang}: {len(merged)}건 병합 완료")
+    # ★ 최종 산출물 — 기존 파일과 병합 (덮어쓰기 방지)
+    all_path = output_dir / "contents_detail_all.json"
+    if all_path.exists():
+        with open(all_path, encoding="utf-8") as f:
+            existing = json.load(f)
+        existing_cids = {d["cid"] for d in existing if "cid" in d}
+        new_items = [d for d in details if d.get("cid") not in existing_cids]
+        details = existing + new_items
+        if new_items:
+            print(f"  → 기존 {len(existing)}건 + 신규 {len(new_items)}건 병합")
+    save_json(all_path, details)
+    print(f"  → 상세 정보 {len(details)}건 수집 완료")
 
     # ─── 통계 출력 ───────────────────────────────────────
     print("\n" + "=" * 50)
@@ -384,21 +360,19 @@ def fetch_all_data(api_key: str, output_dir: Path, lang_codes_filter: list = Non
     print(f"  저장 위치: {output_dir.resolve()}")
     print("=" * 50)
     print("\n저장된 파일:")
-    print("  - language_codes.json       : 언어 코드")
-    print("  - categories.json           : 카테고리 코드")
-    print("  - contents_list_{lang}.json : 목록 원본 (언어별)")
-    print("  - contents_detail_all.json  : 상세 정보 전체")
-    print("  - contents_merged_{lang}.json : ★ 목록+상세 병합 최종본")
-    print("  - fetch_summary.json        : 수집 요약")
+    print("  - language_codes.json          : 언어 코드")
+    print("  - categories.json              : 카테고리 코드")
+    print("  - contents_detail_all.json     : ★ 상세 정보 최종본")
+    print("  - contents_detail_partial_*.json : 중간 저장본")
+    print("  - fetch_summary.json           : 수집 요약")
 
     summary = {
         "timestamp": timestamp,
         "stats": client.stats,
-        "languages_used": use_langs,
+        "ref_lang_for_cid": ref_lang,
         "categories_found": len(cat_codes),
         "unique_cids": len(all_cids),
-        "details_fetched": len(detail_map),
-        "contents_per_lang": {lang: len(items) for lang, items in all_contents.items()},
+        "details_fetched": len(details),
     }
     save_json(output_dir / "fetch_summary.json", summary)
 
