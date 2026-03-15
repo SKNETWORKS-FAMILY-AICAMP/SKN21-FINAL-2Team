@@ -122,6 +122,7 @@ export function useChatMessages({
         message,
         saveUserMessage,
         optimisticUserText,
+        optimisticImageDataUrl,
         imageDataUrl,
         location,
     }: {
@@ -129,6 +130,9 @@ export function useChatMessages({
         message: string;
         saveUserMessage: boolean;
         optimisticUserText?: string;
+        /** 낙관적 메시지 미리보기용 dataUrl (업로드 전 원본) */
+        optimisticImageDataUrl?: string | null;
+        /** 실제 API에 전송할 업로드된 path */
         imageDataUrl?: string | null;
         location?: string | null;
     }) => {
@@ -144,7 +148,7 @@ export function useChatMessages({
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
-                image_path: imageDataUrl ?? null,
+                image_path: optimisticImageDataUrl ?? imageDataUrl ?? null,
                 created_at: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, optimisticUserMsg]);

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 import { cn } from "@/lib/utils";
+import { resolveImageUrl } from "@/lib/imageUrl";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
@@ -56,7 +57,7 @@ export const ChatMessageItem = memo(({
                     {!!msg.image_path && (
                         <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
                             <img
-                                src={msg.image_path}
+                                src={resolveImageUrl(msg.image_path)}
                                 alt="Attached"
                                 className="w-full max-h-[220px] object-cover"
                             />

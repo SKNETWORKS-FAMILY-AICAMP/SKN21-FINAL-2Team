@@ -1,3 +1,4 @@
+import os
 import re
 import urllib.parse
 from typing import Any, Optional
@@ -37,13 +38,48 @@ def is_remote_image_url(value: Optional[str]) -> bool:
     return text.startswith("http://") or text.startswith("https://") or text.startswith("data:image")
 
 
+def _get_upload_root() -> str:
+    return os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "uploads")
+    )
+
+
+def _get_s3_public_base() -> str:
+    return os.environ.get("S3_PUBLIC_BASE_URL", "").rstrip("/")
+
+
 def to_client_image_url(value: Optional[str]) -> str:
+    """저장된 path를 프론트엔드 표시용 URL로 변환.
+
+    - 이미 절대 URL(http/https/data:image) → 그대로 반환
+    - /api/static/ 레거시 path → 그대로 반환
+    - 상대 path (folder/filename) → S3 base URL 또는 /api/static/ 접두어
+    """
     text = (value or "").strip()
     if not text:
         return ""
-    if text.startswith("/api/static/") or is_remote_image_url(text):
+    if is_remote_image_url(text) or text.startswith("/api/static/"):
         return text
+    s3_base = _get_s3_public_base()
+    if s3_base:
+        return f"{s3_base}/{text.lstrip('/')}"
     return f"/api/static/{text.lstrip('/')}"
+
+
+def to_vision_image_input(value: Optional[str]) -> str:
+    """저장된 path를 비전 모델 입력에 적합한 형태로 변환 (절대 URL 또는 절대 로컬 파일 path)."""
+    text = (value or "").strip()
+    if not text:
+        return ""
+    if is_remote_image_url(text):
+        return text
+    if text.startswith("/api/static/"):
+        # 레거시: 로컬 절대 path로 변환
+        return os.path.join(_get_upload_root(), text[len("/api/static/"):])
+    s3_base = _get_s3_public_base()
+    if s3_base:
+        return f"{s3_base}/{text.lstrip('/')}"
+    return os.path.join(_get_upload_root(), text.lstrip("/"))
 
 
 def in_seoul_bbox(lat, lng) -> bool:

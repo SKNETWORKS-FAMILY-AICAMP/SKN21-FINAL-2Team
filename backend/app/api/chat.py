@@ -25,7 +25,7 @@ from app.schemas.chat import (
 )
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
-from app.utils.common import to_client_image_url
+from app.utils.common import to_client_image_url, to_vision_image_input
 from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
@@ -209,7 +209,7 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         room_id=room.id,
         input_lat=message_in.latitude,
         input_lon=message_in.longitude,
-        input_image=message_in.image_path,
+        input_image=to_vision_image_input(message_in.image_path) if message_in.image_path else None,
         prefs_info=user.build_preferences(),
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
