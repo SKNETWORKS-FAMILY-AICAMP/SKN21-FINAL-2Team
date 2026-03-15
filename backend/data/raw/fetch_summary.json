@@ -1,0 +1,12 @@
+{
+  "timestamp": "20260315_122548",
+  "stats": {
+    "api_calls": 3247,
+    "errors": 822,
+    "items_fetched": 2353
+  },
+  "ref_lang_for_cid": "ko",
+  "categories_found": 61,
+  "unique_cids": 3154,
+  "details_fetched": 2353
+}

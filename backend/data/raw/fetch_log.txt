@@ -1,0 +1,1086 @@
+==================================================
+비짓서울 API 관광지 데이터 수집기
+시작 시간: 2026-03-15 12:25:48
+API 키: 86980386...aa51
+==================================================
+
+[1/4] 언어 코드 조회 중...
+  → 7개 언어 코드 확인
+  [저장] language_codes.json
+
+[2/4] 카테고리 코드 조회 중...
+  [HTTP 오류] 404 - /api/v1/code/category
+  [HTTP 오류] 404 - /api/v1/code/ctgry
+  → 61개 카테고리 확인 (endpoint: /api/v1/category/list)
+  [저장] categories.json
+
+사용할 언어: ['ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'ru', 'ms']
+
+[3/4] 콘텐츠 목록에서 CID 수집 중...
+  카테고리: Ca0o2d4
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Ce9z7g9
+    페이지 1: 74건 (누적 74건)
+  카테고리: Ca1u7i6
+  카테고리: Cr1f0k2
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cl5y4k0
+    페이지 1: 46건 (누적 46건)
+  카테고리: Ct4h4b7
+    페이지 1: 40건 (누적 40건)
+  카테고리: Co0g3x0
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cl2d2s1
+    페이지 1: 13건 (누적 13건)
+  카테고리: Cy5h2x9
+    페이지 1: 8건 (누적 8건)
+  카테고리: Cp7e6o3
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cg1x6l1
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 100건 (누적 300건)
+    페이지 4: 100건 (누적 400건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cy6j7j7
+    페이지 1: 25건 (누적 25건)
+  카테고리: Ct9t6m8
+    페이지 1: 48건 (누적 48건)
+  카테고리: Cr0q2v2
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cu8e6t5
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 58건 (누적 258건)
+  카테고리: Cn0t1e0
+    페이지 1: 100건 (누적 100건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cy4k5t1
+    페이지 1: 31건 (누적 31건)
+  카테고리: Cn7z1h7
+    페이지 1: 32건 (누적 32건)
+  카테고리: Cs3j7y4
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cp5i3g2
+    페이지 1: 5건 (누적 5건)
+  카테고리: Ct1z4k9
+    페이지 1: 3건 (누적 3건)
+  카테고리: Ch4v8z7
+    페이지 1: 16건 (누적 16건)
+  카테고리: Ce7q5s7
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Ct9n1n3
+    페이지 1: 2건 (누적 2건)
+  카테고리: Ca1z6p7
+    페이지 1: 91건 (누적 91건)
+  카테고리: Cw1i3e4
+    페이지 1: 19건 (누적 19건)
+  카테고리: Cl1k5b1
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Ch5t7s7
+    페이지 1: 15건 (누적 15건)
+  카테고리: Cb9c5i3
+    페이지 1: 8건 (누적 8건)
+  카테고리: Ci7i9i6
+    페이지 1: 10건 (누적 10건)
+  카테고리: Cr6m1i5
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cb9o5c4
+    페이지 1: 15건 (누적 15건)
+  카테고리: Co2n1h7
+    페이지 1: 13건 (누적 13건)
+  카테고리: Cl9s3y9
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 100건 (누적 300건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cz9d1h6
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 100건 (누적 300건)
+    페이지 4: 100건 (누적 400건)
+    페이지 5: 100건 (누적 500건)
+    페이지 6: 19건 (누적 519건)
+  카테고리: Cx0t8m5
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Ck6n0w6
+    페이지 1: 61건 (누적 61건)
+  카테고리: Cx2j0n1
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 29건 (누적 229건)
+  카테고리: Cn7k2s5
+    페이지 1: 35건 (누적 35건)
+  카테고리: Cl9n1c2
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Ch7l5i4
+    페이지 1: 36건 (누적 36건)
+  카테고리: Cm1y8v1
+    페이지 1: 52건 (누적 52건)
+  카테고리: Cx3e9k9
+    페이지 1: 11건 (누적 11건)
+  카테고리: Co6c2n2
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cu5u8d4
+    페이지 1: 28건 (누적 28건)
+  카테고리: Cw8j0y7
+    페이지 1: 13건 (누적 13건)
+  카테고리: Cp3b3j9
+    페이지 1: 16건 (누적 16건)
+  카테고리: Cc9i5o2
+    페이지 1: 100건 (누적 100건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cr6o1h2
+    페이지 1: 18건 (누적 18건)
+  카테고리: Cq3m6s6
+    페이지 1: 20건 (누적 20건)
+  카테고리: Cd0m9o0
+    페이지 1: 22건 (누적 22건)
+  카테고리: Cl8f8q1
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cf1y9k1
+    페이지 1: 14건 (누적 14건)
+  카테고리: Cq9d5v0
+    페이지 1: 2건 (누적 2건)
+  카테고리: Cv7s8m5
+    페이지 1: 100건 (누적 100건)
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cd4y5u1
+    페이지 1: 100건 (누적 100건)
+    페이지 2: 100건 (누적 200건)
+    페이지 3: 100건 (누적 300건)
+    페이지 4: 100건 (누적 400건)
+    페이지 5: 100건 (누적 500건)
+    페이지 6: 100건 (누적 600건)
+    페이지 7: 100건 (누적 700건)
+    페이지 8: 54건 (누적 754건)
+  카테고리: Cb2b0t2
+    페이지 1: 27건 (누적 27건)
+  카테고리: Cf9q1q4
+  [HTTP 오류] 500 - /api/v1/contents/list
+  카테고리: Cw7q1x8
+    페이지 1: 20건 (누적 20건)
+  카테고리: Cu6j1f4
+    페이지 1: 3건 (누적 3건)
+  카테고리: Cu9u5z7
+    페이지 1: 97건 (누적 97건)
+
+  총 고유 CID: 3154개
+
+[4/4] 콘텐츠 상세 정보 수집 중... (3154건)
+  진행: 1/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 50/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 100/3154
+  [저장] contents_detail_partial_100.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 150/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 200/3154
+  [저장] contents_detail_partial_200.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 250/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 300/3154
+  [저장] contents_detail_partial_300.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 350/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 400/3154
+  [저장] contents_detail_partial_400.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 450/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 500/3154
+  [저장] contents_detail_partial_500.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 550/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 600/3154
+  [저장] contents_detail_partial_600.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 650/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 700/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_700.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 750/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 800/3154
+  [저장] contents_detail_partial_800.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 850/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 900/3154
+  [저장] contents_detail_partial_900.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 950/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1000/3154
+  [저장] contents_detail_partial_1000.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1050/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1100/3154
+  [저장] contents_detail_partial_1100.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1150/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1200/3154
+  [저장] contents_detail_partial_1200.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1250/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1300/3154
+  [저장] contents_detail_partial_1300.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1350/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1400/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_1400.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1450/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1500/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_1500.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1550/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1600/3154
+  [저장] contents_detail_partial_1600.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1650/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1700/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_1700.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1750/3154
+  [요청 오류] ('Connection aborted.', ConnectionResetError(10054, '현재 연결은 원격 호스트에 의해 강제로 끊겼습니다', None, 10054, None))
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1800/3154
+  [저장] contents_detail_partial_1800.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1850/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1900/3154
+  [저장] contents_detail_partial_1900.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 1950/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2000/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_2000.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2050/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2100/3154
+  [저장] contents_detail_partial_2100.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2150/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2200/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_2200.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2250/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [요청 오류] ('Connection aborted.', ConnectionResetError(10054, '현재 연결은 원격 호스트에 의해 강제로 끊겼습니다', None, 10054, None))
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2300/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_2300.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2350/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2400/3154
+  [저장] contents_detail_partial_2400.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2450/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2500/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_2500.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2550/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2600/3154
+  [저장] contents_detail_partial_2600.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2650/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2700/3154
+  [저장] contents_detail_partial_2700.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2750/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2800/3154
+  [저장] contents_detail_partial_2800.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2850/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2900/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_2900.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 2950/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 3000/3154
+  [저장] contents_detail_partial_3000.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 3050/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 3100/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_partial_3100.json
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [HTTP 오류] 500 - /api/v1/contents/info
+  진행: 3150/3154
+  [HTTP 오류] 500 - /api/v1/contents/info
+  [저장] contents_detail_all.json
+  → 상세 정보 2353건 수집 완료
+
+==================================================
+수집 완료!
+  API 호출 횟수: 3247
+  오류 횟수: 822
+  수집 항목 수: 2353
+  저장 위치: C:\SKN21\Project\SKN21-FINAL-2Team\backend\data\raw
+==================================================
+
+저장된 파일:
+  - language_codes.json          : 언어 코드
+  - categories.json              : 카테고리 코드
+  - contents_detail_all.json     : ★ 상세 정보 최종본
+  - contents_detail_partial_*.json : 중간 저장본
+  - fetch_summary.json           : 수집 요약
+  [저장] fetch_summary.json

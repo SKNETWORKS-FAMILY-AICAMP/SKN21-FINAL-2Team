@@ -1,0 +1,429 @@
+[
+  {
+    "com_ctgry_sn": "Ca0o2d4",
+    "ctgry_nm": "Culture",
+    "ctgry_path": " Culture",
+    "ctgry_level": 1,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Ce9z7g9",
+    "ctgry_nm": "Parks",
+    "ctgry_path": " Culture > Parks",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Ca1u7i6",
+    "ctgry_nm": "Cultural Districts",
+    "ctgry_path": " Culture > Cultural Districts",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cr1f0k2",
+    "ctgry_nm": "Performance Halls",
+    "ctgry_path": " Culture > Performance Halls",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cl5y4k0",
+    "ctgry_nm": "Landmarks",
+    "ctgry_path": " Culture > Landmarks",
+    "ctgry_level": 2,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Ct4h4b7",
+    "ctgry_nm": "Other Cultural Destinations",
+    "ctgry_path": " Culture > Other Cultural Destinations",
+    "ctgry_level": 2,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Co0g3x0",
+    "ctgry_nm": "Leisure/Sports Centers",
+    "ctgry_path": " Culture > Leisure/Sports Centers",
+    "ctgry_level": 2,
+    "sort_no": 6
+  },
+  {
+    "com_ctgry_sn": "Cl2d2s1",
+    "ctgry_nm": "Education Centers",
+    "ctgry_path": " Culture > Education Centers",
+    "ctgry_level": 2,
+    "sort_no": 7
+  },
+  {
+    "com_ctgry_sn": "Cy5h2x9",
+    "ctgry_nm": "Theme Parks",
+    "ctgry_path": " Culture > Theme Parks",
+    "ctgry_level": 2,
+    "sort_no": 8
+  },
+  {
+    "com_ctgry_sn": "Cp7e6o3",
+    "ctgry_nm": "Convention Centers",
+    "ctgry_path": " Culture > Convention Centers",
+    "ctgry_level": 2,
+    "sort_no": 9
+  },
+  {
+    "com_ctgry_sn": "Cg1x6l1",
+    "ctgry_nm": "Cultural Facilities",
+    "ctgry_path": " Culture > Cultural Facilities",
+    "ctgry_level": 2,
+    "sort_no": 10
+  },
+  {
+    "com_ctgry_sn": "Cy6j7j7",
+    "ctgry_nm": "Others Cultural Facilities",
+    "ctgry_path": " Culture > Cultural Facilities > Others Cultural Facilities",
+    "ctgry_level": 3,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Ct9t6m8",
+    "ctgry_nm": "Art Museums/Galleries",
+    "ctgry_path": " Culture > Cultural Facilities > Art Museums/Galleries",
+    "ctgry_level": 3,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cr0q2v2",
+    "ctgry_nm": "Museums",
+    "ctgry_path": " Culture > Cultural Facilities > Museums",
+    "ctgry_level": 3,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cu8e6t5",
+    "ctgry_nm": "Shopping",
+    "ctgry_path": " Shopping",
+    "ctgry_level": 1,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cn0t1e0",
+    "ctgry_nm": "Specialty Shops & Stores",
+    "ctgry_path": " Shopping > Specialty Shops & Stores",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cy4k5t1",
+    "ctgry_nm": "Shopping Malls & Outlets",
+    "ctgry_path": " Shopping > Shopping Malls & Outlets",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cn7z1h7",
+    "ctgry_nm": "Traditional Markets",
+    "ctgry_path": " Shopping > Traditional Markets",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cs3j7y4",
+    "ctgry_nm": "Department Stores",
+    "ctgry_path": " Shopping > Department Stores",
+    "ctgry_level": 2,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cp5i3g2",
+    "ctgry_nm": "Duty Free Shops",
+    "ctgry_path": " Shopping > Duty Free Shops",
+    "ctgry_level": 2,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Ct1z4k9",
+    "ctgry_nm": "Supermarkets & Warehouses",
+    "ctgry_path": " Shopping > Supermarkets & Warehouses",
+    "ctgry_level": 2,
+    "sort_no": 6
+  },
+  {
+    "com_ctgry_sn": "Ch4v8z7",
+    "ctgry_nm": "Accommodations",
+    "ctgry_path": " Accommodations",
+    "ctgry_level": 1,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Ce7q5s7",
+    "ctgry_nm": "Hotels",
+    "ctgry_path": " Accommodations > Hotels",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Ct9n1n3",
+    "ctgry_nm": "Hostels",
+    "ctgry_path": " Accommodations > Hostels",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Ca1z6p7",
+    "ctgry_nm": "History",
+    "ctgry_path": " History",
+    "ctgry_level": 1,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cw1i3e4",
+    "ctgry_nm": "Religious Sites",
+    "ctgry_path": " History > Religious Sites",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cl1k5b1",
+    "ctgry_nm": "Historical Sites",
+    "ctgry_path": " History > Historical Sites",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Ch5t7s7",
+    "ctgry_nm": "Palaces",
+    "ctgry_path": " History > Historical Sites > Palaces",
+    "ctgry_level": 3,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cb9c5i3",
+    "ctgry_nm": "Tombs & Mausoleums",
+    "ctgry_path": " History > Historical Sites > Tombs & Mausoleums",
+    "ctgry_level": 3,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Ci7i9i6",
+    "ctgry_nm": "Modern Architecture",
+    "ctgry_path": " History > Historical Sites > Modern Architecture",
+    "ctgry_level": 3,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cr6m1i5",
+    "ctgry_nm": "Others Historical Sites",
+    "ctgry_path": " History > Historical Sites > Others Historical Sites",
+    "ctgry_level": 3,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cb9o5c4",
+    "ctgry_nm": "Historical Sites",
+    "ctgry_path": " History > Historical Sites > Historical Sites",
+    "ctgry_level": 3,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Co2n1h7",
+    "ctgry_nm": "Fortresses & Gates",
+    "ctgry_path": " History > Historical Sites > Fortresses & Gates",
+    "ctgry_level": 3,
+    "sort_no": 6
+  },
+  {
+    "com_ctgry_sn": "Cl9s3y9",
+    "ctgry_nm": "Cuisine",
+    "ctgry_path": " Cuisine",
+    "ctgry_level": 1,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Cz9d1h6",
+    "ctgry_nm": "Korean Restaurants",
+    "ctgry_path": " Cuisine > Korean Restaurants",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cx0t8m5",
+    "ctgry_nm": "Cafes & Tea Shops",
+    "ctgry_path": " Cuisine > Cafes & Tea Shops",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Ck6n0w6",
+    "ctgry_nm": "Bars & Clubs",
+    "ctgry_path": " Cuisine > Bars & Clubs",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cx2j0n1",
+    "ctgry_nm": "Foreign Restaurant",
+    "ctgry_path": " Cuisine > Foreign Restaurant",
+    "ctgry_level": 2,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cn7k2s5",
+    "ctgry_nm": "Others",
+    "ctgry_path": " Cuisine > Foreign Restaurant > Others",
+    "ctgry_level": 3,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cl9n1c2",
+    "ctgry_nm": "Western",
+    "ctgry_path": " Cuisine > Foreign Restaurant > Western",
+    "ctgry_level": 3,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Ch7l5i4",
+    "ctgry_nm": "Japanese",
+    "ctgry_path": " Cuisine > Foreign Restaurant > Japanese",
+    "ctgry_level": 3,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cm1y8v1",
+    "ctgry_nm": "Chinese",
+    "ctgry_path": " Cuisine > Foreign Restaurant > Chinese",
+    "ctgry_level": 3,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cx3e9k9",
+    "ctgry_nm": "Fusion",
+    "ctgry_path": " Cuisine > Foreign Restaurant > Fusion",
+    "ctgry_level": 3,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Co6c2n2",
+    "ctgry_nm": "Nature",
+    "ctgry_path": " Nature",
+    "ctgry_level": 1,
+    "sort_no": 6
+  },
+  {
+    "com_ctgry_sn": "Cu5u8d4",
+    "ctgry_nm": "Natural Sites(Mountains)",
+    "ctgry_path": " Nature > Natural Sites(Mountains)",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cw8j0y7",
+    "ctgry_nm": "Natural Sites(Rivers)",
+    "ctgry_path": " Nature > Natural Sites(Rivers)",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cp3b3j9",
+    "ctgry_nm": "Natural Sites(Parks)",
+    "ctgry_path": " Nature > Natural Sites(Parks)",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cc9i5o2",
+    "ctgry_nm": "Experience Programs",
+    "ctgry_path": " Experience Programs",
+    "ctgry_level": 1,
+    "sort_no": 7
+  },
+  {
+    "com_ctgry_sn": "Cr6o1h2",
+    "ctgry_nm": "Industrial Sites",
+    "ctgry_path": " Experience Programs > Industrial Sites",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cq3m6s6",
+    "ctgry_nm": "Craft Workshops",
+    "ctgry_path": " Experience Programs > Craft Workshops",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cd0m9o0",
+    "ctgry_nm": "Traditional Experience",
+    "ctgry_path": " Experience Programs > Traditional Experience",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cl8f8q1",
+    "ctgry_nm": "Other Experiences",
+    "ctgry_path": " Experience Programs > Other Experiences",
+    "ctgry_level": 2,
+    "sort_no": 4
+  },
+  {
+    "com_ctgry_sn": "Cf1y9k1",
+    "ctgry_nm": "Wellness",
+    "ctgry_path": " Experience Programs > Wellness",
+    "ctgry_level": 2,
+    "sort_no": 5
+  },
+  {
+    "com_ctgry_sn": "Cq9d5v0",
+    "ctgry_nm": "Temple Stays",
+    "ctgry_path": " Experience Programs > Temple Stays",
+    "ctgry_level": 2,
+    "sort_no": 6
+  },
+  {
+    "com_ctgry_sn": "Cv7s8m5",
+    "ctgry_nm": "Festivals/Events/Performances",
+    "ctgry_path": " Festivals/Events/Performances",
+    "ctgry_level": 1,
+    "sort_no": 8
+  },
+  {
+    "com_ctgry_sn": "Cd4y5u1",
+    "ctgry_nm": "Festivals",
+    "ctgry_path": " Festivals/Events/Performances > Festivals",
+    "ctgry_level": 2,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cb2b0t2",
+    "ctgry_nm": "Performances",
+    "ctgry_path": " Festivals/Events/Performances > Performances",
+    "ctgry_level": 2,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cf9q1q4",
+    "ctgry_nm": "Events",
+    "ctgry_path": " Festivals/Events/Performances > Events",
+    "ctgry_level": 2,
+    "sort_no": 3
+  },
+  {
+    "com_ctgry_sn": "Cw7q1x8",
+    "ctgry_nm": "Other Events",
+    "ctgry_path": " Festivals/Events/Performances > Events > Other Events",
+    "ctgry_level": 3,
+    "sort_no": 1
+  },
+  {
+    "com_ctgry_sn": "Cu6j1f4",
+    "ctgry_nm": "Expos",
+    "ctgry_path": " Festivals/Events/Performances > Events > Expos",
+    "ctgry_level": 3,
+    "sort_no": 2
+  },
+  {
+    "com_ctgry_sn": "Cu9u5z7",
+    "ctgry_nm": "Exhibitions",
+    "ctgry_path": " Festivals/Events/Performances > Events > Exhibitions",
+    "ctgry_level": 3,
+    "sort_no": 3
+  }
+]
