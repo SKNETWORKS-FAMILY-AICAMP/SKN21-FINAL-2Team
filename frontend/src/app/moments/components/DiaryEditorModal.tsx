@@ -150,7 +150,7 @@ export function DiaryEditorModal({
                       {linkedPlace ? (
                         <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                           <MapPin size={13} className="shrink-0" />
-                          <span className="truncate">{linkedPlace.adress}</span>
+                          <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
                           <button
                             type="button"
                             onClick={(event) => {
@@ -193,7 +193,7 @@ export function DiaryEditorModal({
                     linkedPlace && (
                       <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                         <MapPin size={13} className="shrink-0" />
-                        <span className="truncate">{linkedPlace.adress}</span>
+                        <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
                       </div>
                     )
                   )}
@@ -202,6 +202,9 @@ export function DiaryEditorModal({
             </div>
               );
             })()}
+
+            {/* [Feature] 좌우 영역 구분선 */}
+            <div className="hidden md:block h-full w-[2px] bg-zinc-700" />
 
             <div className="flex w-full flex-col overflow-hidden bg-zinc-950 p-5 md:w-[360px]">
               <div className="mb-4 flex flex-none items-center justify-between">
@@ -242,24 +245,18 @@ export function DiaryEditorModal({
                       </p>
                     )}
 
-                    {linkedPlace && (
-                      <div className="mt-4 rounded-2xl border border-zinc-900 bg-black/30 p-3">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black">
-                            <MapPin size={14} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-zinc-300">Linked place</p>
-                            <p className="mt-1 text-xs leading-5 text-zinc-500">{linkedPlace.adress}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
                   </div>
 
-                  <div className="mt-4 flex flex-none justify-end gap-3 border-t border-zinc-900 pt-4">
+                  <div className="mt-4 flex flex-none items-center justify-between gap-3 border-t border-zinc-900 pt-4">
+                    {linkedPlace ? (
+                      <div className="flex items-center gap-2 text-zinc-400">
+                        <MapPin size={14} className="shrink-0" />
+                        <span className="truncate text-xs font-medium">{linkedPlace.name || linkedPlace.adress}</span>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
                     {isEditMode ? (
                       <button
                         onClick={onSave}

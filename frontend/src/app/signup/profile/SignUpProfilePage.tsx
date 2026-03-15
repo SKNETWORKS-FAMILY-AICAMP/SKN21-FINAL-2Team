@@ -187,9 +187,11 @@ export function SignUpProfilePage() {
                   <MessageSquare size={12} /> Language
                 </label>
                 <div className="relative">
+                  {/* [Feature] 언어 선택지 — 순서: 한국어/영어/중국어/일본어 */}
                   <select className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all appearance-none cursor-pointer">
-                    <option value="en">English (US)</option>
                     <option value="ko">Korean</option>
+                    <option value="en">English (US)</option>
+                    <option value="zh">Chinese</option>
                     <option value="ja">Japanese</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">

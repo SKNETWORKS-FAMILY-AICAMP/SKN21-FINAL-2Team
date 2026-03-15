@@ -77,9 +77,12 @@ export function ReviewSection() {
         exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80 }),
     };
 
+    // [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정
     return (
-        <section id="reviews" className="py-24 bg-gray-50 overflow-hidden">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        // [Fix] min-h-[calc(100vh-64px)] + flex justify-center: Header(64px) 제외 뷰포트 채움 + 세로 중앙
+        <section id="reviews" className="py-24 bg-gray-50 overflow-hidden min-h-[calc(100vh-64px)] flex flex-col justify-center">
+            {/* [Fix] max-w-7xl → xl:max-w-[90%]: 큰 화면에서 콘텐츠가 화면 너비에 맞게 유동 확장 */}
+            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
                         <h2 className="text-4xl md:text-6xl font-black tracking-tight text-black mb-6 uppercase">Community Voices</h2>
@@ -99,7 +102,8 @@ export function ReviewSection() {
                     </button>
 
                     {/* 카드 슬라이드 - 2개 나란히 */}
-                    <div className="relative w-full max-w-4xl overflow-hidden">
+                    {/* [Fix] max-w-4xl → xl:max-w-[75%]: 캐러셀도 넓은 화면에서 유동 확장 */}
+                    <div className="relative w-full max-w-4xl xl:max-w-[75%] overflow-hidden">
                         <AnimatePresence mode="wait" custom={direction}>
                             <motion.div
                                 key={currentIndex}

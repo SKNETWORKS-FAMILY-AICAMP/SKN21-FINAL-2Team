@@ -21,11 +21,32 @@ export function SignUpPage() {
   const [bgImage, setBgImage] = useState("");
 
   useEffect(() => {
-    // 주의: Next.js 환경에서 서버 렌더링 결과와 불일치하는 것을 막기 위해 (Hydration 에러 방지)
-    // 랜덤 이미지는 항상 클라이언트 사이드인 useEffect 내에서 설정합니다.
+    // 1. 배경 이미지 설정
     const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
     setBgImage(BACKGROUND_IMAGES[randomIndex]);
-  }, []);
+
+    // 2. 세션 체크 및 자동 리다이렉트
+    const checkSession = async () => {
+      const { fetchCurrentUser, getPostLoginPath } = await import("@/services/api");
+      const { clearAuth } = await import("@/services/errorHandler");
+
+      const token = localStorage.getItem("access_token");
+      if (!token) return; // 토큰이 없으면 가입 페이지 유지
+
+      try {
+        const user = await fetchCurrentUser();
+        if (user) {
+          const targetPath = getPostLoginPath(user);
+          router.replace(targetPath); // 유효한 세션이 있으면 해당 페이지로 이동
+        }
+      } catch (err) {
+        console.warn("Invalid session detected on signup page entry, clearing auth.");
+        clearAuth(); // 검증 실패(꼬인 데이터) 시에만 정리
+      }
+    };
+
+    checkSession();
+  }, [router]);
 
   const handleSignUp = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -52,12 +73,26 @@ export function SignUpPage() {
         if (name) localStorage.setItem("user_name", name);
         if (email) localStorage.setItem("user_email", email);
 
-        // API로 사용자 정보 조회 후 동적 라우팅 결정
-        const user = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/users/me`, {
-          headers: { "Authorization": `Bearer ${access_token}` }
-        }).then(r => r.json());
+        // API로 사용자 정보 조회 전 토큰이 정상적으로 저장되었는지 확인
+        const { fetchCurrentUser, getPostLoginPath } = await import("@/services/api");
 
-        const { getPostLoginPath } = await import("@/services/api");
+        let user;
+        try {
+          user = await fetchCurrentUser();
+        } catch (fetchError) {
+          console.error("Failed to fetch user after signup:", fetchError);
+          // 실패 시 알림 없이 초기화 후 가입 페이지 유지
+          const { clearAuth } = await import("@/services/errorHandler");
+          clearAuth();
+          return;
+        }
+
+        if (!user) {
+          const { clearAuth } = await import("@/services/errorHandler");
+          clearAuth();
+          return;
+        }
+
         const targetPath = getPostLoginPath(user);
 
         // 주의: pendingDestination이 있으면 getPostLoginPath가 "/chatbot?fromDestination=1"을 반환합니다.
@@ -66,7 +101,9 @@ export function SignUpPage() {
 
       } catch (error) {
         console.error("SignUp Failed:", error);
-        alert("Sign up failed. Please try again.");
+        // 인증 시도 중 에러 발생 시(네트워크 등) 알림 없이 조용히 토큰 정리
+        const { clearAuth } = await import("@/services/errorHandler");
+        clearAuth();
       }
     },
     onError: () => {

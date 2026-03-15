@@ -14,11 +14,13 @@ export const SURVEY_ITEM_LABELS: Record<"plan" | "vibe" | "places", string> = {
     places: "Interests",
 };
 
+
 export const SPECIAL_EXTRA_PREFER_OPTIONS = [
     "Halal",
     "Kosher",
     "Vegan",
     "Wheelchair Accessible",
+    "Pets",
 ];
 
 export const SNAPSHOT_OPTIONS: Record<"plan" | "vibe" | "places", string[]> = {

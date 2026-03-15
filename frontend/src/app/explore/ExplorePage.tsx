@@ -194,11 +194,12 @@ export function ExplorePage() {
 
             {/* Main Content Area — [Feature] lg 이상에서도 스크롤 가능하도록 overflow-y-auto 적용 (100% 줌에서 Contents까지 스크롤 가능) */}
             <main className="flex-1 min-w-0 rounded-lg bg-white border-r border-gray-200 p-2 md:p-6 lg:h-full lg:overflow-y-auto custom-scrollbar">
-                <div className="flex flex-col gap-6 w-full lg:h-full xl:flex-row">
+                {/* [Fix] 두 컬럼 너비/높이를 고정하여 새로고침 시 레이아웃 변동 완전 방지 */}
+                <div className="flex flex-col gap-6 w-full xl:flex-row">
 
-                    {/* LEFT COLUMN: Your Choices (Largest) */}
-                    <div className="flex-1 xl:flex-[2] flex flex-col gap-6 min-h-0">
-                        <div className="border border-gray-200 rounded-[32px] p-6 md:p-8 flex flex-col h-full shadow-sm bg-white relative overflow-hidden">
+                    {/* LEFT COLUMN: Your Choices — 너비 62% 고정, 높이 calc(100vh - 80px) 고정 */}
+                    <div className="w-full xl:w-[62%] flex-shrink-0 flex flex-col gap-6">
+                        <div className="border border-gray-200 rounded-[32px] p-6 md:p-8 flex flex-col h-[calc(100vh-80px)] shadow-sm bg-white relative overflow-hidden">
 
                             {/* Fixed Header */}
                             <div className="flex justify-between items-center mb-4 z-10 flex-none">
@@ -230,12 +231,12 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     🍽️ Local Eats
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
+                                            {/* [Fix] 이미지를 aspect-ratio 기반으로 변경하여 화면 크기에 맞게 유동 확장 */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.restaurants.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
@@ -251,12 +252,11 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     📸 Must-Visit Spots
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tourist.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
@@ -272,12 +272,11 @@ export function ExplorePage() {
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                                     🎨 Unique Experiences
                                                 </h4>
-                                                <button className="text-[10px] text-gray-400 hover:text-black transition-colors">See all</button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.activities.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
+                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
@@ -295,11 +294,11 @@ export function ExplorePage() {
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: Hot Places + Contents */}
-                    <div className="flex-1 xl:flex-[1.2] flex flex-col gap-6 min-h-0">
+                    {/* RIGHT COLUMN: Hot Places + Contents — 너비 36% 고정 */}
+                    <div className="w-full xl:w-[36%] flex-shrink-0 flex flex-col gap-6">
 
-                        {/* Hot Places Section */}
-                        <div className="flex-1 border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden min-h-[300px]">
+                        {/* Hot Places Section — 높이 = (전체 - gap) / 2 로 고정 */}
+                        <div className="border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden h-[calc((100vh-80px-24px)/2)]">
                             {/* Fixed Header */}
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
@@ -313,12 +312,13 @@ export function ExplorePage() {
 
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                                {/* [Fix] 카드가 남은 공간을 꽉 채우도록 flex + flex-1 적용 */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2 h-full">
                                     {hotPlaces.map((place) => (
                                         <motion.div
                                             key={place.id}
                                             whileHover={{ scale: 1.02 }}
-                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 h-full"
+                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 min-h-[120px]"
                                             onClick={() => handleHotPlaceCardClick(place)}
                                         >
                                             <img
@@ -342,8 +342,8 @@ export function ExplorePage() {
                             </div>
                         </div>
 
-                        {/* Contents Section */}
-                        <div className="flex-1 border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden min-h-[300px]">
+                        {/* Contents Section — 높이 = (전체 - gap) / 2 로 고정 */}
+                        <div className="border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden h-[calc((100vh-80px-24px)/2)]">
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
                                     <h3 className="page-title text-gray-900">Contents</h3>
