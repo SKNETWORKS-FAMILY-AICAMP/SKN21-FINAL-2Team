@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.database.connection import db_manager
@@ -9,8 +9,31 @@ from app.models.user import User
 from app.schemas.reservation import ReservationCreate, ReservationResponse, ReservationUpdate
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
+from app.services.ocr_service import extract_datetime_from_image
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
+
+
+@router.post("/ocr")
+async def ocr_reservation_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    업로드된 이미지에서 예약 날짜·시간을 OCR로 추출합니다.
+    - date: 날짜 문자열 (YYYY-MM-DD), 못 찾으면 None
+    - time: 시간 문자열 (HH:MM), 없으면 None
+    - raw_text: OCR 전체 텍스트 (디버깅용)
+    - error: 에러 메시지, 정상이면 None
+    """
+    # 주의: 이미지 파일인지 간단히 검증
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "이미지 파일만 업로드 가능합니다.", 400)
+
+    image_bytes = await file.read()
+    result = await extract_datetime_from_image(image_bytes)
+    return result
+
 
 
 @router.get("", response_model=List[ReservationResponse])

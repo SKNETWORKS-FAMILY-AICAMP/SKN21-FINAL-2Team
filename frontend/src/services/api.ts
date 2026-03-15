@@ -813,3 +813,34 @@ export const uploadImageDataUrl = async (dataUrl: string, folder = "misc"): Prom
     const data = await response.json();
     return data.image_path as string;
 };
+
+/** OCR API 응답 타입 */
+export interface OcrResult {
+    date: string | null;   // "YYYY-MM-DD" 형태, 못 찾으면 null
+    time: string | null;   // "HH:MM" 형태, 없으면 null
+    raw_text: string;      // 디버깅용 전체 OCR 텍스트
+    error: string | null;  // 에러 메시지, 정상이면 null
+}
+
+/**
+ * 이미지 파일을 백엔드로 전송해 OCR로 날짜·시간을 추출합니다.
+ * 주의: FormData 전송이라 fetchWithAuth 대신 직접 fetch 사용
+ */
+export const ocrReservationImage = async (file: File): Promise<OcrResult> => {
+    const token = safeLocalGet('access_token');
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_URL}/reservations/ocr`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`OCR 요청 실패: ${response.status} ${text}`);
+    }
+    return response.json();
+};

@@ -816,6 +816,38 @@ export function MyPagePage() {
             console.error("Failed to update reservation image", error);
           }
         }}
+        onSaveDate={async (newDate) => {
+          // [추가] OCR로 인식된 날짜를 PATCH API로 저장
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              date: newDate || null,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+            setActiveReservation(mapped);
+          } catch (error) {
+            console.error("Failed to update reservation date", error);
+          }
+        }}
+        onSaveCategory={async (newCategory) => {
+          // [추가] 카테고리 변경을 PATCH API로 저장
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              category: newCategory,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+            setActiveReservation(mapped);
+          } catch (error) {
+            console.error("Failed to update reservation category", error);
+          }
+        }}
         onClose={() => setActiveReservation(null)}
       />
 
