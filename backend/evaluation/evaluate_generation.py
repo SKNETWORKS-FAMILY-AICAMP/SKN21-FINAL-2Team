@@ -124,9 +124,13 @@ def run_generation_evaluation(input_csv: str, context_k: int, output_prefix: str
 
     rows: list[dict[str, Any]] = []
     for idx, (_, row) in enumerate(metric_df.iterrows()):
+        input_row = eval_df.iloc[idx]
         rows.append(
             {
                 "idx": idx,
+                "user_input": input_row.get("user_input", ""),
+                "response": input_row.get("response", ""),
+                "reference": input_row.get("reference", ""),
                 "faithfulness": float(row.get("faithfulness", 0.0)),
                 "answer_relevancy": float(row.get("answer_relevancy", 0.0)),
                 "context_precision": float(row.get("context_precision", 0.0)),

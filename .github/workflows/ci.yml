@@ -79,5 +79,4 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: /api
           NEXT_PUBLIC_STREAM_API_URL: /api
-          BACKEND_URL: http://backend:8000
         run: npm run build

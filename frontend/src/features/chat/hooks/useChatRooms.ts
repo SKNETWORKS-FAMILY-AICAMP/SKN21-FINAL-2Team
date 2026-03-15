@@ -85,6 +85,10 @@ export function useChatRooms({
 
     const handleCreateNewRoom = useCallback(async () => {
         try {
+            // [Feature] 모달 취소 시 Plan Trip 플로우 플래그 정리
+            localStorage.removeItem("planTripFlow");
+            localStorage.removeItem("pendingDestination");
+            
             const newRoom = await createRoom("새로운 여행 계획");
 
             setPendingAutoStartMeta(newRoom.id, { mode: "greeting" });
@@ -119,7 +123,9 @@ export function useChatRooms({
                     }];
                 } catch {
                 } finally {
+                    // [Feature] Plan Trip 플로우 완료 시 localStorage 정리
                     localStorage.removeItem("pendingDestination");
+                    localStorage.removeItem("planTripFlow");
                 }
             }
 

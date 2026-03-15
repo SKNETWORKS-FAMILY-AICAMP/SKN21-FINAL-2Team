@@ -1,6 +1,11 @@
 import json as _json
 from typing import Any, Optional
 
+
+def _normalize_text(value: str) -> str:
+    return re.sub(r"\s+", "", (value or "")).lower()
+
+
 def parse_payload(payload: dict, exclude_keys: list = ["image", "image_urls", "mapx", "mapy", "map_url", "contentid", "id"]) -> str:
     """
     payload에서 LLM이 사용하지 않는 불필요한 키를 제거하고 JSON 문자열로 반환한다.

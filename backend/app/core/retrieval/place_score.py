@@ -160,7 +160,7 @@ class PlaceScorer:
         geo = payload.get("geo")
         if isinstance(geo, dict):
             geo_lat = _safe_float(geo.get("lat"))
-            geo_lng = _safe_float(geo.get("lon"))
+            geo_lng = _safe_float(geo.get("long"))
             if geo_lat is not None and geo_lng is not None:
                 if -90.0 <= geo_lat <= 90.0 and -180.0 <= geo_lng <= 180.0:
                     return geo_lat, geo_lng

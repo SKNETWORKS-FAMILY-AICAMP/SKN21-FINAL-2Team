@@ -17,6 +17,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
+from app.utils.common import _normalize_text
 
 import numpy as np
 
@@ -88,10 +89,6 @@ class Reference:
 def _resolve_eval_path(path_str: str) -> Path:
     p = Path(path_str)
     return p if p.is_absolute() else (EVAL_DIR / p)
-
-
-def _normalize_text(value: str) -> str:
-    return re.sub(r"[\s\W_]+", "", (value or "")).lower()
 
 
 def _clip01(value: float) -> float:

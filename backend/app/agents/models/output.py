@@ -45,14 +45,16 @@ class CategoryType(str, Enum):
         lines = [f"- {item.value}: {hints.get(item.value, item.name)}" for item in cls]
         return "\n".join(lines)
 
-class PlannerNeedType(str, Enum): # 계획 필수 타입 
-    DATES = "여행 날짜"
-    PARTY_SIZE = "여행 인원"
+
+class IntentLocation(BaseModel):
+    name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
+    lat: Optional[float] = Field(default=None, description="location 위도")
+    long: Optional[float] = Field(default=None, description="location 경도")
 
 
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
-    location: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
+    location: Optional[IntentLocation] = Field(default=None, description="도시나 지역 여행지, 주소등 장소 정보")
     categories: Optional[List[CategoryType]] = Field(default=None, description="사용자 입력에서 추출된 여러 카테고리 리스트")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")
@@ -69,11 +71,17 @@ class IntentOutput(BaseModel):
     intents: List[IntentType] = Field(description="사용자의 의도")
     primary_intent: IntentType = Field(description="사용자의 주요 의도")
     slots: IntentSlots = Field(description="사용자 입력에서 추출된 슬롯")
+    input_tags: List[str] = Field(description="사용자 입력에서 추출된 태그 (장소, 카테고리, 키워드 등)")
     summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
     summary_message: str = Field(default="", description="대화 요약")
 
 
 # # Planner Output
+class PlannerNeedType(str, Enum): # 계획 필수 타입 
+    DATES = "여행 날짜"
+    PARTY_SIZE = "여행 인원"
+
+
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
@@ -92,3 +100,14 @@ class PlannerOutput(BaseModel):
             "항상 생성되는 후속 질문 1문장. duration 누락 시 여행 기간을 재질문하고 문장에 반드시 '여행일정'을 포함"
         )
     )
+
+
+class PlaceInfo(BaseModel):
+    """Executor 노드가 구성한 장소 정보 (DB 저장 전 중간 표현)"""
+    place_id: str = ""       # contentid (Qdrant) 또는 "" (Tavily)
+    name: str = ""
+    address: str = ""        # ORM 컬럼명은 adress(오타) — chat.py에서만 매핑
+    image_path: str = ""
+    map_url: str = ""
+    longitude: float = 0.0
+    latitude: float = 0.0

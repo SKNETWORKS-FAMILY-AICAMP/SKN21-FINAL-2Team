@@ -81,8 +81,16 @@ export function SurveyPage() {
     };
 
     const handleFinalizeSignup = () => {
-        // [Feature] 설문 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
-        router.push("/explore");
+        // [Feature] Plan Trip 버튼을 통한 가입 플로우인 경우에만 챗봇으로 직행
+        const isPlanTripFlow = localStorage.getItem("planTripFlow") === "true";
+        const hasPendingDestination = localStorage.getItem("pendingDestination");
+        
+        if (isPlanTripFlow && hasPendingDestination) {
+            router.push("/chatbot?fromDestination=1");
+        } else {
+            // [Feature] 일반 설문 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
+            router.push("/explore");
+        }
     };
 
     const handlePrevious = () => {
