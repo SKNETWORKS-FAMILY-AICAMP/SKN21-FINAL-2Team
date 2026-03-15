@@ -13,6 +13,7 @@ Visit Seoul 데이터 전처리 스크립트
     6. category_depth 공백 정규화
 """
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -75,6 +76,69 @@ def to_float(val):
         return None
 
 
+# 음식점 코드 필드: "{'code_id': 'FOOD_1_2', 'code_nm': '한식'}" → "한식"
+CODE_FIELDS = {"cuisine_kind", "restaurant_type", "halal", "salam", "dietary"}
+
+# "None" 문자열을 실제 None으로 처리할 필드
+NONE_STRING_FIELDS = {"menu", "price_range"}
+
+# halal 필드: 논-할랄 값 (llm_text에 불필요)
+HALAL_NON_HALAL = {"살람서울(기타/논-할랄)"}
+
+# salam → dietary로 매핑할 값 (나머지는 halal과 중복이므로 제거)
+SALAM_TO_DIETARY = {
+    "살람 - 비건": "채식",
+    "살람 - 해산물": "해산물",
+}
+
+def parse_code_field(val) -> str | None:
+    """문자열로 저장된 코드 딕셔너리에서 code_nm 추출"""
+    if not val or val == "None":
+        return None
+    try:
+        if isinstance(val, str):
+            parsed = ast.literal_eval(val)
+        else:
+            parsed = val
+        nm = parsed.get("code_nm", "") if isinstance(parsed, dict) else ""
+        return nm.strip() or None
+    except Exception:
+        return None
+
+
+def merge_halal_dietary(result: dict) -> dict:
+    """halal/salam/dietary 필드 정리
+    - halal: 논-할랄 값 제거
+    - salam: 비건/해산물만 dietary로 이관, 필드 자체 제거
+    - dietary: 할랄(halal과 중복) 제거, salam에서 넘어온 값 추가
+    """
+    halal = result.pop("halal", None)
+    salam = result.pop("salam", None)
+    dietary = result.pop("dietary", None)
+
+    # halal: 논-할랄이면 None 처리
+    if halal in HALAL_NON_HALAL:
+        halal = None
+
+    # salam → dietary 이관
+    salam_dietary = SALAM_TO_DIETARY.get(salam)  # 매핑 없으면 None (할랄/논할랄은 버림)
+
+    # dietary: "할랄"은 halal 필드와 중복 → 제거, salam 유래 값 추가
+    dietary_vals = set()
+    if dietary and dietary != "할랄":
+        dietary_vals.add(dietary)
+    if salam_dietary:
+        dietary_vals.add(salam_dietary)
+    dietary_final = ", ".join(sorted(dietary_vals)) or None
+
+    if halal:
+        result["halal"] = halal
+    if dietary_final:
+        result["dietary"] = dietary_final
+
+    return result
+
+
 # ── 항목 변환 ─────────────────────────────────────────────
 def transform(item: dict) -> dict:
     result = {}
@@ -85,7 +149,11 @@ def transform(item: dict) -> dict:
             continue
 
         # 타입별 처리
-        if key in ("mapy", "mapx"):
+        if key in CODE_FIELDS:
+            result[key] = parse_code_field(val)
+        elif key in NONE_STRING_FIELDS:
+            result[key] = None if (not val or val == "None") else val
+        elif key in ("mapy", "mapx"):
             result[key] = to_float(val)
         elif key == "tags":
             result[key] = clean_tags(val)
@@ -97,6 +165,10 @@ def transform(item: dict) -> dict:
             result[key] = normalize(val) if val else None
         else:
             result[key] = val
+
+    # halal/salam/dietary 통합 정리 (음식점 전용)
+    if any(k in result for k in ("halal", "salam", "dietary")):
+        result = merge_halal_dietary(result)
 
     # null 필드 제거
     result = {k: v for k, v in result.items() if v is not None and v != [] and v != ""}

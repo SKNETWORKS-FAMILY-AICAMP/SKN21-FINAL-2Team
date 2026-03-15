@@ -38,6 +38,18 @@ def build_user_prompt(item: dict) -> str:
         parts.append(f"장소명: {v}")
     if v := item.get("category_depth"):
         parts.append(f"카테고리: {v}")
+    if v := item.get("cuisine_kind"):
+        parts.append(f"음식 종류: {v}")
+    if v := item.get("restaurant_type"):
+        parts.append(f"식당 유형: {v}")
+    if v := item.get("halal"):
+        parts.append(f"할랄 인증: {v}")
+    if v := item.get("salam"):
+        parts.append(f"살람(이슬람): {v}")
+    if v := item.get("dietary"):
+        parts.append(f"식이 유형: {v}")
+    if v := item.get("menu"):
+        parts.append(f"메뉴: {v[:200]}")
     tags = item.get("tags") or []
     if tags:
         parts.append(f"태그: {', '.join(tags)}")
