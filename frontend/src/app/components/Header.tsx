@@ -143,7 +143,8 @@ export function Header() {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-            <div className="max-w-7xl mx-auto px-6 h-16 relative flex items-center justify-between">
+            {/* [Fix] Removed max-w-7xl mx-auto so Logo stays fixed at px-6 matching Sidebar */}
+            <div className="w-full px-6 h-16 relative flex items-center justify-between">
                 <Logo />
 
                 {/* [Fix] 네비 클릭 시 h2 기준 스크롤 + 리사이즈 시 자동 재정렬 */}

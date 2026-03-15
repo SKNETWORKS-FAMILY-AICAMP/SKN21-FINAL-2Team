@@ -257,7 +257,7 @@ backend/tmp
 # frontend/tests/
 
 .claude/
-.cursor/*
+.cursor/
 CLAUDE.md
 .gemini
 
