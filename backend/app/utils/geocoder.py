@@ -267,12 +267,12 @@ class GeoCoder:
         if data and data.get("status") == "OK" and data.get("addresses"):
             target = data["addresses"][0]
             lat = float(target["y"])
-            lng = float(target["x"])
+            lon = float(target["x"])
             result = {
                 "latitude": lat,
-                "longitude": lng,
+                "longitude": lon,
                 "lat": lat,
-                "lng": lng,
+                "lon": lon,
                 "road_address": target.get("roadAddress"),
                 "jibun_address": target.get("jibunAddress"),
             }
@@ -296,7 +296,7 @@ class GeoCoder:
                 {
                     "name": None,
                     "lat": float(target["y"]),
-                    "lng": float(target["x"]),
+                    "lon": float(target["x"]),
                     "road_address": target.get("roadAddress"),
                     "jibun_address": target.get("jibunAddress"),
                 }
@@ -317,7 +317,7 @@ class GeoCoder:
 
         result: Optional[Dict[str, Any]] = None
         if not data or data.get("status", {}).get("code") != 0 or not data.get("results"):
-            print(f"검색 결과가 없습니다: lat={latitude}, lng={longitude}")
+            print(f"검색 결과가 없습니다: lat={latitude}, lon={longitude}")
         else:
             target = None
             for r in data["results"]:
@@ -330,7 +330,7 @@ class GeoCoder:
             address = self._build_address_dict(target)
             result = {
                 "lat": latitude,
-                "lng": longitude,
+                "lon": longitude,
                 "road_address": address.get("road_address"),
                 "jibun_address": address.get("jibun_address"),
             }
@@ -369,7 +369,7 @@ class GeoCoder:
                 {
                     "name": item.get("name") or query,
                     "lat": geocoded.get("lat"),
-                    "lng": geocoded.get("lng"),
+                    "lon": geocoded.get("lon"),
                     "road_address": geocoded.get("road_address") or address,
                     "jibun_address": geocoded.get("jibun_address") or address,
                 }
@@ -467,7 +467,7 @@ class GeoCoder:
         """
         result = await cls.get_instance().geocoder(address)
         if result:
-            return result["lat"], result["lng"]
+            return result["lat"], result["lon"]
         return 0.0, 0.0
 
     @classmethod

@@ -166,14 +166,14 @@ async def search_places(
     serialized = []
     for result in results:
         address = result.get("road_address") or result.get("jibun_address") or query.strip()
-        if result.get("lat") is None or result.get("lng") is None:
+        if result.get("lat") is None or result.get("lon") is None:
             continue
         serialized.append(
             {
                 "name": result.get("name") or query.strip(),
                 "adress": address,
                 "latitude": result.get("lat"),
-                "longitude": result.get("lng"),
+                "longitude": result.get("lon"),
             }
         )
     return serialized

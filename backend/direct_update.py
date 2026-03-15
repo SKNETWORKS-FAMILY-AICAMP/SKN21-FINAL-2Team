@@ -22,7 +22,7 @@ def get_geocode(query):
             target = data["addresses"][0]
             return {
                 "lat": target["y"],
-                "lng": target["x"],
+                "lon": target["x"],
                 "road": target.get("roadAddress"),
                 "jibun": target.get("jibunAddress")
             }
@@ -60,7 +60,7 @@ def main():
         
         if geo:
             item["addr"] = geo["road"] or geo["jibun"] or item.get("addr")
-            item["mapx"] = geo["lng"]
+            item["mapx"] = geo["lon"]
             item["mapy"] = geo["lat"]
             print(f"[{i+1}/{total}] {title} -> {item['addr']}")
         else:

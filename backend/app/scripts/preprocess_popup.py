@@ -227,7 +227,7 @@ async def step3_geocode(data: list) -> list:
             geo = await geocoder.geocoder(addr)
             if geo:
                 geocoded["mapy"] = str(geo["lat"])
-                geocoded["mapx"] = str(geo["lng"])
+                geocoded["mapx"] = str(geo["lon"])
                 if geo.get("road_address"):
                     geocoded["road_address"] = geo["road_address"]
                 if geo.get("jibun_address"):

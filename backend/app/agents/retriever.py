@@ -24,26 +24,31 @@ def _candidate_category(candidate: Dict[str, Any]) -> str:
     )
 
 def _candidate_score(candidate: Dict[str, Any]) -> float:
+    """blended_score → rerank_score → score 순으로 최종 품질 점수를 반환."""
     try:
-        return max(float(candidate.get("score", 0.0)), 1e-6)
+        for key in ("blended_score", "rerank_score", "score"):
+            val = candidate.get(key)
+            if val is not None:
+                return max(float(val), 1e-6)
+        return 1e-6
     except Exception:
         return 1e-6
 
 
-def _candidate_name(candidate: Dict[str, Any]) -> str:
-    """후보의 대표 장소명을 추출한다."""
+def _candidate_name_signature(candidate: Dict[str, Any]) -> str:
+    """
+    같은 장소 여부를 판별하기 위한 이름 시그니처.
+    후보의 대표 장소명을 추출한다.
+    """
     payload = candidate.get("payload", {}) or {}
-    return str(
+    name = str(
         payload.get("place")
         or payload.get("title")
         or payload.get("name")
         or ""
     ).strip()
 
-
-def _candidate_name_signature(candidate: Dict[str, Any]) -> str:
-    """같은 장소 여부를 판별하기 위한 이름 시그니처."""
-    return _normalize_text(_candidate_name(candidate))
+    return normalize_text(name)
 
 
 def _resolve_search_scope(
@@ -290,7 +295,7 @@ async def _search_for_general(
                 results = await GeoCoder.get_instance().search_places(f"{name} 서울", 1)
                 if results:
                     new_lat = results[0].get("lat")
-                    new_lng = results[0].get("lng")
+                    new_lng = results[0].get("lon")
                     if new_lat and new_lng and in_seoul_bbox(new_lat, new_lng):
                         print(f"[Retriever] anchor resolved to Seoul: ({new_lat}, {new_lng})")
                         return new_lat, new_lng, radius_m
@@ -322,7 +327,7 @@ async def _search_for_general(
                 results = await GeoCoder.get_instance().search_places(f"{raw_location} 서울", 1)
                 if results:
                     anchor_lat = results[0].get("lat")
-                    anchor_lon = results[0].get("lng")
+                    anchor_lon = results[0].get("lon")
                     print(f"[Retriever] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_lon})")
             except Exception as e:
                 print(f"[Retriever] Naver search anchor failed for '{raw_location}': {e}")

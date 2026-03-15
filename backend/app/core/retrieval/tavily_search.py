@@ -125,15 +125,15 @@ class TavilySearch:
         places = []
         for place in extraction_result.places:
             # 위도, 경도 추출
-            lat, long = await GeoCoder.get_coordinates(place.address)
+            lat, lon = await GeoCoder.get_coordinates(place.address)
 
             place_info = PlaceInfo(
                 place_id="",
                 name=place.name,
                 address=place.address,
                 image_path=place.image_url,
-                map_url=build_naver_map_url(place.name, lat, long),
-                longitude=long,
+                map_url=build_naver_map_url(place.name, lat, lon),
+                longitude=lon,
                 latitude=lat
             )
             places.append(place_info)
@@ -146,17 +146,17 @@ class TavilySearch:
     # =================================================
     # 
     # =================================================
-    def in_seoul_bbox(self, lat: float, lng: float) -> bool:
+    def in_seoul_bbox(self, lat: float, lon: float) -> bool:
         # 서울 행정 경계 bounding box
         _SEOUL_BBOX = {
             "lat_min": 37.413,
             "lat_max": 37.701,
-            "lng_min": 126.734,
-            "lng_max": 127.269,
+            "lon_min": 126.734,
+            "lon_max": 127.269,
         }
         return (
             _SEOUL_BBOX["lat_min"] <= lat <= _SEOUL_BBOX["lat_max"]
-            and _SEOUL_BBOX["lng_min"] <= lng <= _SEOUL_BBOX["lng_max"]
+            and _SEOUL_BBOX["lon_min"] <= lon <= _SEOUL_BBOX["lon_max"]
         )
 
 
@@ -170,11 +170,11 @@ class TavilySearch:
         return "서울" in text or "Seoul".lower() in text.lower()
 
     @staticmethod
-    def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """두 WGS84 좌표 간 거리(km)."""
         R = 6371.0
         dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lng2 - lng1)
+        dlon = math.radians(lon2 - lon1)
         a = (math.sin(dlat / 2) ** 2
             + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
             * math.sin(dlon / 2) ** 2)

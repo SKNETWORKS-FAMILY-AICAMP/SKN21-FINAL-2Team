@@ -4,6 +4,7 @@ import base64
 import math
 import mimetypes
 import re
+import pprint
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
@@ -66,7 +67,7 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
                 name=name,
                 address=address,
                 image_path=payload.get("image") or "",
-                map_url=payload.get("map_url", ""),
+                map_url=build_naver_map_url(name, float(latitude), float(longitude)),
                 longitude=float(longitude),
                 latitude=float(latitude),
             ),
@@ -249,30 +250,30 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
             
             try:
                 lat = float(payload.get("mapy") or p.get("lat") or 0.0)
-                lng = float(payload.get("mapx") or p.get("lng") or 0.0)
+                lon = float(payload.get("mapx") or p.get("lon") or 0.0)
             except (TypeError, ValueError):
-                lat, lng = 0.0, 0.0
-                
-            map_url = build_naver_map_url(query, lat, lng)
+                lat, lon = 0.0, 0.0
+
+            map_url = build_naver_map_url(query, lat, lon)
             lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
 
     return "\n".join(lines)
 
 
-_SEOUL_BBOX = {"lat_min": 37.413, "lat_max": 37.701, "lng_min": 126.734, "lng_max": 127.269}
+_SEOUL_BBOX = {"lat_min": 37.413, "lat_max": 37.701, "lon_min": 126.734, "lon_max": 127.269}
 
 
-def _in_seoul_bbox(lat: float, lng: float) -> bool:
+def _in_seoul_bbox(lat: float, lon: float) -> bool:
     return (
         _SEOUL_BBOX["lat_min"] <= lat <= _SEOUL_BBOX["lat_max"]
-        and _SEOUL_BBOX["lng_min"] <= lng <= _SEOUL_BBOX["lng_max"]
+        and _SEOUL_BBOX["lon_min"] <= lon <= _SEOUL_BBOX["lon_max"]
     )
 
 
-def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlat = math.radians(lat2 - lat1)
-    dlng = math.radians(lng2 - lng1)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
     return 6371.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -349,10 +350,10 @@ async def _build_web_context(
             name = (item.get("name") or "").strip()
             address = (item.get("road_address") or item.get("jibun_address") or "").strip()
             lat = float(item.get("lat") or 0.0)
-            lng = float(item.get("lng") or 0.0)
-            if not name or not address or not lat or not lng:
+            lon = float(item.get("lon") or 0.0)
+            if not name or not address or not lat or not lon:
                 continue
-            if not _in_seoul_bbox(lat, lng):
+            if not _in_seoul_bbox(lat, lon):
                 continue
             norm = name.lower().replace(" ", "")
             if norm in seen_names:
@@ -363,16 +364,16 @@ async def _build_web_context(
                 name=name,
                 address=address,
                 image_path="",
-                map_url=build_naver_map_url(name, lat, lng),
-                longitude=lng,
+                map_url=build_naver_map_url(name, lat, lon),
+                longitude=lon,
                 latitude=lat,
             ))
 
     # ── 4단계: 위치 기준 정렬 ────────────────────────────────────────────
     slots_lat = location.lat if location else None
-    slots_lng = location.lon if location else None
-    if slots_lat and slots_lng:
-        naver_places.sort(key=lambda p: _haversine_km(slots_lat, slots_lng, p.latitude, p.longitude))
+    slots_lon = location.lon if location else None
+    if slots_lat and slots_lon:
+        naver_places.sort(key=lambda p: _haversine_km(slots_lat, slots_lon, p.latitude, p.longitude))
     elif input_lat and input_lon:
         naver_places.sort(key=lambda p: _haversine_km(input_lat, input_lon, p.latitude, p.longitude))
 
@@ -491,7 +492,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     else:
         print(f"candidate_pool : {len(candidate_pool)}")
         print(f"candidates : {len(candidates)}")
-        print(candidates)
+        pprint.pprint(candidates)
 
         # 컨텍스트 구성
         candidate_places, place_context, candidate_names = _build_place_context(candidates)

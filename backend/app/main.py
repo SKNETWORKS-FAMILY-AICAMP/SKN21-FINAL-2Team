@@ -31,7 +31,8 @@ async def lifespan(app: FastAPI):
     print("[INFO] Starting up: Loading models...")
     try:
         # CLIP 모델 로드 (PlaceRetriever 초기화)
-        PlaceRetriever.get_instance()
+        retriever = PlaceRetriever.get_instance()
+        retriever._ensure_reranker()  # CrossEncoder 워밍업 (첫 요청 지연 방지)
         
         # LLM 및 Tavily 인스턴스 초기화
         # 노드별 설정(temperature)에 맞춰 자주 쓰는 조합을 미리 워밍업
