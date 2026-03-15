@@ -7,6 +7,10 @@ export interface ApiError {
     status?: number;
 }
 
+export interface ApiErrorHandlingOptions {
+    logLevel?: "error" | "warn" | "silent";
+}
+
 // Backend ErrorCode 상수와 동기화
 export const ErrorCode = {
     TOKEN_EXPIRED: 1001,
@@ -73,7 +77,11 @@ export const clearAuth = () => {
  * 에러 코드에 따라 공통 처리를 수행한다.
  * 반환값: 'retry' (토큰 refresh 후 재시도), 'redirect' (로그인 리다이렉트), 'throw' (호출자에서 처리)
  */
-export const handleApiError = (error: ApiError): "retry" | "redirect" | "throw" => {
+export const handleApiError = (
+    error: ApiError,
+    options: ApiErrorHandlingOptions = {}
+): "retry" | "redirect" | "throw" => {
+    const { logLevel = "error" } = options;
     const code = normalizeErrorCode(error.error_code);
 
     switch (code) {
@@ -100,7 +108,11 @@ export const handleApiError = (error: ApiError): "retry" | "redirect" | "throw" 
         default:
             // 인증 미들웨어에서 내려오는 401(코드 불명확/기타)도 refresh 1회 시도
             if (error.status === 401) return "retry";
-            console.error(`[API Error] ${error.error_code}: ${error.message}`);
+            if (logLevel === "warn") {
+                console.warn(`[API Warning] ${error.error_code}: ${error.message}`);
+            } else if (logLevel === "error") {
+                console.error(`[API Error] ${error.error_code}: ${error.message}`);
+            }
             return "throw";
     }
 };

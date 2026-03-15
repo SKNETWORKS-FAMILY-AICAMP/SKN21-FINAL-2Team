@@ -35,9 +35,19 @@ export interface PreferItem {
 }
 
 export const getPostLoginPath = (user: UserProfile): string => {
+    if (!user) return "/"; // Safety fallback
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    // [Feature] 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
+    
+    // [Feature] Plan Trip 버튼을 통한 로그인/가입 시에만 챗봇으로 직행
+    const isPlanTripFlow = typeof window !== "undefined" && localStorage.getItem("planTripFlow") === "true";
+    const hasPendingDestination = typeof window !== "undefined" && localStorage.getItem("pendingDestination");
+    
+    if (isPlanTripFlow && hasPendingDestination) {
+        return "/chatbot?fromDestination=1";
+    }
+    
+    // [Feature] 일반 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
     return "/explore";
 };
 
@@ -158,14 +168,13 @@ export const resolveStreamApiBaseUrl = (
     const streamApiUrl = process.env.NEXT_PUBLIC_STREAM_API_URL;
     if (streamApiUrl) return streamApiUrl;
     if (typeof window === "undefined") return API_URL;
-    if (API_URL !== "/api") return API_URL;
 
-    const { hostname, protocol } = runtimeLocation ?? window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return `${protocol}//${hostname}:8000/api`;
+    // 브라우저에서는 환경과 무관하게 Next.js /api rewrite를 우선 사용해 CORS preflight를 피한다.
+    if (API_URL.startsWith("http://") || API_URL.startsWith("https://")) {
+        return "/api";
     }
-
-    return API_URL;
+    if (API_URL !== "/api") return API_URL;
+    return runtimeLocation ? "/api" : API_URL;
 };
 
 const refreshAccessToken = async () => {
@@ -246,10 +255,11 @@ type FetchOpts = {
     body?: unknown;
     headers?: HeadersInit;
     cache?: RequestCache;
+    errorLogLevel?: "error" | "warn" | "silent";
 };
 
 const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
-    const { method = 'GET', body, headers, cache } = opts;
+    const { method = 'GET', body, headers, cache, errorLogLevel = "error" } = opts;
 
     const doFetch = async () => fetch(url, {
         method,
@@ -262,7 +272,7 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     let res = await doFetch();
     if (!res.ok) {
         const apiError = await parseApiError(res);
-        const action = handleApiError(apiError);
+        const action = handleApiError(apiError, { logLevel: errorLogLevel });
 
         if (action === 'retry') {
             // 토큰 refresh 후 재시도
@@ -771,7 +781,7 @@ export const fetchRandomExplorePlaces = async (
         url += `?${params.toString()}`;
     }
 
-    const response = await fetchWithAuth(url);
+    const response = await fetchWithAuth(url, { errorLogLevel: "warn" });
     return response.json();
 };
 

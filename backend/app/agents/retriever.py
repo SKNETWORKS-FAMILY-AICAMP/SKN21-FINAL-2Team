@@ -139,7 +139,7 @@ async def _search_for_trip_planning(
     retriever = PlaceRetriever.get_instance()
 
     itinerary = state.get("itinerary", [])
-    image_path = state.get("image_path")
+    image_path = state.get("input_image")
 
     if not itinerary:
         return []
@@ -164,9 +164,9 @@ async def _search_for_trip_planning(
                     candidate_k=max(10, candidate_k // 3),
                     categories=[item_category] if item_category else None,
                     emotional_text=emotional_text,
-                    user_latitude=state.get("latitude"),
-                    user_longitude=state.get("longitude"),
-                    preferred_location=getattr_safe(state.get("slots"), "location"),
+                    user_latitude=state.get("input_lat"),
+                    user_longitude=state.get("input_long"),
+                    preferred_location=getattr_safe(state.get("slots"), "location").name if getattr_safe(state.get("slots"), "location") else None,
                     enable_bm25=True,
                     enable_rerank=True,
                     rerank_top_k=min(rerank_max_k, max(10, candidate_k // 3)),
@@ -191,9 +191,9 @@ async def _search_for_general(
     retriever = PlaceRetriever.get_instance()
 
     user_input = get_effective_user_input(state)
-    image_path = state.get("image_path")
-    latitude = state.get("latitude")
-    longitude = state.get("longitude")
+    image_path = state.get("input_image")
+    latitude = state.get("input_lat")
+    longitude = state.get("input_long")
     slots = state.get("slots")
 
     print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
@@ -210,28 +210,65 @@ async def _search_for_general(
             print(f"[Retriever] Geocoding error: {e}")
 
     categories = None
+    location_obj = None
     raw_location = None
     if slots:
         # 다중 카테고리(리스트) 우선, 없을 경우 단일 카테고리 사용
         categories = getattr_safe(slots, "categories")
-        raw_location = getattr_safe(slots, "location")
+        location_obj = getattr_safe(slots, "location")
+        raw_location = location_obj.name if location_obj else None
+
+    def _in_seoul_bbox(lat, lng) -> bool:
+        return (37.413 <= lat <= 37.701) and (126.734 <= lng <= 127.269)
+
+    def _resolve_seoul_anchor(name: str, lat, lng, radius_m):
+        """anchor 좌표가 서울 bbox 밖이면 Naver Local Search로 서울 내 좌표 재검색."""
+        if lat and lng and not _in_seoul_bbox(lat, lng):
+            print(f"[Retriever] anchor '{name}' outside Seoul bbox ({lat}, {lng}) — retrying with Seoul search")
+            try:
+                results = GeoCoder().search_places(f"{name} 서울", 1)
+                if results:
+                    new_lat = results[0].get("lat")
+                    new_lng = results[0].get("lng")
+                    if new_lat and new_lng and _in_seoul_bbox(new_lat, new_lng):
+                        print(f"[Retriever] anchor resolved to Seoul: ({new_lat}, {new_lng})")
+                        return new_lat, new_lng, radius_m
+            except Exception as e:
+                print(f"[Retriever] Seoul anchor re-search failed for '{name}': {e}")
+            return None, None, None
+        return lat, lng, radius_m
 
     # intent_node에서 이미 normalize된 표준명이면 LANDMARK_DICTIONARY에서 바로 조회
-    anchor_lat = anchor_lon = anchor_radius_m = None
+    anchor_lat = anchor_long = anchor_radius_m = None
     if raw_location and raw_location in LANDMARK_DICTIONARY:
         entry = LANDMARK_DICTIONARY[raw_location]
         anchor_lat = entry["lat"]
-        anchor_lon = entry["lon"]
+        anchor_long = entry["long"]
         anchor_radius_m = entry["radius_m"]
-        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
+        print(f"[Retriever] landmark anchor: {raw_location!r} → lat={anchor_lat} lon={anchor_long} r={anchor_radius_m}m")
     elif raw_location:
         # 만약 intent_node 후처리를 거치지 않은 경우에도 대비한 안전망
         norm = normalize_location(raw_location)
         if norm.canonical_matched and norm.lat is not None:
             anchor_lat = norm.lat
-            anchor_lon = norm.lon
+            anchor_long = norm.long
             anchor_radius_m = norm.radius_m
             print(f"[Retriever] landmark anchor (fallback normalize): {raw_location!r} → {norm.normalized_location!r}")
+        else:
+            # LANDMARK_DICTIONARY 미매칭 → Naver Search로 서울 내 좌표 직접 검색
+            print(f"[Retriever] '{raw_location}' not in landmark dict — searching Seoul coords via Naver")
+            try:
+                results = GeoCoder().search_places(f"{raw_location} 서울", 1)
+                if results:
+                    anchor_lat = results[0].get("lat")
+                    anchor_long = results[0].get("lng")
+                    print(f"[Retriever] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_long})")
+            except Exception as e:
+                print(f"[Retriever] Naver search anchor failed for '{raw_location}': {e}")
+
+    anchor_lat, anchor_long, anchor_radius_m = _resolve_seoul_anchor(
+        raw_location or "", anchor_lat, anchor_long, anchor_radius_m
+    )
 
     try:
         return await retriever.search_hybrid(
@@ -249,7 +286,7 @@ async def _search_for_general(
             rerank_top_k=min(rerank_max_k, candidate_k),
             search_scope=search_scope,
             location_anchor_lat=anchor_lat,
-            location_anchor_lon=anchor_lon,
+            location_anchor_long=anchor_long,
             location_radius_m=anchor_radius_m,
         )
     except Exception as e:
@@ -299,7 +336,7 @@ async def retriever_node(state: TravelState):
     primary_intent = state.get("primary_intent")
     print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
-    image_path = state.get("image_path")
+    image_path = state.get("input_image")
     emotional_text = None
     if image_path:
         print("[Retriever] Image detected. Fetching description once...")
@@ -376,7 +413,8 @@ async def retriever_node(state: TravelState):
 
     # location diagnostics 보강
     slots = state.get("slots")
-    norm_location = getattr_safe(slots, "location") if slots else None
+    location_obj = getattr_safe(slots, "location") if slots else None
+    norm_location = location_obj.name if location_obj else None
     canonical_matched = norm_location in LANDMARK_DICTIONARY if norm_location else False
     diagnostics["normalized_location"] = norm_location
     diagnostics["location_canonical_matched"] = canonical_matched

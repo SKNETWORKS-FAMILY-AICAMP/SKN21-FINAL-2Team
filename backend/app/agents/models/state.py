@@ -1,6 +1,6 @@
 from typing import TypedDict, List, Dict, Any, Annotated
 from langgraph.graph.message import add_messages
-from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType
+from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType, PlaceInfo
 from langchain_core.messages import BaseMessage
 
 class TravelState(TypedDict, total=False):
@@ -9,9 +9,10 @@ class TravelState(TypedDict, total=False):
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
     room_id: int
-    latitude: float | None
-    longitude: float | None
-    image_path: str | None
+
+    input_lat: float | None
+    input_long: float | None
+    input_image: str | None
 
     # 대화 관리
     user_input: str
@@ -24,6 +25,7 @@ class TravelState(TypedDict, total=False):
     update_user_input: str | None
     summary_title: str
     summary_message: str
+    input_tags: List[str]
     user_preferences: Dict[str, Any]           # 선호도 조사
     prefs_info: str
     
@@ -43,8 +45,18 @@ class TravelState(TypedDict, total=False):
     follow_up_questions: List[str]          # LLM이 생성한 후속 질문 목록   
     missing_slots: List[PlannerNeedType]                # 다음 단계 진행을 위해 추가로 사용자에게 물어봐야 하는 slot 목록 (필수 정보들만 재질문)
     answer: str
-    selected_ids: List[str]                 # LLM이 최종 답변에서 선택한 장소들의 contentid 목록
+    place_info_list: List[PlaceInfo]        # executor가 구성한 장소 정보 목록 (Qdrant/Tavily 통합)
 
 
 def get_effective_user_input(state: TravelState) -> str:
     return (state.get("update_user_input") or state.get("user_input") or "").strip()
+
+def get_slots_info(state: TravelState) -> str:
+    slots_info = ""
+    slots = state.get("slots")
+
+    if slots:
+        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
+        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
+
+    return slots_info

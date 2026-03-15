@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const backendUrl = process.env.BACKEND_URL || 'http://backend:8000';
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000/api';
 
-        const response = await fetch(`${backendUrl}/api/chat`, {
+        const response = await fetch(`${backendUrl}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

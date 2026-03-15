@@ -3,59 +3,185 @@ import os
 import base64
 import mimetypes
 import concurrent.futures
+import math
 import re
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from app.agents.models.state import TravelState, get_effective_user_input
-from app.agents.models.output import IntentType
+from app.agents.models.output import IntentType, PlaceInfo
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.core.llm_factory import LLMFactory
 from app.utils.common import parse_payload, getattr_safe
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
+from app.utils.config import TAVILY_IMAGE_SCORE_THRESHOLD
+
+def _in_seoul_bbox(lat: float, lng: float) -> bool:
+    # 서울 행정 경계 bounding box
+    _SEOUL_BBOX = {
+        "lat_min": 37.413,
+        "lat_max": 37.701,
+        "lng_min": 126.734,
+        "lng_max": 127.269,
+    }
+    return (
+        _SEOUL_BBOX["lat_min"] <= lat <= _SEOUL_BBOX["lat_max"]
+        and _SEOUL_BBOX["lng_min"] <= lng <= _SEOUL_BBOX["lng_max"]
+    )
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """두 WGS84 좌표 간 거리(km)."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lng2 - lng1)
+    a = (math.sin(dlat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+         * math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def _normalize_text(value: str) -> str:
-    return re.sub(r"\s+", "", (value or "")).lower()
+def _is_seoul_result(r: Any) -> bool:
+    """Tavily 결과 dict에 서울 관련 키워드가 포함되어 있는지 확인."""
+    if not isinstance(r, dict):
+        return False
+    text = " ".join([
+        r.get("content", ""),
+        r.get("title", ""),
+        r.get("url", ""),
+    ])
+    return "서울" in text or "Seoul" in text or "seoul" in text
 
 
-def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str, Any]]) -> List[str]:
-    if not answer_text or not candidates:
-        return []
+def _extract_place_names_from_answer(answer_text: str) -> list[str]:
+    """답변 텍스트에서 장소명 추출 (마크다운 링크 → 볼드 텍스트 순)."""
+    names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
+    if not names:
+        names = re.findall(r"\*\*([^*]+)\*\*", answer_text)
+    return list(dict.fromkeys(n.strip() for n in names if n.strip()))
 
-    inferred_ids: List[str] = []
 
-    # 1) Markdown 링크 텍스트 우선 매칭: [장소명](...)
-    link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
-    for raw_name in link_names:
-        name_key = _normalize_text(raw_name)
-        for c in candidates:
-            payload = c.get("payload", {}) or {}
-            candidate_name = payload.get("title") or payload.get("name") or ""
-            if not candidate_name:
+def _build_place_info_from_candidates(
+    candidates: List[Dict[str, Any]],
+    answer_text: str = "",
+) -> List[PlaceInfo]:
+    """candidates 중 답변에 언급된 장소만 PlaceInfo로 변환."""
+    result = []
+    for c in (candidates or []):
+        payload = c.get("payload", {}) or {}
+        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        if answer_text and name and name not in answer_text:
+            continue
+        address = (payload.get("addr") or payload.get("road_address") or "").strip()
+        try:
+            lng = float(payload.get("mapx") or 0)
+            lat = float(payload.get("mapy") or 0)
+        except (TypeError, ValueError):
+            lng = lat = 0.0
+        valid_coords = math.isfinite(lng) and math.isfinite(lat) and not (lng == 0.0 and lat == 0.0)
+        if not name or (not address and not valid_coords):
+            continue
+        result.append(PlaceInfo(
+            place_id=get_place_id(c) or "",
+            name=name,
+            address=address,
+            image_path=payload.get("image") or "",
+            map_url=payload.get("map_url", ""),
+            longitude=lng,
+            latitude=lat,
+        ))
+    return result
+
+
+_DEFAULT_LOCATION_RADIUS_KM = 3.0
+
+
+def _build_tavily_place_info(
+    answer_text: str,
+    images: list[str] | None = None,
+    timeout_sec: float = 2.0,
+    slots=None,
+) -> List[PlaceInfo]:
+    """Tavily 기반 답변에서 장소명 파싱 → GeoCoder.search_places()로 좌표/주소 획득."""
+    from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY
+
+    # slots.location 기반 anchor 좌표 및 반경 결정
+    anchor_lat: Optional[float] = None
+    anchor_lng: Optional[float] = None
+    anchor_radius_km: float = _DEFAULT_LOCATION_RADIUS_KM
+    anchor_name: str = ""
+
+    if slots:
+        location = getattr_safe(slots, "location")
+        if location:
+            loc_lat = getattr_safe(location, "lat")
+            loc_lng = getattr_safe(location, "long")
+            loc_name = (getattr_safe(location, "name") or "").strip()
+            if loc_lat and loc_lng:
+                anchor_lat = float(loc_lat)
+                anchor_lng = float(loc_lng)
+                anchor_name = loc_name
+                entry = LANDMARK_DICTIONARY.get(loc_name)
+                if entry and entry.get("radius_m"):
+                    anchor_radius_km = entry["radius_m"] / 1000.0
+            elif loc_name:
+                try:
+                    geocoder_tmp = GeoCoder()
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        future = pool.submit(geocoder_tmp.geocoder, loc_name)
+                        geo = future.result(timeout=timeout_sec)
+                    if geo:
+                        anchor_lat = float(geo.get("lat") or 0) or None
+                        anchor_lng = float(geo.get("lng") or geo.get("long") or 0) or None
+                        anchor_name = loc_name
+                except Exception as e:
+                    print(f"[Executor] anchor geocode failed for '{loc_name}': {e}")
+
+    names = _extract_place_names_from_answer(answer_text)
+    images = images or []
+    result = []
+    geocoder = GeoCoder()
+    for idx, name in enumerate(names):
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(geocoder.search_places, name, 1)
+                places = future.result(timeout=timeout_sec)
+            if not places:
                 continue
-            candidate_key = _normalize_text(candidate_name)
-            if name_key and (name_key in candidate_key or candidate_key in name_key):
-                cid = get_place_id(c)
-                if cid and cid not in inferred_ids:
-                    inferred_ids.append(cid)
-                break
+            p = places[0]
+            lat = float(p.get("lat") or p.get("latitude") or 0)
+            lng = float(p.get("lng") or p.get("longitude") or 0)
+            address = (p.get("road_address") or p.get("jibun_address") or p.get("address") or "").strip()
+            if not name or (not address and not (lat and lng)):
+                continue
 
-    # 2) 링크가 없으면 본문 장소명 포함 여부로 매칭
-    if not inferred_ids:
-        answer_key = _normalize_text(answer_text)
-        for c in candidates:
-            payload = c.get("payload", {}) or {}
-            candidate_name = payload.get("title") or payload.get("name") or ""
-            candidate_key = _normalize_text(candidate_name)
-            if candidate_key and candidate_key in answer_key:
-                cid = get_place_id(c)
-                if cid and cid not in inferred_ids:
-                    inferred_ids.append(cid)
+            if lat and lng and not _in_seoul_bbox(lat, lng):
+                print(f"[Executor] Tavily place '{name}' out of Seoul bbox ({lat}, {lng}) — skipped")
+                continue
 
-    return inferred_ids
+            if anchor_lat and anchor_lng and lat and lng:
+                dist_km = _haversine_km(anchor_lat, anchor_lng, lat, lng)
+                if dist_km > anchor_radius_km:
+                    print(f"[Executor] Tavily place '{name}' too far from '{anchor_name}' ({dist_km:.2f}km > {anchor_radius_km:.2f}km) — skipped")
+                    continue
+
+            map_url = f"https://map.naver.com/v5/search/{name}?c=15.00,{lng},{lat},0,dh"
+            image_path = images[idx] if idx < len(images) else ""
+
+            result.append(PlaceInfo(
+                place_id="",
+                name=name,
+                address=address,
+                image_path=image_path,
+                map_url=map_url,
+                longitude=lng,
+                latitude=lat,
+            ))
+        except Exception as e:
+            print(f"[Executor] Tavily geocode failed for '{name}': {e}")
+    return result
+
 
 def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
     """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
@@ -119,39 +245,98 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
 
     return "\n".join(lines)
 
-def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeout_sec: float = 3.0) -> str:
+def _clean_tavily_results(raw_results: list, score_threshold: float = 0.3) -> list[dict]:
+    """Tavily 결과 정제: score 필터 → 서울 키워드 필터 → URL 중복 제거 → 내용 정규화."""
+    import html
+    seen_urls: set[str] = set()
+    cleaned = []
+    for r in raw_results:
+        if not isinstance(r, dict):
+            continue
+        # score 기준 미달 제거
+        score = r.get("score") or 0.0
+        if score < score_threshold:
+            continue
+        # 서울 관련 결과만 허용
+        if not _is_seoul_result(r):
+            continue
+        # URL 중복 제거
+        url = (r.get("url") or "").strip()
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
+        # content 정제: HTML 엔티티 디코딩 + 공백 정규화
+        raw_content = r.get("content") or ""
+        raw_content = html.unescape(raw_content)
+        raw_content = re.sub(r"<[^>]+>", "", raw_content)          # HTML 태그 제거
+        raw_content = re.sub(r"\s+", " ", raw_content).strip()    # 공백 정규화
+        if not raw_content:
+            continue
+        cleaned.append({
+            "title": (r.get("title") or "").strip(),
+            "url": url,
+            "content": raw_content[:300],
+            "score": score,
+            "images": r.get("images") or [],
+        })
+    return cleaned
+
+
+def _build_web_context(input_tags: list[str], slots: Optional[Dict[str, Any]] = None, timeout_sec: float = 7.0) -> tuple[str, list[str]]:
     # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
     web_context = ""
     print("[Executor] No candidates — trying Tavily fallback")
+
+    tavily = LLMFactory.get_tavily()
+
+    tags = ", ".join(input_tags) if input_tags else ""
+
+    location = getattr_safe(slots, "location") if slots else None
+    loc_name = getattr_safe(location, "name") if location else None
+    if loc_name:
+        search_query = f"서울 {loc_name} 여행 {tags}".strip(", ")
+    else:
+        search_query = f"서울 여행 {tags}".strip()
+
+    # ThreadPoolExecutor + shutdown(wait=False) 로 진짜 타임아웃 보장
+    # with 블록 방식은 shutdown(wait=True)가 되어 timeout 후에도 블로킹 발생
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
-        tavily = LLMFactory.get_tavily()
-        if not query:
-             query = "한국 여행 추천" # 쿼리가 비어있을 경우 기본값 설정
-        
-        search_query = query
-        if slots:
-            location = getattr_safe(slots, "location")
-            if location:
-                search_query = f"{location} 여행 {query}"
-        # Tavily 응답 지연 시 executor 전체 대기를 막기 위해 타임아웃 적용
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(tavily.invoke, search_query)
-            web_results = future.result(timeout=timeout_sec)
-        if web_results:
-            web_lines = ["## 웹 검색 결과 (참고 정보)"]
-            for r in web_results:
-                if isinstance(r, dict):
-                    web_lines.append(f"- {r.get('content', '')[:200]}")
-                else:
-                    web_lines.append(f"- {str(r)[:200]}")
-            web_context = "".join(web_lines)
-            print(f"[Executor] Tavily fallback results: {len(web_results)}")
+        future = executor.submit(tavily.invoke, search_query)
+        web_results = future.result(timeout=timeout_sec)
     except concurrent.futures.TimeoutError:
         print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
+        executor.shutdown(wait=False)
+        return web_context, []
     except Exception as e:
         print(f"[Executor] Tavily fallback failed: {e}")
+        executor.shutdown(wait=False)
+        return web_context, []
+    else:
+        executor.shutdown(wait=False)
 
-    return web_context
+    cleaned = _clean_tavily_results(web_results)
+    print(f"[Executor] Tavily raw={len(web_results)} → cleaned(Seoul)={len(cleaned)}")
+    if not cleaned:
+        return web_context, []
+
+    # score 높은 순 정렬 후 임계값 이상인 결과에서만 이미지 수집
+    sorted_results = sorted(cleaned, key=lambda r: r["score"], reverse=True)
+    tavily_images = [
+        img
+        for r in sorted_results
+        if r["score"] >= TAVILY_IMAGE_SCORE_THRESHOLD
+        for img in r["images"]
+        if img
+    ]
+
+    web_lines = ["## 웹 검색 결과 (참고 정보)"]
+    for r in cleaned:
+        title = f"[{r['title']}] " if r["title"] else ""
+        web_lines.append(f"- {title}{r['content']}")
+    web_context = "\n".join(web_lines)
+    return web_context, tavily_images
 
 
 def _get_image_data_url(image_path: str) -> str:
@@ -202,22 +387,43 @@ async def executor_node(state: TravelState, config=None):
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
     user_input = get_effective_user_input(state)
+    input_tags = state.get("input_tags", [])
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots = state.get("slots")
-    image_path = state.get("image_path") # 이미지 경로 가져오기
+    image_path = state.get("input_image")
+    input_lat = state.get("input_lat")
+    input_long = state.get("input_long")
     follow_up_questions = state.get("follow_up_questions", [])
+
+    # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
+    user_location_context = ""
+    if input_lat and input_long:
+        try:
+            from app.utils.geocoder import GeoCoder
+            geo = GeoCoder().reverse_geocoder(input_lat, input_long)
+            road = (geo.get("road_address") or "").strip() if geo else ""
+            addr = road or f"위도 {input_lat}, 경도 {input_long}"
+        except Exception:
+            addr = f"위도 {input_lat}, 경도 {input_long}"
+        user_location_context = f"- 사용자 현재 위치: {addr}\n- 현재 위치에서 가까운 장소를 우선 추천하세요."
+    elif slots:
+        location = getattr_safe(slots, "location")
+        if location and getattr_safe(location, "name"):
+            loc_name = getattr_safe(location, "name")
+            user_location_context = f"- 사용자 요청 지역: {loc_name}\n- 해당 지역 내 또는 인근 장소를 우선 추천하세요."
 
     if not candidate_pool:
         candidate_pool = candidates
 
     web_context = None
+    tavily_images: list[str] = []
     place_context = None
     itinerary_context = None
     if not candidates:
         print("[Executor] No candidates — trying Tavily fallback")
-        web_context = _build_web_context(user_input, slots)
+        web_context, tavily_images = _build_web_context(input_tags, slots)
     else:
         print(f"candidate_pool : {len(candidate_pool)}")
         print(f"candidates : {len(candidates)}")
@@ -232,13 +438,6 @@ async def executor_node(state: TravelState, config=None):
     if slots:
         slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
         slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
-
-    # candidates 부족 시 안내 메시지 추가
-    data_notice = ""
-    if not candidates and not web_context:
-        data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
-    elif candidates is not None and len(candidates) < 3:
-        data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
 
     # 최종 답변 생성
     context_block = "\n\n".join(filter(None, [place_context, itinerary_context]))
@@ -267,11 +466,12 @@ async def executor_node(state: TravelState, config=None):
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
     system_prompt = EXECUTOR_PROMPT.format(
-        data_notice=data_notice,
         slots_info=slots_info,
+        user_location_context=user_location_context,
         prefs_info=prefs_info,
         web_context=web_context or "",
         context_block=context_block or "",
+        follow_up_questions=follow_up_questions,
     )
 
     prompt_messages = [SystemMessage(content=system_prompt), *messages]
@@ -283,45 +483,22 @@ async def executor_node(state: TravelState, config=None):
     # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
     full_content = await collect_streamed_text(llm, prompt_messages, config=config)
 
-    # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
-    selected_ids = []
-    
-    tag_match = re.search(r"\[\s*ids?\s*:\s*([^\]]+)\]", full_content, flags=re.IGNORECASE)
-    if tag_match:
-        ids_str = tag_match.group(1)
-        # 쉼표로 구분된 ID들 추출
-        selected_ids = [s.strip() for s in ids_str.split(',') if s.strip()]
-        # 답변에서 태그 제거
-        cleaned_answer = re.sub(r"\[\s*ids?\s*:\s*.*?\]", "", full_content, flags=re.IGNORECASE).strip()
-    else:
-        cleaned_answer = full_content.strip()
-
-    if not selected_ids:
-        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
-
-    # 후보 풀에 존재하지 않는 ID는 제거
-    valid_candidate_ids = set()
-    for c in candidate_pool:
-        payload = c.get("payload", {}) if isinstance(c, dict) else {}
-        cid = get_place_id(c)
-        if cid:
-            valid_candidate_ids.add(cid)
-
-    invalid_ids = [cid for cid in selected_ids if cid not in valid_candidate_ids]
-    selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
-
-    # LLM 태그가 모두 무효하면 텍스트 기반 fallback 재시도
-    if not selected_ids:
-        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
-        selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
-
-    if invalid_ids:
-        print(f"[Executor] Invalid selected IDs filtered: {invalid_ids}")
-
-    print(f"[Executor] Selected IDs: {selected_ids}")
+    cleaned_answer = full_content.strip()
     print(f"[Executor] Answer length: {len(cleaned_answer)}")
 
-    return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
+    # PlaceInfo 목록 구성 (Qdrant path: candidates 기반, Tavily path: 답변 파싱 + 지오코딩)
+    if candidates:
+        place_info_list = _build_place_info_from_candidates(candidates, cleaned_answer)
+    else:
+        place_info_list = _build_tavily_place_info(cleaned_answer, tavily_images, slots=slots)
+
+    print(f"[Executor] place_info_list: {len(place_info_list)} items")
+
+    return {
+        "messages": AIMessage(content=cleaned_answer),
+        "answer": cleaned_answer,
+        "place_info_list": place_info_list,
+    }
 
 
 async def executor_missing_node(state: TravelState, config=None):
