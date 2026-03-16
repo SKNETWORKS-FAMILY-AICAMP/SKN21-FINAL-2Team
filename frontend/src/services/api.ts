@@ -759,6 +759,7 @@ export interface CategoryPlaceItem {
     image_url: string;
     score: number;
     description: string;
+    category?: string;
     start_date?: string;
     end_date?: string;
 }

@@ -799,28 +799,25 @@ export function MyPagePage() {
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-            setActiveReservation(mapped);
           } catch (error) {
-            console.error("Failed to update reservation image", error);
+            console.error("Failed to update photo", error);
           }
         }}
         onSaveTitle={async (newTitle) => {
           if (!activeReservation) return;
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
-              name: newTitle || null,
+              name: newTitle.trim(),
             });
             const mapped = mapReservationRecordToItem(updated);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-            setActiveReservation(mapped);
           } catch (error) {
-            console.error("Failed to update reservation title", error);
+            console.error("Failed to update title", error);
           }
         }}
         onSaveCategory={async (newCategory) => {
-          // [추가] 카테고리 변경을 PATCH API로 저장
           if (!activeReservation) return;
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
@@ -830,18 +827,13 @@ export function MyPagePage() {
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-            setActiveReservation(mapped);
           } catch (error) {
-            console.error("Failed to update reservation category", error);
+            console.error("Failed to update category", error);
           }
         }}
         onSaveDetails={async (newDetails) => {
-          // [추가] 추출된 세부 정보(JSON) 변경을 PATCH API로 저장
           if (!activeReservation) return;
           try {
-            // newDetails는 Record<string, string> 형태로 전달됩니다. 예약 API가 이를 받을 수 있도록 합니다.
-            // ReservationPayload의 details 필드는 Record<string, string> 혹은 비슷할 것입니다. (만약 없다면 백엔드가 알아서 무시/수용해야함)
-            // @ts-ignore: details exists in backend payload but might need explicit typing if api.ts isn't fully synced
             const updated = await updateReservation(activeReservation.reservationId, {
               details: newDetails,
             });
@@ -849,12 +841,17 @@ export function MyPagePage() {
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-            setActiveReservation(mapped);
           } catch (error) {
-            console.error("Failed to update reservation details", error);
+            console.error("Failed to update details", error);
           }
         }}
-        onClose={() => setActiveReservation(null)}
+        onClose={(wasSaved, isNewDraft) => {
+          if (!wasSaved && isNewDraft && activeReservation) {
+            void handleDeleteReservation(activeReservation.id);
+          } else {
+            setActiveReservation(null);
+          }
+        }}
       />
 
       <AnimatePresence>
