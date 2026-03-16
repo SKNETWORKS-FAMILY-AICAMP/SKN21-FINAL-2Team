@@ -31,7 +31,7 @@ def test_enrich_payload_geo_and_addr_tokens_adds_geo_and_addr_tokens():
     out = enrich_payload_geo_and_addr_tokens(payload)
 
     assert out["geo"]["lat"] == 37.5912
-    assert out["geo"]["lon"] == 127.0021
+    assert out["geo"]["long"] == 127.0021
     assert "성북구" in out["addr_tokens"]
     assert "성북" in out["addr_tokens"]
 

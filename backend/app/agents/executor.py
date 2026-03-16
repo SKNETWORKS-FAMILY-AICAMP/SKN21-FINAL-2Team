@@ -1,93 +1,231 @@
-import urllib.parse
 import os
+import asyncio
 import base64
+import math
 import mimetypes
-import concurrent.futures
 import re
+import pprint
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
+from langchain_core.runnables import RunnableConfig
 
 from app.agents.models.state import TravelState, get_effective_user_input
-from app.agents.models.output import IntentType
+from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.core.llm_factory import LLMFactory
-from app.utils.common import parse_payload, getattr_safe
+from app.utils.common import getattr_safe, build_naver_map_url
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
+from app.utils.geocoder import GeoCoder
+from app.agents.models.state import IntentSlots
+from app.agents.models.place import PlaceInfo
+from app.core.retrieval.tavily_search import TavilySearch
+
+def _extract_place_names_from_answer(answer_text: str) -> list[str]:
+    """
+    답변 텍스트에서 장소명 추출.
+    """
+    link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
+    bold_names = re.findall(r"\*\*([^*]+)\*\*", answer_text)
+    # 링크명 우선, 볼드명은 보완 (중복 제거는 dict.fromkeys로)
+    return list(dict.fromkeys(n.strip() for n in (link_names + bold_names) if n.strip()))
 
 
-def _normalize_text(value: str) -> str:
-    return re.sub(r"\s+", "", (value or "")).lower()
+def _normalize_place_name(value: str) -> str:
+    value = (value or "").strip().lower()
+    return re.sub(r"\s+", "", value)
 
 
-def _infer_selected_ids_from_answer(answer_text: str, candidates: List[Dict[str, Any]]) -> List[str]:
-    if not answer_text or not candidates:
+def _extract_previously_recommended_place_names(messages: List[BaseMessage]) -> list[str]:
+    names: list[str] = []
+    for message in messages or []:
+        if not isinstance(message, AIMessage):
+            continue
+        content = getattr(message, "content", "")
+        if isinstance(content, str):
+            names.extend(_extract_place_names_from_answer(content))
+    return list(dict.fromkeys(name for name in names if name))
+
+
+def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple[Dict[str, Any], PlaceInfo]]:
+    """
+    유효한 candidate만 PlaceInfo와 함께 반환한다.
+    """
+    result: list[tuple[Dict[str, Any], PlaceInfo]] = []
+    for c in (candidates or []):
+        payload = c.get("payload", {}) or {}
+        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        address = (payload.get("addr") or payload.get("road_address") or "").strip()
+
+        # 좌표: mapx/mapy 우선, 없으면 geo.lon/geo.lat 폴백
+        geo = payload.get("geo") or {}
+        longitude = payload.get("mapx") or geo.get("lon")
+        latitude = payload.get("mapy") or geo.get("lat")
+
+        if not name or not address or not longitude or not latitude:
+            continue
+
+        result.append((
+            c,
+            PlaceInfo(
+                place_id=get_place_id(c) or "",
+                name=name,
+                address=address,
+                image_path=payload.get("image") or "",
+                map_url=build_naver_map_url(name, float(latitude), float(longitude)),
+                longitude=float(longitude),
+                latitude=float(latitude),
+            ),
+        ))
+    return result
+
+
+def _collect_recommended_places(
+    answer_text: str,
+    places: List[PlaceInfo],
+    minimum_count: int = 2,
+    maximum_count: int = 3,
+    deprioritized_names: List[str] | None = None,
+) -> List[PlaceInfo]:
+    """답변 텍스트에 실제로 언급된 장소만 반환한다. 미언급 장소는 절대 포함하지 않는다."""
+    if not places:
         return []
 
-    inferred_ids: List[str] = []
+    normalized_to_place = {
+        _normalize_place_name(place.name): place
+        for place in places
+        if place.name
+    }
+    recommended: list[PlaceInfo] = []
+    for name in _extract_place_names_from_answer(answer_text):
+        place = normalized_to_place.get(_normalize_place_name(name))
+        if place and all(place.name != existing.name for existing in recommended):
+            recommended.append(place)
 
-    # 1) Markdown 링크 텍스트 우선 매칭: [장소명](...)
-    link_names = re.findall(r"\[([^\]]+)\]\(https?://[^)]+\)", answer_text)
-    for raw_name in link_names:
-        name_key = _normalize_text(raw_name)
-        for c in candidates:
-            payload = c.get("payload", {}) or {}
-            candidate_name = payload.get("title") or payload.get("name") or ""
-            if not candidate_name:
-                continue
-            candidate_key = _normalize_text(candidate_name)
-            if name_key and (name_key in candidate_key or candidate_key in name_key):
-                cid = get_place_id(c)
-                if cid and cid not in inferred_ids:
-                    inferred_ids.append(cid)
-                break
+    return recommended[:maximum_count]
 
-    # 2) 링크가 없으면 본문 장소명 포함 여부로 매칭
-    if not inferred_ids:
-        answer_key = _normalize_text(answer_text)
-        for c in candidates:
-            payload = c.get("payload", {}) or {}
-            candidate_name = payload.get("title") or payload.get("name") or ""
-            candidate_key = _normalize_text(candidate_name)
-            if candidate_key and candidate_key in answer_key:
-                cid = get_place_id(c)
-                if cid and cid not in inferred_ids:
-                    inferred_ids.append(cid)
 
-    return inferred_ids
+def _answer_mentions_unknown_places(answer_text: str, places: List[PlaceInfo]) -> bool:
+    """답변에서 추출한 장소명 중 과반수가 후보군 밖이면 True.
+    ONE unknown(오탈자·약칭 등)이 있어도 나머지가 알려진 장소면 허용한다."""
+    extracted_names = _extract_place_names_from_answer(answer_text)
+    if not extracted_names:
+        return False
 
-def _build_place_context(candidates: List[Dict[str, Any]]) -> str:
-    """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환"""
-    if not candidates:
+    normalized_known_names = {
+        _normalize_place_name(place.name)
+        for place in places
+        if place.name
+    }
+    unknown_count = sum(
+        1 for name in extracted_names
+        if _normalize_place_name(name) not in normalized_known_names
+    )
+    # 과반수가 모르는 장소일 때만 할루시네이션으로 판단
+    return unknown_count > len(extracted_names) / 2
+
+
+def _build_minimum_recommendation_suffix(
+    recommended_places: List[PlaceInfo],
+    candidates: List[Dict[str, Any]],
+) -> str:
+    if not recommended_places:
         return ""
 
-    lines = ["## 검색된 장소 정보"]
-    for i, c in enumerate(candidates, 1):
-        payload = c.get("payload", {})
-        lat = float(payload.get("mapy", "0"))
-        lng = float(payload.get("mapx", "0"))
-
-        # 네이버 지도 링크 생성
-        title = payload.get("place") or payload.get("title") or ""
-        contentid = get_place_id(c) or ""
-        
-        if title:
-            encoded = urllib.parse.quote(title)
-            payload['map_url'] = f"https://map.naver.com/v5/search/{encoded}?c=15.00,{lng},{lat},0,dh"
-
-        map_url = payload.get("map_url", "Unknown")
-
-        # payload에서 빈값/불필요 필드 제거 후 JSON string
-        payload_str = parse_payload(payload)
-
-        line = (
-            f"{i}. (ID: {contentid}) / 지도링크: {map_url}\n"
-            f"   {payload_str}"
+    intro_by_name: dict[str, str] = {}
+    for candidate in candidates or []:
+        payload = candidate.get("payload", {}) or {}
+        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        if not name:
+            continue
+        introduction = (
+            candidate.get("introduction")
+            or payload.get("introduction")
+            or payload.get("llm_text")
+            or ""
         )
-        lines.append(line)
+        intro_by_name[_normalize_place_name(name)] = str(introduction).strip()
 
-    return "\n".join(lines)
+    lines = ["", "추천드릴 곳은 다음 2~3곳입니다."]
+    for place in recommended_places:
+        intro = intro_by_name.get(_normalize_place_name(place.name), "")
+        summary = intro[:120].strip()
+        if len(intro) > 120:
+            summary += "..."
+        if place.map_url and place.map_url != "Unknown":
+            place_label = f"[{place.name}]({place.map_url})"
+        else:
+            place_label = place.name
+        detail_parts = [part for part in [place.address, summary] if part]
+        if detail_parts:
+            lines.append(f"{place_label}은 {', '.join(detail_parts)} 기준으로 추천드립니다.")
+        else:
+            lines.append(f"{place_label}을 추천드립니다.")
+    return "\n\n".join(lines)
+
+
+def _build_place_context(candidates: List[Dict[str, Any]]) -> tuple[list[PlaceInfo], str, str]:
+    """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환.
+    Returns: (place_info_list, place_context_str, candidate_names_str)
+    """
+    if not candidates:
+        return [], "", "없음"
+
+    candidate_place_pairs = _build_candidate_place_pairs(candidates)
+    lines = ["## 검색된 장소 정보"]
+    name_lines: list[str] = []
+    for i, (c, info) in enumerate(candidate_place_pairs, 1):
+        payload = c.get("payload", {})
+
+        # 소개글: 우선순위 순서대로 첫 번째 non-empty 값 사용
+        introduction = (
+            payload.get("llm_text") or payload.get("introduction")
+            or c.get("introduction") or payload.get("summary") or payload.get("description") or ""
+        )
+        tags = payload.get("tags") or []
+        start_d = payload.get("start_date", "")
+        end_d   = payload.get("end_date", "")
+
+        # JSON 대신 사람이 읽기 쉬운 구조화 텍스트로 변환 (LLM이 그대로 출력하는 현상 방지)
+        block = [f"### {i}. {info.name}"]
+        block.append(f"- 주소: {info.address}")
+        if info.map_url:
+            block.append(f"- 지도: {info.map_url}")
+        if introduction:
+            block.append(f"- 소개: {introduction}")
+        if tags:
+            block.append(f"- 태그: {', '.join(str(t) for t in tags)}")
+
+        # payload 필드 → 한국어 레이블 매핑. 순서가 곧 컨텍스트 출력 순서.
+        # 필드 추가/제거 시 이 딕셔너리만 수정하면 됨.
+        _PAYLOAD_FIELD_LABELS: dict[str, str] = {
+            "usetime":    "이용시간",
+            "restdate":   "휴무일",
+            "parking":    "주차",
+            "tel":        "전화",
+            "subway_info": "대중교통",
+            "website":    "웹사이트",
+            "fee":        "입장료",
+            "period":     "기간",
+            "pet_raw":    "반려동물",
+        }
+
+        # 매핑 테이블 기반 단순 필드 처리
+        for field, label in _PAYLOAD_FIELD_LABELS.items():
+            value = payload.get(field, "")
+            if value:
+                block.append(f"- {label}: {value}")
+
+        # 날짜 범위는 두 필드를 합쳐야 하므로 별도 처리
+        if start_d or end_d:
+            block.append(f"- 일정: {start_d} ~ {end_d}")
+
+        lines.append("\n".join(block))
+        name_lines.append(f"{i}. {info.name}")
+
+    candidate_names_str = "\n".join(name_lines) if name_lines else "없음"
+    return [info for _, info in candidate_place_pairs], "\n\n".join(lines), candidate_names_str
 
 
 def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
@@ -112,46 +250,152 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
         lines.append(f"\n### {day}일차 - {time_slot}")
         lines.append(f"활동: {info['activity']}")
         for p in info["places"]:
-            name = p.get("title", "")
-            query = name or p.get("address", "")
-            map_url = f"https://map.naver.com/v5/search/{urllib.parse.quote(query)}" if query else ""
+            payload = p.get("payload", {}) if "payload" in p else p
+            name = payload.get("place") or payload.get("title") or payload.get("name") or p.get("title", "")
+            query = name or payload.get("addr") or payload.get("road_address") or p.get("address", "")
+            
+            try:
+                lat = float(payload.get("mapy") or p.get("lat") or 0.0)
+                lon = float(payload.get("mapx") or p.get("lon") or 0.0)
+            except (TypeError, ValueError):
+                lat, lon = 0.0, 0.0
+
+            map_url = build_naver_map_url(query, lat, lon)
             lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
 
     return "\n".join(lines)
 
-def _build_web_context(query: str, slots: Optional[Dict[str, Any]] = None, timeout_sec: float = 3.0) -> str:
-    # Fallback: candidates가 비어있으면 Tavily 웹 검색으로 보완
-    web_context = ""
-    print("[Executor] No candidates — trying Tavily fallback")
-    try:
-        tavily = LLMFactory.get_tavily()
-        if not query:
-             query = "한국 여행 추천" # 쿼리가 비어있을 경우 기본값 설정
-        
-        search_query = query
-        if slots:
-            location = getattr_safe(slots, "location")
-            if location:
-                search_query = f"{location} 여행 {query}"
-        # Tavily 응답 지연 시 executor 전체 대기를 막기 위해 타임아웃 적용
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(tavily.invoke, search_query)
-            web_results = future.result(timeout=timeout_sec)
-        if web_results:
-            web_lines = ["## 웹 검색 결과 (참고 정보)"]
-            for r in web_results:
-                if isinstance(r, dict):
-                    web_lines.append(f"- {r.get('content', '')[:200]}")
-                else:
-                    web_lines.append(f"- {str(r)[:200]}")
-            web_context = "\n".join(web_lines)
-            print(f"[Executor] Tavily fallback results: {len(web_results)}")
-    except concurrent.futures.TimeoutError:
-        print(f"[Executor] Tavily fallback timeout after {timeout_sec:.1f}s")
-    except Exception as e:
-        print(f"[Executor] Tavily fallback failed: {e}")
 
-    return web_context
+_SEOUL_BBOX = {"lat_min": 37.413, "lat_max": 37.701, "lon_min": 126.734, "lon_max": 127.269}
+
+
+def _in_seoul_bbox(lat: float, lon: float) -> bool:
+    return (
+        _SEOUL_BBOX["lat_min"] <= lat <= _SEOUL_BBOX["lat_max"]
+        and _SEOUL_BBOX["lon_min"] <= lon <= _SEOUL_BBOX["lon_max"]
+    )
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return 6371.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+async def _build_web_context(
+    input_tags: list[str],
+    slots: Optional[IntentSlots] = None,
+    timeout_sec: float = 7.0,
+    input_lat: Optional[float] = None,
+    input_lon: Optional[float] = None,
+) -> tuple[list[PlaceInfo], str]:
+    """Hybrid Tavily+Naver Local Search fallback.
+
+    1단계: Tavily 자연어 검색 → 점수 높은 결과의 title 추출
+    2단계: 각 title로 Naver Local Search → 정형 장소 데이터(주소, 좌표) 획득
+    """
+    location = slots.location if slots else None
+    loc_name = location.name if location else None
+    tags = " ".join(input_tags) if input_tags else ""
+    categories = " ".join(slots.categories) if slots and slots.categories else ""
+
+    # Tavily는 자연어 쿼리에 강함
+    if loc_name:
+        search_query = f"서울 {loc_name} {tags}".strip()
+    else:
+        search_query = f"서울 {tags}".strip() if tags else "서울 여행 추천"
+
+    print(f"[Executor] Hybrid fallback — Tavily query: '{search_query}'")
+
+    # ── 1단계: Tavily 웹 검색 (sync → async 래핑) ──────────────────────
+    # tavily = TavilySearch(max_result=10)
+    # try:
+    #     cleaned_results, _ = await asyncio.wait_for(
+    #         asyncio.to_thread(tavily.web_search, search_query),
+    #         timeout=timeout_sec,
+    #     )
+    # except (asyncio.TimeoutError, Exception) as e:
+    #     print(f"[Executor] Tavily search error: {e}")
+    #     cleaned_results = []
+
+    # if not cleaned_results:
+    #     print("[Executor] Tavily returned no results — skipping fallback")
+    #     return [], ""
+
+    # # 상위 5개 결과의 title을 Naver 검색어로 사용 (cleaned_results는 score 내림차순)
+    # top_titles = [r["title"] for r in cleaned_results[:5] if r.get("title")]
+    # print(f"[Executor] Tavily top titles: {top_titles}")
+
+    # ── 2단계: 각 title로 Naver Local Search (병렬 처리) ─────────────────
+    async def _naver_for_title(title: str) -> list[dict]:
+        try:
+            return await GeoCoder.get_instance().search_places(title, limit=5)
+        except Exception as e:
+            print(f"[Executor] Naver search for '{title}' failed: {e}")
+            return []
+
+    search_keyword = []
+    if loc_name and categories:
+        keyword = f"{loc_name} {categories}"
+        print(f"[Executor] Start!!!! — Naver search keyword: '{keyword}'")
+        search_keyword.append(keyword)
+    if tags:
+        print(f"[Executor] Start!!!! — Naver search keyword: '{tags}'")
+        search_keyword.append(tags)
+    
+    naver_results_lists = await asyncio.gather(*[_naver_for_title(t) for t in search_keyword]) # [[{}, {}, ...], [{}, {}, ...]]
+
+    # ── 3단계: PlaceInfo 구성 (중복 제거 + 서울 bbox 필터) ──────────────
+    seen_names: set[str] = set()
+    naver_places: list[PlaceInfo] = []
+    seen_names.add(loc_name) # 사용자가 입력한 지역명은 중복 제거
+
+    for items in naver_results_lists:
+        for item in items:
+            name = (item.get("name") or "").strip()
+            address = (item.get("road_address") or item.get("jibun_address") or "").strip()
+            lat = float(item.get("lat") or 0.0)
+            lon = float(item.get("lon") or 0.0)
+            if not name or not address or not lat or not lon:
+                continue
+            if not _in_seoul_bbox(lat, lon):
+                continue
+            norm = name.lower().replace(" ", "")
+            if norm in seen_names:
+                continue
+            seen_names.add(norm)
+            naver_places.append(PlaceInfo(
+                place_id="",
+                name=name,
+                address=address,
+                image_path="",
+                map_url=build_naver_map_url(name, lat, lon),
+                longitude=lon,
+                latitude=lat,
+            ))
+
+    # ── 4단계: 위치 기준 정렬 ────────────────────────────────────────────
+    slots_lat = location.lat if location else None
+    slots_lon = location.lon if location else None
+    if slots_lat and slots_lon:
+        naver_places.sort(key=lambda p: _haversine_km(slots_lat, slots_lon, p.latitude, p.longitude))
+    elif input_lat and input_lon:
+        naver_places.sort(key=lambda p: _haversine_km(input_lat, input_lon, p.latitude, p.longitude))
+
+    # ── 5단계: 컨텍스트 텍스트 구성 ─────────────────────────────────────
+    web_context_lines = ["## 웹 검색 결과"]
+    for i, place in enumerate(naver_places, 1):
+        block = [f"### {i}. {place.name}"]
+        if place.address:
+            block.append(f"- 주소: {place.address}")
+        if place.map_url:
+            block.append(f"- 지도: {place.map_url}")
+        web_context_lines.append("\n".join(block))
+
+    web_context = "\n\n".join(web_context_lines) if naver_places else ""
+    print(f"[Executor] Hybrid search done: Naver places={web_context}")
+    return naver_places, web_context
 
 
 def _get_image_data_url(image_path: str) -> str:
@@ -190,60 +434,86 @@ def _build_missing_context(missing_slots: List[str]) -> str:
     
     return "\n".join(lines)
 
-async def executor_node(state: TravelState, config=None):
+
+async def _build_location_context(
+    slots: Optional[IntentSlots],
+    input_address: Optional[str] = None,
+) -> str:
+    # 사용자 위치 컨텍스트 구성 (geocoder_node에서 미리 reverse geocoding된 주소 사용)
+    user_location_context = ""
+
+    if input_address:
+        user_location_context = f"- 사용자 현재 위치: {input_address}"
+
+    if slots and slots.location and slots.location.name:
+        address = ""
+        if slots.location.lat and slots.location.lon:
+            address = await GeoCoder.get_address(slots.location.lat, slots.location.lon)
+        user_location_context += f"\n- 사용자 관심 장소: {slots.location.name} ({address})"
+
+    return user_location_context
+
+
+async def executor_node(state: TravelState, config: RunnableConfig | None = None):
     """
-    여행 계획을 최종적으로 확정하는 노드
-    - 검증: 영업시간, 예약 필요 여부 확인
-    - 링크 생성: 네이버 지도 링크 생성
-    - 최종 답변 생성
+    최종 답변 생성
     """
     print("--- Executor Agent ---")
 
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
     user_input = get_effective_user_input(state)
+    input_tags = state.get("input_tags", [])
     messages = state.get("messages", [])[-10:]
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
-    slots = state.get("slots")
-    image_path = state.get("input_image") # 이미지 경로 가져오기
+    slots: Optional[IntentSlots] = state.get("slots")
+    image_path = state.get("input_image")
+    input_lat = state.get("input_lat")
+    input_lon = state.get("input_lon")
     follow_up_questions = state.get("follow_up_questions", [])
+    previous_recommendations = _extract_previously_recommended_place_names(messages)
 
+    # ====================================
+    # 장소 정보 리스트가 없으면 Tavily 검색으로 보완
     if not candidate_pool:
         candidate_pool = candidates
+
+    if not slots:
+        slots = IntentSlots(location=IntentLocation(name="서울", lat=0, lon=0))
 
     web_context = None
     place_context = None
     itinerary_context = None
+    fallback_places = []
+    candidate_places = []
+    candidate_names = "없음"
     if not candidates:
-        print("[Executor] No candidates — trying Tavily fallback")
-        web_context = _build_web_context(user_input, slots)
+        # web_search_node가 미리 검색해 놓은 결과를 state에서 읽는다.
+        print("[Executor] No candidates — reading web_search results from state")
+        fallback_places = state.get("web_search_places") or []
+        web_context = state.get("web_search_context") or ""
+        if not fallback_places:
+            print("[Executor] web_search_places empty — no fallback results available")
     else:
         print(f"candidate_pool : {len(candidate_pool)}")
         print(f"candidates : {len(candidates)}")
+        pprint.pprint(candidates)
 
         # 컨텍스트 구성
-        place_context = _build_place_context(candidates)
-        # print(f"[Executor] Place context: {place_context}")
+        candidate_places, place_context, candidate_names = _build_place_context(candidates)
         itinerary_context = _build_itinerary_context(candidates) if primary_intent == IntentType.TRIP_PLANNING else None
+    # ====================================
 
-    # 슬롯 정보 텍스트
-    slots_info = ""
-    if slots:
-        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
-        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
 
-    # candidates 부족 시 안내 메시지 추가
-    data_notice = ""
-    if not candidates and not web_context:
-        data_notice = "\n⚠️ 참고: 검색 결과가 없어 일반 지식을 기반으로 답변합니다. 정보의 정확도가 다소 낮을 수 있으니 확인 부탁드려요."
-    elif candidates is not None and len(candidates) < 3:
-        data_notice = "\n※ 검색 결과가 제한적이어서 추가 장소가 필요하시면 더 구체적으로 말씀해 주세요."
+    # 슬롯 정보 텍스트 =======================
+    if slots and slots.categories:
+        prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
-    # 최종 답변 생성
-    context_block = "\n\n".join(filter(None, [place_context, itinerary_context]))
+    # 위치 정보 ============================
+    # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
+    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
-    llm = LLMFactory.get_llm(temperature=0.5)
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
@@ -267,64 +537,57 @@ async def executor_node(state: TravelState, config=None):
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
     system_prompt = EXECUTOR_PROMPT.format(
-        data_notice=data_notice,
-        slots_info=slots_info,
         prefs_info=prefs_info,
-        web_context=web_context or "",
-        context_block=context_block or "",
+        location_context=location_context,
+        candidate_names=candidate_names,
+        place_context=place_context or "없음",
+        itinerary_context=itinerary_context or "없음",
+        web_context=web_context or "없음",
+        follow_up_questions=follow_up_questions,
+        previous_recommendations=", ".join(previous_recommendations) if previous_recommendations else "없음",
     )
 
-    prompt_messages = [SystemMessage(content=system_prompt), *messages]
-    if image_path:
-        prompt_messages.append(HumanMessage(content=content_blocks))
-    else:
-        prompt_messages.append(HumanMessage(content=user_input))
-
-    # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
-    full_content = await collect_streamed_text(llm, prompt_messages, config=config)
-
-    # ID 태그 추출 ([IDs: id1, id2, ...]) - 공백/대소문자 변형 허용
-    selected_ids = []
+    # state의 messages에는 이미 현재 턴 HumanMessage가 포함되어 있음(chat API에서 invoke 시 추가).
+    # 이미지 등 멀티모달을 위해 현재 턴은 content_blocks로 한 번만 보내고, 과거 대화만 history로 사용.
+    history = messages[:-1] if messages else []
+    prompt_messages = [SystemMessage(content=system_prompt), *history, HumanMessage(content=content_blocks)]
     
-    tag_match = re.search(r"\[\s*ids?\s*:\s*([^\]]+)\]", full_content, flags=re.IGNORECASE)
-    if tag_match:
-        ids_str = tag_match.group(1)
-        # 쉼표로 구분된 ID들 추출
-        selected_ids = [s.strip() for s in ids_str.split(',') if s.strip()]
-        # 답변에서 태그 제거
-        cleaned_answer = re.sub(r"\[\s*ids?\s*:\s*.*?\]", "", full_content, flags=re.IGNORECASE).strip()
-    else:
-        cleaned_answer = full_content.strip()
+    # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
+    full_content = await collect_streamed_text(
+        temperature=0.5, 
+        prompt_value=prompt_messages, 
+        config=config,
+    )
 
-    if not selected_ids:
-        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
-
-    # 후보 풀에 존재하지 않는 ID는 제거
-    valid_candidate_ids = set()
-    for c in candidate_pool:
-        payload = c.get("payload", {}) if isinstance(c, dict) else {}
-        cid = get_place_id(c)
-        if cid:
-            valid_candidate_ids.add(cid)
-
-    invalid_ids = [cid for cid in selected_ids if cid not in valid_candidate_ids]
-    selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
-
-    # LLM 태그가 모두 무효하면 텍스트 기반 fallback 재시도
-    if not selected_ids:
-        selected_ids = _infer_selected_ids_from_answer(cleaned_answer, candidate_pool)
-        selected_ids = [cid for cid in selected_ids if cid in valid_candidate_ids]
-
-    if invalid_ids:
-        print(f"[Executor] Invalid selected IDs filtered: {invalid_ids}")
-
-    print(f"[Executor] Selected IDs: {selected_ids}")
+    cleaned_answer = full_content.strip()
     print(f"[Executor] Answer length: {len(cleaned_answer)}")
 
-    return {"messages": AIMessage(content=cleaned_answer), "answer": cleaned_answer, "selected_ids": selected_ids}
+    # PlaceInfo 목록 구성 (Qdrant path: candidates 기반, Tavily path: 답변 파싱 + 지오코딩)
+    if candidates:
+        place_info_list = _collect_recommended_places(
+            cleaned_answer,
+            candidate_places,
+            deprioritized_names=previous_recommendations,
+        )
+        if _answer_mentions_unknown_places(cleaned_answer, candidate_places):
+            place_info_list = []
+    else:
+        place_info_list = _collect_recommended_places(
+            cleaned_answer,
+            fallback_places,
+            deprioritized_names=previous_recommendations,
+        )
+
+    print(f"[Executor] place_info_list: {len(place_info_list)} items")
+
+    return {
+        "messages": AIMessage(content=cleaned_answer),
+        "answer": cleaned_answer,
+        "place_info_list": place_info_list,
+    }
 
 
-async def executor_missing_node(state: TravelState, config=None):
+async def executor_missing_node(state: TravelState, config: RunnableConfig | None = None):
     """
     여행 계획에서 부족한 정보를 재질문하는 node
     """
@@ -349,7 +612,6 @@ async def executor_missing_node(state: TravelState, config=None):
         human_message
     ])
 
-    llm = LLMFactory.get_llm(temperature=0.5)
     prompt_value = prompt.invoke({
         "messages": messages,
         "user_input": user_input,
@@ -359,7 +621,11 @@ async def executor_missing_node(state: TravelState, config=None):
         "follow_up_questions": follow_up_questions,
     })
 
-    full_content = await collect_streamed_text(llm, prompt_value, config=config)
+    full_content = await collect_streamed_text(
+        temperature=0.5,
+        prompt_value=prompt_value,
+        config=config,
+    )
 
     answer = full_content.strip()
     print(f"[Executor] Answer generated (length={len(answer)})")
@@ -367,7 +633,7 @@ async def executor_missing_node(state: TravelState, config=None):
     return {"messages": AIMessage(content=answer), "answer": answer}
 
 
-async def executor_general_node(state: TravelState, config=None):
+async def executor_general_node(state: TravelState, config: RunnableConfig | None = None):
     """
     일상 대화 node
     """
@@ -380,12 +646,10 @@ async def executor_general_node(state: TravelState, config=None):
     follow_up_questions = state.get("follow_up_questions", [])
 
     # 슬롯 정보 텍스트
-    slots_info = ""
-    if slots:
-        slots_dict = slots.model_dump() if hasattr(slots, 'model_dump') else (slots.dict() if hasattr(slots, 'dict') else slots)
-        slots_info = "\n".join(f"- {k}: {v}" for k, v in slots_dict.items() if v is not None)
+    if slots and slots.categories:
+        prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
-    llm = LLMFactory.get_llm(temperature=0.7)
+    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", EXECUTOR_GENERAL_PROMPT),
@@ -394,12 +658,16 @@ async def executor_general_node(state: TravelState, config=None):
     prompt_value = prompt.invoke({
         "messages": messages,
         "user_input": user_input,
-        "slots_info": slots_info,
+        "location_context": location_context,
         "prefs_info": prefs_info,
         "follow_up_questions": follow_up_questions,
     })
 
-    full_content = await collect_streamed_text(llm, prompt_value, config=config)
+    full_content = await collect_streamed_text(
+        temperature=0.7,
+        prompt_value=prompt_value,
+        config=config,
+    )
 
     answer = full_content.strip()
     print(f"[Executor General] Answer generated (length={len(answer)})")

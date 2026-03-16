@@ -2,7 +2,7 @@ import re
 from typing import Any
 
 from langchain_core.callbacks.manager import adispatch_custom_event
-
+from app.core.llm_factory import LLMFactory
 
 def extract_text_from_chunk(chunk: Any) -> str:
     if chunk is None:
@@ -51,10 +51,11 @@ def extract_text_from_chunk(chunk: Any) -> str:
     return ""
 
 
-async def collect_streamed_text(llm: Any, prompt_value: Any, config: Any = None) -> str:
+async def collect_streamed_text(temperature: float, prompt_value: Any, config: Any = None) -> str:
     full_content = ""
-
-    async for chunk in llm.astream(prompt_value):
+    
+    llm = LLMFactory.get_llm(temperature=temperature)
+    async for chunk in llm.astream(prompt_value, config=config):
         token_text = extract_text_from_chunk(chunk)
         if not token_text:
             continue

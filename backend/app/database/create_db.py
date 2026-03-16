@@ -130,6 +130,7 @@ Table reservation_list {
   name varchar
   date date
   image_path varchar
+  details json
 }
 
 // 7. 개인 일기장

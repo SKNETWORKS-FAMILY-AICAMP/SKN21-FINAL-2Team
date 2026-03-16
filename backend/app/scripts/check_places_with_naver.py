@@ -475,7 +475,7 @@ class NaverPlaceChecker:
             target = addresses[0]
             result = {
                 "lat": to_float(target.get("y")),
-                "lon": to_float(target.get("x")),
+                "long": to_float(target.get("x")),
                 "road_address": normalize_space(target.get("roadAddress") or ""),
                 "jibun_address": normalize_space(target.get("jibunAddress") or ""),
             }
@@ -575,7 +575,7 @@ class NaverPlaceChecker:
                     candidate_lat = geocoded.get("lat")
                     candidate_long = geocoded.get("long")
 
-            candidate_distance = distance_meters(input_lat, input_lon, candidate_lat, candidate_lon)
+            candidate_distance = distance_meters(input_lat, input_lon, candidate_lat, candidate_long)
             distance_score = 0.0
             if candidate_distance is not None:
                 if candidate_distance <= 80:

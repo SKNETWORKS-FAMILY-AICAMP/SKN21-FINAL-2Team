@@ -127,6 +127,11 @@ export function SignUpPage() {
     <div className="min-h-screen w-full flex bg-white">
       {/* Left Side - Image & Brand */}
       <div className="hidden lg:flex w-[45%] bg-black relative overflow-hidden">
+        {/* [Fix] Desktop Logo aligned identically to Header/Sidebar */}
+        <div className="absolute top-0 left-0 w-full px-6 h-16 flex items-center z-20 pointer-events-auto">
+          <Logo tone="light" size={24} className="opacity-90 transition-opacity hover:opacity-100" />
+        </div>
+
         <div className="absolute inset-0 z-0 bg-black">
           {bgImage && (
             <img
@@ -138,8 +143,9 @@ export function SignUpPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-purple-900/10 to-black/30" />
         </div>
 
-        <div className="relative z-10 p-12 flex flex-col justify-between h-full text-white w-full">
-          <Logo tone="light" size={34} className="w-fit opacity-90 group-hover:opacity-100 transition-opacity" />
+        <div className="relative z-10 p-12 flex flex-col justify-between h-full text-white w-full pointer-events-none">
+          {/* Flex spacer to maintain 'justify-between' layout after pulling out the absolute Logo */}
+          <div />
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -164,12 +170,16 @@ export function SignUpPage() {
 
       {/* Right Side - Sign Up Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 relative bg-white">
-        <button
-          onClick={handleBack}
-          className="absolute top-8 left-8 lg:hidden flex items-center gap-2 text-[13px] font-medium text-gray-400 hover:text-black transition-colors"
-        >
-          <ArrowLeft size={16} /> {t("common.back")}
-        </button>
+        {/* [Fix] Mobile Header aligned identically to Header/Sidebar */}
+        <div className="absolute top-0 left-0 w-full px-6 h-16 flex items-center justify-between z-20 lg:hidden">
+          <Logo size={24} />
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-[13px] font-medium text-gray-400 hover:text-black transition-colors"
+          >
+            <ArrowLeft size={16} /> {t("common.back")}
+          </button>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}

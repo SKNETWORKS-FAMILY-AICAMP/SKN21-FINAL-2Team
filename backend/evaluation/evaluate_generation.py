@@ -21,7 +21,6 @@ from evaluation.common import (  # noqa: E402
     parse_structured_columns,
     write_evaluation_outputs,
 )
-from app.utils.common import parse_payload
 
 
 def extract_generation_inputs(df: pd.DataFrame, context_k: int) -> pd.DataFrame:
@@ -40,7 +39,7 @@ def extract_generation_inputs(df: pd.DataFrame, context_k: int) -> pd.DataFrame:
                 if not isinstance(c, dict):
                     continue
                 payload = c.get("payload") if isinstance(c.get("payload"), dict) else {}
-                payload_str = parse_payload(payload)
+                payload_str = json.dumps(payload, ensure_ascii=False)
                 contexts.append(f"{i}. {payload_str}")
         else:
             contexts = contexts[:context_k]
