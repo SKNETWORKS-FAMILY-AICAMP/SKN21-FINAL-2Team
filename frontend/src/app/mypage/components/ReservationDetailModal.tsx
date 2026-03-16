@@ -2,45 +2,109 @@
 
 import { useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, ScanText, Loader2 } from "lucide-react";
 import type { ReservationItem } from "../types";
+import { ocrReservationImage } from "@/services/api";
+import { resolveImageUrl } from "@/lib/imageUrl";
+
+// 카테고리 목록 (사용자가 선택 가능)
+const CATEGORY_OPTIONS = [
+    { value: "transportation", label: "✈️ 교통" },
+    { value: "hotel", label: "🏨 호텔" },
+    { value: "activity", label: "🎭 공연/활동" },
+    { value: "restaurant", label: "🍽️ 식당" },
+    { value: "etc", label: "📋 기타" },
+] as const;
+
+const CATEGORY_MAP: Record<string, string> = {
+    transportation: "교통",
+    hotel: "호텔",
+    restaurant: "식당",
+    activity: "공연/활동",
+    etc: "기타",
+};
+
+const TEMPLATE_MAP: Record<string, string[]> = {
+    transportation: ['날짜', '목적지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'],
+    hotel: ['날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
+    activity: ['날짜', '이름', '시간', '장소', '좌석'],
+    restaurant: ['날짜', '식당이름', '예약시간', '예약자명'],
+    etc: ['예약내역', '시간', '예약자명']
+};
 
 export function ReservationDetailModal({
     open,
     reservation,
     photoUrl,
     onSavePhoto,
-    onSaveTitle, // [추가] 예약 제목 저장 함수
+    onSaveTitle,
+    onSaveCategory, // [추가] 카테고리 저장 콜백
+    onSaveDetails,   // [추가] JSON 상세 저장 콜백
     onClose,
 }: {
     open: boolean;
     reservation: ReservationItem | null;
     photoUrl?: string;
     onSavePhoto: (nextUrl: string | null) => Promise<void> | void;
-    onSaveTitle?: (newTitle: string) => Promise<void> | void; // [추가] 제목 저장 prop
+    onSaveTitle?: (newTitle: string) => Promise<void> | void;
+    onSaveCategory?: (newCategory: string) => Promise<void> | void;
+    onSaveDetails?: (newDetails: Record<string, string>) => Promise<void> | void; // [추가] JSON 상세 저장
     onClose: () => void;
 }) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     // undefined: unchanged, string: new image, null: removed
     const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null | undefined>(undefined);
-    
-    // [추가] 제목 편집 상태 관리
+
+    // [추가] 날짜 편집 상태 (날짜만, DB는 Date 타입)
+    const [draftDate, setDraftDate] = useState<string>(""); // "YYYY-MM-DD"
+
+    const [draftCategory, setDraftCategory] = useState<string>(reservation?.category || "etc");
+    const [draftDetails, setDraftDetails] = useState<Record<string, string>>({}); // [추가] 세부 정보 보관
+
+    // 제목 편집 상태
     const [editingTitle, setEditingTitle] = useState(false);
     const [draftTitle, setDraftTitle] = useState(reservation?.title || "");
-    
+
     const [previewOpen, setPreviewOpen] = useState(false);
-    
-    // [추가] 닫기 경고 및 저장 완료 메시지 상태
+
+    // [추가] OCR 로딩 상태 및 결과 메시지
+    const [isOcrLoading, setIsOcrLoading] = useState(false);
+    const [ocrMessage, setOcrMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    // 닫기 경고 및 저장 완료 메시지 상태
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-    
-    // [추가] reservation이 변경될 때 제목 업데이트
+
+    // [추가] 편집 모드 상태
+    const [isEditMode, setIsEditMode] = useState(false);
+
+    // reservation이 변경될 때 상태 업데이트
     useEffect(() => {
-        if (reservation?.title) {
-            setDraftTitle(reservation.title);
+        if (reservation?.title) setDraftTitle(reservation.title);
+        if (reservation?.category) setDraftCategory(reservation.category);
+
+        const existingDetails = reservation?.details;
+        let pDetails: Record<string, string> = {};
+        if (Array.isArray(existingDetails)) {
+            existingDetails.forEach(d => {
+                pDetails[d.label] = d.value;
+            });
         }
-    }, [reservation?.title]);
-    
+
+        const cat = reservation?.category || "etc";
+
+        // 새로 만든 예약이거나 내용이 없을 경우 현재 카테고리 템플릿으로 초기화하고 편집 모드 활성화
+        if (Object.keys(pDetails).length === 0 && (!reservation?.title || reservation?.title === "Reservation" || reservation?.title === "새 예약")) {
+            const newKeys = TEMPLATE_MAP[cat] || TEMPLATE_MAP["etc"];
+            newKeys.forEach(k => { pDetails[k] = ""; });
+            setIsEditMode(true);
+        } else {
+            setIsEditMode(false);
+        }
+
+        setDraftDetails(pDetails);
+    }, [reservation?.title, reservation?.category, reservation?.details]);
+
     const initialPhotoUrl = (typeof photoUrl === "string" && photoUrl.trim().length
         ? photoUrl
         : (typeof reservation?.reservationImageUrl === "string" && reservation.reservationImageUrl.trim().length
@@ -48,35 +112,132 @@ export function ReservationDetailModal({
             : null));
 
     const effectivePhotoUrl = draftPhotoUrl === undefined ? initialPhotoUrl : draftPhotoUrl;
-    const previewPhotoUrl = effectivePhotoUrl || undefined;
-    
-    // [추가] 수정사항 확인 함수
+    const previewPhotoUrl = effectivePhotoUrl ? resolveImageUrl(effectivePhotoUrl) : undefined;
+
+    // 수정사항 확인 함수
     const hasChanges = () => {
+        if (!isEditMode) return false;
+
         const photoChanged = draftPhotoUrl !== undefined;
-        const titleChanged = draftTitle !== (reservation?.title || "");
-        return photoChanged || titleChanged;
+        const initialTitle = reservation?.title || "";
+        const titleChanged = Boolean(reservation) && draftTitle !== initialTitle;
+        const initialCategory = reservation?.category || "etc";
+        const categoryChanged = draftCategory !== initialCategory;
+
+        // 원본 상세 정보 복구
+        let originalDetails: Record<string, string> = {};
+        if (Array.isArray(reservation?.details)) {
+            reservation.details.forEach(d => {
+                originalDetails[d.label] = d.value;
+            });
+        }
+
+        // 새로 생성된 예약(빈 데이터)의 경우 초기 템플릿과 비교
+        if (Object.keys(originalDetails).length === 0 && (!reservation?.title || reservation?.title === "Reservation" || reservation?.title === "새 예약")) {
+            const newKeys = TEMPLATE_MAP[initialCategory] || TEMPLATE_MAP["etc"];
+            newKeys.forEach(k => { originalDetails[k] = ""; });
+        }
+
+        let detailsChanged = false;
+        const draftKeys = Object.keys(draftDetails);
+        const originalKeys = Object.keys(originalDetails);
+
+        if (draftKeys.length !== originalKeys.length) {
+            detailsChanged = true;
+        } else {
+            for (const key of draftKeys) {
+                if (draftDetails[key] !== originalDetails[key]) {
+                    detailsChanged = true;
+                    break;
+                }
+            }
+        }
+
+        return photoChanged || titleChanged || categoryChanged || detailsChanged;
     };
-    
-    // [추가] 모달 닫기 핸들러 (수정사항 체크)
+
+    // 모달 닫기 핸들러 (수정사항 체크)
     const handleClose = () => {
+        if (!isEditMode) {
+            onClose();
+            return;
+        }
+
         if (hasChanges()) {
             setShowCloseWarning(true);
         } else {
             onClose();
         }
     };
-    
-    // [추가] 저장 후 닫기 핸들러
+
+    // 저장 후 닫기 핸들러
     const handleSave = async () => {
         await onSavePhoto(effectivePhotoUrl ?? null);
+
         if (onSaveTitle && draftTitle !== reservation?.title) {
             await onSaveTitle(draftTitle);
         }
+
+        // [추가] 카테고리 저장
+        if (onSaveCategory && draftCategory !== (reservation?.category || "etc")) {
+            await onSaveCategory(draftCategory);
+        }
+
+        if (onSaveDetails && Object.keys(draftDetails).length > 0) {
+            await onSaveDetails(draftDetails);
+        }
+
         setShowSuccessMessage(true);
         setTimeout(() => {
             setShowSuccessMessage(false);
             onClose();
         }, 1500);
+    };
+
+    // [추가] 현재 업로드된 이미지로 OCR 실행
+    const handleOcr = async () => {
+        if (!effectivePhotoUrl) return;
+        setIsOcrLoading(true);
+        setOcrMessage(null);
+
+        try {
+            // [수정] base64 또는 URL 이미지를 File 객체로 변환 시 확장자 동적 적용
+            const res = await fetch(resolveImageUrl(effectivePhotoUrl));
+            const blob = await res.blob();
+
+            // blob.type (예: 'image/png')에서 확장자 추출. 'jpeg'는 'jpg'로 변환
+            const mimeType = blob.type || "image/jpeg";
+            let extension = mimeType.split('/')[1] || "jpg";
+            if (extension === "jpeg") extension = "jpg";
+
+            const file = new File([blob], `ticket.${extension}`, { type: mimeType });
+
+            const result = await ocrReservationImage(file, draftCategory);
+
+            if (result.date) {
+                // [추가] 날짜를 찾았다면 제목을 "카테고리명 YYYY-MM-DD" 형태로 자동 덮어쓰기
+                const autoTitle = `${CATEGORY_MAP[draftCategory] || "예약"} ${result.date}`;
+                setDraftTitle(autoTitle);
+
+                if (result.details) {
+                    setDraftDetails(result.details);
+                }
+                setOcrMessage({
+                    type: "success",
+                    text: "이미지를 인식했습니다. \n정보가 맞는지 확인해 주세요.",
+                });
+            } else {
+                setOcrMessage({
+                    type: "error",
+                    text: "이미지를 인식하지 못 했습니다.",
+                });
+            }
+        } catch (e) {
+            setOcrMessage({ type: "error", text: "OCR 요청 중 오류가 발생했어요." });
+            console.error(e);
+        } finally {
+            setIsOcrLoading(false);
+        }
     };
 
     return (
@@ -107,6 +268,7 @@ export function ReservationDetailModal({
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
                         transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     >
+                        {/* 헤더 */}
                         <div className="relative p-6 pb-4">
                             <button
                                 type="button"
@@ -119,104 +281,246 @@ export function ReservationDetailModal({
                             <h2 className="text-3xl font-bold text-gray-900 text-center pr-12">예약 상세</h2>
                         </div>
 
-                        <div className="px-6 pb-4 max-h-[60vh] overflow-y-auto">
-                            {/* [추가] 예약 제목 편집 섹션 */}
-                            <div className="mb-4">
+                        <div className="px-6 pb-4 max-h-[70vh] overflow-y-auto space-y-4">
+                            {/* 예약 제목 편집 */}
+                            <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-2">예약 제목</label>
-                                {editingTitle ? (
-                                    <input
-                                        type="text"
-                                        value={draftTitle}
-                                        onChange={(e) => setDraftTitle(e.target.value)}
-                                        onBlur={() => setEditingTitle(false)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                setEditingTitle(false);
-                                            }
-                                        }}
-                                        autoFocus
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                        placeholder="예약 제목을 입력하세요"
-                                    />
+                                {isEditMode ? (
+                                    editingTitle ? (
+                                        <input
+                                            type="text"
+                                            value={draftTitle}
+                                            onChange={(e) => setDraftTitle(e.target.value)}
+                                            onBlur={() => setEditingTitle(false)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') setEditingTitle(false); }}
+                                            autoFocus
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                                            placeholder="예약 제목을 입력하세요"
+                                        />
+                                    ) : (
+                                        <div
+                                            onClick={() => setEditingTitle(true)}
+                                            className="w-full px-3 py-2 border border-blue-200 bg-blue-50/50 rounded-lg cursor-pointer hover:border-blue-300 transition-colors"
+                                        >
+                                            <p className="text-sm font-medium text-gray-900">{draftTitle || "클릭하여 제목 입력"}</p>
+                                        </div>
+                                    )
                                 ) : (
-                                    <div
-                                        onClick={() => setEditingTitle(true)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-colors"
-                                    >
-                                        <p className="text-sm font-medium text-gray-900">{draftTitle || "클릭하여 제목 입력"}</p>
+                                    <div className="w-full px-3 py-2 border border-transparent rounded-lg bg-gray-50">
+                                        <p className="text-sm font-bold text-gray-900">{draftTitle}</p>
                                     </div>
                                 )}
                             </div>
-                            
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (!file) return;
-                                    const reader = new FileReader();
-                                    reader.onload = () => {
-                                        const url = typeof reader.result === "string" ? reader.result : "";
-                                        if (!url) return;
-                                        setDraftPhotoUrl(url);
-                                    };
-                                    reader.readAsDataURL(file);
-                                    e.currentTarget.value = "";
-                                }}
-                            />
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (previewPhotoUrl) {
-                                        setPreviewOpen(true);
-                                        return;
-                                    }
-                                    fileInputRef.current?.click();
-                                }}
-                                className="w-full rounded-xl border border-gray-200 bg-gray-200 text-gray-900 overflow-hidden"
-                                aria-label="예약 이미지 업로드"
-                            >
-                                {previewPhotoUrl ? (
-                                    <div className="h-[220px] bg-gray-100 flex items-center justify-center">
-                                        <img src={previewPhotoUrl} alt="예약 이미지" className="w-full h-full object-contain" />
+                            {/* 카테고리 선택 */}
+                            {isEditMode ? (
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {CATEGORY_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setDraftCategory(opt.value);
+                                                    const newKeys = TEMPLATE_MAP[opt.value] || TEMPLATE_MAP["etc"];
+                                                    const nextDetails: Record<string, string> = {};
+                                                    newKeys.forEach(k => { nextDetails[k] = draftDetails[k] || ""; });
+                                                    Object.keys(draftDetails).forEach(oldKey => {
+                                                        if (!newKeys.includes(oldKey) && draftDetails[oldKey].trim() !== "") {
+                                                            nextDetails[oldKey] = draftDetails[oldKey];
+                                                        }
+                                                    });
+                                                    setDraftDetails(nextDetails);
+                                                }}
+                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${draftCategory === opt.value
+                                                    ? "bg-black text-white border-black"
+                                                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                                                    }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
                                     </div>
-                                ) : (
-                                    <div className="h-[180px] flex flex-col items-center justify-center">
-                                        <div className="text-lg font-bold">예약 이미지</div>
-                                        <div className="text-xs text-gray-700 mt-1">(이미지 없을 시 클릭하여 업로드)</div>
-                                    </div>
-                                )}
-                            </button>
+                                </div>
+                            ) : null}
 
-                            <div className="mt-2 flex items-center justify-end gap-3">
+                            {/* 이미지 업로드 영역 */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-2">관련 이미지 / 티켓</label>
+
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onload = () => {
+                                            const url = typeof reader.result === "string" ? reader.result : "";
+                                            if (!url) return;
+                                            setDraftPhotoUrl(url);
+                                            // 새 이미지 업로드 시 OCR 메시지 초기화
+                                            setOcrMessage(null);
+                                        };
+                                        reader.readAsDataURL(file);
+                                        e.currentTarget.value = "";
+                                    }}
+                                />
+
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setPreviewOpen(false);
-                                        fileInputRef.current?.click();
+                                        if (previewPhotoUrl) {
+                                            setPreviewOpen(true);
+                                            return;
+                                        }
+                                        if (isEditMode) fileInputRef.current?.click();
                                     }}
-                                    className="text-[11px] font-semibold text-gray-600 hover:text-black"
+                                    className={`w-full rounded-xl overflow-hidden ${isEditMode ? "border border-blue-200 bg-blue-50/30" : "border border-gray-200 bg-gray-50"}`}
+                                    aria-label="예약 이미지"
                                 >
-                                    이미지 변경
+                                    {previewPhotoUrl ? (
+                                        <div className="h-[180px] flex items-center justify-center">
+                                            <img src={previewPhotoUrl} alt="예약 이미지" className="w-full h-full object-contain" />
+                                        </div>
+                                    ) : (
+                                        <div className="h-[140px] flex flex-col items-center justify-center text-gray-400">
+                                            <div className="text-lg font-bold text-gray-300">NO IMAGE</div>
+                                            {isEditMode && <div className="text-xs mt-1">(클릭하여 업로드)</div>}
+                                        </div>
+                                    )}
                                 </button>
+
+                                {isEditMode && (
+                                    <div className="mt-1.5 flex items-center justify-between gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setPreviewOpen(false); fileInputRef.current?.click(); }}
+                                            className="text-[11px] font-semibold text-gray-600 hover:text-black"
+                                        >
+                                            이미지 변경
+                                        </button>
+
+                                        {/* [추가] OCR 버튼 — 이미지가 있을 때만 활성화 */}
+                                        <button
+                                            type="button"
+                                            onClick={handleOcr}
+                                            disabled={!effectivePhotoUrl || isOcrLoading}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${effectivePhotoUrl && !isOcrLoading
+                                                ? "bg-black text-white border-black hover:bg-gray-800"
+                                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                                                }`}
+                                        >
+                                            {isOcrLoading
+                                                ? <><Loader2 size={12} className="animate-spin" /> 분석 중...</>
+                                                : <><ScanText size={12} /> OCR로 데이터 읽기</>
+                                            }
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* OCR 결과 메시지 */}
+                                <AnimatePresence>
+                                    {ocrMessage && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            className={`mt-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-pre-line ${ocrMessage.type === "success"
+                                                ? "bg-green-50 text-green-700 border border-green-200"
+                                                : "bg-red-50 text-red-600 border border-red-200"
+                                                }`}
+                                        >
+                                            {ocrMessage.text}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
+
+                            {/* [추가] 다이나믹 JSON 상세 정보 폼 */}
+                            {Object.keys(draftDetails).length > 0 && (
+                                <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                    <h4 className="text-xs font-bold text-gray-800 mb-3 uppercase tracking-wider">상세 정보</h4>
+                                    <div className="space-y-3">
+                                        {Object.entries(draftDetails).map(([key, value]) => (
+                                            <div key={key}>
+                                                <label className="block text-[11px] font-semibold text-gray-500 mb-1">{key}</label>
+                                                {isEditMode ? (
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={value || ""}
+                                                            onChange={(e) => setDraftDetails(prev => ({ ...prev, [key]: e.target.value }))}
+                                                            className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 transition-colors"
+                                                            placeholder="내용을 입력하세요"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newDetails = { ...draftDetails };
+                                                                delete newDetails[key];
+                                                                setDraftDetails(newDetails);
+                                                            }}
+                                                            className="flex-shrink-0 px-2 py-2 text-gray-400 hover:text-red-500 rounded-lg border border-transparent hover:border-red-200 transition-colors"
+                                                            aria-label={`${key} 삭제`}
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full px-3 py-2 bg-white border border-transparent rounded-lg text-sm font-medium text-gray-800">
+                                                        {value || <span className="text-gray-300 font-normal">입력된 내용 없음</span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {isEditMode && (
+                                            <div className="pt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newKey = window.prompt("추가할 항목의 이름을 입력하세요 (예: 시간, 메모 등)");
+                                                        if (newKey && newKey.trim() !== "") {
+                                                            setDraftDetails(prev => ({ ...prev, [newKey.trim()]: "" }));
+                                                        }
+                                                    }}
+                                                    className="w-full py-2 border border-dashed border-blue-300 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                                                >
+                                                    + 새로운 항목 추가
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
+                        {/* 저장 버튼 */}
                         <div className="px-6 pb-6">
-                            <button
-                                type="button"
-                                onClick={handleSave}
-                                disabled={showSuccessMessage}
-                                className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50 transition-opacity"
-                            >
-                                저장
-                            </button>
+                            {isEditMode ? (
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={showSuccessMessage}
+                                    className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold disabled:opacity-50 transition-opacity"
+                                >
+                                    저장
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditMode(true)}
+                                    className="w-full py-3 bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                                >
+                                    ✏️ 수정하기
+                                </button>
+                            )}
                         </div>
-                        
-                        {/* [추가] 저장 완료 메시지 */}
+
+                        {/* 저장 완료 메시지 */}
                         <AnimatePresence>
                             {showSuccessMessage && (
                                 <motion.div
@@ -233,8 +537,8 @@ export function ReservationDetailModal({
                             )}
                         </AnimatePresence>
                     </motion.div>
-                    
-                    {/* [추가] 닫기 경고 팝업 */}
+
+                    {/* 닫기 경고 팝업 */}
                     <AnimatePresence>
                         {showCloseWarning && (
                             <motion.div
@@ -257,20 +561,14 @@ export function ReservationDetailModal({
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
-                                            onClick={async () => {
-                                                setShowCloseWarning(false);
-                                                await handleSave();
-                                            }}
+                                            onClick={async () => { setShowCloseWarning(false); await handleSave(); }}
                                             className="flex-1 bg-black text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
                                         >
                                             네
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setShowCloseWarning(false);
-                                                onClose();
-                                            }}
+                                            onClick={() => { setShowCloseWarning(false); onClose(); }}
                                             className="flex-1 bg-gray-200 text-gray-900 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
                                         >
                                             아니요
@@ -281,6 +579,7 @@ export function ReservationDetailModal({
                         )}
                     </AnimatePresence>
 
+                    {/* 이미지 풀스크린 미리보기 */}
                     <AnimatePresence>
                         {previewOpen && !!effectivePhotoUrl && (
                             <motion.div

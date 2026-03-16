@@ -243,8 +243,8 @@ jobs:
             # Qdrant 스냅샷 적용 (workflow_dispatch에서 bool 옵션 선택 시)
             if [ "${APPLY_SNAPSHOTS}" = "true" ]; then
               echo "Applying Qdrant snapshots from S3..."
-              aws s3 cp s3://triver-assets-prod/private/snapshots/photos-382739127437433-2026-03-10-22-11-06.snapshot.tar /tmp/photos.snapshot
-              aws s3 cp s3://triver-assets-prod/private/snapshots/places-382739127437433-2026-03-10-22-11-19.snapshot.tar /tmp/places.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/photos-9001122649727837-2026-03-16-05-19-19.snapshot.tar /tmp/photos.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/places-9001122649727837-2026-03-16-05-19-53.snapshot.tar /tmp/places.snapshot
 
               echo "Waiting for Qdrant to be ready..."
               for i in $(seq 1 12); do
