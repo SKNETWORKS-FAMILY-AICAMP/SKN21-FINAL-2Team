@@ -16,11 +16,11 @@ export const SURVEY_ITEM_LABELS: Record<"plan" | "vibe" | "places", string> = {
 
 
 export const SPECIAL_EXTRA_PREFER_OPTIONS = [
-    "Halal",
-    "Kosher",
-    "Vegan",
-    "Wheelchair Accessible",
-    "Pets",
+    "할랄",
+    "코셔",
+    "비건",
+    "휠체어 이용 가능",
+    "반려동물",
 ];
 
 export const SNAPSHOT_OPTIONS: Record<"plan" | "vibe" | "places", string[]> = {

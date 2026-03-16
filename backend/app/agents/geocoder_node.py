@@ -66,8 +66,22 @@ async def geocoder_node(state: TravelState):
 
     print(f"[Geocoder] Final anchor: lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
 
+    # 사용자 현재 위치 reverse geocoding (한 번만 수행, state에 저장)
+    input_address = None
+    input_lat = state.get("input_lat")
+    input_lon = state.get("input_lon")
+    if input_lat and input_lon:
+        try:
+            geocode_data = await GeoCoder.get_instance().reverse_geocoder(input_lat, input_lon)
+            if geocode_data:
+                input_address = (geocode_data.get("road_address") or geocode_data.get("jibun_address") or "").strip() or None
+                print(f"[Geocoder] reverse geocoded user location: {input_address!r}")
+        except Exception as e:
+            print(f"[Geocoder] reverse geocoding failed: {e}")
+
     return {
         "location_anchor_lat": anchor_lat,
         "location_anchor_lon": anchor_lon,
         "location_anchor_radius_m": anchor_radius_m,
+        "input_address": input_address,
     }
