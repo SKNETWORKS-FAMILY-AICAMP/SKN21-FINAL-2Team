@@ -49,7 +49,7 @@ export function ReservationDetailModal({
     onSaveTitle?: (newTitle: string) => Promise<void> | void;
     onSaveCategory?: (newCategory: string) => Promise<void> | void;
     onSaveDetails?: (newDetails: Record<string, string>) => Promise<void> | void; // [추가] JSON 상세 저장
-    onClose: () => void;
+    onClose: (wasSaved: boolean, isNewDraft: boolean, shouldDeleteDraft?: boolean) => void;
 }) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     // undefined: unchanged, string: new image, null: removed
@@ -78,32 +78,38 @@ export function ReservationDetailModal({
     // [추가] 편집 모드 상태
     const [isEditMode, setIsEditMode] = useState(false);
 
-    // reservation이 변경될 때 상태 업데이트
+    // open 되거나 reservation이 변경될 때 상태 초기화
     useEffect(() => {
-        if (reservation?.title) setDraftTitle(reservation.title);
-        if (reservation?.category) setDraftCategory(reservation.category);
+        if (open) {
+            setDraftTitle(reservation?.title || "");
+            setDraftCategory(reservation?.category || "etc");
+            setDraftPhotoUrl(undefined); // 새 이미지 초기화
+            setDraftDate("");
+            setEditingTitle(false);
+            setOcrMessage(null);
+            setShowSuccessMessage(false);
 
-        const existingDetails = reservation?.details;
-        let pDetails: Record<string, string> = {};
-        if (Array.isArray(existingDetails)) {
-            existingDetails.forEach(d => {
-                pDetails[d.label] = d.value;
-            });
+            const existingDetails = reservation?.details;
+            let pDetails: Record<string, string> = {};
+            if (Array.isArray(existingDetails)) {
+                existingDetails.forEach(d => {
+                    pDetails[d.label] = d.value;
+                });
+            }
+
+            const cat = reservation?.category || "etc";
+
+            if (Object.keys(pDetails).length === 0 && (!reservation?.title || reservation?.title === "Reservation" || reservation?.title === "새 예약")) {
+                const newKeys = TEMPLATE_MAP[cat] || TEMPLATE_MAP["etc"];
+                newKeys.forEach(k => { pDetails[k] = ""; });
+                setIsEditMode(true);
+            } else {
+                setIsEditMode(false);
+            }
+
+            setDraftDetails(pDetails);
         }
-
-        const cat = reservation?.category || "etc";
-
-        // 새로 만든 예약이거나 내용이 없을 경우 현재 카테고리 템플릿으로 초기화하고 편집 모드 활성화
-        if (Object.keys(pDetails).length === 0 && (!reservation?.title || reservation?.title === "Reservation" || reservation?.title === "새 예약")) {
-            const newKeys = TEMPLATE_MAP[cat] || TEMPLATE_MAP["etc"];
-            newKeys.forEach(k => { pDetails[k] = ""; });
-            setIsEditMode(true);
-        } else {
-            setIsEditMode(false);
-        }
-
-        setDraftDetails(pDetails);
-    }, [reservation?.title, reservation?.category, reservation?.details]);
+    }, [open, reservation]);
 
     const initialPhotoUrl = (typeof photoUrl === "string" && photoUrl.trim().length
         ? photoUrl
@@ -158,15 +164,17 @@ export function ReservationDetailModal({
 
     // 모달 닫기 핸들러 (수정사항 체크)
     const handleClose = () => {
+        const isNewDraft = reservation?.title === "새 예약" || reservation?.title === "Reservation";
+        
         if (!isEditMode) {
-            onClose();
+            onClose(false, isNewDraft);
             return;
         }
 
         if (hasChanges()) {
             setShowCloseWarning(true);
         } else {
-            onClose();
+            onClose(false, isNewDraft);
         }
     };
 
@@ -190,7 +198,8 @@ export function ReservationDetailModal({
         setShowSuccessMessage(true);
         setTimeout(() => {
             setShowSuccessMessage(false);
-            onClose();
+            const isNewDraft = reservation?.title === "새 예약" || reservation?.title === "Reservation";
+            onClose(true, isNewDraft);
         }, 1500);
     };
 
@@ -262,7 +271,7 @@ export function ReservationDetailModal({
                     />
 
                     <motion.div
-                        className="relative z-10 w-full max-w-sm rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
+                        className="relative z-10 w-full max-w-[96vw] sm:max-w-[480px] rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -316,7 +325,7 @@ export function ReservationDetailModal({
                             {isEditMode ? (
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
                                         {CATEGORY_OPTIONS.map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -333,7 +342,7 @@ export function ReservationDetailModal({
                                                     });
                                                     setDraftDetails(nextDetails);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${draftCategory === opt.value
+                                                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${draftCategory === opt.value
                                                     ? "bg-black text-white border-black"
                                                     : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
                                                     }`}
@@ -568,7 +577,7 @@ export function ReservationDetailModal({
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => { setShowCloseWarning(false); onClose(); }}
+                                            onClick={() => { setShowCloseWarning(false); onClose(false, reservation?.title === "새 예약" || reservation?.title === "Reservation"); }}
                                             className="flex-1 bg-gray-200 text-gray-900 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
                                         >
                                             아니요
