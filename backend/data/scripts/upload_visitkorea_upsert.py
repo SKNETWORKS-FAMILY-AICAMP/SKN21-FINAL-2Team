@@ -14,7 +14,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import PointStruct, SparseVector
+from qdrant_client.models import (
+    PointStruct, SparseVector, Distance, VectorParams,
+    PayloadSchemaType, HnswConfigDiff, OptimizersConfigDiff,
+    SparseVectorParams, SparseIndexParams,
+)
 from sentence_transformers import SentenceTransformer
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
@@ -24,7 +28,8 @@ PRE_DIR = DATA_DIR / "preprocessed"
 sys.path.insert(0, str(BACKEND_DIR))
 
 from app.utils.config import (
-    TEXT_MODEL, DEVICE, VISION_MODEL, PLACES_COLLECTION, PHOTOS_COLLECTION
+    TEXT_MODEL, DEVICE, VISION_MODEL, PLACES_COLLECTION, PHOTOS_COLLECTION,
+    TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
 )
 from app.scripts.preprocess_data import (
     download_image, enrich_payload_geo_and_addr_tokens, 
@@ -122,18 +127,42 @@ def upload_file(client, text_model, vision_model, category_name: str, file_name:
     return places_success, photos_success, errors
 
 def main():
-    host = "localhost"
+    host = os.getenv("QDRANT_HOST", "localhost")
     port = int(os.getenv("QDRANT_PORT", "6333"))
     client = QdrantClient(host=host, port=port, timeout=600)
 
-    # 연결 확인 및 현재 카운트 표시
-    try:
-        places_info = client.get_collection(PLACES_COLLECTION)
-        photos_info = client.get_collection(PHOTOS_COLLECTION)
-        print(f"[시작 전 상태] {PLACES_COLLECTION}: {places_info.points_count}건, {PHOTOS_COLLECTION}: {photos_info.points_count}건")
-    except Exception as e:
-        print(f"컬렉션 접근 오류 (DB 연결 확인 필요): {e}")
-        return
+    # 컬렉션 없으면 생성, 있으면 그대로 upsert
+    if not client.collection_exists(PLACES_COLLECTION):
+        print(f"[컬렉션 생성] {PLACES_COLLECTION}")
+        client.create_collection(
+            collection_name=PLACES_COLLECTION,
+            vectors_config=VectorParams(size=TEXT_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            sparse_vectors_config={
+                "text_sparse": SparseVectorParams(index=SparseIndexParams(on_disk=True))
+            },
+            hnsw_config=HnswConfigDiff(on_disk=True, m=16, ef_construct=100),
+            optimizers_config=OptimizersConfigDiff(indexing_threshold=20000),
+        )
+        client.create_payload_index(PLACES_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
+        client.create_payload_index(PLACES_COLLECTION, "geo", PayloadSchemaType.GEO)
+        client.create_payload_index(PLACES_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
+
+    if not client.collection_exists(PHOTOS_COLLECTION):
+        print(f"[컬렉션 생성] {PHOTOS_COLLECTION}")
+        client.create_collection(
+            collection_name=PHOTOS_COLLECTION,
+            vectors_config=VectorParams(size=VISION_VECTOR_SIZE, distance=Distance.COSINE, on_disk=True),
+            hnsw_config=HnswConfigDiff(on_disk=True, m=16, ef_construct=100),
+            optimizers_config=OptimizersConfigDiff(indexing_threshold=20000),
+        )
+        client.create_payload_index(PHOTOS_COLLECTION, "contenttypeid", PayloadSchemaType.KEYWORD)
+        client.create_payload_index(PHOTOS_COLLECTION, "contentid", PayloadSchemaType.KEYWORD)
+        client.create_payload_index(PHOTOS_COLLECTION, "geo", PayloadSchemaType.GEO)
+        client.create_payload_index(PHOTOS_COLLECTION, "addr_tokens", PayloadSchemaType.KEYWORD)
+
+    places_info = client.get_collection(PLACES_COLLECTION)
+    photos_info = client.get_collection(PHOTOS_COLLECTION)
+    print(f"[시작 전 상태] {PLACES_COLLECTION}: {places_info.points_count}건, {PHOTOS_COLLECTION}: {photos_info.points_count}건")
 
     print(f"\n텍스트 모델 로드: {TEXT_MODEL} ({DEVICE})")
     text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
