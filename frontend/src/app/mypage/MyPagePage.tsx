@@ -536,7 +536,7 @@ export function MyPagePage() {
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight font-pretendard">여행 선호도</h3>
                       <div className="flex items-center gap-2">
                         {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
                         {isEditingPreferences && (
@@ -565,7 +565,7 @@ export function MyPagePage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Traveling Style</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">여행 스타일</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: SURVEY_ITEM_LABELS.plan, value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -618,7 +618,7 @@ export function MyPagePage() {
 
                   {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Additional Preference</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">추가 특이사항</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
