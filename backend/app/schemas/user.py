@@ -67,6 +67,7 @@ class TokenData(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     code: str # Google Auth Code
+    redirect_uri: Optional[str] = None
 
 class RefreshRequest(BaseModel):
     refresh_token: str

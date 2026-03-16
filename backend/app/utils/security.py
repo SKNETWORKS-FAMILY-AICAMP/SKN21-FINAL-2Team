@@ -85,16 +85,17 @@ import requests as req # Rename to avoid conflict
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = "postmessage"
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "postmessage")
 
-def verify_google_auth_code(code: str):
+def verify_google_auth_code(code: str, redirect_uri: Optional[str] = None):
     # Exchange Auth Code for Tokens
     token_endpoint = "https://oauth2.googleapis.com/token"
+    resolved_redirect_uri = (redirect_uri or GOOGLE_REDIRECT_URI or "postmessage").strip()
     data = {
         "code": code,
         "client_id": GOOGLE_CLIENT_ID,
         "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "redirect_uri": resolved_redirect_uri,
         "grant_type": "authorization_code"
     }
     

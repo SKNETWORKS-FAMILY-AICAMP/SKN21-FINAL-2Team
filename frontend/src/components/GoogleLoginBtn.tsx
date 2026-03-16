@@ -7,12 +7,14 @@ import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
 type Props = {
     label?: string;
 };
+const GOOGLE_POPUP_REDIRECT_URI = "postmessage";
 
 export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Props) {
     const router = useRouter();
 
     const login = useGoogleLogin({
         flow: "auth-code",
+        ux_mode: "popup",
         scope: "https://www.googleapis.com/auth/calendar",
         onSuccess: async (codeResponse) => {
             try {
@@ -24,6 +26,7 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                     credentials: "include",
                     body: JSON.stringify({
                         code: codeResponse.code,
+                        redirect_uri: GOOGLE_POPUP_REDIRECT_URI,
                     }),
                 });
 

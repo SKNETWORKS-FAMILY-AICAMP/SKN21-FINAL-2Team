@@ -14,6 +14,7 @@ const BACKGROUND_IMAGES = [
   "https://images.unsplash.com/photo-1538485399081-7191377e8241?q=80&w=674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   "https://images.unsplash.com/photo-1546672136-49179bf19b4e?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 ];
+const GOOGLE_POPUP_REDIRECT_URI = "postmessage";
 
 export function SignUpPage() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export function SignUpPage() {
   }, [router]);
 
   const handleSignUp = useGoogleLogin({
+    ux_mode: "popup",
     onSuccess: async (codeResponse) => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}/auth/google/callback`, {
@@ -56,7 +58,10 @@ export function SignUpPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ code: codeResponse.code }),
+          body: JSON.stringify({
+            code: codeResponse.code,
+            redirect_uri: GOOGLE_POPUP_REDIRECT_URI,
+          }),
         });
 
         if (!res.ok) {

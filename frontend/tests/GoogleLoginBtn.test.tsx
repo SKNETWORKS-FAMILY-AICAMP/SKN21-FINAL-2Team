@@ -28,8 +28,9 @@ describe("GoogleLoginBtn", () => {
     mockPush.mockClear();
     mockLogin.mockClear();
     // @ts-expect-error - 테스트에서 fetch를 목킹하기 위해 대입
-    global.fetch = jest.fn((url: string) => {
+    global.fetch = jest.fn((url: string, init?: RequestInit) => {
       if (url.includes("/api/auth/google/callback")) {
+        expect(init?.body).toBe(JSON.stringify({ code: "test-code", redirect_uri: "postmessage" }));
         return Promise.resolve({
           ok: true,
           json: async () => ({ access_token: "token", refresh_token: "rt" }),
