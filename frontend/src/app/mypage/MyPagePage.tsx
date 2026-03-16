@@ -164,9 +164,16 @@ export function MyPagePage() {
         ]);
         if (cancelled) return;
 
-        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3].filter(
-          (x): x is string => typeof x === "string" && x.trim().length > 0,
-        );
+        const extraPreferMigrationMap: Record<string, string> = {
+          "Halal": "할랄",
+          "Kosher": "코셔",
+          "Vegan": "비건",
+          "Wheelchair Accessible": "휠체어 이용 가능",
+          "Pets": "반려동물",
+        };
+        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3]
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .map((x) => extraPreferMigrationMap[x] ?? x);
 
         setUserProfile({
           nickname: user.nickname || user.name || "User",
