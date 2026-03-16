@@ -663,7 +663,7 @@ export function MyPagePage() {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
-                    Today&apos;s Recommendation
+                    오늘의 추천 상품
                   </div>
                   {todayRecommendations.length > 0 ? (
                     <>
@@ -700,13 +700,13 @@ export function MyPagePage() {
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4">
                       <h2 className="text-lg font-semibold mb-1 tracking-tight leading-tight">
-                        No recommendation yet
+                        아직 추천 항목이 없습니다
                       </h2>
                       <p className="text-white/80 text-[13px] leading-relaxed">
-                        Start a chat first. We will suggest new topics from your saved conversation summaries.
+                        먼저 채팅을 시작해보세요. 저장된 대화 요약을 바탕으로 새로운 주제를 추천해드립니다.
                       </p>
                       <p className="text-white/50 text-[10px] mt-2">
-                        Recommendations appear when chat history summary is stored.
+                        채팅 기록 요약이 저장되면 추천 항목이 표시됩니다.
                       </p>
                     </div>
                   )}
@@ -730,7 +730,7 @@ export function MyPagePage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    Reservation
+                    예약내역
                   </h3>
                   <button
                     type="button"
