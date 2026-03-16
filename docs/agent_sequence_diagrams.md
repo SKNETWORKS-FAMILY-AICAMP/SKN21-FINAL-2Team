@@ -207,9 +207,10 @@ sequenceDiagram
     participant State as TravelState
 
     Router->>Planner: planner_node(state)
-    Planner->>State: user_input, slots, prefs_info 읽기
+    Planner->>State: user_input, slots, prefs_info, itinerary 읽기
     Planner->>Planner: slots → 텍스트 변환 (slots_info)
-    Planner->>LLM: PLANNER_PROMPT + messages + user_input
+    Planner->>Planner: itinerary → 텍스트 변환 (current_itinerary)
+    Planner->>LLM: PLANNER_PROMPT + messages + user_input + current_itinerary
     Note over LLM: Structured Output → PlannerOutput
     LLM-->>Planner: PlannerOutput
 
@@ -227,6 +228,13 @@ sequenceDiagram
   - `day`, `time_slot` (morning/afternoon/evening), `activity`, `search_query`, `category`
 - `missing_slots`: 누락된 필수 정보 (여행 날짜, 여행 인원)
 - `followup_question`: 후속 질문 문장
+
+**기존 itinerary 처리 규칙:**
+- 기존 itinerary가 없으면 새 일정 초안을 생성합니다.
+- 기존 itinerary가 있고 사용자가 특정 변경을 요청하면 해당 부분을 우선 수정하고, 변경 지시가 없는 항목은 최대한 유지합니다.
+- 사용자가 "이어서" 요청하면 기존 일정 뒤로 확장합니다.
+- 사용자가 "참고해서 다시" 요청하면 기존 일정을 참고하되 전체 재구성이 가능합니다.
+- 최종 출력은 항상 최신 전체 itinerary입니다.
 
 ---
 

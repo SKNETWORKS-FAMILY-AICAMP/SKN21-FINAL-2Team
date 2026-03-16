@@ -80,6 +80,20 @@ GEO_PROXIMITY_RADIUS_KM = 10.0
 # 사용자 GPS 또는 요청 지역 anchor로부터 이 거리 이내의 장소만 추천
 MAX_DISTANCE_KM = 3.0
 
+# 위치 기반 검색 실패시 확장 범위 배수
+GEO_RETRY_MULTIPLIER = 2.0
+
+# Candidate threshold
+CANDIDATE_THRESHOLD = 0.4
+
+# Rerank 후 geo proximity 블렌딩 가중치
+# reranker(CrossEncoder)는 텍스트 유사도만 보므로, 거리 점수를 일부 반영해 근거리 장소 우선도를 유지.
+# blended_score = (1 - RERANK_GEO_BLEND_WEIGHT) * rerank_score + RERANK_GEO_BLEND_WEIGHT * normalized_geo
+# 0.0: 순수 텍스트 유사도, 1.0: 순수 거리 우선. 기본 0.3 (텍스트 70% + 거리 30%)
+RERANK_GEO_BLEND_WEIGHT = 0.3
+# _geo_proximity_bonus의 max_boost 값 (정규화 기준)
+GEO_MAX_BOOST = 0.20
+
 # Taviily search image threshold
 TAVILY_IMAGE_SCORE_THRESHOLD = 0.6
 

@@ -1,247 +1,233 @@
 # Backend 디렉토리 구조 분석
 
-> FastAPI 기반 한국 여행 추천 챗봇 백엔드 서버
+> FastAPI + LangGraph 기반 백엔드 구조와 현재 점검 시 유의사항을 정리한 문서
 
 ---
 
-## 1) 전체 구조
+## 1. 전체 구조
 
 ```text
 backend/
+├── app/
+├── evaluation/
+├── tests/
+├── data/
 ├── main.py
 ├── Dockerfile
-├── requirements.txt
 ├── pyproject.toml
-├── README.md
-├── app/
-├── data/
-├── evaluation/
-└── tests/
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 2) 루트 파일
+## 2. 루트 파일 역할
 
-- `main.py`: 패키지 레벨 엔트리 포인트
-- `Dockerfile`: 백엔드 컨테이너 빌드/실행 설정
-- `requirements.txt`: 런타임/평가/테스트 의존성 목록
-- `pyproject.toml`: `uv` 기반 프로젝트 메타데이터
-- `README.md`: 백엔드 실행/설정 가이드
+- `main.py`
+  - 패키지 레벨 엔트리 포인트
+- `Dockerfile`
+  - 백엔드 컨테이너 빌드/실행 설정
+- `pyproject.toml`
+  - `uv` 기반 파이썬 프로젝트 설정
+- `requirements.txt`
+  - 도커/런타임 의존성 설치 기준
+- `README.md`
+  - 백엔드 실행 가이드
 
 ---
 
-## 3) `app/` 구조
+## 3. `app/` 구조
 
 ```text
 app/
 ├── main.py
 ├── api/
 ├── agents/
+├── core/
 ├── database/
 ├── models/
 ├── schemas/
-├── services/
-├── retrieval/
 ├── scripts/
+├── services/
 └── utils/
 ```
 
-### 3-1. `app/main.py`
+---
+
+## 4. `app/main.py`
+
+현재 백엔드 진입점은 다음 역할을 수행한다.
 
 - FastAPI 앱 생성
-- lifespan에서 검색기/LLM/Tavily 워밍업
+- lifespan에서 `PlaceRetriever`, `LLMFactory` 워밍업
 - 전역 예외 핸들러 등록
-- CORS 설정
-- 업로드 파일 정적 경로 마운트
-- 라우터 등록(`auth`, `users`, `chat`, `prefer`, `common`, `explore`, `reservations`, `diaries`)
-- HTTP 요청 단위 로깅 미들웨어 적용
-
-### 3-2. `app/api/`
-
-- `auth.py`: Google OAuth 로그인, 토큰 갱신, 로그아웃
-- `users.py`: 내 정보 조회/수정
-- `chat.py`: 채팅방/메시지/북마크/스트리밍/SSE/자동시작/오늘 추천
-- `explore.py`: 여행지 탐색 API
-- `prefer.py`: 취향 데이터 API
-- `hot_place.py`: 인기 장소 API
-- `attractions.py`: 관광지 검색 API
-- `restaurants.py`: 음식점 검색 API
-- `reservations.py`: 예약 API
-- `common.py`: 공통 응답/유틸 API
-
-#### 채팅 API 핵심 엔드포인트
-
-- `GET /api/chat/rooms`: 채팅방 목록
-- `POST /api/chat/rooms`: 채팅방 생성
-- `GET /api/chat/rooms/{room_id}`: 채팅방 상세
-- `POST /api/chat/rooms/{room_id}/ask`: 일반 응답
-- `POST /api/chat/rooms/{room_id}/ask/stream`: SSE 스트리밍 응답
-- `POST /api/chat/rooms/{room_id}/autostart/stream`: 자동 시작 스트리밍
-- `GET /api/chat/recommendations/today`: 최근 대화 기반 추천 프롬프트 목록
-
-#### 채팅방 제목 정책
-
-- 자동 생성 제목(`새 채팅`, `새로운 여행 계획` 등)인 경우에만 덮어쓰기 가능
-- 현재는 방 메시지 수가 `20`개 이하일 때까지 LLM이 생성한 `summary_title`로 제목 갱신 가능
-- 제목 길이가 DB 제한을 넘으면 `_make_room_title()`로 축약 저장
-
-### 3-3. `app/agents/` (LangGraph)
-
-- `graph.py`: 워크플로우 그래프 정의
-- `intent.py`: 의도 분석 + 대화 요약
-- `planner.py`: 일정 초안 및 후속 질문 생성
-- `retriever.py`: RAG 후보 검색 및 검색 스코프 선택
-- `executor.py`: 최종 답변 생성 (ID 태깅, 지도 링크, Tavily fallback, 멀티모달 지원)
-- `executor_missing (in executor.py): 누락 정보 재질문 생성`
-- `executor_general (in executor.py): 일상 대화 응답 생성`
-- `grapy_route.py`: 노드 라우팅
-- `models/state.py`: 그래프 상태 정의
-- `models/output.py`: intent/planner 출력 스키마 정의
-
-### 3-4. `app/database/`
-
-- `connection.py`: SQLAlchemy engine/session 관리
-- `checkpointer.py`: LangGraph 체크포인터 연결
-- `create_db.py`: 초기 스키마 생성
-- `insert_db.py`: 초기 데이터 삽입
-
-### 3-5. `app/models/`
-
-- `user.py`: 사용자/선호/소셜 필드
-- `chat.py`: `ChatRoom`, `ChatMessage`, `ChatPlace`
-- `reservation.py`, `hot_place.py`, `country.py`
-- `enums.py`: 공통 Enum (`human`, `ai` 등)
-- `orm.py`: 베이스 모델
-
-### 3-6. `app/schemas/`
-
-- API 요청/응답용 Pydantic 스키마
-- 채팅/사용자/북마크/자동시작/예약 모델 포함
-
-### 3-7. `app/services/`
-
-- `prompts.py`: intent/planner/이미지 분석 프롬프트
-- `executor_prompt.py`: executor 전용 프롬프트
-- `auto_start_prompt.py`: 자동시작 메시지 렌더링
-- `vision.py`: 이미지 처리 관련 서비스
-
-### 3-8. `app/retrieval/`
-
-- `place.py`: Qdrant 기반 텍스트/이미지/위치 검색
-- 검색 스코프 정책
-  - `place_only`: `places` 컬렉션만 검색
-  - `photo_only`: `photos` 컬렉션만 검색
-  - `auto`: 기존 하이브리드 전체 채널
-- 성능 최적화 정책
-  - BM25 입력 텍스트는 경량 포맷 사용
-  - 옵션 플래그(`ENABLE_QDRANT_SPARSE`)가 켜진 경우 `text_sparse`(Qdrant native sparse vector) 채널을 추가로 사용
-  - rerank 대상 수는 Retrieval 프로파일에서 상한 관리
-  - BM25는 벡터 1차 후보 풀 내부에서만 계산
-  - 벡터 점수가 충분하면 BM25를 조건부 스킵
-  - `search_nearby`는 기본적으로 Qdrant `geo_radius` 필터를 우선 사용하고, 실패 시 제한적 fallback scroll로 동작
-- 점수 보정 정책
-  - 대화/슬롯의 `location` 텍스트가 후보 주소/제목과 일치할수록 가산점 부여
-  - 사용자 첨부 좌표(`latitude`, `longitude`)와 후보 좌표 간 거리가 가까울수록 가산점 부여
-  - 옵션 플래그(`ENABLE_ADDR_SPARSE_BOOST`)가 켜진 경우 `addr_tokens` 기반 sparse 주소 점수를 추가 가산
-- 카테고리 필터 정책
-  - 슬롯의 `categories`(다중) 또는 `category`(단일) 값을 입력받아 정규화 맵(`맛집 -> 음식점`)을 적용
-  - 정규화 실패 시 원문 category 자체도 후보군에 포함
-  - `contenttypeid` 필드에 대해 후보군 OR 매칭으로 필터링
-
-### 3-9. `app/scripts/`
-
-- 데이터 전처리, 팝업스토어 수집, LLM 보강, Qdrant 적재 스크립트 제공
-- 대표 스크립트: `preprocess_data.py`, `preprocess_popup.py`, `enrich_llm.py`, `enrich_with_tavily.py`, `qdrant_setup.py`
-  - 전처리/적재 시 payload에 `geo(lat/lon)`와 `addr_tokens`를 함께 저장하여 위치 필터와 sparse 주소 보강에 활용
-  - `qdrant_setup.py`는 `places` 컬렉션에 `text_sparse` sparse vector를 함께 적재하여 native sparse 검색을 지원
-
-### 3-10. `app/utils/`
-
-- `config.py`: 전역 설정/프로파일
-- `security.py`: JWT/OAuth 인증
-- `error_handler.py`: 공통 예외 처리
-- `geocoder.py`: 주소/좌표 변환
-- `llm_factory.py`: LLM/Tavily 인스턴스 관리
-- `common.py`: 공통 유틸
+- CORS 허용 origin 구성
+- `/static`, `/api/static` 업로드 정적 경로 마운트
+- 라우터 등록
+  - `auth`
+  - `users`
+  - `chat`
+  - `prefer`
+  - `common`
+  - `explore`
+  - `reservations`
+  - `diaries`
+- 요청 로깅 미들웨어 적용
+- 헬스체크 엔드포인트 제공
+  - `GET /api/healthz`
 
 ---
 
-## 4) `data/` 구조
+## 5. `app/api/`
 
-```text
-data/
-├── emotional/
-├── llm_result/
-├── preprocess_steps/
-├── uploads/
-└── 원천 json/jsonl 데이터
-```
+주요 API 모듈은 다음과 같다.
 
-- 관광지/숙박/음식점/팝업스토어 원천 데이터와 전처리 산출물 관리
-- `uploads/`에는 사용자 프로필/예약 이미지/핫플레이스 이미지 등 서비스 자산 저장
-
----
-
-## 5) `evaluation/` 구조
-
-- `evaluate_ragas.py`: 합성 데이터 생성 및 enriched CSV 생성
-- `evaluate_prepare_enriched.py`: 평가용 enriched 컬럼 준비
-- `evaluate_retrieval.py`: Retrieval/Rerank 평가
-- `evaluate_recommendation.py`: Recommendation 평가
-- `evaluate_generation.py`: Generation 평가
-- `evaluate_all.py`: 단계별 평가 통합 실행
-- `common/`: 입출력/지표/리포팅 공통 모듈
-- `result/`: 단계별 리포트 및 요약 JSON/TXT 저장
-
----
-
-## 6) `tests/` 구조
-
-```text
-tests/
-├── conftest.py
-├── test_auth.py
-├── test_chat.py
-├── test_chat_stream.py
-├── test_diaries.py
-├── test_graph_routing.py
-├── test_retriever_selection.py
-├── test_retriever_regression.py
-├── test_place_rerank_fallback.py
-├── test_executor_selected_id_validation.py
-├── test_retrieval_profile_config.py
-├── test_image_url_utils.py
-├── test_llm_streaming.py
-├── test_place_id_utils.py
-├── test_preprocess_addr_tokens.py
-├── test_user_deactivate.py
-├── test_evaluation_*.py
-└── 보조 점검 스크립트(check_qdrant.py, debug_search.py, test_fill_missing_images_*.py)
-```
-
-- 인증/채팅/스트리밍/그래프 라우팅/검색 회귀/평가 스크립트까지 pytest 기반으로 검증
+- `auth.py`
+  - Google OAuth 콜백, 토큰 refresh, 로그아웃, verify
+- `users.py`
+  - 내 정보 조회/수정, 프로필 이미지 초기화, 회원 비활성화
+- `chat.py`
+  - 채팅방 목록/생성/상세
+  - 일반 응답
+  - SSE 스트리밍 응답
+  - 자동시작 스트리밍
+  - 북마크 및 오늘 추천
+- `prefer.py`
+  - 선호도 조회/수정
+- `explore.py`
+  - 랜덤 장소, 핫플, 음식점, 관광지, 카테고리 기반 탐색
+- `reservations.py`
+  - 예약 CRUD
+- `diaries.py`
+  - 여행 기록 CRUD
+  - 장소 검색
+  - 역지오코딩
+- `common.py`
+  - 공통 응답 및 보조 API
 
 ---
 
-## 7) 실행 가이드
+## 6. `app/agents/`
 
-### Docker 우선
+LangGraph 기반 대화 플로우 영역이다.
 
-- `docker compose ps`
-- `docker compose run --rm backend pytest -q`
-
-### 로컬(`uv`) 실행
-
-- `cd backend`
-- `uv sync`
-- `uv run uvicorn app.main:app --reload`
-- `uv run pytest`
+- `graph.py`
+  - 워크플로우 정의
+- `grapy_route.py`
+  - 노드 라우팅
+- `intent.py`
+  - 의도 분석, 슬롯 추출, 대화 요약
+- `planner.py`
+  - 여행 일정 초안 및 후속 질문 생성
+- `retriever.py`
+  - 후보 검색 및 후보군 정리
+- `executor.py`
+  - 최종 응답 생성
+  - 선택된 장소 정보 구성
+- `models/`
+  - `output.py`: intent/planner 출력 스키마
+  - `state.py`: 그래프 상태
+  - `place.py`: `PlaceInfo`
+  - `tavily_search.py`: Tavily 추출 스키마
+- `prompts/`
+  - `prompts.py`
+  - `executor_prompt.py`
+  - `auto_start_prompt.py`
 
 ---
 
-## 8) 문서 관리 원칙
+## 7. `app/core/`
 
-- 백엔드 구조 변경은 `docs/BACKEND_STRUCTURE.md`에 반영
-- 평가 절차/해석 기준은 `docs/EVALUATION.md`에서 단일 관리
-- 채팅 플로우, 제목 정책, API 추가/삭제가 있으면 구조 문서 우선 갱신
+공통 실행 코어 계층이다.
+
+- `llm_factory.py`
+  - LLM 인스턴스 캐시/재사용
+- `llm_streaming.py`
+  - 토큰 스트리밍 조립
+  - visible delta 계산
+- `retrieval/place.py`
+  - Qdrant 기반 장소 검색
+  - 텍스트/이미지/위치 기반 검색
+- `retrieval/place_score.py`
+  - 후보 점수 계산 관련 로직
+- `retrieval/tavily_search.py`
+  - 웹 검색 기반 보조 장소 추출 경로
+- `utils/geocoder.py`
+  - 네이버 geocode / reverse geocode / local search 공통 클라이언트
+  - `httpx.AsyncClient` 기반 비동기 호출 사용
+
+---
+
+## 8. `app/database/`
+
+- `connection.py`
+  - SQLAlchemy engine/session 관리
+- `checkpointer.py`
+  - LangGraph 체크포인터 연결
+- `create_db.py`
+  - 초기 스키마 생성
+- `insert_db.py`
+  - 초기 데이터 적재
+- `entrypoint.sh`
+  - 컨테이너 시작 보조 스크립트
+
+---
+
+## 9. `app/models/` / `app/schemas/`
+
+### `app/models/`
+
+- SQLAlchemy ORM 모델 정의
+- 사용자, 채팅, 예약, 국가, 핫플레이스, 다이어리 포함
+
+### `app/schemas/`
+
+- Pydantic 요청/응답 스키마
+- 사용자, 채팅, 예약, 다이어리, 선호도 등 API 입출력 정의
+
+---
+
+## 10. `app/scripts/`
+
+데이터 수집/전처리/보강 스크립트 영역이다.
+
+- 관광지/음식점/숙박 데이터 정리
+- 팝업스토어 수집
+- LLM/Tavily 기반 보강
+- Qdrant 적재
+- 네이버 장소 검증 스크립트
+
+---
+
+## 11. `evaluation/`
+
+평가 파이프라인이 별도 폴더로 분리되어 있다.
+
+- `evaluate_prepare_enriched.py`
+- `evaluate_retrieval.py`
+- `evaluate_recommendation.py`
+- `evaluate_generation.py`
+- `evaluate_all.py`
+- 평가 입력 CSV 및 결과 요약 파일
+
+---
+
+## 12. `tests/`
+
+현재 테스트는 다음 범주를 포함한다.
+
+- API/헬스체크
+- 채팅 및 스트리밍
+- intent/retrieval/executor 회귀
+- place id / image url / address 토큰 유틸
+- evaluation 계열 스크립트
+
+실행 결과나 현재 실패 항목은 [PROJECT_ANALYSIS.md](/Users/kim/SKN21-FINAL-2Team/docs/PROJECT_ANALYSIS.md)에서만 관리한다.
+
+---
+
+## 13. 문서 관리 메모
+
+- 구조 변경 시 `agents/models`, `core/retrieval`, `api` 라우터 목록부터 우선 갱신
+- 테스트 문서와 구조 문서를 분리해 관리
+- 실행 상태 요약은 `docs/PROJECT_ANALYSIS.md`를 기준으로 최신화

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 import { cn } from "@/lib/utils";
+import { resolveImageUrl } from "@/lib/imageUrl";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
@@ -22,7 +23,7 @@ interface ChatMessageItemProps {
     streamBufferingReason?: string | null;
     selectedMapPlaceId: string | null;
     toMapId: (place: ChatPlaceItem) => string;
-    handleSelectMapPlace: (mapId: string) => void;
+    handleSelectMapPlace: (mapId: string, messageId?: number) => void;
     handleTogglePlaceBookmark: (messageId: number, placeId: number, currentStatus: boolean) => void;
     placeCardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
     compactPlaces?: boolean;
@@ -56,7 +57,7 @@ export const ChatMessageItem = memo(({
                     {!!msg.image_path && (
                         <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
                             <img
-                                src={msg.image_path}
+                                src={resolveImageUrl(msg.image_path)}
                                 alt="Attached"
                                 className="w-full max-h-[220px] object-cover"
                             />
@@ -183,12 +184,12 @@ export const ChatMessageItem = memo(({
                                     const isMapSelected = selectedMapPlaceId === mapId;
                                     return (
                                         <div
-                                                key={place.id}
-                                                ref={(element) => {
-                                                    placeCardRefs.current[mapId] = element;
-                                                }}
+                                            key={place.id}
+                                            ref={(element) => {
+                                                placeCardRefs.current[mapId] = element;
+                                            }}
                                             onMouseEnter={() => handleSelectMapPlace(mapId)}
-                                            onClick={() => handleSelectMapPlace(mapId)}
+                                            onClick={() => handleSelectMapPlace(mapId, msg.id)}
                                             className={cn(
                                                 "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
                                                 compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",

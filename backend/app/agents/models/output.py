@@ -49,7 +49,7 @@ class CategoryType(str, Enum):
 class IntentLocation(BaseModel):
     name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
     lat: Optional[float] = Field(default=None, description="location 위도")
-    long: Optional[float] = Field(default=None, description="location 경도")
+    lon: Optional[float] = Field(default=None, description="location 경도")
 
 
 class IntentSlots(BaseModel):
@@ -101,13 +101,14 @@ class PlannerOutput(BaseModel):
         )
     )
 
+# ========================================================
+# Tavily Extraction Output Schema
+class TavilyExtractedPlace(BaseModel):
+    score: float = Field(description="사용자의 의도와 유사한 정도의 점수 (0~1)")
+    name: str = Field(description="장소 이름")
+    address: str = Field(description="장소 주소")
+    description: str = Field(description="장소 특징 및 설명")
+    image_url: str = Field(default="", description="장소에 대한 대표 이미지 URL")
 
-class PlaceInfo(BaseModel):
-    """Executor 노드가 구성한 장소 정보 (DB 저장 전 중간 표현)"""
-    place_id: str = ""       # contentid (Qdrant) 또는 "" (Tavily)
-    name: str = ""
-    address: str = ""        # ORM 컬럼명은 adress(오타) — chat.py에서만 매핑
-    image_path: str = ""
-    map_url: str = ""
-    longitude: float = 0.0
-    latitude: float = 0.0
+class TavilyExtractionOutput(BaseModel):
+    places: List[TavilyExtractedPlace]

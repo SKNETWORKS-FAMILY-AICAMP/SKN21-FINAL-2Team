@@ -18,8 +18,9 @@ from app.utils.config import (
     BOOST_WEIGHT,
     CANDIDATE_LIMIT_MULTIPLIER,
     GEO_PROXIMITY_RADIUS_KM,
-    MAX_DISTANCE_KM,
+    MAX_DISTANCE_KM, GEO_RETRY_MULTIPLIER,
     RRF_SCORE_MAX, FUSED_SCORE_MAX, MAX_BOOST_SUM,
+    RERANK_GEO_BLEND_WEIGHT, GEO_MAX_BOOST,
     get_retrieval_params,
 )
 from app.schemas.chat import ChatMessageCreate
@@ -53,6 +54,50 @@ class PlaceRetriever(PlaceScorer):
         self._reranker_load_attempted = False
 
         print(f"[INFO] PlaceRetriever ready on {DEVICE}")
+
+    @staticmethod
+    def _merge_geo_bboxes(
+        gps_bbox: tuple[float, float, float, float],
+        anchor_bbox: tuple[float, float, float, float],
+    ) -> tuple[tuple[float, float, float, float], str]:
+        """GPS와 anchor bbox를 보수적으로 병합한다.
+
+        - 겹치면 교집합 사용
+        - 겹치지 않으면 사용자가 명시한 anchor bbox 우선
+        """
+        min_lat = max(gps_bbox[0], anchor_bbox[0])
+        max_lat = min(gps_bbox[1], anchor_bbox[1])
+        min_lng = max(gps_bbox[2], anchor_bbox[2])
+        max_lng = min(gps_bbox[3], anchor_bbox[3])
+
+        if min_lat <= max_lat and min_lng <= max_lng:
+            return (min_lat, max_lat, min_lng, max_lng), "intersection"
+        return anchor_bbox, "anchor_only"
+
+    def _filter_candidates_by_distance(
+        self,
+        candidates: list[dict],
+        anchor_lat: float | None,
+        anchor_lon: float | None,
+        max_distance_km: float,
+    ) -> list[dict]:
+        """기준 좌표에서 너무 먼 후보를 최종 단계에서 제거한다."""
+        if anchor_lat in (None, 0, 0.0) or anchor_lon in (None, 0, 0.0):
+            return candidates
+
+        filtered: list[dict] = []
+        for candidate in candidates:
+            payload = candidate.get("payload") or {}
+            point_lat, point_lng = self._payload_coordinates(payload)
+            if point_lat is None or point_lng is None:
+                continue
+
+            distance_km = self._haversine(float(anchor_lat), float(anchor_lon), point_lat, point_lng)
+            candidate["distance_km"] = round(distance_km, 3)
+            if distance_km <= max_distance_km:
+                filtered.append(candidate)
+
+        return filtered
 
     def _build_query_filter(
         self,
@@ -95,18 +140,18 @@ class PlaceRetriever(PlaceScorer):
                     ),
                 )
             )
-            print(f"[INFO] geo bbox filter: lat=[{min_lat:.4f},{max_lat:.4f}] lng=[{min_lng:.4f},{max_lng:.4f}]")
+            # print(f"[INFO] geo bbox filter: lat=[{min_lat:.4f},{max_lat:.4f}] lng=[{min_lng:.4f},{max_lng:.4f}]")
         elif anchor_lat is not None and anchor_lon is not None and radius_m is not None:
             must_conditions.append(
                 FieldCondition(
                     key="geo",
                     geo_radius={
-                        "center": {"lat": float(anchor_lat), "long": float(anchor_lon)},
+                        "center": {"lat": float(anchor_lat), "lon": float(anchor_lon)},
                         "radius": float(radius_m),
                     },
                 )
             )
-            print(f"[INFO] geo circle filter: lat={anchor_lat} lon={anchor_lon} radius_m={radius_m}")
+            # print(f"[INFO] geo circle filter: lat={anchor_lat} lon={anchor_lon} radius_m={radius_m}")
 
         if not must_conditions and not must_not_conditions:
             return None
@@ -194,7 +239,7 @@ class PlaceRetriever(PlaceScorer):
         categories: list[CategoryType] = None,
         emotional_text: str = None,
         user_latitude: float | None = None,
-        user_longitude: float | None = None,
+        user_lon: float | None = None,
         preferred_location: str | None = None,
         candidate_k: int | None = None,
         enable_bm25: bool = True,
@@ -202,8 +247,10 @@ class PlaceRetriever(PlaceScorer):
         rerank_top_k: int | None = None,
         search_scope: str = "auto",
         location_anchor_lat: float | None = None,
-        location_anchor_long: float | None = None,
+        location_anchor_lon: float | None = None,
         location_radius_m: float | None = None,
+        geo_retry_count: int = 0,
+        input_tags: list[str] | None = None,
     ):
         """
         Refined Hybrid search combining Text (BGE-M3) and Image (CLIP-L) with Place-ID Fusion.
@@ -232,34 +279,37 @@ class PlaceRetriever(PlaceScorer):
 
         geo_bbox = None
         apply_geo = ENABLE_GEO_FILTER
-        has_gps = user_latitude is not None and user_longitude is not None
+        has_gps = (
+            user_latitude is not None and user_lon is not None
+            and not (abs(user_latitude) < 1e-6 and abs(user_lon) < 1e-6)
+        )
         has_anchor = (
             location_anchor_lat is not None
-            and location_anchor_long is not None
+            and location_anchor_lon is not None
             and location_radius_m is not None
         )
 
         if apply_geo and has_gps and has_anchor:
-            # 두 좌표 모두 있을 때: union bbox
-            gps_bbox = _km_to_bbox(user_latitude, user_longitude, MAX_DISTANCE_KM)
-            anchor_bbox = _km_to_bbox(location_anchor_lat, location_anchor_long, location_radius_m / 1000.0)
-            geo_bbox = (
-                min(gps_bbox[0], anchor_bbox[0]),  # min_lat
-                max(gps_bbox[1], anchor_bbox[1]),  # max_lat
-                min(gps_bbox[2], anchor_bbox[2]),  # min_lng
-                max(gps_bbox[3], anchor_bbox[3]),  # max_lng
-            )
-            print(f"[INFO] union bbox from GPS+anchor: {geo_bbox}")
+            # 두 좌표 모두 있을 때: 과도한 확장을 막기 위해 교집합 우선, 미겹치면 anchor 우선
+            expanded_radius_km = MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)
+            expanded_anchor_km = (location_radius_m / 1000.0) * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)
+            gps_bbox = _km_to_bbox(user_latitude, user_lon, expanded_radius_km)
+            anchor_bbox = _km_to_bbox(location_anchor_lat, location_anchor_lon, expanded_anchor_km)
+            geo_bbox, geo_bbox_mode = self._merge_geo_bboxes(gps_bbox, anchor_bbox)
+            print(f"[INFO] combined bbox from GPS+anchor ({geo_bbox_mode}): {geo_bbox}")
         elif apply_geo and has_gps:
             # GPS만 있을 때: GPS 기준 bbox
-            geo_bbox = _km_to_bbox(user_latitude, user_longitude, MAX_DISTANCE_KM)
+            expanded_radius_km = MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)
+            geo_bbox = _km_to_bbox(user_latitude, user_lon, expanded_radius_km)
             print(f"[INFO] GPS-only bbox: {geo_bbox}")
 
+        expanded_radius_m = (location_radius_m * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)) if location_radius_m else None
+        
         places_filter = self._build_query_filter(
             categories,
             anchor_lat=location_anchor_lat if (apply_geo and has_anchor and not has_gps) else None,
-            anchor_lon=location_anchor_long if (apply_geo and has_anchor and not has_gps) else None,
-            radius_m=location_radius_m if (apply_geo and has_anchor and not has_gps) else None,
+            anchor_lon=location_anchor_lon if (apply_geo and has_anchor and not has_gps) else None,
+            radius_m=expanded_radius_m if (apply_geo and has_anchor and not has_gps) else None,
             bbox=geo_bbox,
         )
         photos_filter = self._build_query_filter(categories)  # geo 없이 category만
@@ -411,7 +461,7 @@ class PlaceRetriever(PlaceScorer):
                         pool_limit=BM25_POOL_LIMIT,
                     )
                     for rank, item in enumerate(lexical_hits, start=1):
-                        pid = _to_positive_int(item.get("id"))
+                        pid = str(item.get("id") or "").strip() or None
                         if pid is None:
                             continue
                         payload = item.get("payload") or {}
@@ -429,33 +479,27 @@ class PlaceRetriever(PlaceScorer):
             except Exception as e:
                 print(f"[WARN] bm25 lexical channel failed: {e}")
 
-        # --- geo filter 0결과 fallback ---
-        # geo filter 적용 후 후보가 하나도 없으면 geo 없이 재시도
+        # --- geo filter 0결과 ---
+        # geo_retry_count > 0 (이미 확장 반경)인데도 후보가 없으면 빈 결과 반환.
+        # geo_retry_count == 0 (초회)이면 그래프 레벨에서 retriever 노드를 재실행하며
+        # geo_retry_count=1 을 전달해 확장 반경 검색을 수행한다.
         if apply_geo and not score_map:
-            print(
-                f"[INFO] search_hybrid: geo filter returned 0 candidates "
-                f"(lat={location_anchor_lat} lon={location_anchor_long} r={location_radius_m}), "
-                f"retrying without geo filter"
+            radius_info = (
+                f"anchor_lat={location_anchor_lat} anchor_lon={location_anchor_lon} "
+                f"anchor_radius_m={location_radius_m} gps_radius_km={MAX_DISTANCE_KM} "
+                f"geo_retry_count={geo_retry_count}"
             )
-            return await self.search_hybrid(
-                query=query,
-                image_url=image_url,
-                limit=limit,
-                categories=categories,
-                emotional_text=emotional_text,
-                user_latitude=user_latitude,
-                user_longitude=user_longitude,
-                preferred_location=preferred_location,
-                candidate_k=candidate_k,
-                enable_bm25=enable_bm25,
-                enable_rerank=enable_rerank,
-                rerank_top_k=rerank_top_k,
-                search_scope=search_scope,
-                # anchor None → 재귀 방지
-                location_anchor_lat=None,
-                location_anchor_long=None,
-                location_radius_m=None,
-            )
+            if geo_retry_count == 0:
+                print(
+                    f"[INFO] search_hybrid: geo filter returned 0 candidates ({radius_info}). "
+                    f"Returning empty — graph will retry with {GEO_RETRY_MULTIPLIER:.1f}x expanded radius."
+                )
+            else:
+                print(
+                    f"[INFO] search_hybrid: expanded geo filter still returned 0 candidates "
+                    f"(expanded_by={GEO_RETRY_MULTIPLIER:.1f}x, {radius_info}). Returning empty."
+                )
+            return []
 
         # --- C. Fusion & Boosting ---
         results = []
@@ -470,7 +514,7 @@ class PlaceRetriever(PlaceScorer):
 
         # geo proximity boost anchor: 사용자 좌표 우선, 없으면 landmark anchor 사용
         prox_lat = user_latitude if user_latitude else location_anchor_lat
-        prox_long = user_longitude if user_longitude else location_anchor_long
+        prox_lon = user_lon if user_lon else location_anchor_lon
 
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
@@ -479,7 +523,7 @@ class PlaceRetriever(PlaceScorer):
             geo_proximity_boost = self._geo_proximity_bonus(
                 payload=payload,
                 anchor_lat=prox_lat,
-                anchor_lng=prox_long,
+                anchor_lon=prox_lon,
                 radius_km=GEO_PROXIMITY_RADIUS_KM,  # config 기반 반경 (#9)
             )
             payload_addr_tokens = self._payload_addr_tokens(payload)
@@ -492,7 +536,14 @@ class PlaceRetriever(PlaceScorer):
                 if addr_sparse_boost > 0.0:
                     data["matches"].add("addr_sparse")
 
-            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost
+            # input_tags ↔ payload.tags 부분 문자열 매칭 보너스
+            tag_boost = 0.0
+            if input_tags:
+                tag_boost = self._tag_match_bonus(input_tags=input_tags, payload=payload)
+                if tag_boost > 0.0:
+                    data["matches"].add("tag_match")
+
+            boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost + tag_boost
             # BOOST_WEIGHT로 스케일 보정: RRF first_stage_score(0.01~0.05) 대비
             # boost 합계(최대 0.65) 스케일 불균형 완화.
             # 적용 후 boost 최대 기여 ≈ 0.65 * 0.3 = 0.195
@@ -506,18 +557,33 @@ class PlaceRetriever(PlaceScorer):
                         "location_text": location_text_boost,
                         "geo_proximity": geo_proximity_boost,
                         "addr_sparse": addr_sparse_boost,
+                        "tag": tag_boost,
                         "total": boost,
                     },
                 )
             )
 
         fused.sort(key=lambda x: x[2], reverse=True)
+
+        # min-max 정규화: 고정 분모(FUSED_SCORE_MAX) 대신 결과셋 내 최솟값·최댓값 사용.
+        # 이전 방식은 FUSED_SCORE_MAX(0.20)보다 실제 max가 크면 상위 결과가 모두
+        # 1.0으로 clamp되어 점수 분포가 의미 없어지는 문제가 있었다.
+        if fused:
+            all_final   = [x[2]          for x in fused]
+            all_rrf     = [x[1]["score"] for x in fused]
+            fused_max   = all_final[0];   fused_min  = all_final[-1]
+            fused_range = max(fused_max - fused_min, 1e-9)
+            rrf_max     = max(all_rrf);   rrf_min    = min(all_rrf)
+            rrf_range   = max(rrf_max - rrf_min, 1e-9)
+        else:
+            fused_min = fused_range = rrf_min = rrf_range = 1.0
+
         for idx, (pid, data, final_score, boost_detail) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
-                # 모든 점수를 [0.0, 1.0] 범위로 정규화
-                "score":             round(min(1.0, final_score        / FUSED_SCORE_MAX), 4),
-                "first_stage_score": round(min(1.0, data["score"]      / RRF_SCORE_MAX),   4),
+                # min-max 정규화: 이 결과셋 내에서 [0.0, 1.0] 상대 점수
+                "score":             round((final_score    - fused_min) / fused_range, 4),
+                "first_stage_score": round((data["score"]  - rrf_min)   / rrf_range,  4),
                 "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"])),
@@ -525,6 +591,7 @@ class PlaceRetriever(PlaceScorer):
                 "location_text_boost":  boost_detail["location_text"],
                 "geo_proximity_boost":  boost_detail["geo_proximity"],
                 "addr_sparse_boost":    boost_detail["addr_sparse"],
+                "tag_match_boost":      boost_detail["tag"],
                 "score_boost_total":    round(min(1.0, boost_detail["total"] / MAX_BOOST_SUM), 4),
             })
 
@@ -546,8 +613,42 @@ class PlaceRetriever(PlaceScorer):
                 c["rerank_score"] = None
                 c["final_rank"] = idx
 
+        # rerank 후 거리 블렌딩: geo_proximity_boost(이미 퓨전 단계에서 계산됨)를
+        # rerank_score와 가중 합산하여 텍스트 관련도와 근접성을 함께 반영.
+        # prox_lat/lng 이 있을 때만 적용 (없으면 순수 rerank 순위 유지).
+        final_candidates = reranked
+        if prox_lat is not None and prox_lon is not None:
+            for c in reranked:
+                raw_rerank = float(c.get("rerank_score") or 0.0)
+                raw_geo = float(c.get("geo_proximity_boost") or 0.0)
+                normalized_geo = min(raw_geo / GEO_MAX_BOOST, 1.0)  # [0, 1]
+                c["blended_score"] = (
+                    (1 - RERANK_GEO_BLEND_WEIGHT) * raw_rerank
+                    + RERANK_GEO_BLEND_WEIGHT * normalized_geo
+                )
+            reranked.sort(key=lambda x: float(x.get("blended_score", 0.0)), reverse=True)
+            for idx, c in enumerate(reranked, start=1):
+                c["final_rank"] = idx
+            print(f"[INFO] geo-blended reranking applied (blend_weight={RERANK_GEO_BLEND_WEIGHT})")
+            final_candidates = reranked
+
+            # 안전망: 블렌딩 후에도 너무 먼 장소가 남아 있을 경우를 대비한 거리 하드 필터
+            nearby_candidates = self._filter_candidates_by_distance(
+                reranked,
+                anchor_lat=prox_lat,
+                anchor_lon=prox_lon,
+                max_distance_km=MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0),
+            )
+            if nearby_candidates:
+                final_candidates = nearby_candidates
+            else:
+                print(
+                    f"[INFO] search_hybrid distance post-filter kept 0 candidates; "
+                    f"falling back to blended results (anchor=({prox_lat}, {prox_lon}))"
+                )
+
         # 기존 인터페이스 호환: limit 기준으로 반환
-        final = reranked[: max(int(limit or 0), 1)]
+        final = final_candidates[: max(int(limit or 0), 1)]
         print(f"[INFO] search_hybrid returning {len(final)} candidates (score_map={len(score_map)} reranked={len(reranked)})")
         return final
 
@@ -568,7 +669,7 @@ class PlaceRetriever(PlaceScorer):
                         FieldCondition(
                             key="geo",
                             geo_radius={
-                                "center": {"lat": float(lat), "long": float(lng)},
+                                "center": {"lat": float(lat), "lon": float(lng)},
                                 "radius": radius_m,
                             },
                         )
@@ -635,12 +736,12 @@ async def retrieval_place(message_in: ChatMessageCreate):
         retriever = PlaceRetriever.get_instance()
 
         user_lat = message_in.latitude
-        user_long = message_in.longitude
+        user_lon = message_in.longitude
         address = ''
-        if user_lat and user_long:
+        if user_lat and user_lon:
             # Instantiate geocoder on demand
-            geocoder_client = GeoCoder()
-            geocode_data = geocoder_client.reverse_geocoder(user_lat, user_long)
+            geocoder_client = GeoCoder.get_instance()
+            geocode_data = await geocoder_client.reverse_geocoder(user_lat, user_lon)
             if geocode_data:
                 road_address = (geocode_data.get("road_address") or "").strip()
                 jibun_address = (geocode_data.get("jibun_address") or "").strip()
@@ -651,14 +752,14 @@ async def retrieval_place(message_in: ChatMessageCreate):
 
         query = message_in.message
         if len(address) > 0:
-            query += f'\n## location : ({user_lat}, {user_long}), address : {address}'
+            query += f'\n## location : ({user_lat}, {user_lon}), address : {address}'
         # Main Search (Hybrid)
         search_results = await retriever.search_hybrid(
             query=query,
             image_url=message_in.image_path,
             limit=5,
             user_latitude=user_lat,
-            user_longitude=user_long,
+            user_lon=user_lon,
         )
         print(f"[INFO] retrieval_place search_results_count={len(search_results) if search_results else 0}")
 
@@ -703,9 +804,9 @@ async def retrieval_place(message_in: ChatMessageCreate):
             print("[WARN] retrieval_place no search results")
 
         # Nearby Search (if best match found and has coordinates)
-        if user_lat and user_long:
+        if user_lat and user_lon:
             lat = user_lat
-            lng = user_long
+            lng = user_lon
             print(f"[DEBUG] retrieval_place best_place coords lat={lat} lng={lng}")
 
             if lat != 0 and lng != 0:

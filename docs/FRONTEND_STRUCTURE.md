@@ -1,10 +1,17 @@
 # Frontend 디렉토리 구조 분석
 
-> Next.js App Router 기반 한국 여행 추천 챗봇 프론트엔드
+> Next.js App Router 기반 프론트엔드 구조와 현재 실행 상태를 정리한 문서
 
 ---
 
-## 1) 전체 구조
+## 1. 개요
+
+프론트엔드는 `frontend/` 아래에 구성되어 있으며, Next.js 16 + React 19 조합을 사용한다.  
+주요 사용자 흐름은 랜딩, 회원가입, 취향 설문, 챗봇, 탐색, 북마크, 여행 기록, 마이페이지로 나뉜다.
+
+---
+
+## 2. 루트 구조
 
 ```text
 frontend/
@@ -20,8 +27,8 @@ frontend/
 ├── tests/
 ├── Dockerfile
 ├── package.json
+├── package-lock.json
 ├── next.config.ts
-├── vite.config.ts
 ├── postcss.config.mjs
 ├── eslint.config.mjs
 └── tsconfig.json
@@ -29,147 +36,140 @@ frontend/
 
 ---
 
-## 2) 루트 파일
+## 3. 핵심 설정 파일
 
 ### `package.json`
 
-- 프레임워크: `next@16`, `react@19`, `react-dom@19`
-- 스타일/렌더링: `framer-motion`, `lucide-react`, `react-markdown`, `remark-gfm`
-- 유틸리티: `clsx`, `tailwind-merge`, `jose`
+- 프레임워크: `next@16.1.6`, `react@19.2.3`
+- UI/유틸: `framer-motion`, `lucide-react`, `react-markdown`, `remark-gfm`, `jose`
 - 테스트: `jest`, `@testing-library/*`, `jest-environment-jsdom`
-- 실행 스크립트
+- 주요 스크립트
   - `npm run dev`
   - `npm run build`
   - `npm run start`
   - `npm run lint`
   - `npm run test`
 
+### `next.config.ts`
+
+- `@` alias를 `frontend/src`로 연결
+- `/api/:path*` 요청을 백엔드로 rewrite
+- `NEXT_PUBLIC_API_URL`이 절대 URL이 아니면 기본 목적지는 `http://backend:8000/api`
+
 ### `Dockerfile`
 
-- Node 기반 프론트엔드 컨테이너 설정
-- 개발 환경에서 `npm run dev`를 기준으로 사용
-
-### 테스트 설정
-
-- `tests/jest.config.js`: Next.js 연동 Jest 설정
-- `tests/jest.setup.js`: DOM 테스트 공통 설정
+- `dev`, `builder`, `production` 멀티 스테이지 구성
+- 개발 컨테이너는 `npm run dev`
+- 프로덕션 이미지는 `npm run build` 결과물 기반
 
 ---
 
-## 3) `src/app/` 라우트 구조
+## 4. `src/app/` 라우트 구조
 
-현재 확인되는 주요 페이지는 아래와 같습니다.
+현재 확인되는 주요 페이지는 다음과 같다.
 
-| 경로 | 설명 |
-| --- | --- |
-| `/` | 랜딩 페이지 |
-| `/signup` | 회원가입 페이지 |
-| `/signup/profile` | 프로필 입력 단계 |
-| `/survey` | 사용자 취향 설문 |
-| `/chatbot` | 메인 챗봇 인터페이스 |
-| `/explore` | 여행지 탐색 |
-| `/bookmark` | 북마크 목록 |
-| `/collection` | 컬렉션 페이지 |
-| `/mypage` | 마이페이지 |
+| 경로 | 파일 | 설명 |
+| --- | --- | --- |
+| `/` | `src/app/page.tsx` | 랜딩 페이지 |
+| `/signup` | `src/app/signup/page.tsx` | 회원가입 진입 |
+| `/signup/profile` | `src/app/signup/profile/page.tsx` | 프로필 입력 |
+| `/survey` | `src/app/survey/page.tsx` | 취향 설문 |
+| `/chatbot` | `src/app/chatbot/page.tsx` | 메인 챗봇 |
+| `/explore` | `src/app/explore/page.tsx` | 여행지 탐색 |
+| `/bookmark` | `src/app/bookmark/page.tsx` | 북마크 |
+| `/moments` | `src/app/moments/page.tsx` | 여행 기록/다이어리 |
+| `/mypage` | `src/app/mypage/page.tsx` | 마이페이지 |
 
 공통 파일:
 
-- `layout.tsx`: 전역 레이아웃
-- `globals.css`: 전역 스타일
-- `favicon.ico`: 파비콘
-
-참고:
-
-- 문서 작성 시점 기준 `src/app/login`, `src/app/onboarding` 페이지는 존재하지 않습니다.
+- `src/app/layout.tsx`: 전역 폰트, `GoogleOAuthProvider`, 메타데이터
+- `src/app/globals.css`: 전역 스타일
+- `src/app/api/chat/route.ts`: Next 서버 측 채팅 프록시 엔드포인트
 
 ---
 
-## 4) `src/components/` 구성
+## 5. 컴포넌트 구조
 
-- `chat/`: 챗봇 인터페이스 핵심 컴포넌트
+### `src/app/components/`
+
+랜딩 및 공통 화면 조각이 위치한다.
+
+- `Hero.tsx`, `Features.tsx`, `Destinations.tsx`, `ReviewSection.tsx`, `CTA.tsx`
+- `Header.tsx`, `Footer.tsx`
+- `IncompleteSignupModal.tsx`
+
+### `src/components/`
+
+라우트 바깥 공통 컴포넌트 영역이다.
+
+- `GoogleLoginBtn.tsx`
+- `common/Logo.tsx`
+- `navigation/Sidebar.tsx`
+
+### `src/features/chat/`
+
+챗봇 기능이 집중된 영역이다.
+
+- `components/`
   - `ChatHome.tsx`
+  - `ChatHeader.tsx`
+  - `ChatInputArea.tsx`
   - `ChatMessageItem.tsx`
   - `PipelineProgress.tsx`
   - `PlaceMapPanel.tsx`
   - `PlaceMapSheet.tsx`
   - `TripContextModal.tsx`
+- `hooks/`
+  - `useChatMessages.ts`
+  - `useChatRooms.ts`
+  - `useChatMap.ts`
   - `useNaverMap.ts`
-- `landing/`: 랜딩 전용 섹션 컴포넌트
-  - `Hero.tsx`, `Features.tsx`, `Destinations.tsx`, `ReviewSection.tsx`, `CTA.tsx`, `Header.tsx`, `Footer.tsx`
-- `ui/`: 공통 UI 컴포넌트
-  - `button.tsx`, `input.tsx`, `label.tsx`, `dialog.tsx`, `SimpleModal.tsx`
-- 기타 공통 컴포넌트
-  - `Sidebar.tsx`, `Logo.tsx`, `SettingsModal.tsx`, `GoogleLoginBtn.tsx`, `IntroGate.tsx`, `IntroOverlay.tsx`
 
 ---
 
-## 5) `src/lib/`, `src/services/`, `src/hooks/`, `src/types/`
-
-### `src/lib/`
-
-- `utils.ts`: 공통 유틸리티 함수 (예: Tailwind 클래스 병합을 위한 `cn`)
-
+## 6. 서비스 및 유틸리티
 
 ### `src/services/`
 
-- `api.ts`: 프론트-백엔드 API 통신 래퍼
-  - 스트리밍 요청은 브라우저에서 same-origin `/api` 경로를 우선 사용해 Next.js rewrite를 타도록 설계
-  - 이유: `Authorization` 헤더와 JSON `POST` 조합에서 발생하는 CORS preflight 실패를 배포 환경에서 줄이기 위함
-- `authError.ts`: 인증 오류 처리
-- `errorHandler.ts`: 공통 에러 처리 로직
+- `api.ts`
+  - 인증/사용자/채팅/북마크/자동시작 API 래퍼
+  - 스트리밍 요청은 브라우저에서 `/api` rewrite를 우선 사용
+  - 토큰 검증 및 refresh 처리 포함
+- `autoStart.ts`: 자동시작 관련 보조 로직
+- `authError.ts`, `errorHandler.ts`: 인증 및 공통 에러 처리
 
 ### `src/hooks/`
 
-- `useSpeechRecognition.ts`: 음성 인식 처리 훅
+- `common/useSpeechRecognition.ts`: 음성 인식 훅
+
+### `src/lib/`
+
+- `utils.ts`: 공통 유틸리티
 
 ### `src/types/`
 
-- `speech-recognition.d.ts`: 브라우저 음성 인식 타입 정의
+- 브라우저 음성 인식 타입 정의 등 전역 타입 보완
 
 ---
 
-## 6) `public/` 정적 자산
+## 7. 정적 자산
 
-- 브랜드 로고: `public/brand/*`
-- 랜딩/설문용 이미지: `public/image/*`
-- 기본 SVG 아이콘: `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`, `file.svg`
+`public/` 아래에 랜딩/설문/브랜드 이미지가 배치되어 있다.
 
----
-
-## 7) 테스트 구성
-
-`frontend/tests/`에서 Jest + Testing Library 기반으로 주요 UI/상호작용을 검증합니다.
-
-- `ChatbotPage.test.tsx`
-- `ChatHome.stt-permission.test.tsx`
-- `GoogleLoginBtn.test.tsx`
-- `IntroGate.test.tsx`
-- `authError.test.ts`
+- `public/image/*`
+- 기본 SVG 자산
 
 ---
 
-## 8) 데이터 흐름 요약
+## 8. 문서 역할 및 연계
 
-```text
-[사용자 브라우저]
-    │
-    ▼
-[src/app 페이지]
-    │
-    ▼
-[src/components UI]
-    │
-    ▼
-[src/services/api.ts]
-    │
-    ▼
-[Backend API]
-```
+- 이 문서는 프론트엔드 구조와 파일 배치를 설명하는 문서다.
+- 실행 가능 여부, 테스트 통과 여부, 현재 이슈 목록은 [PROJECT_ANALYSIS.md](/Users/kim/SKN21-FINAL-2Team/docs/PROJECT_ANALYSIS.md)에서만 관리한다.
 
 ---
 
-## 9) 문서 관리 메모
+## 9. 문서 관리 메모
 
-- 프론트 라우트가 추가/삭제되면 이 문서를 먼저 갱신
-- 테스트 도구는 현재 `Vitest`가 아니라 `Jest` 기준
-- 정적 자산 분류는 `public/brand`, `public/image` 구조를 기준으로 관리
+- 라우트 추가/삭제 시 이 문서를 먼저 갱신
+- `src/features/chat`가 현재 챗봇 핵심 로직의 중심
+- 빌드 상태는 코드 변경 여부와 별개로 로컬 의존성 상태 영향을 크게 받으므로 테스트 결과와 빌드 결과를 분리해 기록
