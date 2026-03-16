@@ -1,4 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.output import IntentOutput, IntentType, IntentSlots, InputType
 from app.agents.prompts.prompts import INTENT_PROMPT
@@ -7,6 +8,20 @@ from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
 from app.utils.geocoder import NormalizedLocation
 from app.utils.common import in_seoul_bbox
+from app.utils.vision import describe_image
+
+
+async def _analyze_image(image_path: str) -> str | None:
+    """이미지 분석 + custom event 발행 (pipeline 'image_analysis' step 표시용)"""
+    await adispatch_custom_event("image_analysis", {"status": "start"})
+    try:
+        result = await describe_image(image_path)
+    except Exception as e:
+        print(f"[Intent] describe_image failed: {e}")
+        result = None
+    await adispatch_custom_event("image_analysis", {"status": "done"})
+    return result
+
 
 async def intent_node(state: TravelState):
     """
@@ -25,16 +40,24 @@ async def intent_node(state: TravelState):
     image_path = state.get("input_image")
     summary_title = state.get("summary_title", "제목 없음")
     summary_message = state.get("summary_message", "아직 대화 요약 없음")
-    
-    if not user_input:
-        if image_path:
-             return {
-                "intents": [IntentType.IMAGE_SIMILAR],
-                "primary_intent": IntentType.IMAGE_SIMILAR,
-                "slots": IntentSlots(input_type=InputType.IMAGE),
-                "summary_title": "이미지 검색",
-                "summary_message": "이미지 기반 장소 검색 요청",
-             }
+
+    # 이미지가 있으면 가장 먼저 분석 (결과를 state에 저장하여 이후 노드에서 재사용)
+    semantic_input_image = state.get("semantic_input_image")
+    if image_path and not semantic_input_image:
+        print("[Intent] Analyzing image before LLM intent...")
+        semantic_input_image = await _analyze_image(image_path)
+        print(f"[Intent] semantic_input_image={semantic_input_image}")
+
+    if not user_input and not image_path:
+        # if image_path:
+        #     return {
+        #         "intents": [IntentType.IMAGE_SIMILAR],
+        #         "primary_intent": IntentType.IMAGE_SIMILAR,
+        #         "slots": IntentSlots(input_type=InputType.IMAGE),
+        #         "summary_title": "이미지 검색",
+        #         "summary_message": "이미지 기반 장소 검색 요청",
+        #         "semantic_input_image": semantic_input_image,
+        #     }
         return {
             "intents": [IntentType.GENERAL],
             "primary_intent": IntentType.GENERAL,
@@ -47,18 +70,22 @@ async def intent_node(state: TravelState):
     llm = LLMFactory.get_llm()
     structured_llm = llm.with_structured_output(IntentOutput)
 
+    human_input = user_input
+    if semantic_input_image:
+        human_input += f"\n입력 이미지에 대한 설명 : {semantic_input_image}"
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", INTENT_PROMPT),
         MessagesPlaceholder(variable_name="messages"),
-        ("human", "{user_input}")
+        ("human", human_input)
     ])
 
     chain = prompt | structured_llm
 
     print(f"[Intent] Prefs info from state: {prefs_info}")
+
     result = await chain.ainvoke({
             "messages": messages,
-            "user_input": user_input,
             "category_desc": CategoryType.description(),
             "summary_title": summary_title,
             "summary_message": summary_message,
@@ -103,6 +130,7 @@ async def intent_node(state: TravelState):
         "summary_message": result.summary_message,
         "input_tags": result.input_tags,
         "prefs_info": prefs_info,
+        "semantic_input_image": semantic_input_image,
         "candidates": [],
         "candidate_pool": [],
         "place_info_list": [],

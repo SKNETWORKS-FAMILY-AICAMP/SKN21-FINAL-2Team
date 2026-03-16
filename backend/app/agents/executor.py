@@ -437,17 +437,13 @@ def _build_missing_context(missing_slots: List[str]) -> str:
 
 async def _build_location_context(
     slots: Optional[IntentSlots],
-    input_lat: Optional[float] = None,
-    input_lon: Optional[float] = None,
+    input_address: Optional[str] = None,
 ) -> str:
-    # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
+    # 사용자 위치 컨텍스트 구성 (geocoder_node에서 미리 reverse geocoding된 주소 사용)
     user_location_context = ""
-    resolved_input_address = ""
-    
-    if input_lat and input_lon:
-        resolved_input_address = await GeoCoder.get_address(input_lat, input_lon)
-    if resolved_input_address:
-        user_location_context = f"- 사용자 현재 위치: {resolved_input_address}"
+
+    if input_address:
+        user_location_context = f"- 사용자 현재 위치: {input_address}"
 
     if slots and slots.location and slots.location.name:
         address = ""
@@ -516,7 +512,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
 
     # 위치 정보 ============================
     # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
-    location_context = await _build_location_context(slots, input_lat=input_lat, input_lon=input_lon)
+    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
 
     # HumanMessage 구성 (멀티모달 지원)
@@ -653,7 +649,7 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     if slots and slots.categories:
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
-    location_context = await _build_location_context(slots, input_lat=state.get("input_lat"), input_lon=state.get("input_lon"))
+    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", EXECUTOR_GENERAL_PROMPT),

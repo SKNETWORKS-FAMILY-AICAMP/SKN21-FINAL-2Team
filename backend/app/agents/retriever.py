@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
 from app.core.retrieval.place import PlaceRetriever
-from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY
+from app.utils.geocoder import LANDMARK_DICTIONARY
 from app.utils.vision import describe_image
 from app.utils.common import getattr_safe, in_seoul_bbox, normalize_text
 from app.utils.place_id import get_candidate_point_id, get_place_id
@@ -264,16 +264,9 @@ async def _search_for_general(
 
     print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
     query = user_input
-    if latitude and longitude:
-        try:
-            geocoder = GeoCoder.get_instance()
-            geocode_data = await geocoder.reverse_geocoder(latitude, longitude)
-            if geocode_data:
-                road = (geocode_data.get("road_address") or "").strip()
-                if road:
-                    query += f"\n현재 내 위치 주소: {road}"
-        except Exception as e:
-            print(f"[Retriever] Geocoding error: {e}")
+    input_address = state.get("input_address")
+    if input_address:
+        query += f"\n현재 내 위치 주소: {input_address}"
 
     if input_tags:
         query += f"\n핵심 키워드: {', '.join(input_tags)}"
@@ -372,9 +365,9 @@ async def retriever_node(state: TravelState):
     print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
     image_path = state.get("input_image")
-    emotional_text = None
-    if image_path:
-        print("[Retriever] Image detected. Fetching description once...")
+    emotional_text = state.get("semantic_input_image") or None
+    if image_path and not emotional_text:
+        print("[Retriever] semantic_input_image missing, calling describe_image as fallback...")
         emotional_text = await describe_image(image_path)
 
     search_scope = _resolve_search_scope(

@@ -10,7 +10,6 @@ import {
   UtensilsCrossed,
   CheckCircle2,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -164,9 +163,16 @@ export function MyPagePage() {
         ]);
         if (cancelled) return;
 
-        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3].filter(
-          (x): x is string => typeof x === "string" && x.trim().length > 0,
-        );
+        const extraPreferMigrationMap: Record<string, string> = {
+          "Halal": "할랄",
+          "Kosher": "코셔",
+          "Vegan": "비건",
+          "Wheelchair Accessible": "휠체어 이용 가능",
+          "Pets": "반려동물",
+        };
+        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3]
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .map((x) => extraPreferMigrationMap[x] ?? x);
 
         setUserProfile({
           nickname: user.nickname || user.name || "User",
@@ -536,7 +542,7 @@ export function MyPagePage() {
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight">Travel Preferences</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight font-pretendard">여행 선호도</h3>
                       <div className="flex items-center gap-2">
                         {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
                         {isEditingPreferences && (
@@ -565,7 +571,7 @@ export function MyPagePage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Traveling Style</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">여행 스타일</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: SURVEY_ITEM_LABELS.plan, value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -598,7 +604,7 @@ export function MyPagePage() {
                                         ...(item.key === "places" ? { placesPrefer: opt } : {}),
                                       }));
                                     }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${(item.key === "plan" && draftInsight.planPrefer === opt)
+                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
                                       || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                                       || (item.key === "places" && draftInsight.placesPrefer === opt)
                                       ? "bg-black text-white border-black"
@@ -618,7 +624,7 @@ export function MyPagePage() {
 
                   {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">Additional Preference</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">추가 특이사항</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
@@ -657,8 +663,7 @@ export function MyPagePage() {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
-                    <Sparkles size={20} className="text-white" />
-                    Today&apos;s Recommendation
+                    오늘의 추천 상품
                   </div>
                   {todayRecommendations.length > 0 ? (
                     <>
@@ -695,13 +700,13 @@ export function MyPagePage() {
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4">
                       <h2 className="text-lg font-semibold mb-1 tracking-tight leading-tight">
-                        No recommendation yet
+                        아직 추천 항목이 없습니다
                       </h2>
                       <p className="text-white/80 text-[13px] leading-relaxed">
-                        Start a chat first. We will suggest new topics from your saved conversation summaries.
+                        먼저 채팅을 시작해보세요. 저장된 대화 요약을 바탕으로 새로운 주제를 추천해드립니다.
                       </p>
                       <p className="text-white/50 text-[10px] mt-2">
-                        Recommendations appear when chat history summary is stored.
+                        채팅 기록 요약이 저장되면 추천 항목이 표시됩니다.
                       </p>
                     </div>
                   )}
@@ -725,15 +730,14 @@ export function MyPagePage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Ticket size={20} />
-                    Reservation
+                    예약내역
                   </h3>
                   <button
                     type="button"
                     onClick={handleAddReservation}
-                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
+                    className="text-xl font-medium text-gray-700 hover:opacity-70 leading-none"
                   >
-                    Add
+                    +
                   </button>
                 </div>
 
