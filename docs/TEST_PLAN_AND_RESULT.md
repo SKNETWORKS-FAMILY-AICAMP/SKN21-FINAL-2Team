@@ -30,7 +30,7 @@
   - 위도/경도 인자 순서 혼동 가능성을 줄이기 위해 `get_address(latitude, longitude)` 시그니처로 통일
 - 실행 명령:
   - `uv run python -m compileall app/agents app/api app/core app/utils`
-  - `uv run python -m pytest tests/test_intent.py tests/test_geocoder.py tests/test_chat_stream.py -q`
+  - `uv run python -m pytest tests/test_intent.py tests/test_cors.py tests/test_healthz.py -q`
 - 결과 요약:
   - compileall 통과
   - pytest `27 passed`
@@ -48,7 +48,7 @@
   - custom token event가 그래프 이벤트 트리에 붙도록 `config`를 `adispatch_custom_event()`까지 유지
 - 실행 명령:
   - `uv run python -m compileall backend/app/agents backend/app/core backend/tests`
-  - `docker compose run --rm backend pytest tests/test_executor_streaming.py tests/test_chat_stream.py -q`
+  - `docker compose run --rm backend pytest tests/test_executor_streaming.py tests/test_cors.py -q`
 - 결과 요약:
   - compileall 통과
   - pytest `27 passed`
