@@ -442,12 +442,20 @@ async def retriever_node(state: TravelState):
     candidates = sorted(deduped_candidates, key=_candidate_score, reverse=True)[:candidate_k]
 
     # CANDIDATE_THRESHOLD 미만 후보 제거
+    # 단, 모두 탈락해도 최소 final_k개는 점수순으로 유지 (web_search fallback 방지)
     above = [c for c in candidates if _candidate_score(c) >= CANDIDATE_THRESHOLD]
     print(
         f"[Retriever] threshold={CANDIDATE_THRESHOLD} "
         f"before={len(candidates)} after={len(above)} "
         f"(dropped={len(candidates) - len(above)})"
     )
+    if len(above) < final_k and candidates:
+        # reranker가 쿼리와 후보 간 관련성을 낮게 평가해 전원 탈락했더라도
+        # 점수순 상위 final_k개는 무조건 유지 → 빈 결과로 web_search로 빠지는 현상 방지
+        above = candidates[:max(final_k, len(above))]
+        print(
+            f"[Retriever] threshold dropped all → keeping top {len(above)} by score (min_k={final_k})"
+        )
     candidates = above
 
     exposed_candidates = _pick_candidates(

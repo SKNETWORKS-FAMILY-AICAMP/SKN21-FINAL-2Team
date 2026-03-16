@@ -46,6 +46,24 @@ async def geocoder_node(state: TravelState):
             except Exception as e:
                 print(f"[Geocoder] Naver search anchor failed for '{raw_location}': {e}")
 
+    # slots.location에서 anchor를 못 잡은 경우, input_tags에서 landmark 후보 검색
+    # 예: input_tags = ["K-pop", "카페", "홍대"] → "홍대" → LANDMARK_DICTIONARY 매칭
+    if not anchor_lat:
+        input_tags = state.get("input_tags") or []
+        for tag in input_tags:
+            if not tag:
+                continue
+            tag_norm = NormalizedLocation.normalize_location(tag)
+            if tag_norm.canonical_matched and tag_norm.lat is not None:
+                anchor_lat = tag_norm.lat
+                anchor_lon = tag_norm.lon
+                anchor_radius_m = tag_norm.radius_m
+                print(
+                    f"[Geocoder] anchor resolved from input_tags: {tag!r} → "
+                    f"lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m"
+                )
+                break
+
     # Seoul bbox 밖이면 재검색
     if anchor_lat and anchor_lon and not in_seoul_bbox(anchor_lat, anchor_lon):
         print(f"[Geocoder] anchor '{raw_location}' outside Seoul bbox ({anchor_lat}, {anchor_lon}) — retrying")

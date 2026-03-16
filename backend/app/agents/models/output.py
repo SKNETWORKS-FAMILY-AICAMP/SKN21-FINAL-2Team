@@ -29,6 +29,7 @@ class CategoryType(str, Enum):
     ACCOMMODATION = "숙박"
     RESTAURANT = "음식점"
     POPUP_STORE = "팝업스토어"
+    TOUR = "투어"
 
     @classmethod
     def description(cls) -> str:
@@ -41,9 +42,21 @@ class CategoryType(str, Enum):
             "숙박":        "호텔, 펜션, 게스트하우스, 리조트, 모텔, 에어비앤비",
             "음식점":      "음식점, 카페, 식당, 레스토랑, 맛집, 한식, 양식, 일식, 비빔밥, 분식, 치킨, 피자",
             "팝업스토어":  "팝업스토어, 브랜드 팝업, 한정판 전시 매장, 굿즈",
+            "투어":        "투어, 여행 코스, 가이드 투어, 당일치기 여행, 체험 프로그램",
         }
         lines = [f"- {item.value}: {hints.get(item.value, item.name)}" for item in cls]
         return "\n".join(lines)
+
+
+# DB 실존 카테고리 fallback 매핑 (LLM 추출값 → DB 실제 contenttypeid 값)
+# DB 실제 값: 음식점(241건), 관광지(172건), 숙박(36건), 콘텐츠(30건), 투어(21건)
+# LLM이 "문화시설"로 추출해도 DB에는 없으므로 "관광지"로 fallback
+CATEGORY_DB_FALLBACK: dict[str, list[str]] = {
+    "문화시설":     ["관광지"],
+    "축제공연행사": ["콘텐츠", "관광지"],
+    "팝업스토어":   ["콘텐츠"],
+    "레포츠":       ["관광지", "투어"],
+}
 
 
 class IntentLocation(BaseModel):
