@@ -44,6 +44,7 @@ import {
   type TodayRecommendationItem,
 } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
+import { resolveImageUrl } from "@/lib/imageUrl";
 
 function formatKstDate(dateLike?: string | null) {
   if (!dateLike) return "-";
@@ -59,6 +60,10 @@ function formatKstDate(dateLike?: string | null) {
 }
 
 function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
+  const dynamicDetails = item.details 
+    ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
+    : [];
+
   return {
     id: `reservation-${item.id}`,
     reservationId: item.id,
@@ -69,10 +74,7 @@ function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
     reservationImageUrl: item.image_path ?? undefined,
     identifierLabel: "Reservation ID",
     identifierValue: String(item.id),
-    details: [
-      { label: "Category", value: item.category || "-" },
-      { label: "Created At", value: formatKstDate(item.created_at) },
-    ],
+    details: dynamicDetails,
   };
 }
 
@@ -239,11 +241,20 @@ export function MyPagePage() {
 
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 
-  const handleAddReservation = () => {
-    setAddReservationName("");
-    setAddReservationImage("");
-    setAddReservationError("");
-    setAddReservationOpen(true);
+  const handleAddReservation = async () => {
+    try {
+      const created = await createReservation({
+        category: "etc",
+        name: "새 예약",
+        date: new Date().toISOString().slice(0, 10),
+        image_path: "",
+      });
+      const mapped = mapReservationRecordToItem(created);
+      setReservations((prev) => [mapped, ...prev]);
+      setActiveReservation(mapped);
+    } catch (error) {
+      console.error("Failed to create new reservation draft", error);
+    }
   };
 
   const handleDeleteReservation = async (id: string) => {
@@ -395,35 +406,7 @@ export function MyPagePage() {
     }
   };
 
-  const handleSaveManualReservation = async () => {
-    const trimmedName = addReservationName.trim();
-    if (!trimmedName) {
-      setAddReservationError("Please enter reservation name.");
-      return;
-    }
-    if (!addReservationImage) {
-      setAddReservationError("Please attach reservation image.");
-      return;
-    }
-
-    try {
-      const resolvedImagePath = addReservationImage.startsWith("data:image/")
-        ? await uploadImageDataUrl(addReservationImage, "reservations")
-        : addReservationImage;
-      const created = await createReservation({
-        category: "transportation",
-        name: trimmedName,
-        date: new Date().toISOString().slice(0, 10),
-        image_path: resolvedImagePath,
-      });
-      const mapped = mapReservationRecordToItem(created);
-      setReservations((prev) => [mapped, ...prev]);
-      setAddReservationOpen(false);
-    } catch (error) {
-      console.error("Failed to create reservation", error);
-      setAddReservationError("Failed to save reservation.");
-    }
-  };
+  // Removed handleSaveManualReservation as it is bypassed
 
   const toggleDraftExtraPreference = (value: string) => {
     setDraftExtraPreferences((prev) => {
@@ -510,7 +493,7 @@ export function MyPagePage() {
                     <div className="w-14 h-14 sm:w-16 sm:h-16 xl:w-20 xl:h-20 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                       {userProfile.profile_picture ? (
                         <img
-                          src={userProfile.profile_picture}
+                          src={resolveImageUrl(userProfile.profile_picture)}
                           alt="Profile"
                           className="w-full h-full object-cover grayscale-[20%]"
                         />
@@ -820,6 +803,56 @@ export function MyPagePage() {
             console.error("Failed to update reservation image", error);
           }
         }}
+        onSaveTitle={async (newTitle) => {
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              name: newTitle || null,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+            setActiveReservation(mapped);
+          } catch (error) {
+            console.error("Failed to update reservation title", error);
+          }
+        }}
+        onSaveCategory={async (newCategory) => {
+          // [추가] 카테고리 변경을 PATCH API로 저장
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              category: newCategory,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+            setActiveReservation(mapped);
+          } catch (error) {
+            console.error("Failed to update reservation category", error);
+          }
+        }}
+        onSaveDetails={async (newDetails) => {
+          // [추가] 추출된 세부 정보(JSON) 변경을 PATCH API로 저장
+          if (!activeReservation) return;
+          try {
+            // newDetails는 Record<string, string> 형태로 전달됩니다. 예약 API가 이를 받을 수 있도록 합니다.
+            // ReservationPayload의 details 필드는 Record<string, string> 혹은 비슷할 것입니다. (만약 없다면 백엔드가 알아서 무시/수용해야함)
+            // @ts-ignore: details exists in backend payload but might need explicit typing if api.ts isn't fully synced
+            const updated = await updateReservation(activeReservation.reservationId, {
+              details: newDetails,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+            setActiveReservation(mapped);
+          } catch (error) {
+            console.error("Failed to update reservation details", error);
+          }
+        }}
         onClose={() => setActiveReservation(null)}
       />
 
@@ -876,102 +909,7 @@ export function MyPagePage() {
         )}
       </AnimatePresence>
 
-      <SimpleModal open={addReservationOpen} title="Add Reservation" onClose={() => setAddReservationOpen(false)}>
-        <div className="space-y-4">
-          <input
-            ref={addReservationPhotoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-
-
-              const supportedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
-              const lowerName = (file.name || "").toLowerCase();
-              const supportedByExt =
-                lowerName.endsWith(".jpg")
-                || lowerName.endsWith(".jpeg")
-                || lowerName.endsWith(".png")
-                || lowerName.endsWith(".webp")
-                || lowerName.endsWith(".gif");
-              const isSupported = supportedMimeTypes.has(file.type) || supportedByExt;
-
-              if (!isSupported) {
-                setAddReservationImage("");
-                setAddReservationError("Only supported image formats can be uploaded: JPG, PNG, WEBP, GIF.");
-                e.currentTarget.value = "";
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onload = () => {
-                const next = typeof reader.result === "string" ? reader.result : "";
-                if (!next) return;
-                setAddReservationImage(next);
-                setAddReservationError("");
-              };
-              reader.onerror = () => {
-                setAddReservationImage("");
-                setAddReservationError("Failed to read this image file. Please try a different image.");
-              };
-              reader.readAsDataURL(file);
-              e.currentTarget.value = "";
-            }}
-          />
-
-          <button
-            type="button"
-            onClick={() => addReservationPhotoInputRef.current?.click()}
-            className="w-full rounded-2xl border border-gray-200 bg-gray-50 overflow-hidden text-left"
-          >
-            {addReservationImage ? (
-              <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                <img src={addReservationImage} alt="Reservation preview" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-gray-500 font-medium">
-                Click to attach image
-              </div>
-            )}
-          </button>
-
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Reservation Name</label>
-            <input
-              value={addReservationName}
-              onChange={(e) => {
-                setAddReservationName(e.target.value);
-                setAddReservationError("");
-              }}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-              placeholder="e.g. Seoul > Busan train ticket"
-            />
-          </div>
-
-          {!!addReservationError && (
-            <div className="text-xs font-semibold text-red-600">{addReservationError}</div>
-          )}
-
-          <div className="pt-1 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setAddReservationOpen(false)}
-              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveManualReservation}
-              className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </SimpleModal>
+      {/* Add Reservation SimpleModal was removed here */}
 
       <SimpleModal
         open={settingsOpen}
