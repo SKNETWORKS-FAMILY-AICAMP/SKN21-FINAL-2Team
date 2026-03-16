@@ -46,26 +46,25 @@ from app.scripts.preprocess_data import (
 )
 
 BATCH_SIZE = 32
-CATEGORIES = ["관광지", "음식점"]
 
 
 def make_point_id(contentid: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"visitkorea:{contentid}"))
 
 
-def upload_category(client, text_model, vision_model, category: str):
-    path = PRE_DIR / f"visitkorea_{category}.json"
+def upload_file(client, text_model, vision_model, path: Path):
     if not path.exists():
         print(f"  [SKIP] {path.name} 없음")
         return 0, 0, 0
 
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
-    print(f"\n  {category}: {len(data)}건 로드")
+    print(f"\n  {path.stem}: {len(data)}건 로드")
 
     places_success = 0
     photos_success = 0
     errors = 0
+    failed_images = []
 
     for i in range(0, len(data), BATCH_SIZE):
         batch = data[i:i + BATCH_SIZE]
@@ -102,6 +101,8 @@ def upload_category(client, text_model, vision_model, category: str):
                 image_url = payload.get("image")
                 if image_url:
                     img = download_image(image_url)
+                    if img is None:
+                        failed_images.append({"title": payload.get("title"), "contentid": payload.get("contentid"), "image": image_url})
                     if img is not None:
                         img_vec = vision_model.encode(img).astype(np.float32)
                         photo_points.append(PointStruct(
@@ -126,7 +127,11 @@ def upload_category(client, text_model, vision_model, category: str):
         if (i // BATCH_SIZE + 1) % 5 == 0 or i == 0 or done == len(data):
             print(f"    진행: {done}/{len(data)} (places={places_success}, photos={photos_success})")
 
-    print(f"  {category} 완료: places {places_success} / photos {photos_success} / 실패 {errors}")
+    print(f"  {path.stem} 완료: places {places_success} / photos {photos_success} / 실패 {errors}")
+    if failed_images:
+        print(f"  이미지 실패 {len(failed_images)}건:")
+        for fi in failed_images:
+            print(f"    - {fi['title']} (id={fi['contentid']}): {fi['image']}")
     return places_success, photos_success, errors
 
 
@@ -169,13 +174,12 @@ def recreate_collections(client: QdrantClient):
 
 
 def main():
-    host = "localhost"
+    host = os.getenv("QDRANT_HOST", "localhost")
     port = int(os.getenv("QDRANT_PORT", "6333"))
     client = QdrantClient(host=host, port=port, timeout=600)
 
-    # 컬렉션 재생성 (visitkorea만 넣을 것이므로)
-    print("컬렉션 재생성...")
-    recreate_collections(client)
+    # 기존 컬렉션 유지 (upsert)
+    print("기존 컬렉션 유지 (upsert 모드)")
 
     print(f"\n텍스트 모델 로드: {TEXT_MODEL} ({DEVICE})")
     text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
@@ -187,8 +191,12 @@ def main():
     total_photos = 0
     total_errors = 0
 
-    for cat in CATEGORIES:
-        p, ph, e = upload_category(client, text_model, vision_model, cat)
+    # preprocessed 디렉토리의 visitkorea *_template.json 업로드
+    template_files = sorted(PRE_DIR.glob("visitkorea_*_template.json"))
+    print(f"\n업로드 대상: {[f.name for f in template_files]}")
+
+    for template_path in template_files:
+        p, ph, e = upload_file(client, text_model, vision_model, template_path)
         total_places += p
         total_photos += ph
         total_errors += e
@@ -209,6 +217,6 @@ def main():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("visitkorea Qdrant 업로드 (기존 컬렉션에 upsert)")
+    print("template 데이터 Qdrant 업로드")
     print("=" * 50)
     main()
