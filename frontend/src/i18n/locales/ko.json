@@ -242,6 +242,14 @@
   "incomplete.later": "다음에 할게요",
   "incomplete.switchAccount": "다른 구글 계정으로 로그인하기",
 
+  "explore.choicesSubtitle": "{name}님을 위한 맞춤 여행지",
+  "explore.choicesSubtitleDefault": "당신의 취향에 맞춘 추천 여행지",
+  "explore.trendingNeighborhoods": "인기 지역",
+  "explore.eventsExhibitions": "이벤트 & 전시",
+  "explore.noPopupStores": "팝업스토어 정보가 없습니다",
+  "explore.noImg": "No img",
+  "explore.ongoing": "진행 중",
+
   "banner.switchPrompt": "다른 언어로 설정할까요?",
   "banner.switch": "설정",
 

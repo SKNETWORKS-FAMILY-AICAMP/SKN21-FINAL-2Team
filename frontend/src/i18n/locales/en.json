@@ -242,6 +242,14 @@
   "incomplete.later": "Later",
   "incomplete.switchAccount": "Sign in with a different account",
 
+  "explore.choicesSubtitle": "Curated recommendations for {name}",
+  "explore.choicesSubtitleDefault": "Curated recommendations based on your preferences",
+  "explore.trendingNeighborhoods": "Trending neighborhoods",
+  "explore.eventsExhibitions": "Events & Exhibitions",
+  "explore.noPopupStores": "No popup store information available",
+  "explore.noImg": "No img",
+  "explore.ongoing": "Ongoing",
+
   "banner.switchPrompt": "Switch to another language?",
   "banner.switch": "Settings",
 
