@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from app.database.connection import db_manager
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/reservations", tags=["reservations"])
 @router.post("/ocr")
 async def ocr_reservation_image(
     file: UploadFile = File(...),
+    category: str = Form(None),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -31,7 +32,7 @@ async def ocr_reservation_image(
         raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "이미지 파일만 업로드 가능합니다.", 400)
 
     image_bytes = await file.read()
-    result = await extract_datetime_from_image(image_bytes)
+    result = await extract_datetime_from_image(image_bytes, category)
     return result
 
 

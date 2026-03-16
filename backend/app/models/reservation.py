@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.models.orm import BaseModel
 
@@ -12,5 +12,6 @@ class Reservation(BaseModel):
     name = Column(String(255), nullable=True)
     date = Column(Date, nullable=True)
     image_path = Column(String(255), nullable=True)
+    details = Column(JSON, nullable=True)
 
     user = relationship("User", back_populates="reservations")

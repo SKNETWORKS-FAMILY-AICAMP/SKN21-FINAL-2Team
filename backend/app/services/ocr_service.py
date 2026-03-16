@@ -4,12 +4,14 @@ OCR 서비스 — Google Cloud Vision API (REST 방식, API Key 인증)
 날짜(필수)와 시간(선택)을 이미지에서 추출합니다.
 """
 
+import json
 import os
 import re
 import base64
 import httpx
 from datetime import datetime
 from typing import Optional
+from app.core.llm_factory import LLMFactory
 
 
 # 지원하는 날짜 패턴 목록 (다양한 국가/포맷 티켓 대응)
@@ -122,7 +124,7 @@ def _parse_time(text: str) -> Optional[str]:
     return None
 
 
-async def extract_datetime_from_image(image_bytes: bytes) -> dict:
+async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str] = None) -> dict:
     """
     Google Cloud Vision API(REST)로 이미지 텍스트 추출 후
     날짜(필수)·시간(선택) 파싱하여 반환.
@@ -132,6 +134,7 @@ async def extract_datetime_from_image(image_bytes: bytes) -> dict:
             "date": "2024-12-25" | None,
             "time": "14:30" | None,
             "raw_text": "...(OCR 전체 텍스트)...",
+            "details": {...} | None,
             "error": None | "에러 메시지"
         }
     """
@@ -176,9 +179,56 @@ async def extract_datetime_from_image(image_bytes: bytes) -> dict:
     date_str = _parse_date(raw_text)
     time_str = _parse_time(raw_text)
 
+    details = None
+    if category and raw_text:
+        llm = LLMFactory.get_llm(temperature=0)
+        
+        # Category-specific prompt mapping
+        category_prompts = {
+            "transportation": "교통 티켓입니다. '날짜', '목적지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'을 추출해주세요.",
+            "hotel": "호텔 예약증입니다. '날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'을 추출해주세요.",
+            "activity": "공연/활동 티켓입니다. '날짜', '이름', '시간', '장소', '좌석'을 추출해주세요.",
+            "restaurant": "식당 예약증입니다. '날짜', '식당이름', '예약시간', '예약자명'을 추출해주세요.",
+            "etc": "기타 예약증/영수증입니다. '예약내역', '시간', '예약자명'을 추출해주세요.",
+        }
+        
+        prompt_instruction = category_prompts.get(category, category_prompts["etc"])
+        
+        system_prompt = (
+            f"당신은 OCR 텍스트에서 예약 정보를 추출하는 어시스턴트입니다.\n"
+            f"다음 텍스트에서 {prompt_instruction}\n"
+            f"추출 규칙:\n"
+            f"1. 날짜와 관련된 모든 항목(날짜, 체크인 날짜 등)은 반드시 'YYYY-MM-DD' 형식(예: 2026-03-25)으로 통일해서 반환하세요.\n"
+            f"2. 시간과 관련된 모든 항목(시간, 출발시간 등)은 반드시 '24시간 표기법 HH:MM' 패턴(예: 16:30)으로 통일해서 반환하세요.\n"
+            f"3. 결괏값의 Key는 위에서 요청한 한글 명칭을 그대로 사용하세요.\n"
+            f"4. 결과는 반드시 JSON 형식으로만 반환하세요. JSON 외의 설명 텍스트는 포함하지 마세요.\n"
+            f"5. 찾을 수 없는 항목은 빈 문자열로 두세요."
+        )
+        
+        try:
+            # invoke LLM
+            response = await llm.ainvoke([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": raw_text}
+            ])
+            response_content = response.content.strip()
+            # Clean up potential markdown formatting block
+            if response_content.startswith("```json"):
+                response_content = response_content[7:]
+            if response_content.startswith("```"):
+                response_content = response_content[3:]
+            if response_content.endswith("```"):
+                response_content = response_content[:-3]
+                
+            details = json.loads(response_content.strip())
+        except Exception as e:
+            print(f"LLM details extraction failed: {e}")
+            details = None
+
     return {
         "date": date_str,
         "time": time_str,
         "raw_text": raw_text,
+        "details": details,
         "error": None if date_str else "날짜를 찾지 못했습니다.",
     }
