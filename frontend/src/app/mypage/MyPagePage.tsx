@@ -738,9 +738,9 @@ export function MyPagePage() {
                   <button
                     type="button"
                     onClick={handleAddReservation}
-                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
+                    className="text-xl font-medium text-gray-700 hover:opacity-70 leading-none"
                   >
-                    Add
+                    +
                   </button>
                 </div>
 
