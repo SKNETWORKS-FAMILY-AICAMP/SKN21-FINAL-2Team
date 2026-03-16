@@ -24,7 +24,7 @@ VK_ONLY_DIR = DATA_DIR / "add(image,info)" / "visitkorea_only"
 OUT_DIR = DATA_DIR / "preprocessed"
 OUT_DIR.mkdir(exist_ok=True)
 
-CATEGORIES = ["관광지", "음식점"]
+CATEGORIES = ["관광지", "음식점", "숙박"]
 
 
 # ── 텍스트 정규화 (preprocess_visitseoul.py 동일) ──────────
@@ -206,9 +206,60 @@ def flatten_intro_음식점(item: dict) -> dict:
     return item
 
 
+def flatten_intro_숙박(item: dict) -> dict:
+    """숙박: detail_intro에서 필요한 필드 추출 → 최상위 병합"""
+    di = item.pop("detail_intro", None) or {}
+
+    # tel 보완
+    if not item.get("tel") and di.get("infocenterlodging"):
+        item["tel"] = di["infocenterlodging"]
+
+    # checkin/checkout
+    if di.get("checkintime"):
+        item["checkintime"] = di["checkintime"]
+    if di.get("checkouttime"):
+        item["checkouttime"] = di["checkouttime"]
+
+    # usetime 보완 (checkin~checkout)
+    if not item.get("usetime"):
+        ci = di.get("checkintime", "")
+        co = di.get("checkouttime", "")
+        if ci and co:
+            item["usetime"] = f"체크인 {ci} / 체크아웃 {co}"
+
+    # parking
+    if di.get("parkinglodging"):
+        item["parking"] = di["parkinglodging"]
+
+    # fee 보완 (subfacility, foodplace 등 부대시설)
+    subfacility = di.get("subfacility", "")
+    foodplace = di.get("foodplace", "")
+    facilities = [s for s in [subfacility, foodplace] if s]
+    if facilities:
+        item["subfacility"] = ", ".join(facilities)
+
+    # room_type: category_depth 3번째 레벨
+    if not item.get("room_type"):
+        cd = item.get("category_depth", "") or ""
+        parts = [p.strip() for p in cd.split(">")]
+        if len(parts) >= 3 and parts[2].strip():
+            item["room_type"] = parts[2].strip()
+
+    # reservation
+    if di.get("reservationlodging"):
+        item["reservation"] = di["reservationlodging"]
+
+    # accomcount
+    if di.get("accomcountlodging"):
+        item["accomcount"] = di["accomcountlodging"]
+
+    return item
+
+
 FLATTEN_FN = {
     "관광지": flatten_intro_관광지,
     "음식점": flatten_intro_음식점,
+    "숙박": flatten_intro_숙박,
 }
 
 
@@ -229,7 +280,9 @@ def transform(item: dict) -> dict:
             result[key] = val
         elif key in ("usetime", "restdate", "fee", "addr", "tel",
                       "subway_info", "website", "title",
-                      "parking", "packing", "firstmenu", "restaurant_type"):
+                      "parking", "packing", "firstmenu", "restaurant_type",
+                      "checkintime", "checkouttime", "subfacility",
+                      "room_type", "reservation", "accomcount"):
             result[key] = normalize(val) if val else None
         elif key == "tags":
             # 기존 tags는 비어있으므로 무시 (새로 생성)
@@ -417,9 +470,40 @@ def build_llm_text_음식점(item: dict) -> str:
     return "\n".join(lines)
 
 
+def build_llm_text_숙박(item: dict) -> str:
+    lines = []
+    if v := item.get("title"):
+        lines.append(f"- 장소명: {v}")
+    if v := item.get("addr"):
+        lines.append(f"- 주소: {v}")
+    if v := item.get("category_depth"):
+        lines.append(f"- 카테고리: {v}")
+    if tags := item.get("tags"):
+        lines.append(f"- 주요 키워드: {', '.join(tags)}")
+    if v := item.get("room_type"):
+        lines.append(f"- 객실유형: {v}")
+    if v := item.get("usetime"):
+        lines.append(f"- 체크인/아웃: {v}")
+    if v := item.get("fee"):
+        lines.append(f"- 요금: {v}")
+    if v := item.get("parking"):
+        lines.append(f"- 주차: {v}")
+    if v := item.get("subfacility"):
+        lines.append(f"- 부대시설: {v}")
+    if v := item.get("accomcount"):
+        lines.append(f"- 수용인원: {v}")
+    if v := item.get("reservation"):
+        lines.append(f"- 예약: {v}")
+    intro = item.get("description") or item.get("summary") or ""
+    if intro:
+        lines.append(f"- 소개: {intro[:300]}")
+    return "\n".join(lines)
+
+
 LLM_TEXT_FN = {
     "관광지": build_llm_text_관광지,
     "음식점": build_llm_text_음식점,
+    "숙박": build_llm_text_숙박,
 }
 
 
@@ -429,7 +513,7 @@ def load_intro_map(cat_name: str) -> dict:
     intro_file = VK_ONLY_DIR / f"visitkorea_only_{cat_name}_intro_raw.jsonl"
     intro_map = {}
     if intro_file.exists():
-        with open(intro_file, encoding="utf-8") as f:
+        with open(intro_file, encoding="utf-8", errors="replace") as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -444,12 +528,8 @@ def load_intro_map(cat_name: str) -> dict:
 
 # ── 메인 처리 ─────────────────────────────────────────────
 def process(category: str, vs_titles: list[str], cat_map: dict):
-    # 관광지: enriched 전체 사용 (detail_intro 없는 것도 포함)
-    # 음식점: visitkorea 폴더 (detail_intro 있는 것만)
-    if category == "관광지":
-        in_path = VK_ONLY_DIR / f"visitkorea_only_{category}_enriched.json"
-    else:
-        in_path = VK_DIR / f"visitkorea_{category}.json"
+    # 모든 카테고리: enriched 전체 사용 + intro_raw 병합
+    in_path = VK_ONLY_DIR / f"visitkorea_only_{category}_enriched.json"
     out_path = OUT_DIR / f"visitkorea_{category}.json"
 
     if not in_path.exists():
@@ -459,14 +539,13 @@ def process(category: str, vs_titles: list[str], cat_map: dict):
     with open(in_path, encoding="utf-8") as f:
         data = json.load(f)
 
-    # 관광지: intro_raw에서 detail_intro 병합
-    if category == "관광지":
-        intro_map = load_intro_map(category)
-        for item in data:
-            cid = str(item.get("contentid", ""))
-            if cid in intro_map and "detail_intro" not in item:
-                item["detail_intro"] = intro_map[cid]
-        print(f"  detail_intro 병합: {len(intro_map)}건")
+    # intro_raw에서 detail_intro 병합
+    intro_map = load_intro_map(category)
+    for item in data:
+        cid = str(item.get("contentid", ""))
+        if cid in intro_map and "detail_intro" not in item:
+            item["detail_intro"] = intro_map[cid]
+    print(f"  detail_intro 병합: {len(intro_map)}건")
 
     # contentid 중복 제거 (같은 contentid가 2건 이상이면 첫 번째만 유지)
     seen_cids = set()
@@ -509,10 +588,14 @@ def process(category: str, vs_titles: list[str], cat_map: dict):
         # 5. llm_text 생성
         cleaned["llm_text"] = llm_fn(cleaned)
 
-        # 6. firstmenu, packing은 llm_text에만 쓰고 최종 스키마에서 제거 (음식점)
-        # → packing은 제거, firstmenu는 제거
+        # 6. llm_text에만 쓰고 최종 스키마에서 제거할 필드
         cleaned.pop("packing", None)
         cleaned.pop("firstmenu", None)
+        cleaned.pop("checkintime", None)
+        cleaned.pop("checkouttime", None)
+        cleaned.pop("subfacility", None)
+        cleaned.pop("reservation", None)
+        cleaned.pop("accomcount", None)
 
         results.append(cleaned)
 
