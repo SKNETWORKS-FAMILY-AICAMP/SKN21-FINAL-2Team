@@ -13,7 +13,9 @@ class TravelState(TypedDict, total=False):
 
     input_lat: float | None
     input_lon: float | None
-    input_image: str | None
+    input_address: str | None  # 사용자 현재 위치
+    input_image: str | None    # 사용자 입력 이미지
+    semantic_input_image: str | None  # intent_node에서 describe_image로 분석한 이미지 설명
 
     # 대화 관리
     user_input: str

@@ -618,6 +618,12 @@ def _build_streaming_response(
                                     # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
                                     yield _encode_sse({"room_title": room.title})
 
+                # 이미지 분석 진행 상태 (intent_node 내부에서 dispatch)
+                elif kind == "on_custom_event" and event_name == "image_analysis":
+                    status = (event.get("data") or {}).get("status")
+                    if status in ("start", "done"):
+                        yield _encode_sse({"step": "image_analysis", "status": status})
+
                 # LLM 토큰 스트리밍 — metadata의 langgraph_node로 executor 여부 직접 판별
                 elif kind in ("on_chat_model_stream", "on_llm_stream") and node_name in _EXECUTOR_NODES:
                     chunk = event.get("data", {}).get("chunk")
