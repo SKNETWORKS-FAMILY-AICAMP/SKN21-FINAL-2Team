@@ -17,7 +17,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
-from app.utils.common import _normalize_text
+from app.utils.common import normalize_text
 
 import numpy as np
 
@@ -235,9 +235,9 @@ def _candidate_to_text(candidate: dict[str, Any]) -> str:
 def _find_gold_rank(gold_title: str, retrieved_titles: list[str], top_k: int) -> int:
     if not gold_title:
         return 0
-    g = _normalize_text(gold_title)
+    g = normalize_text(gold_title)
     for idx, title in enumerate(retrieved_titles[:top_k], start=1):
-        t = _normalize_text(title)
+        t = normalize_text(title)
         if t and (t in g or g in t):
             return idx
     return 0

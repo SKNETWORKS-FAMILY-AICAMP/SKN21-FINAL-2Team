@@ -7,7 +7,10 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 const PIPELINE_STEPS = [
     { key: "intent", label: "의도 분석" },
     { key: "planner", label: "여행 계획 수립" },
+    { key: "geocoder", label: "위치 좌표 확인" },
     { key: "retriever", label: "장소 검색" },
+    { key: "retriever_retry", label: "반경 확대 후 장소 검색" },
+    { key: "web_search", label: "웹 검색" },
     { key: "executor", label: "답변 생성" },
     { key: "executor_missing", label: "추가 정보 확인" },
     { key: "executor_general", label: "일반 답변 생성" },
@@ -88,7 +91,10 @@ export function createInitialPipelineSteps(): PipelineSteps {
     return {
         intent: "running",
         planner: "pending",
+        geocoder: "pending",
         retriever: "pending",
+        retriever_retry: "pending",
+        web_search: "pending",
         executor: "pending",
         executor_missing: "pending",
         executor_general: "pending",

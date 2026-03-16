@@ -38,15 +38,15 @@ export const getPostLoginPath = (user: UserProfile): string => {
     if (!user) return "/"; // Safety fallback
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    
+
     // [Feature] Plan Trip 버튼을 통한 로그인/가입 시에만 챗봇으로 직행
     const isPlanTripFlow = typeof window !== "undefined" && localStorage.getItem("planTripFlow") === "true";
     const hasPendingDestination = typeof window !== "undefined" && localStorage.getItem("pendingDestination");
-    
+
     if (isPlanTripFlow && hasPendingDestination) {
         return "/chatbot?fromDestination=1";
     }
-    
+
     // [Feature] 일반 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
     return "/explore";
 };
@@ -291,16 +291,16 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     return res;
 };
 
-const parseLocationToCoords = (location?: string | null): { latitude: number; longitude: number } => {
-    if (!location) return { latitude: 0, longitude: 0 };
+const parseLocationToCoords = (location?: string | null): { latitude: number | null; longitude: number | null } => {
+    if (!location) return { latitude: null, longitude: null };
     const parts = location.split(',');
-    if (parts.length < 2) return { latitude: 0, longitude: 0 };
+    if (parts.length < 2) return { latitude: null, longitude: null };
 
     const parsedLat = parseFloat(parts[0].trim());
     const parsedLng = parseFloat(parts[1].trim());
     return {
-        latitude: Number.isFinite(parsedLat) ? parsedLat : 0,
-        longitude: Number.isFinite(parsedLng) ? parsedLng : 0,
+        latitude: Number.isFinite(parsedLat) ? parsedLat : null,
+        longitude: Number.isFinite(parsedLng) ? parsedLng : null,
     };
 };
 

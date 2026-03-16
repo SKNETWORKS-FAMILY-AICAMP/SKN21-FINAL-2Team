@@ -1,42 +1,46 @@
 from langgraph.graph import StateGraph, END
 from app.agents.models.state import TravelState
-from app.agents.grapy_route import route_by_intent, route_by_missing
+from app.agents.grapy_route import route_by_intent, route_by_missing, route_after_retriever
 
 # Import Agent Nodes
 from app.agents.intent import intent_node
 from app.agents.planner import planner_node
+from app.agents.geocoder_node import geocoder_node
 from app.agents.retriever import retriever_node
+from app.agents.web_search_node import web_search_node
 from app.agents.executor import executor_node, executor_missing_node, executor_general_node
 
 
 def workflow():
     # Initialize Graph
     graph = StateGraph(TravelState)
-    
+
     # Add Nodes
     graph.add_node("intent", intent_node)
     graph.add_node("planner", planner_node)
+    graph.add_node("geocoder", geocoder_node)
     graph.add_node("retriever", retriever_node)
+    graph.add_node("web_search", web_search_node)
     graph.add_node("executor", executor_node)
     graph.add_node("executor_missing", executor_missing_node)
     graph.add_node("executor_general", executor_general_node)
-    
-    # Define Edges (Linear Flow)
-    # planner -> context -> retriever -> budget -> executor -> END
+
+    # Define Edges
+    # intent → (geocoder | planner | executor_general)
+    # planner → (geocoder | executor_missing)
+    # geocoder → retriever
+    # retriever → (executor | retriever[retry] | web_search)
+    # web_search → executor
     graph.set_entry_point("intent")
-    graph.add_conditional_edges(
-        "intent",
-        route_by_intent,
-    )
-    graph.add_conditional_edges(
-        "planner",
-        route_by_missing,
-    )
-    graph.add_edge("retriever", "executor")
+    graph.add_conditional_edges("intent", route_by_intent)
+    graph.add_conditional_edges("planner", route_by_missing)
+    graph.add_edge("geocoder", "retriever")
+    graph.add_conditional_edges("retriever", route_after_retriever)
+    graph.add_edge("web_search", "executor")
     graph.add_edge("executor", END)
     graph.add_edge("executor_missing", END)
     graph.add_edge("executor_general", END)
-    
+
     return graph
 
 

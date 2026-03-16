@@ -31,15 +31,15 @@ async def lifespan(app: FastAPI):
     print("[INFO] Starting up: Loading models...")
     try:
         # CLIP 모델 로드 (PlaceRetriever 초기화)
-        PlaceRetriever.get_instance()
+        retriever = PlaceRetriever.get_instance()
+        retriever._ensure_reranker()  # CrossEncoder 워밍업 (첫 요청 지연 방지)
         
         # LLM 및 Tavily 인스턴스 초기화
         # 노드별 설정(temperature)에 맞춰 자주 쓰는 조합을 미리 워밍업
-        LLMFactory.get_llm(temperature=0.0)  # intent/summarizer
+        LLMFactory.get_llm(temperature=0.0)  # intent/summarizer/tavily_search
         LLMFactory.get_llm(temperature=0.3)  # planner/missing
         LLMFactory.get_llm(temperature=0.5)  # executor
         LLMFactory.get_llm(temperature=0.7)  # executor
-        LLMFactory.get_tavily()
         
         print("[INFO] All models loaded successfully.")
     except Exception as e:

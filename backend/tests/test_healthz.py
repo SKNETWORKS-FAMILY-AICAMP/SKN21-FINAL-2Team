@@ -8,7 +8,6 @@ from app.main import app
 def test_healthz_returns_ok(monkeypatch):
     monkeypatch.setattr(PlaceRetriever, "get_instance", classmethod(lambda cls: None))
     monkeypatch.setattr(LLMFactory, "get_llm", classmethod(lambda cls, temperature=0.0: None))
-    monkeypatch.setattr(LLMFactory, "get_tavily", classmethod(lambda cls: None))
 
     with TestClient(app) as client:
         response = client.get("/api/healthz")
