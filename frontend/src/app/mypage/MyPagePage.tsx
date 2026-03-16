@@ -10,7 +10,6 @@ import {
   UtensilsCrossed,
   CheckCircle2,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -664,7 +663,6 @@ export function MyPagePage() {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
-                    <Sparkles size={20} className="text-white" />
                     Today&apos;s Recommendation
                   </div>
                   {todayRecommendations.length > 0 ? (
@@ -732,7 +730,6 @@ export function MyPagePage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Ticket size={20} />
                     Reservation
                   </h3>
                   <button
