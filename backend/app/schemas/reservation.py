@@ -8,6 +8,7 @@ class ReservationBase(BaseModel):
     name: Optional[str] = None
     date: Optional[dt_date] = None
     image_path: Optional[str] = None
+    details: Optional[dict] = None
 
 
 class ReservationCreate(ReservationBase):
@@ -19,6 +20,7 @@ class ReservationUpdate(BaseModel):
     name: Optional[str] = None
     date: Optional[dt_date] = None
     image_path: Optional[str] = None
+    details: Optional[dict] = None
 
 
 class ReservationResponse(ReservationBase):

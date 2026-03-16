@@ -10,7 +10,6 @@ import {
   UtensilsCrossed,
   CheckCircle2,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -45,8 +44,7 @@ import {
   type TodayRecommendationItem,
 } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
-import { useTranslation } from "@/i18n/useTranslation";
-import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { resolveImageUrl } from "@/lib/imageUrl";
 
 function formatKstDate(dateLike?: string | null) {
   if (!dateLike) return "-";
@@ -62,6 +60,10 @@ function formatKstDate(dateLike?: string | null) {
 }
 
 function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
+  const dynamicDetails = item.details 
+    ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
+    : [];
+
   return {
     id: `reservation-${item.id}`,
     reservationId: item.id,
@@ -72,10 +74,7 @@ function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
     reservationImageUrl: item.image_path ?? undefined,
     identifierLabel: "Reservation ID",
     identifierValue: String(item.id),
-    details: [
-      { label: "Category", value: item.category || "-" },
-      { label: "Created At", value: formatKstDate(item.created_at) },
-    ],
+    details: dynamicDetails,
   };
 }
 
@@ -167,9 +166,16 @@ export function MyPagePage() {
         ]);
         if (cancelled) return;
 
-        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3].filter(
-          (x): x is string => typeof x === "string" && x.trim().length > 0,
-        );
+        const extraPreferMigrationMap: Record<string, string> = {
+          "Halal": "할랄",
+          "Kosher": "코셔",
+          "Vegan": "비건",
+          "Wheelchair Accessible": "휠체어 이용 가능",
+          "Pets": "반려동물",
+        };
+        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3]
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .map((x) => extraPreferMigrationMap[x] ?? x);
 
         setUserProfile({
           nickname: user.nickname || user.name || "User",
@@ -236,11 +242,20 @@ export function MyPagePage() {
 
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 
-  const handleAddReservation = () => {
-    setAddReservationName("");
-    setAddReservationImage("");
-    setAddReservationError("");
-    setAddReservationOpen(true);
+  const handleAddReservation = async () => {
+    try {
+      const created = await createReservation({
+        category: "etc",
+        name: "새 예약",
+        date: new Date().toISOString().slice(0, 10),
+        image_path: "",
+      });
+      const mapped = mapReservationRecordToItem(created);
+      setReservations((prev) => [mapped, ...prev]);
+      setActiveReservation(mapped);
+    } catch (error) {
+      console.error("Failed to create new reservation draft", error);
+    }
   };
 
   const handleDeleteReservation = async (id: string) => {
@@ -392,35 +407,7 @@ export function MyPagePage() {
     }
   };
 
-  const handleSaveManualReservation = async () => {
-    const trimmedName = addReservationName.trim();
-    if (!trimmedName) {
-      setAddReservationError(t("mypage.enterReservationName"));
-      return;
-    }
-    if (!addReservationImage) {
-      setAddReservationError(t("mypage.attachReservationImage"));
-      return;
-    }
-
-    try {
-      const resolvedImagePath = addReservationImage.startsWith("data:image/")
-        ? await uploadImageDataUrl(addReservationImage, "reservations")
-        : addReservationImage;
-      const created = await createReservation({
-        category: "transportation",
-        name: trimmedName,
-        date: new Date().toISOString().slice(0, 10),
-        image_path: resolvedImagePath,
-      });
-      const mapped = mapReservationRecordToItem(created);
-      setReservations((prev) => [mapped, ...prev]);
-      setAddReservationOpen(false);
-    } catch (error) {
-      console.error("Failed to create reservation", error);
-      setAddReservationError(t("mypage.reservationSaveFailed"));
-    }
-  };
+  // Removed handleSaveManualReservation as it is bypassed
 
   const toggleDraftExtraPreference = (value: string) => {
     setDraftExtraPreferences((prev) => {
@@ -507,7 +494,7 @@ export function MyPagePage() {
                     <div className="w-14 h-14 sm:w-16 sm:h-16 xl:w-20 xl:h-20 rounded-full overflow-hidden border-4 border-gray-50 shadow-sm flex items-center justify-center bg-gray-200 text-gray-400 flex-none">
                       {userProfile.profile_picture ? (
                         <img
-                          src={userProfile.profile_picture}
+                          src={resolveImageUrl(userProfile.profile_picture)}
                           alt="Profile"
                           className="w-full h-full object-cover grayscale-[20%]"
                         />
@@ -539,7 +526,7 @@ export function MyPagePage() {
                 <div className="space-y-8">
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight">{t("mypage.travelPreferences")}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight font-pretendard">여행 선호도</h3>
                       <div className="flex items-center gap-2">
                         {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
                         {isEditingPreferences && (
@@ -568,7 +555,7 @@ export function MyPagePage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">{t("mypage.travelerSnapshot")}</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">여행 스타일</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -601,7 +588,7 @@ export function MyPagePage() {
                                         ...(item.key === "places" ? { placesPrefer: opt } : {}),
                                       }));
                                     }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${(item.key === "plan" && draftInsight.planPrefer === opt)
+                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
                                       || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                                       || (item.key === "places" && draftInsight.placesPrefer === opt)
                                       ? "bg-black text-white border-black"
@@ -621,7 +608,7 @@ export function MyPagePage() {
 
                   {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-[0.14em] mb-4">{t("mypage.additionalPreference")}</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">추가 특이사항</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS
@@ -660,8 +647,7 @@ export function MyPagePage() {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
-                    <Sparkles size={20} className="text-white" />
-                    {t("mypage.todayRecommendation")}
+                    오늘의 추천 상품
                   </div>
                   {todayRecommendations.length > 0 ? (
                     <>
@@ -698,13 +684,13 @@ export function MyPagePage() {
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4">
                       <h2 className="text-lg font-semibold mb-1 tracking-tight leading-tight">
-                        {t("mypage.noRecommendation")}
+                        아직 추천 항목이 없습니다
                       </h2>
                       <p className="text-white/80 text-[13px] leading-relaxed">
-                        {t("mypage.noRecommendationDesc")}
+                        먼저 채팅을 시작해보세요. 저장된 대화 요약을 바탕으로 새로운 주제를 추천해드립니다.
                       </p>
                       <p className="text-white/50 text-[10px] mt-2">
-                        {t("mypage.noRecommendationHint")}
+                        채팅 기록 요약이 저장되면 추천 항목이 표시됩니다.
                       </p>
                     </div>
                   )}
@@ -728,15 +714,14 @@ export function MyPagePage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Ticket size={20} />
-                    {t("mypage.reservation")}
+                    예약내역
                   </h3>
                   <button
                     type="button"
                     onClick={handleAddReservation}
-                    className="text-[11px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
+                    className="text-xl font-medium text-gray-700 hover:opacity-70 leading-none"
                   >
-                    {t("mypage.add")}
+                    +
                   </button>
                 </div>
 
@@ -814,12 +799,59 @@ export function MyPagePage() {
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-            setActiveReservation(mapped);
           } catch (error) {
-            console.error("Failed to update reservation image", error);
+            console.error("Failed to update photo", error);
           }
         }}
-        onClose={() => setActiveReservation(null)}
+        onSaveTitle={async (newTitle) => {
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              name: newTitle.trim(),
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+          } catch (error) {
+            console.error("Failed to update title", error);
+          }
+        }}
+        onSaveCategory={async (newCategory) => {
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              category: newCategory,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+          } catch (error) {
+            console.error("Failed to update category", error);
+          }
+        }}
+        onSaveDetails={async (newDetails) => {
+          if (!activeReservation) return;
+          try {
+            const updated = await updateReservation(activeReservation.reservationId, {
+              details: newDetails,
+            });
+            const mapped = mapReservationRecordToItem(updated);
+            setReservations((prev) => prev.map((item) => (
+              item.reservationId === mapped.reservationId ? mapped : item
+            )));
+          } catch (error) {
+            console.error("Failed to update details", error);
+          }
+        }}
+        onClose={(wasSaved, isNewDraft) => {
+          if (!wasSaved && isNewDraft && activeReservation) {
+            void handleDeleteReservation(activeReservation.id);
+          } else {
+            setActiveReservation(null);
+          }
+        }}
       />
 
       <AnimatePresence>
@@ -875,102 +907,7 @@ export function MyPagePage() {
         )}
       </AnimatePresence>
 
-      <SimpleModal open={addReservationOpen} title={t("mypage.addReservation")} onClose={() => setAddReservationOpen(false)}>
-        <div className="space-y-4">
-          <input
-            ref={addReservationPhotoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-
-
-              const supportedMimeTypes = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]);
-              const lowerName = (file.name || "").toLowerCase();
-              const supportedByExt =
-                lowerName.endsWith(".jpg")
-                || lowerName.endsWith(".jpeg")
-                || lowerName.endsWith(".png")
-                || lowerName.endsWith(".webp")
-                || lowerName.endsWith(".gif");
-              const isSupported = supportedMimeTypes.has(file.type) || supportedByExt;
-
-              if (!isSupported) {
-                setAddReservationImage("");
-                setAddReservationError(t("mypage.imageFormatError"));
-                e.currentTarget.value = "";
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onload = () => {
-                const next = typeof reader.result === "string" ? reader.result : "";
-                if (!next) return;
-                setAddReservationImage(next);
-                setAddReservationError("");
-              };
-              reader.onerror = () => {
-                setAddReservationImage("");
-                setAddReservationError(t("mypage.imageReadError"));
-              };
-              reader.readAsDataURL(file);
-              e.currentTarget.value = "";
-            }}
-          />
-
-          <button
-            type="button"
-            onClick={() => addReservationPhotoInputRef.current?.click()}
-            className="w-full rounded-2xl border border-gray-200 bg-gray-50 overflow-hidden text-left"
-          >
-            {addReservationImage ? (
-              <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                <img src={addReservationImage} alt="Reservation preview" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-gray-500 font-medium">
-                {t("mypage.clickToAttachImage")}
-              </div>
-            )}
-          </button>
-
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.reservationName")}</label>
-            <input
-              value={addReservationName}
-              onChange={(e) => {
-                setAddReservationName(e.target.value);
-                setAddReservationError("");
-              }}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-              placeholder={t("mypage.reservationNamePlaceholder")}
-            />
-          </div>
-
-          {!!addReservationError && (
-            <div className="text-xs font-semibold text-red-600">{addReservationError}</div>
-          )}
-
-          <div className="pt-1 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setAddReservationOpen(false)}
-              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveManualReservation}
-              className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
-            >
-              {t("common.save")}
-            </button>
-          </div>
-        </div>
-      </SimpleModal>
+      {/* Add Reservation SimpleModal was removed here */}
 
       <SimpleModal
         open={settingsOpen}

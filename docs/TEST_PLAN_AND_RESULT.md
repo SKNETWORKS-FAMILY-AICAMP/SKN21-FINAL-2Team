@@ -1,171 +1,82 @@
 # 테스트 계획 및 결과 보고서
 
-## 목차
-1. [테스트 개요 및 목적](#1-테스트-개요-및-목적)
-2. [테스트 시나리오 및 방법](#2-테스트-시나리오-및-방법)
-   - 2.1 RAG 테스트 시나리오
-   - 2.2 테스트 처리 흐름
-3. [테스트 환경](#3-테스트-환경)
-4. [RAG 성능 최적화 트래킹](#4-rag-성능-최적화-트래킹)
-   - 4.1 단계별 최적화 적용 내역
-5. [RAG 파이프라인 모델링 평가 (3-Stage)](#5-rag-파이프라인-모델링-평가-3-stage)
-   - 5.1 Stage 1: 검색(Retrieval) 평가
-   - 5.2 Stage 2: 추천(Recommendation) 평가
-   - 5.3 Stage 3: 생성(Generation) 평가
-6. [종합 평가](#6-종합-평가)
-   - 6.1 성능 평가 결과 요약
-   - 6.2 한계점 및 향후 개선 계획
-   - 6.3 결론
+이 문서는 실제 측정 결과를 기록하는 결과 문서로만 사용한다.  
+평가 단계, 실행 명령, 지표 정의, 결과 파일 구조는 [EVALUATION.md](/Users/kim/SKN21-FINAL-2Team/docs/EVALUATION.md)에만 유지한다.
 
 ---
 
-# 1. 테스트 개요 및 목적
+## 1. 문서 역할
 
-본 테스트는 여행 추천 챗봇의 RAG 파이프라인에서 검색 정확도와 답변 생성의 신뢰성을 검증하기 위해 수행되었다. 초기 모델의 응답 지연 문제를 해결하기 위한 단계별 최적화 과정을 트래킹하고, 3-Stage(검색→추천→생성) 평가를 통해 실사용 가능성을 확증하는 데 목적이 있다.
-
----
-
-# 2. 테스트 시나리오 및 방법
-
-## 2.1 RAG 테스트 시나리오
-실제 여행 추천 상담 상황을 가정한 대표 질의를 선정해 반복 실행하였다.
-질의 유형은 관광지 추천/음식점 추천/축제 정보/여행 코스 계획/레포츠/숙박 등으로 구성하였다.
-
-## 2.2 테스트 처리 흐름 (반복 수행 단계)
-1. LangGraph Intent 노드를 통한 질의 분기 (TRIP_PLANNING / PLACE_INQUIRY / GENERAL)
-2. Qdrant 벡터 검색 + BM25 하이브리드 검색
-3. CrossEncoder(bge-reranker-base) 리랭킹
-4. LLM(gpt-4o-mini)을 통한 여행 추천 답변 생성
-5. End-to-End 응답 시간 측정
-6. 검색 정확도 및 생성 품질 평가 (RAGAS)
-
-※ 성능 측정은 캐시 미적중(cache=miss) 기준을 원칙으로 하되, 캐시 효과 확인을 위해 hit 로그도 별도로 기록하였다.
+- `EVALUATION.md`
+  - 평가 방법, 실행 절차, 지표 정의
+- `TEST_PLAN_AND_RESULT.md`
+  - 실제 실행 일자별 결과 요약과 해석
 
 ---
 
-# 3. 테스트 환경
+## 2. 현재 상태
 
-| 구분 | 버전/상세 |
-|------|----------|
-| OS | macOS |
-| Python | 3.13+ |
-| LLM | OpenAI gpt-4o-mini |
-| Embedding (Text) | BAAI/bge-m3 (1024-dim) |
-| Embedding (Image) | CLIP-ViT-L-14 (768-dim) |
-| Reranker | BAAI/bge-reranker-base (CrossEncoder) |
-| Vector DB | Qdrant (places / photos 컬렉션) |
-| RAG 평가 도구 | RAGAS (gpt-4o-mini + text-embedding-3-small) |
-| 테스트 프레임워크 | pytest, pytest-asyncio |
+현재 문서에는 확정된 측정 결과가 아직 정리되어 있지 않다.  
+향후 결과를 기록할 때는 아래 형식만 채워서 사용한다.
 
----
+### 2026-03-15 비동기 GeoCoder 전환 점검
 
-# 4. RAG 성능 최적화 트래킹
+- 실행 환경:
+  - `uv` 가상환경
+  - FastAPI 백엔드 로컬 테스트
+- 변경 요약:
+  - `GeoCoder`를 `requests` 기반 동기 호출에서 `httpx.AsyncClient` 기반 비동기 호출로 전환
+  - `intent`, `retriever`, `executor`, `diaries API`, `retrieval_place`, `tavily_search`의 geocoder 호출을 `await` 체인으로 정리
+  - 위도/경도 인자 순서 혼동 가능성을 줄이기 위해 `get_address(latitude, longitude)` 시그니처로 통일
+- 실행 명령:
+  - `uv run python -m compileall app/agents app/api app/core app/utils`
+  - `uv run python -m pytest tests/test_intent.py tests/test_geocoder.py tests/test_chat_stream.py -q`
+- 결과 요약:
+  - compileall 통과
+  - pytest `27 passed`
+- 해석:
+  - geocoder 호출로 인해 이벤트 루프를 직접 블로킹하던 경로를 비동기 호출로 교체했다.
+  - 핵심 스트리밍 테스트 기준으로 `intent -> retriever -> executor` 파이프라인 이벤트는 유지된다.
 
-단순 구현에 그치지 않고, 로그 분석을 통한 단계별 최적화를 진행하여 응답 속도를 개선하였다.
+### 2026-03-15 executor 스트리밍 토큰 전파 점검
 
-## 4.1 단계별 최적화 적용 내역
-
-### Step 1. [Baseline] 초기 파이프라인 구성
-- **적용 내용**: RAG 기본 파이프라인 구성 및 전체 필드 생성 지시
-- **문제점**: 입력 컨텍스트 및 출력 토큰 수 과다, 실시간 요구사항에 부적합한 지연 발생
-- **응답 시간**: (측정 필요)
-
-### Step 2. [프롬프트 경량화] 출력 포맷 개선
-- **적용 내용**: LLM이 핵심 요약문 생성에만 집중하도록 프롬프트 구조 축소, `response_format={"type":"json_object"}` 적용
-- **효과**: 출력 구조 오류 감소, 요약 생성 시간 점진적 감소
-- **응답 시간**: (측정 필요) | **개선율**: (측정 필요)
-
-### Step 3. [파라미터 튜닝] LLM 입력 축소
-- **적용 내용**: Retrieval `top_k` 최적화 및 검색 로직 효율화, 문서 길이 제한
-- **효과**: 입력 토큰 수 감소, 생성 시간 단축
-- **응답 시간**: (측정 필요) | **개선율**: (측정 필요)
-
-### Step 4. [구조 최적화] 병목 제거
-- **적용 내용**: 캐시 도입 및 생성 병목 구간 제거
-- **효과**: 캐시 적중 시 LLM 호출 제거, End-to-End 응답 시간 대폭 개선
-- **응답 시간**: (측정 필요) | **최종 개선율**: (측정 필요)
-
-### 최적화 요약
-| 단계 | 적용 내용 | 응답 시간(Total) | 개선 효과 |
-|------|----------|-----------------|----------|
-| Stage 1 | 초기 RAG 파이프라인 (최적화 전) | (측정 필요) | - |
-| Stage 2 | 프롬프트 경량화 및 응답 형식 고정 | (측정 필요) | (측정 필요) |
-| Stage 3 | 파라미터 튜닝 (top_k 조정) | (측정 필요) | (측정 필요) |
-| Stage 4 | 캐시 적용 및 병목 로직 제거 | (측정 필요) | (측정 필요) |
+- 실행 환경:
+  - Docker Compose 백엔드 테스트
+- 변경 요약:
+  - `executor`, `executor_missing`, `executor_general` 노드가 `RunnableConfig`를 받도록 수정
+  - `collect_streamed_text()`에서 `llm.astream(..., config=config)`로 LangGraph 런타임 설정을 하위 LLM 호출까지 전달
+  - custom token event가 그래프 이벤트 트리에 붙도록 `config`를 `adispatch_custom_event()`까지 유지
+- 실행 명령:
+  - `uv run python -m compileall backend/app/agents backend/app/core backend/tests`
+  - `docker compose run --rm backend pytest tests/test_executor_streaming.py tests/test_chat_stream.py -q`
+- 결과 요약:
+  - compileall 통과
+  - pytest `27 passed`
+- 해석:
+  - `executor` 단계 시작 이벤트만 보이고 실제 토큰이 내려오지 않던 원인은 executor 노드에서 LangGraph `config`를 누락한 것이었다.
+  - 수정 후 `executor` 스트리밍 토큰과 기존 SSE 단계 이벤트가 함께 유지된다.
 
 ---
 
-# 5. RAG 파이프라인 모델링 평가 (3-Stage)
+## 3. 결과 기록 템플릿
 
-RAGAS 프레임워크를 포함한 3단계 RAG 파이프라인 평가 결과를 기술한다.
+### 실행 정보
 
-## 5.1 Stage 1: 검색(Retrieval) 평가
+- 실행 일시:
+- 실행 환경:
+- 입력 데이터:
+- 사용 명령:
 
-검색 시스템이 관련 문서를 얼마나 정확하게 찾아오는지 평가한다.
+### 결과 요약
 
-### 검색 정확도 (정답 레이블 기반)
-| 메트릭 | 설명 | 결과 |
-|--------|------|------|
-| Precision@K | 상위 K개 검색 결과 중 관련 문서 비율 (정밀도) | |
-| Recall@K | 전체 관련 문서 중 상위 K개에 포함된 비율 (재현율) | |
-| MRR@K | 첫 번째 관련 문서의 역순위 평균 | |
-| nDCG@K | 정규화된 할인 누적 이득 (순위 품질) | |
-| MAP@K | 평균 정밀도 | |
+| 단계 | 핵심 지표 | 결과 | 비고 |
+|------|-----------|------|------|
+| Retrieval |  |  |  |
+| Recommendation |  |  |  |
+| Generation |  |  |  |
 
-### 유사도 및 보조 메트릭
-| 메트릭 | 설명 | 결과 |
-|--------|------|------|
-| sim@1 | 최상위 문서의 코사인 유사도 | |
-| sim@k_mean | 상위 K개 평균 코사인 유사도 | |
-| query_coverage | 쿼리 토큰이 검색 문서에 커버되는 비율 | |
-| category_consistency@k | 검색 결과 내 카테고리 일관성 | |
-| district_consistency@k | 검색 결과 내 지역 일관성 | |
-| delta_nDCG@K | 리랭킹 적용 전후 nDCG 개선도 | |
-| delta_MRR@K | 리랭킹 적용 전후 MRR 개선도 | |
+### 해석
 
-## 5.2 Stage 2: 추천(Recommendation) 평가
-
-최종 추천된 장소의 정확도와 다양성을 평가한다.
-
-| 메트릭 | 설명 | 결과 |
-|--------|------|------|
-| Precision@N | 추천 장소 중 정답 비율 | |
-| Recall@N | 정답 장소 중 추천된 비율 | |
-| nDCG@N | 추천 순위 품질 | |
-| ILD@N | 추천 목록 내 다양성 (Intra-list Diversity, 0=동일, 1=다양) | |
-| Category Coverage | 카테고리(관광지/음식점 등) 분포 커버리지 | |
-| District Diversity | 지역 분포 다양성 | |
-| Entity Existence Rate | 추천 장소가 DB에 실존하는 비율 | |
-
-## 5.3 Stage 3: 생성(Generation) 평가
-
-LLM 답변의 품질을 RAGAS 메트릭으로 평가한다. (gpt-4o-mini + text-embedding-3-small 기반)
-
-| 메트릭 | 설명 | 결과 |
-|--------|------|------|
-| Faithfulness | 답변이 검색된 문서에 근거하는 정도 (환각 방지) | |
-| Answer Relevancy | 답변이 질문에 적합한 정도 | |
-| Context Precision | 관련 문맥이 상위에 위치하는 정도 | |
-| Context Recall | 정답에 필요한 정보가 문맥에 포함된 정도 | |
-
----
-
-# 6. 종합 평가
-
-## 6.1 성능 평가 결과 요약
-| 분류 | 항목 | 평가 |
-|------|------|------|
-| RAG | 검색 안정성 | (측정 필요) |
-| RAG | 생성 신뢰성 | (측정 필요) |
-| RAG | 실시간성 | (측정 필요) |
-| RAG | 실무 활용성 | (측정 필요) |
-
-## 6.2 한계점 및 향후 개선 계획
-
-본 테스트는 RAG 파이프라인의 검색 품질·생성 신뢰성 검증에 초점을 두었으나 다음과 같은 한계가 존재한다.
-
-- RAG 성능 평가는 제한된 수의 대표 질의 기반으로 수행되어, 대규모 질의 분포에 대한 일반화에는 한계가 있다.
-- 실시간 트래픽 환경을 가정한 부하 테스트 및 캐시 적중률 기반 비용/지연 최적화가 필요하다.
-
-## 6.3 결론
-(추후 작성)
+- 잘된 점:
+- 문제점:
+- 다음 액션:

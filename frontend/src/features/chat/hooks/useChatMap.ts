@@ -12,6 +12,9 @@ export function useChatMap({
     placeCardRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }) {
     const [selectedMapPlaceIdRaw, setSelectedMapPlaceId] = useState<string | null>(null);
+    const [focusMessageId, setFocusMessageId] = useState<number | null>(null);
+    const [prevLatestAiMessageId, setPrevLatestAiMessageId] = useState<number | null>(null);
+
     const [isMapSheetOpen, setIsMapSheetOpen] = useState(false);
     const [isMapPanelOpenRaw, setIsMapPanelOpenRaw] = useState(true);
     const [isMapResizing, setIsMapResizing] = useState(false);
@@ -28,73 +31,69 @@ export function useChatMap({
         return `mid:${place.id}:${safeName}`;
     }, []);
 
-    const mapPlaces = useMemo<ChatMapPlace[]>(() => {
-        const dedup = new Map<string, ChatMapPlace>();
-        for (const msg of messages) {
-            if (msg.role !== "ai") continue;
-            if (!msg.places?.length) continue;
-            for (const place of msg.places) {
-                const lat = Number(place.latitude ?? 0);
-                const lng = Number(place.longitude ?? 0);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) continue;
-
-                const mapId = toMapId(place);
-                if (dedup.has(mapId)) continue;
-
-                dedup.set(mapId, {
-                    mapId,
-                    name: (place.name || "").trim() || "Recommended place",
-                    adress: place.adress,
-                    latitude: lat,
-                    longitude: lng,
-                    map_url: place.map_url,
-                });
-                if (dedup.size >= 30) break;
+    const latestAiMessageId = useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg.role === "ai" && msg.places && msg.places.length > 0) {
+                return msg.id;
             }
-            if (dedup.size >= 30) break;
         }
-        return Array.from(dedup.values());
-    }, [messages, toMapId]);
+        return null;
+    }, [messages]);
 
-    const mapPlaceGroups = useMemo<ChatMapPlaceGroup[]>(() => {
-        if (!mapPlaces.length) return [];
-
-        const allowedMapIds = new Set(mapPlaces.map((place) => place.mapId));
-        const groups: ChatMapPlaceGroup[] = [];
-        const globalSeen = new Set<string>();
-
-        for (const msg of messages) {
-            if (msg.role !== "ai" || !msg.places?.length) continue;
-            const groupPlaces: ChatMapPlace[] = [];
-
-            for (const place of msg.places) {
-                const lat = Number(place.latitude ?? 0);
-                const lng = Number(place.longitude ?? 0);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) continue;
-
-                const mapId = toMapId(place);
-                if (!allowedMapIds.has(mapId) || globalSeen.has(mapId)) continue;
-                globalSeen.add(mapId);
-
-                groupPlaces.push({
-                    mapId,
-                    name: (place.name || "").trim() || "Recommended place",
-                    adress: place.adress,
-                    latitude: lat,
-                    longitude: lng,
-                    map_url: place.map_url,
-                });
+    useEffect(() => {
+        if (latestAiMessageId !== prevLatestAiMessageId) {
+            setPrevLatestAiMessageId(latestAiMessageId);
+            setFocusMessageId(latestAiMessageId ?? null);
+        }
+    }, [latestAiMessageId, prevLatestAiMessageId]);
+        
+    const activeMessage = useMemo(() => {
+        if (focusMessageId !== null) {
+            const msg = messages.find((m) => m.id === focusMessageId);
+            if (msg && msg.role === "ai" && msg.places && msg.places.length > 0) {
+                return msg;
             }
+        }
+        if (latestAiMessageId !== null) {
+            return messages.find((m) => m.id === latestAiMessageId) || null;
+        }
+        return null;
+    }, [messages, focusMessageId, latestAiMessageId]);
 
-            if (!groupPlaces.length) continue;
-            groups.push({
-                groupId: `msg:${msg.id}`,
-                label: `AI Reply · ${new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-                places: groupPlaces,
+    const mapPlaces = useMemo<ChatMapPlace[]>(() => {
+        if (!activeMessage || !activeMessage.places) return [];
+        
+        const dedup = new Map<string, ChatMapPlace>();
+        for (const place of activeMessage.places) {
+            const lat = Number(place.latitude ?? 0);
+            const lng = Number(place.longitude ?? 0);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) continue;
+
+            const mapId = toMapId(place);
+            if (dedup.has(mapId)) continue;
+
+            dedup.set(mapId, {
+                mapId,
+                name: (place.name || "").trim() || "Recommended place",
+                adress: place.adress,
+                latitude: lat,
+                longitude: lng,
+                map_url: place.map_url,
             });
         }
-        return groups;
-    }, [messages, mapPlaces, toMapId]);
+        return Array.from(dedup.values());
+    }, [activeMessage, toMapId]);
+
+    const mapPlaceGroups = useMemo<ChatMapPlaceGroup[]>(() => {
+        if (!mapPlaces.length || !activeMessage) return [];
+
+        return [{
+            groupId: `msg:${activeMessage.id}`,
+            label: `AI Reply · ${new Date(activeMessage.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+            places: mapPlaces,
+        }];
+    }, [activeMessage, mapPlaces]);
 
     const hasMapPlaces = mapPlaces.length > 0 && messages.length > 0;
     const isMapPanelOpen = hasMapPlaces && isMapPanelOpenRaw;
@@ -158,8 +157,11 @@ export function useChatMap({
         }
     }, [placeCardRefs]);
 
-    const handleSelectMapPlace = useCallback((mapId: string) => {
+    const handleSelectMapPlace = useCallback((mapId: string, messageId?: number) => {
         setSelectedMapPlaceId(mapId);
+        if (messageId !== undefined) {
+            setFocusMessageId(messageId);
+        }
     }, []);
 
     return {

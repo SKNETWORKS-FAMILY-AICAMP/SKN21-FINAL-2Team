@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-
 // 로고 컴포넌트 (타입 지정, 색상 모드 종류 지정)
 interface LogoProps {
     className?: string;
@@ -50,9 +49,12 @@ export function Logo({
                 <div className="inline-flex items-center gap-2">  {/* 아이콘과 워드마크 표시 */}
                     <BrandMark tone={tone} size={size} />
                     <span
-                        className={cn("font-brand", tone === "light" ? "text-white" : "text-black")}
+                        className={cn("font-serif italic", tone === "light" ? "text-white" : "text-black")}
                         style={{
                             fontSize: Math.round(size * 0.84),
+                            fontWeight: 700,
+                            lineHeight: 1,
+                            letterSpacing: "-0.03em",
                             transform: "translateY(-1px)",
                             paddingLeft: "4px"
                         }}

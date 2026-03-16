@@ -156,38 +156,38 @@ def create_diary(
 
 
 @router.get("/place-search")
-def search_places(
+async def search_places(
     query: str = Query(min_length=1),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
     del current_user, db
-    results = GeoCoder().search_places(query.strip())
+    results = await GeoCoder.get_instance().search_places(query.strip())
     serialized = []
     for result in results:
         address = result.get("road_address") or result.get("jibun_address") or query.strip()
-        if result.get("lat") is None or result.get("lng") is None:
+        if result.get("lat") is None or result.get("lon") is None:
             continue
         serialized.append(
             {
                 "name": result.get("name") or query.strip(),
                 "adress": address,
                 "latitude": result.get("lat"),
-                "longitude": result.get("lng"),
+                "longitude": result.get("lon"),
             }
         )
     return serialized
 
 
 @router.get("/reverse-geocode")
-def reverse_geocode_place(
+async def reverse_geocode_place(
     latitude: float = Query(),
     longitude: float = Query(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
     del current_user, db
-    result = GeoCoder().reverse_geocoder(latitude, longitude)
+    result = await GeoCoder.get_instance().reverse_geocoder(latitude, longitude)
     if not result:
         raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Address not found", 404)
 

@@ -39,15 +39,15 @@ export const getPostLoginPath = (user: UserProfile): string => {
     if (!user) return "/"; // Safety fallback
     if (!user.is_join) return "/signup/profile";
     if (!user.is_prefer) return "/survey";
-    
+
     // [Feature] Plan Trip 버튼을 통한 로그인/가입 시에만 챗봇으로 직행
     const isPlanTripFlow = typeof window !== "undefined" && localStorage.getItem("planTripFlow") === "true";
     const hasPendingDestination = typeof window !== "undefined" && localStorage.getItem("pendingDestination");
-    
+
     if (isPlanTripFlow && hasPendingDestination) {
         return "/chatbot?fromDestination=1";
     }
-    
+
     // [Feature] 일반 로그인/가입 완료 후 항상 /explore(Home: Your Choices, Hot Places, Content)로 이동
     return "/explore";
 };
@@ -292,16 +292,16 @@ const fetchWithAuth = async (url: string, opts: FetchOpts = {}) => {
     return res;
 };
 
-const parseLocationToCoords = (location?: string | null): { latitude: number; longitude: number } => {
-    if (!location) return { latitude: 0, longitude: 0 };
+const parseLocationToCoords = (location?: string | null): { latitude: number | null; longitude: number | null } => {
+    if (!location) return { latitude: null, longitude: null };
     const parts = location.split(',');
-    if (parts.length < 2) return { latitude: 0, longitude: 0 };
+    if (parts.length < 2) return { latitude: null, longitude: null };
 
     const parsedLat = parseFloat(parts[0].trim());
     const parsedLng = parseFloat(parts[1].trim());
     return {
-        latitude: Number.isFinite(parsedLat) ? parsedLat : 0,
-        longitude: Number.isFinite(parsedLng) ? parsedLng : 0,
+        latitude: Number.isFinite(parsedLat) ? parsedLat : null,
+        longitude: Number.isFinite(parsedLng) ? parsedLng : null,
     };
 };
 
@@ -624,6 +624,7 @@ export interface ReservationRecord {
     name?: string | null;
     date?: string | null;
     image_path?: string | null;
+    details?: Record<string, string> | null;
     created_at?: string | null;
     updated_at?: string | null;
 }
@@ -633,6 +634,7 @@ export type ReservationPayload = {
     name?: string | null;
     date?: string | null;
     image_path?: string | null;
+    details?: Record<string, string> | null;
 };
 
 export interface DiaryLinkedRoom {
@@ -757,6 +759,7 @@ export interface CategoryPlaceItem {
     image_url: string;
     score: number;
     description: string;
+    category?: string;
     start_date?: string;
     end_date?: string;
 }
@@ -813,4 +816,39 @@ export const uploadImageDataUrl = async (dataUrl: string, folder = "misc"): Prom
     });
     const data = await response.json();
     return data.image_path as string;
+};
+
+/** OCR API 응답 타입 */
+export interface OcrResult {
+    date: string | null;   // "YYYY-MM-DD" 형태, 못 찾으면 null
+    time: string | null;   // "HH:MM" 형태, 없으면 null
+    raw_text: string;      // 디버깅용 전체 OCR 텍스트
+    details?: Record<string, string> | null;  // LLM이 추출한 상세 정보 JSON
+    error: string | null;  // 에러 메시지, 정상이면 null
+}
+
+/**
+ * 이미지 파일을 백엔드로 전송해 OCR로 날짜·시간을 추출합니다.
+ * 주의: FormData 전송이라 fetchWithAuth 대신 직접 fetch 사용
+ */
+export const ocrReservationImage = async (file: File, category?: string): Promise<OcrResult> => {
+    const token = safeLocalGet('access_token');
+    const formData = new FormData();
+    formData.append("file", file);
+    if (category) {
+        formData.append("category", category);
+    }
+
+    const response = await fetch(`${API_URL}/reservations/ocr`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`OCR 요청 실패: ${response.status} ${text}`);
+    }
+    return response.json();
 };

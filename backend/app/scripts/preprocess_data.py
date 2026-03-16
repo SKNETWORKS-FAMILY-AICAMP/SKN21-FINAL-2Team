@@ -1,4 +1,5 @@
 import os
+import asyncio
 import requests
 import io
 import json
@@ -148,7 +149,7 @@ def enrich_payload_geo_and_addr_tokens(payload: dict) -> dict:
         and -180.0 <= lng <= 180.0
         and not (abs(lat) < 1e-9 and abs(lng) < 1e-9)
     ):
-        payload["geo"] = {"lat": lat, "lon": lng}
+        payload["geo"] = {"lat": lat, "lon": lng}  # Qdrant geo index는 "lon" 키 요구
 
     payload["addr_tokens"] = build_addr_tokens(payload)
     return payload
@@ -209,7 +210,7 @@ def ingest_data(data):
         address = item.get("addr", "")
 
         if address:
-            result = GeoCoder().eocoder(address)
+            result = asyncio.run(GeoCoder.get_instance().geocoder(address))
             if result:
                 item['road_address'] = result.get('road_address')
                 item['old_address'] = result.get('jibun_address')
@@ -219,7 +220,7 @@ def ingest_data(data):
                     item['mapx'] = result.get('lng')
         elif lat != 0.0 and lng != 0.0:
             # 주소는 없는데 좌표는 있는 경우 리버스 지오코딩
-            latlng = GeoCoder().reverse_geocoder(lat, lng)
+            latlng = asyncio.run(GeoCoder.get_instance().reverse_geocoder(lat, lng))
             if latlng:
                 item['road_address'] = latlng.get('road_address')
                 item['old_address'] = latlng.get('jibun_address')
@@ -233,5 +234,4 @@ def ingest_data(data):
         clean_payload = remove_empty_values(item)
         
         yield clean_payload
-
 

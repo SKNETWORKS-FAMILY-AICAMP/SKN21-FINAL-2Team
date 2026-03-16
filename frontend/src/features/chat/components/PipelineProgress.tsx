@@ -5,9 +5,13 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 
 // 파이프라인 단계 정의
 const PIPELINE_STEPS = [
+    { key: "image_analysis", label: "이미지 분석" },
     { key: "intent", label: "의도 분석" },
     { key: "planner", label: "여행 계획 수립" },
+    { key: "geocoder", label: "위치 좌표 확인" },
     { key: "retriever", label: "장소 검색" },
+    { key: "retriever_retry", label: "반경 확대 후 장소 검색" },
+    { key: "web_search", label: "웹 검색" },
     { key: "executor", label: "답변 생성" },
     { key: "executor_missing", label: "추가 정보 확인" },
     { key: "executor_general", label: "일반 답변 생성" },
@@ -66,8 +70,8 @@ export function PipelineProgress({ steps, visible }: PipelineProgressProps) {
                             {/* 상태 텍스트 */}
                             <span
                                 className={`text-[13px] font-medium ${status === "running"
-                                        ? "text-gray-700"
-                                        : "text-gray-400"
+                                    ? "text-gray-700"
+                                    : "text-gray-400"
                                     }`}
                             >
                                 {step.label}
@@ -86,9 +90,13 @@ export function PipelineProgress({ steps, visible }: PipelineProgressProps) {
  */
 export function createInitialPipelineSteps(): PipelineSteps {
     return {
+        image_analysis: "pending",
         intent: "running",
         planner: "pending",
+        geocoder: "pending",
         retriever: "pending",
+        retriever_retry: "pending",
+        web_search: "pending",
         executor: "pending",
         executor_missing: "pending",
         executor_general: "pending",

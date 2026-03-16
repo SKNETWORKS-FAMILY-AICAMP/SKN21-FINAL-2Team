@@ -1,7 +1,6 @@
 {
   "common.back": "Back",
   "common.continue": "Continue",
-
   "signup.welcomeTitle": "Welcome to Triver",
   "signup.welcomeSubtitle": "Join Triver for personalized travel planning",
   "signup.continueGoogle": "Continue with Google",
@@ -13,7 +12,6 @@
   "signup.profileSaveFailed": "Failed to save profile.",
   "signup.signupFailed": "Google Sign up Failed",
   "signup.switchAccount": "Sign in with a different Google account",
-
   "profile.title": "One last step, {name}",
   "profile.subtitle": "Help us personalize your travel experience.",
   "profile.fullName": "Full Name",
@@ -30,14 +28,11 @@
   "profile.privacyConsent": "I agree to the collection and use of personal information for service provision.",
   "profile.privacyNote": "Your data is secured and will never be shared without consent.",
   "profile.continueButton": "Continue to Persona Setup",
-
   "validation.nicknameSpecialChar": "Nickname can only contain letters and numbers.",
   "validation.nicknameTooLong": "Nickname must be 10 Korean characters or 16 alphanumeric characters or less.",
-
   "common.delete": "Delete",
   "common.deleting": "Deleting...",
   "common.cancel": "Cancel",
-
   "sidebar.home": "Home",
   "sidebar.moments": "Moments",
   "sidebar.bookmark": "Bookmark",
@@ -49,7 +44,6 @@
   "sidebar.deleteRoomTitle": "Delete Chat Room",
   "sidebar.deleteRoomMessage": "Delete \"{title}\"? All conversations and recommended places will be permanently removed.",
   "sidebar.deleteRoomFailed": "Failed to delete chat room.",
-
   "chat.travelAssistant": "Travel Assistant",
   "chat.bookmarkToggle": "Toggle chat room bookmark",
   "chat.mapOpen": "Open map",
@@ -63,7 +57,6 @@
   "chat.locationFailed": "Failed to get current location. Please check location permissions.",
   "chat.currentLocation": "Current location",
   "chat.creatingRoom": "Creating chat room...",
-
   "chatInput.placeholder": "Where would you like to go?",
   "chatInput.send": "Send",
   "chatInput.stopResponse": "Stop response",
@@ -80,7 +73,6 @@
   "chatInput.removeLocation": "Remove location",
   "chatInput.attachedImage": "Attached image",
   "chatInput.disclaimer": "Triver AI can make mistakes. Please check important info.",
-
   "tripContext.label": "Trip Context",
   "tripContext.heading": "Select your travel dates and travelers",
   "tripContext.departure": "Departure",
@@ -92,14 +84,12 @@
   "tripContext.childrenAge": "Age 12 and under",
   "tripContext.startChat": "Start Chat",
   "tripContext.skipAndStart": "Skip and start now",
-
   "common.save": "Save",
   "common.saving": "Saving...",
   "common.close": "Close",
   "common.confirm": "OK",
   "common.yes": "Yes",
   "common.no": "No",
-
   "mypage.title": "My Page",
   "mypage.subtitle": "Traveler Profile",
   "mypage.rooms": "Rooms",
@@ -166,16 +156,13 @@
   "mypage.surveyPlan": "Travel Schedule",
   "mypage.surveyVibe": "Travel Vibe",
   "mypage.surveyPlaces": "Interests",
-
   "mypage.journeyDetail": "Journey Detail",
   "mypage.noChatHistory": "No chat history in this room.",
   "mypage.menu": "Menu",
-
   "mypage.reservationDetails": "Reservation Details",
   "mypage.reservationImage": "Reservation Image",
   "mypage.uploadImageHint": "(Click here to upload if no image is available)",
   "mypage.changeImage": "Change Image",
-
   "survey.busySchedule": "Busy Schedule",
   "survey.relaxedSchedule": "Relaxed Schedule",
   "survey.crowdedCity": "Crowded City",
@@ -183,56 +170,48 @@
   "survey.restaurants": "Restaurants",
   "survey.historicalSites": "Historical Sites",
   "survey.kCulture": "K-culture",
-
   "header.features": "Features",
   "header.destinations": "Destinations",
   "header.reviews": "Reviews",
   "header.getStarted": "Get Started",
   "header.goToProfile": "Go to My Profile",
   "header.profileAlt": "Profile",
-
-  "hero.badge": "AI-Powered Travel Planning",
-  "hero.titleLine1": "Your Journey,",
-  "hero.titleLine2": "Reimagined",
-  "hero.descriptionLine1": "Experience travel planning powered by artificial intelligence.",
-  "hero.descriptionLine2": "Personalized itineraries crafted just for you.",
-  "hero.placeholder": "Where do you want to go?",
+  "hero.badge": "Discover Seoul with AI",
+  "hero.titleLine1": "Travel smarter,",
+  "hero.titleLine2": "not harder",
+  "hero.descriptionLine1": "Experience hyper-personalized travel planning.",
+  "hero.descriptionLine2": "Let our AI curate your perfect Seoul itinerary in seconds.",
+  "hero.placeholder": "Where is your next destination?",
   "hero.start": "Start",
   "hero.scroll": "Scroll",
-
-  "features.heading": "WITH TRIVER",
-  "features.subheading": "Discover how AI transforms every step of your travel planning into a seamless, personalized experience.",
-  "features.hyperPersonalized.title": "Hyper-Personalized Recommendations",
+  "features.heading": "With  Triever",
+  "features.subheading": "Cutting-Edge Technology Meets Traveling",
+  "features.hyperPersonalized.title": "Hyper personalized",
   "features.hyperPersonalized.shortTitle": "Personalized",
   "features.hyperPersonalized.description": "Our AI analyzes your preferences, past trips, and travel style to suggest destinations and activities that perfectly match your interests.",
-  "features.smartItinerary.title": "Smart Itinerary Builder",
+  "features.smartItinerary.title": "Smart itinerary",
   "features.smartItinerary.shortTitle": "Smart Planning",
   "features.smartItinerary.description": "Automatically generates optimized day-by-day itineraries considering travel time, opening hours, and your energy levels.",
-  "features.integratedBooking.title": "Integrated Booking Experience",
+  "features.integratedBooking.title": "Integrated booking",
   "features.integratedBooking.shortTitle": "Easy Booking",
   "features.integratedBooking.description": "Seamlessly book flights, hotels, and experiences in one place. Real-time pricing and availability at your fingertips.",
-
-  "destinations.heading": "EXPLORE SEOUL",
-  "destinations.subheading": "Discover the best places in Seoul curated by AI",
+  "destinations.heading": "Explore Seoul",
+  "destinations.subheading": "From historic palaces to neon-lit streets, find your perfect spot.",
   "destinations.hotPlaces": "Hot Places",
-  "destinations.touristSpot": "Tourist Spots",
+  "destinations.touristSpot": "Tourist Spot",
   "destinations.foods": "Foods",
   "destinations.refreshing": "Refreshing...",
   "destinations.noImage": "No Image",
   "destinations.planTrip": "Plan Trip",
-
-  "cta.heading": "Ready to Start Your",
-  "cta.headingHighlight": "Adventure?",
-  "cta.description": "Join thousands of travelers who have discovered their perfect trip with Triver's AI-powered planning.",
+  "cta.heading": "Your journey begins",
+  "cta.headingHighlight": "here.",
+  "cta.description": "Start planning your dream trip to Seoul today with our AI-powered travel assistant. No hidden fees, just pure exploration.",
   "cta.button": "Start for Free",
-
   "footer.copyright": "© {year} Triver. All rights reserved.",
-
   "reviews.heading": "Traveler Stories",
   "reviews.subheading": "See what our community has to say about their experiences with Triver.",
   "reviews.previousReview": "Previous review",
   "reviews.nextReview": "Next review",
-
   "incomplete.profileTitle": "Complete Your Profile",
   "incomplete.surveyTitle": "Complete Your Survey",
   "incomplete.profileDescription": "Please complete your profile to use all features.",
@@ -241,9 +220,14 @@
   "incomplete.surveyButton": "Complete Survey",
   "incomplete.later": "Later",
   "incomplete.switchAccount": "Sign in with a different account",
-
+  "explore.choicesSubtitle": "Curated recommendations for {name}",
+  "explore.choicesSubtitleDefault": "Curated recommendations based on your preferences",
+  "explore.trendingNeighborhoods": "Trending neighborhoods",
+  "explore.eventsExhibitions": "Events & Exhibitions",
+  "explore.noPopupStores": "No popup store information available",
+  "explore.noImg": "No img",
+  "explore.ongoing": "Ongoing",
   "banner.switchPrompt": "Switch to another language?",
   "banner.switch": "Settings",
-
   "languageSwitcher.label": "Language"
 }

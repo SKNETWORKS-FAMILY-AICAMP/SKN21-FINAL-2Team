@@ -7,6 +7,13 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { fetchRandomExplorePlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+
+const CONTENT_CATEGORY_LABELS: Record<string, string> = {
+    "공연": "PERFORMANCE",
+    "전시": "EXHIBITION",
+    "축제": "FESTIVAL",
+    "팝업스토어": "POPUP STORE",
+};
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
 import { useEffect, useState } from "react";
@@ -14,18 +21,19 @@ import { useRouter } from "next/navigation";
 // [Feature] 장소 카드 클릭 → 여행 컨텍스트 설정 팝업 → 챗봇 이동
 import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type YourChoicesState = {
     restaurants: CategoryPlaceItem[];
     tourist: CategoryPlaceItem[];
-    activities: CategoryPlaceItem[];
+    tours: CategoryPlaceItem[];
 };
 
 type ExploreInitPayload = {
     user: UserProfile;
     choices: YourChoicesState;
     hotPlaces: HotPlace[];
-    popupStores: CategoryPlaceItem[];
+    contents: CategoryPlaceItem[];
 };
 
 let exploreInitInFlight: Promise<ExploreInitPayload> | null = null;
@@ -37,7 +45,7 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
 
     // 1번의 API 호출로 5가지 카테고리를 한번에 모두 가져옵니다 (통합)
-    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,팝업스토어,activities", 3);
+    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,tour_courses,콘텐츠", 3);
 
     return {
         user,
@@ -50,11 +58,11 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
             tag1: p.tag1,
             tag2: p.tag2
         })) as unknown as HotPlace[],
-        popupStores: randomData["팝업스토어"] || [],
+        contents: randomData["콘텐츠"] || [],
         choices: {
             restaurants: randomData["restaurants"] || [],
             tourist: randomData["tourist_spots"] || [],
-            activities: randomData["activities"] || [],
+            tours: randomData["tour_courses"] || [],
         },
     };
 };
@@ -82,15 +90,16 @@ const getExploreDataOnce = async (): Promise<ExploreInitPayload> => {
 };
 
 export function ExplorePage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [yourChoices, setYourChoices] = useState<YourChoicesState>({
         restaurants: [],
         tourist: [],
-        activities: [],
+        tours: [],
     });
     const [hotPlaces, setHotPlaces] = useState<HotPlace[]>([]);
-    const [popupStores, setPopupStores] = useState<CategoryPlaceItem[]>([]);
+    const [contents, setContents] = useState<CategoryPlaceItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // [Feature] 장소 카드 클릭 → TripContextModal → 챗봇 이동 상태
@@ -169,7 +178,7 @@ export function ExplorePage() {
                 setUserProfile(payload.user);
                 setYourChoices(payload.choices);
                 setHotPlaces(payload.hotPlaces);
-                setPopupStores(payload.popupStores);
+                setContents(payload.contents);
             } catch (error) {
                 if (isAuthFailureError(error)) {
                     clearAuth();
@@ -208,7 +217,7 @@ export function ExplorePage() {
                                         Your Choices <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
                                     <p className="section-subtitle mt-1">
-                                        {userProfile?.name ? `${userProfile.name}님을 위한 맞춤 여행지` : "Curated recommendations based on your preferences"}
+                                        {userProfile?.name ? t("explore.choicesSubtitle", { name: userProfile.name }) : t("explore.choicesSubtitleDefault")}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400 border border-gray-100 rounded-full px-3 py-1">
@@ -266,15 +275,15 @@ export function ExplorePage() {
                                             </div>
                                         </div>
 
-                                        {/* Section 3: Activities */}
+                                        {/* Section 3: Tours */}
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    🎨 Unique Experiences
+                                                    🗺️ Tour Courses
                                                 </h4>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                {yourChoices.activities.map((item) => (
+                                                {yourChoices.tours.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
                                                             <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -303,7 +312,7 @@ export function ExplorePage() {
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
                                     <h3 className="page-title text-gray-900">Hot Places</h3>
-                                    <p className="section-subtitle mt-1">Trending neighborhoods</p>
+                                    <p className="section-subtitle mt-1">{t("explore.trendingNeighborhoods")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <MapPin size={16} className="text-gray-400" />
@@ -347,7 +356,7 @@ export function ExplorePage() {
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
                                     <h3 className="page-title text-gray-900">Contents</h3>
-                                    <p className="section-subtitle mt-1">Events & Exhibitions</p>
+                                    <p className="section-subtitle mt-1">{t("explore.eventsExhibitions")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <Calendar size={16} className="text-gray-400" />
@@ -360,32 +369,33 @@ export function ExplorePage() {
                                         <div className="h-full flex items-center justify-center py-8">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
                                         </div>
-                                    ) : popupStores.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-6">팝업스토어 정보가 없습니다</p>
+                                    ) : contents.length === 0 ? (
+                                        <p className="text-xs text-gray-400 text-center py-6">콘텐츠 정보가 없습니다</p>
                                     ) : (
-                                        popupStores.map((item) => (
+                                        contents.map((item) => (
                                             <motion.div
                                                 key={item.contentid}
                                                 whileHover={{ x: 5 }}
                                                 className="flex gap-3 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100"
+                                                onClick={() => handleChoiceCardClick(item)}
                                             >
                                                 <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
                                                     {item.image_url ? (
                                                         <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">{t("explore.noImg")}</div>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col justify-center flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
-                                                            POPUP STORE
+                                                            {CONTENT_CATEGORY_LABELS[item.category || ""] || "CONTENT"}
                                                         </span>
                                                     </div>
                                                     <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
-                                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                                                        <Clock size={10} />
-                                                        {item.end_date ? `~ ${item.end_date}` : "진행 중"}
+                                                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
+                                                        <MapPin size={10} />
+                                                        {item.address || "주소 없음"}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-center text-gray-300 group-hover:text-black transition-colors">

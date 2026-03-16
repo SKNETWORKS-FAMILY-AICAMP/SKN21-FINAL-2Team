@@ -5,7 +5,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile } from "@/services/api";
+import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile, uploadImageDataUrl } from "@/services/api";
 import { useTranslation } from "@/i18n/useTranslation";
 import { TripContextModal } from "@/features/chat/components/TripContextModal";
 import { PlaceMapPanel } from "@/features/chat/components/PlaceMapPanel";
@@ -396,7 +396,7 @@ export function ChatHome() {
         ].filter(Boolean);
         const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ")} 분석해줘.` : "메시지를 분석해줘.");
         const optimisticText = userText || fallbackParts.join(" ");
-        const currentAttachment = attachedImageDataUrl;
+        const currentDataUrl = attachedImageDataUrl;   // 미리보기용 dataUrl
         const currentLocation = attachedLocation;
 
         setInputText("");
@@ -412,12 +412,23 @@ export function ChatHome() {
             locationLabel: "",
         };
 
+        // 이미지가 있으면 먼저 업로드하고, DB에는 path만 저장
+        let uploadedImagePath: string | null = null;
+        if (currentDataUrl) {
+            try {
+                uploadedImagePath = await uploadImageDataUrl(currentDataUrl, "chat");
+            } catch (e) {
+                console.error("[ChatHome] Image upload failed", e);
+            }
+        }
+
         await streamMessageToRoom({
             roomId: currentRoomId,
             message: messageToSend,
             saveUserMessage: true,
             optimisticUserText: optimisticText,
-            imageDataUrl: currentAttachment,
+            optimisticImageDataUrl: currentDataUrl,    // 즉시 표시용 (dataUrl)
+            imageDataUrl: uploadedImagePath,           // API 전송용 (path)
             location: currentLocation,
         });
     };

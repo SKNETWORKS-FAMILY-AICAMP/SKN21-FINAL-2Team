@@ -1,0 +1,30 @@
+[
+  {
+    "code_id": "ko",
+    "code_nm": "한국어"
+  },
+  {
+    "code_id": "en",
+    "code_nm": "영어"
+  },
+  {
+    "code_id": "ja",
+    "code_nm": "일본어"
+  },
+  {
+    "code_id": "zh-CN",
+    "code_nm": "중국어(간체)"
+  },
+  {
+    "code_id": "zh-TW",
+    "code_nm": "중국어(번체)"
+  },
+  {
+    "code_id": "ru",
+    "code_nm": "러시아어"
+  },
+  {
+    "code_id": "ms",
+    "code_nm": "말레이어"
+  }
+]
