@@ -604,7 +604,7 @@ export function MyPagePage() {
                                         ...(item.key === "places" ? { placesPrefer: opt } : {}),
                                       }));
                                     }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${(item.key === "plan" && draftInsight.planPrefer === opt)
+                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
                                       || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                                       || (item.key === "places" && draftInsight.placesPrefer === opt)
                                       ? "bg-black text-white border-black"
