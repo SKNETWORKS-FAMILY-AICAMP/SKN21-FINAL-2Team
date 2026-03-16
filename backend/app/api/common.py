@@ -2,6 +2,7 @@ import base64
 import os
 import re
 import time
+import urllib.parse
 from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -29,7 +30,51 @@ class ImageUploadRequest(BaseModel):
 
 
 class ImageUploadResponse(BaseModel):
-    image_path: str
+    image_path: str  # relative path: folder/filename (e.g. "chat/123_timestamp.jpg")
+
+
+def _parse_s3_uri(uri: str):
+    """Parse s3://bucket/prefix/ → (bucket, prefix)"""
+    parsed = urllib.parse.urlparse(uri)
+    bucket = parsed.netloc
+    prefix = parsed.path.strip("/")
+    return bucket, prefix
+
+
+def _upload_to_s3(raw: bytes, s3_key: str, content_type: str) -> None:
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+
+    file_server_url = os.environ.get("FILE_SERVER_URL", "")
+    bucket, _ = _parse_s3_uri(file_server_url)
+
+    region = os.environ.get("AWS_REGION", "ap-northeast-2")
+    s3 = boto3.client(
+        "s3",
+        region_name=region,
+        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+    )
+    try:
+        s3.put_object(
+            Bucket=bucket,
+            Key=s3_key,
+            Body=raw,
+            ContentType=content_type,
+        )
+    except (BotoCoreError, ClientError) as e:
+        raise AppException(ErrorCode.INTERNAL_SERVER_ERROR, f"S3 upload failed: {e}", 500)
+
+
+def _upload_local(raw: bytes, folder: str, filename: str) -> None:
+    upload_root = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "uploads")
+    )
+    target_dir = os.path.join(upload_root, folder)
+    os.makedirs(target_dir, exist_ok=True)
+    with open(os.path.join(target_dir, filename), "wb") as f:
+        f.write(raw)
+
 
 @router.get("/countries", response_model=List[CountryResponse])
 def read_countries(db: Session = Depends(db_manager.get_db)):
@@ -59,14 +104,15 @@ def upload_image(
         raise AppException(ErrorCode.VALIDATION_ERROR, f"Invalid base64 image data: {e}", 400)
 
     folder = re.sub(r"[^a-zA-Z0-9_-]", "", payload.folder or "misc") or "misc"
-    upload_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "uploads")
-    upload_root = os.path.abspath(upload_root)
-    target_dir = os.path.join(upload_root, folder)
-    os.makedirs(target_dir, exist_ok=True)
-
     filename = f"{current_user.id}_{int(time.time() * 1000)}.{ext}"
-    target_path = os.path.join(target_dir, filename)
-    with open(target_path, "wb") as f:
-        f.write(raw)
 
-    return ImageUploadResponse(image_path=f"/api/static/{folder}/{filename}")
+    file_server_url = os.environ.get("FILE_SERVER_URL", "")
+    if file_server_url.startswith("s3://"):
+        _, s3_prefix = _parse_s3_uri(file_server_url)
+        s3_key = f"{s3_prefix}/{folder}/{filename}" if s3_prefix else f"{folder}/{filename}"
+        _upload_to_s3(raw, s3_key, mime_type)
+    else:
+        _upload_local(raw, folder, filename)
+
+    # DB에는 상대 path만 저장 (folder/filename)
+    return ImageUploadResponse(image_path=f"{folder}/{filename}")

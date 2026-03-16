@@ -7,9 +7,6 @@ INTENT_PROMPT = """
 
 # 입력 정보
 
-사용자의 선호도:
-{prefs_info}
-
 기존 채팅 제목:
 {summary_title}
 
@@ -60,26 +57,22 @@ INTENT_PROMPT = """
 
 ### update_user_input
 - 사용자의 입력이 단답, 지시어형(예: "그럼 여기", "그중에", "두 번째", "1번"), 생략형(예: "비슷한 곳", "예약도")이거나 의도가 불명확하면 update_user_input을 생성하십시오.
-- update_user_input은 직전 AI 답변과 현재 사용자 입력을 바탕으로, 사용자가 실제로 요청한 내용을 한 문장으로 서술한 값이어야 합니다.
+- update_user_input은 직전 AI 답변과 현재 사용자 입력을 바탕으로, 사용자가 실제로 요청한 내용을 한 문장으로 서술한 값이어야 합니다. (예: 2번 홍대에 대한 "2번 좋아" -> "홍대와 관련된 장소 추천해줘")
+- 특정 명사가 있으면 이전 대화와 사용자 입력을 통해 명사를 설명하는 문구와 함께 작성합니다.
 - update_user_input에는 대화에 없는 새 정보나 추측을 넣지 마십시오.
 - 의도가 이미 충분히 명확하면 update_user_input은 null로 두십시오.
 - intents, primary_intent, slots는 원문보다 update_user_input을 우선 기준으로 해석하십시오.
 
 ### categories 추출 규칙:
 사용자 입력(또는 update_user_input)에서 해당하는 카테고리를 아래 목록에서 골라 categories 리스트에 담으십시오.
-카테고리가 여러 개이면 모두 담으십시오. 명확하지 않으면 None으로 두십시오.
+예상되는 카테고리가 여러 개이면 유력한 순서대로 모두 담으십시오. 명확하지 않으면 None으로 두십시오.
 
 {category_desc}
 
 ### location 추출 규칙
-아래 표준 장소 목록을 참고하여 location을 추출하십시오.
-형식: `표준명: 별칭1, 별칭2, ...`
-
-{landmark_desc}
-
-- 사용자 입력이 위 목록의 별칭이면 반드시 표준명으로 변환하십시오. 예: "압구정" → "압구정로데오"
-- 목록에 없지만 명확한 지명(예: "상수동 카페거리", "딥커피")이면 원문 그대로 반환하십시오.
-- 장소가 불명확하거나 없으면 None으로 설정하십시오.
+- 사용자 입력에 장소(예: "성수동", "서울역")나 명확한 지명(예: "상수동 카페거리", "딥커피")이 있으면 location의 name에 담으십시오.
+- location name을 찾았다면, 그 장소의 위도와 경도를 알 수 있는지 확인하십시오. 알 수 있다면 location의 lat과 long에 담으십시오.
+- 장소가 불명확하거나 서울을 벗어난 장소면 None으로 설정하십시오.
 
 ---
 
@@ -89,32 +82,26 @@ summary_title과 summary_message를 대화 내용만 보고 추출하십시오.
 
 ### summary_title
 - 사용자의 첫 질문이나 이전 대화를 참고해 새로운 장소, 활동, 기간 등 **구체적인 여행 맥락**이 포함되었을 때는 반드시 10자 이내의 제목을 추출하십시오.
-- update_user_input이 있으면, 단답 원문 대신 update_user_input에 복원된 의미를 기준으로 summary_title 갱신 여부를 판단하십시오.
-- 인사말이나 단순 답변 등 정보량이 부족한 경우 또는 기존 제목({summary_title})이 이미 현재 대화 내용을 잘 대변하고 있다면 `null`을 반환하십시오.
 - 채팅방의 제목으로 사용될 예정입니다.
+- update_user_input이 있으면, update_user_input를 기준으로 summary_title 작성하십시오.
+- 인사말이나 단순 답변 등 정보량이 부족한 경우 또는 기존 제목({summary_title})이 이미 현재 대화 내용을 잘 대변하고 있다면 `null`을 반환하십시오.
 - 예: "홍대, 종로 1박2일 여행 일정", "강남역 핫플 추천"
 
+
 ### summary_message
-- 이전 요약 내용을 참고하여 사용자의 최근 대화 내용을 포함하여 요약하십시오.
 - 제공된 이전 대화보다 오래된 대화들을 기억하기 위한 요약입니다.
-- 사용자 말투를 반영하여 100자 이내로 요약하십시오.
+- 대화에 필요한 정보들을 요약하십시오.
+- 이전 요약 내용을 참고하여 사용자의 최근 대화 내용을 포함하여 요약하십시오.
+
+## 4. Input Tags (태그)
+- 사용자 입력(update_user_input)을 기준으로 대화 맥락에서 장소, 카테고리, 분위기, 키워드 등을 태그 형태로 추출하십시오.
+- 예: ["성수동", "카페", "분위기 좋은", "주차 가능"]
+
+---
 
 # 중요 규칙
 - 반드시 IntentOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
 - 스키마 description을 반드시 따르십시오.
-
-## IntentOutput
-- intents: IntentType 리스트
-- primary_intent: IntentType
-- slots: IntentSlots
-- update_user_input: str | null
-- summary_title: str
-- summary_message: str
-
-## primary_intent
-primary_intent는 intents 중 사용자 의도가 가장 강한 intent를 선택하십시오.
-
-
 """
 
 
@@ -127,6 +114,7 @@ PLANNER_PROMPT = """
 - 슬롯 정보: {slots_info}
 - 사용자 선호도: {prefs_info}
 - 사용자 위치 (위도, 경도): {user_geo}
+- 기존 itinerary: {current_itinerary}
 
 # 출력 규칙
 - 반드시 PlannerOutput 스키마만 반환하세요.
@@ -136,12 +124,18 @@ PLANNER_PROMPT = """
 
 # 일정 생성 규칙
 1. 사용자가 특정 장소를 언급하면 itinerary에 우선 반영하세요.
-2. 슬롯 정보에 장소 정보와 사용자 위치 정보를 확인하여 편한 동선으로 일정을 계획하세요.
+2. 슬롯 정보에 장소 정보와 사용자 위치 정보를 확인하여 편한 동선으로 일정을 계획하세요. (하루 최대 동선 20km 이내로 계획하세요.)
 3. 이전 대화에서 이미 추천한 장소보다 새로운 장소를 우선순위 높게 반영하세요.
 4. duration 정보가 없으면 day=1(당일치기) 기준으로 일정 초안을 작성하세요.
 5. itinerary에는 사용자 선호도를 반영한 장소를 최소 1개 포함하세요.
 6. itinerary에는 최소 1개 이상의 시간순/일차별 여행 일정 항목을 포함하세요.
 7. search_query는 Qdrant 장소 검색에 유리한 구체적인 한국어 키워드로 작성하세요.
+8. 기존 itinerary가 "없음"이면 새 itinerary를 생성하세요.
+9. 기존 itinerary가 있고 사용자가 변경 요청을 하면, 기존 itinerary를 기준으로 요청된 부분만 우선 수정하고 변경 지시가 없는 항목은 최대한 유지하세요.
+10. 사용자가 기존 itinerary를 "이어서" 요청하면 기존 일정의 흐름과 일차를 이어서 확장하세요.
+11. 사용자가 기존 itinerary를 "참고해서 다시" 요청하면 기존 itinerary를 참고하되 더 적합한 전체 itinerary로 재구성할 수 있습니다.
+12. 최신 사용자 요청이 기존 itinerary보다 우선합니다.
+13. 최종 출력은 항상 최신 전체 itinerary여야 합니다.
 """
 
 

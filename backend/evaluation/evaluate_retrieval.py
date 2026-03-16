@@ -17,6 +17,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
+from app.utils.common import normalize_text
 
 import numpy as np
 
@@ -88,10 +89,6 @@ class Reference:
 def _resolve_eval_path(path_str: str) -> Path:
     p = Path(path_str)
     return p if p.is_absolute() else (EVAL_DIR / p)
-
-
-def _normalize_text(value: str) -> str:
-    return re.sub(r"[\s\W_]+", "", (value or "")).lower()
 
 
 def _clip01(value: float) -> float:
@@ -238,9 +235,9 @@ def _candidate_to_text(candidate: dict[str, Any]) -> str:
 def _find_gold_rank(gold_title: str, retrieved_titles: list[str], top_k: int) -> int:
     if not gold_title:
         return 0
-    g = _normalize_text(gold_title)
+    g = normalize_text(gold_title)
     for idx, title in enumerate(retrieved_titles[:top_k], start=1):
-        t = _normalize_text(title)
+        t = normalize_text(title)
         if t and (t in g or g in t):
             return idx
     return 0

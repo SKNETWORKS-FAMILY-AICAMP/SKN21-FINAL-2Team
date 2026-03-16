@@ -379,7 +379,7 @@ function SidebarContent() {
             )}
 
             {/* Logo Area */}
-            <div className={cn("p-6 pb-2 transition-all duration-300", actuallyCollapsed ? "px-0 flex justify-center mt-2" : "")}>
+            <div className={cn("h-16 flex flex-shrink-0 items-center transition-all duration-300", actuallyCollapsed ? "justify-center px-0" : "px-6")}>
                 {!actuallyCollapsed ? (
                     <Logo />
                 ) : (

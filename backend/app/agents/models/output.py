@@ -45,10 +45,6 @@ class CategoryType(str, Enum):
         lines = [f"- {item.value}: {hints.get(item.value, item.name)}" for item in cls]
         return "\n".join(lines)
 
-class PlannerNeedType(str, Enum): # 계획 필수 타입 
-    DATES = "여행 날짜"
-    PARTY_SIZE = "여행 인원"
-
 
 class IntentLocation(BaseModel):
     name: Optional[str] = Field(default=None, description="구체적인 도시나 지역 여행지")
@@ -75,11 +71,17 @@ class IntentOutput(BaseModel):
     intents: List[IntentType] = Field(description="사용자의 의도")
     primary_intent: IntentType = Field(description="사용자의 주요 의도")
     slots: IntentSlots = Field(description="사용자 입력에서 추출된 슬롯")
+    input_tags: List[str] = Field(description="사용자 입력에서 추출된 태그 (장소, 카테고리, 키워드 등)")
     summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
     summary_message: str = Field(default="", description="대화 요약")
 
 
 # # Planner Output
+class PlannerNeedType(str, Enum): # 계획 필수 타입 
+    DATES = "여행 날짜"
+    PARTY_SIZE = "여행 인원"
+
+
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
@@ -98,3 +100,15 @@ class PlannerOutput(BaseModel):
             "항상 생성되는 후속 질문 1문장. duration 누락 시 여행 기간을 재질문하고 문장에 반드시 '여행일정'을 포함"
         )
     )
+
+# ========================================================
+# Tavily Extraction Output Schema
+class TavilyExtractedPlace(BaseModel):
+    score: float = Field(description="사용자의 의도와 유사한 정도의 점수 (0~1)")
+    name: str = Field(description="장소 이름")
+    address: str = Field(description="장소 주소")
+    description: str = Field(description="장소 특징 및 설명")
+    image_url: str = Field(default="", description="장소에 대한 대표 이미지 URL")
+
+class TavilyExtractionOutput(BaseModel):
+    places: List[TavilyExtractedPlace]

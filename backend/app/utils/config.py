@@ -64,17 +64,38 @@ SPARSE_ADDR_MAX_BOOST = 0.20
 # Score 스케일 균형
 # RRF first_stage_score(0.010~0.050) 대비 boost 합계(최대 0.65) 스케일 불균형을 보정.
 # boost * BOOST_WEIGHT ≈ 최대 0.195 → RRF 점수와 유사한 스케일로 정규화.
-BOOST_WEIGHT = float(os.getenv("BOOST_WEIGHT", "0.3"))
+BOOST_WEIGHT = 0.3
 
 # Qdrant 채널별 candidates_limit 배수 (#8)
 # candidates_limit = candidate_k * CANDIDATE_LIMIT_MULTIPLIER
 # 기존 *5(100개)는 과도한 메모리/CPU 사용. *3으로 줄여도 RRF 융합에 충분한 pool 확보 가능.
-CANDIDATE_LIMIT_MULTIPLIER = int(os.getenv("CANDIDATE_LIMIT_MULTIPLIER", "3"))
+CANDIDATE_LIMIT_MULTIPLIER = 3
 
 # Geo proximity boost 반경 (#9)
 # 기본값 20km → 서울 전역 + 경기 일부까지 포함되어 "근처" 의도 희석.
 # 10km로 줄이면 시내 이동 범위에 집중.
-GEO_PROXIMITY_RADIUS_KM = float(os.getenv("GEO_PROXIMITY_RADIUS_KM", "10.0"))
+GEO_PROXIMITY_RADIUS_KM = 10.0
+
+# 거리 기반 후보 필터링 최대 반경
+# 사용자 GPS 또는 요청 지역 anchor로부터 이 거리 이내의 장소만 추천
+MAX_DISTANCE_KM = 3.0
+
+# 위치 기반 검색 실패시 확장 범위 배수
+GEO_RETRY_MULTIPLIER = 2.0
+
+# Candidate threshold
+CANDIDATE_THRESHOLD = 0.4
+
+# Rerank 후 geo proximity 블렌딩 가중치
+# reranker(CrossEncoder)는 텍스트 유사도만 보므로, 거리 점수를 일부 반영해 근거리 장소 우선도를 유지.
+# blended_score = (1 - RERANK_GEO_BLEND_WEIGHT) * rerank_score + RERANK_GEO_BLEND_WEIGHT * normalized_geo
+# 0.0: 순수 텍스트 유사도, 1.0: 순수 거리 우선. 기본 0.3 (텍스트 70% + 거리 30%)
+RERANK_GEO_BLEND_WEIGHT = 0.3
+# _geo_proximity_bonus의 max_boost 값 (정규화 기준)
+GEO_MAX_BOOST = 0.20
+
+# Taviily search image threshold
+TAVILY_IMAGE_SCORE_THRESHOLD = 0.6
 
 # 점수 정규화 기준값 — 결과 필드를 [0.0, 1.0] 범위로 표시하기 위한 참조 최대값
 # RRF_SCORE_MAX : first_stage_score 상한 (모든 채널이 동시에 1위인 이론적 최대)

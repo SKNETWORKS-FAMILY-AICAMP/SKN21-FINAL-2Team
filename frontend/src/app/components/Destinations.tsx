@@ -71,6 +71,8 @@ export function Destinations() {
     const handlePlanTripClick = (place: Destination, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         if (!isLoggedIn) {
+            // [Feature] Plan Trip 버튼을 통한 로그인/가입 플로우임을 표시
+            localStorage.setItem("planTripFlow", "true");
             localStorage.setItem("pendingDestination", JSON.stringify(place));
             router.push("/signup");
         } else {
@@ -195,7 +197,7 @@ export function Destinations() {
                     }
                 }
             } catch (error) {
-                console.error("Failed to fetch random places on tab change:", error);
+                console.warn("Failed to fetch random places on tab change:", error);
                 // 에러 발생 시 더미 데이터 폴백
                 if (activeTab === "tourist-spot") {
                     setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));

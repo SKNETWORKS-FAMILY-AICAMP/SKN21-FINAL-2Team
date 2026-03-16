@@ -15,6 +15,7 @@ from app.main import app
 from app.database.connection import Base, db_manager
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage, ChatPlace
+from app.agents.models.place import PlaceInfo
 from app.utils.security import create_access_token
 
 # ---------- fixtures ----------
@@ -94,12 +95,48 @@ async def _mock_astream_events(*args, **kwargs):
     for token_text in ["안녕", "하세요", "! 여행을 ", "도와드릴게요."]:
         yield {"event": "on_custom_event", "name": "token", "data": {"token": token_text}}
 
-    yield {"event": "on_chain_end", "name": "executor", "data": {"output": {"answer": "추천 답변입니다.", "selected_ids": ["123"]}}}
+    yield {
+        "event": "on_chain_end",
+        "name": "executor",
+        "data": {
+            "output": {
+                "answer": "추천 답변입니다.",
+                "place_info_list": [
+                    PlaceInfo(
+                        place_id="123",
+                        name="Test Place",
+                        address="Test Address",
+                        image_path="",
+                        map_url="",
+                        longitude=0.0,
+                        latitude=0.0,
+                    )
+                ],
+            }
+        },
+    }
+
+
+async def _mock_astream_events_with_metadata(*args, **kwargs):
+    yield {"event": "on_chain_start", "name": "executor_node", "metadata": {"langgraph_node": "intent"}, "data": {}}
+    yield {"event": "on_chain_end", "name": "executor_node", "metadata": {"langgraph_node": "intent"}, "data": {"output": {"summary_title": "요약된 제목", "summary_message": "요약 메시지 제목"}}}
+    yield {"event": "on_chain_start", "name": "executor_node", "metadata": {"langgraph_node": "retriever"}, "data": {}}
+    yield {"event": "on_chain_end", "name": "executor_node", "metadata": {"langgraph_node": "retriever"}, "data": {"output": {"candidates": [{"payload": {"contentid": "123", "title": "Test Place", "address": "Test Address"}}]}}}
+    yield {"event": "on_chain_start", "name": "executor_node", "metadata": {"langgraph_node": "executor"}, "data": {}}
+    yield {"event": "on_custom_event", "name": "token", "metadata": {"langgraph_node": "executor"}, "data": {"token": "안녕하세요"}}
+    yield {"event": "on_chain_end", "name": "executor_node", "metadata": {"langgraph_node": "executor"}, "data": {"output": {"answer": "추천 답변입니다.", "place_info_list": []}}}
 
 
 def _get_mock_graph_app():
     mock_app = AsyncMock()
     mock_app.astream_events = _mock_astream_events
+    mock_app.nodes = {"intent": None, "planner": None, "retriever": None, "executor": None, "executor_missing": None}
+    return mock_app
+
+
+def _get_mock_graph_app_with_metadata():
+    mock_app = AsyncMock()
+    mock_app.astream_events = _mock_astream_events_with_metadata
     mock_app.nodes = {"intent": None, "planner": None, "retriever": None, "executor": None, "executor_missing": None}
     return mock_app
 
@@ -167,6 +204,49 @@ async def test_step_events_order(user_and_room):
 
 
 @pytest.mark.asyncio
+async def test_step_events_use_langgraph_metadata_node_name(user_and_room):
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app_with_metadata()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+            step_events = []
+            for data in _extract_data_payloads(response.text):
+                if "step" in data:
+                    step_events.append((data["step"], data["status"]))
+
+            step_names = [s[0] for s in step_events if s[1] == "start"]
+            assert step_names == ["intent", "retriever", "executor"]
+
+
+@pytest.mark.asyncio
+async def test_token_streaming_uses_custom_event_name_even_with_metadata_node_name(user_and_room):
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app_with_metadata()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+            token_events = []
+            for data in _extract_data_payloads(response.text):
+                if "token" in data:
+                    token_events.append(data["token"])
+
+            assert token_events == ["안녕하세요"]
+
+
+@pytest.mark.asyncio
 async def test_token_streaming(user_and_room):
     """token 이벤트가 1개 이상 수신되는지 확인"""
     user, room, token, db = user_and_room
@@ -211,6 +291,33 @@ async def test_done_event_with_message_id(user_and_room):
             assert "message_id" in last_data
             assert isinstance(last_data["message_id"], int)
             assert "room_title" in last_data
+
+
+@pytest.mark.asyncio
+async def test_done_event_uses_executor_final_answer_over_streamed_tokens(user_and_room):
+    user, room, token, db = user_and_room
+
+    with patch("app.api.chat.get_graph_app", return_value=_get_mock_graph_app()):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/api/chat/rooms/{room.id}/ask/stream",
+                json={"room_id": room.id, "message": "테스트", "role": "human"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+
+            payloads = _extract_data_payloads(response.text)
+            token_text = "".join(data["token"] for data in payloads if "token" in data)
+            done_payload = next(data for data in reversed(payloads) if data.get("done") is True)
+
+            assert token_text == "안녕하세요! 여행을 도와드릴게요."
+            assert done_payload["full_message"] == "추천 답변입니다."
+
+    ai_message = db.query(ChatMessage).filter(
+        ChatMessage.room_id == room.id,
+        ChatMessage.role == "ai",
+    ).one()
+    assert ai_message.message == "추천 답변입니다."
 
 @pytest.mark.asyncio
 async def test_room_title_updated_to_summary(user_and_room):
