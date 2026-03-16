@@ -60,7 +60,7 @@ function formatKstDate(dateLike?: string | null) {
 }
 
 function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
-  const dynamicDetails = item.details 
+  const dynamicDetails = item.details
     ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
     : [];
 
