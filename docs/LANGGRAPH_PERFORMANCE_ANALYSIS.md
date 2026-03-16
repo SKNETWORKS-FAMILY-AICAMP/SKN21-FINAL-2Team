@@ -78,7 +78,7 @@ async def _build_candidate_place_pairs(...):
 
 **문제**  
 - `input_lat/input_long`가 있으면 `get_address(input_lat, input_long)` 1회.
-- `slots.location`이 있으면 `get_address(slots.location.lat, slots.location.long)` 1회.
+- `slots.location`이 있으면 `get_address(slots.location.lat, slots.location.lon)` 1회.
 - 두 호출이 **순차**라서, 두 번의 네트워크 RTT가 연속으로 발생.
 
 **개선**  
