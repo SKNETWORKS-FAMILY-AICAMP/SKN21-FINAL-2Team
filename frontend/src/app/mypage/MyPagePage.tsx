@@ -60,7 +60,7 @@ function formatKstDate(dateLike?: string | null) {
 }
 
 function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
-  const dynamicDetails = item.details 
+  const dynamicDetails = item.details
     ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
     : [];
 
@@ -882,7 +882,7 @@ export function MyPagePage() {
             >
               <div className="p-6">
                 <div className="text-lg font-semibold text-gray-900">
-                  Are you sure you wanna delete this reservation?
+                  정말로 이 예약 내용을 삭제하시나요?
                 </div>
                 <div className="mt-5 flex items-center justify-end gap-3">
                   <button
