@@ -25,6 +25,7 @@ class PlaceExploreItem(BaseModel):
     image_url: str
     score: Optional[float] = None
     description: Optional[str] = None
+    category: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     tag1: Optional[str] = None
@@ -72,8 +73,8 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
     qdrant_cat_map = {
         "tourist_spots": "관광지",
         "restaurants": "음식점",
-        "activities": "축제공연행사",
-        "accommodations": "숙박"
+        "tour_courses": "투어",
+        "콘텐츠": "콘텐츠",
     }
 
     results = {cat: [] for cat in requested_cats}
@@ -128,14 +129,6 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
             for p in points:
                 payload = p.payload or {}
                 img = payload.get("image") or payload.get("firstimage") or payload.get("firstimage2")
-                
-                # 팝업스토어는 과거 종료된 항목 필터링
-                if actual_qdrant_val == "팝업스토어":
-                    from datetime import date
-                    today = date.today().isoformat()
-                    end_date = payload.get("end_date", "")
-                    if end_date and end_date < today:
-                        continue
 
                 if is_valid_image(img):
                     valid_points.append((p, img))
@@ -151,8 +144,7 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
                             address=payload.get("addr") or payload.get("address") or "주소 정보 없음",
                             image_url=to_client_image_url(img_url),
                             description=payload.get("description", "")[:200],
-                            start_date=payload.get("start_date") if actual_qdrant_val == "팝업스토어" else None,
-                            end_date=payload.get("end_date") if actual_qdrant_val == "팝업스토어" else None
+                            category=payload.get("category") if actual_qdrant_val == "콘텐츠" else None,
                         )
                     )
         except Exception as e:
@@ -245,7 +237,7 @@ class CategoryPlacesRequest(BaseModel):
     user_prefs: str  # 사용자 취향 텍스트 (예: "자연 경관을 좋아하고 맛집 탐방을 즐김")
 
 
-SEARCH_CATEGORIES = ["관광지", "음식점", "숙박", "레포츠", "문화시설", "축제공연행사", "팝업스토어"]
+SEARCH_CATEGORIES = ["관광지", "음식점", "투어"]
 
 
 @router.post("/category-places", response_model=Dict[str, List[PlaceExploreItem]])
@@ -258,12 +250,8 @@ async def get_category_places(request: CategoryPlacesRequest):
 
     results: Dict[str, List[PlaceExploreItem]] = {}
 
-    from datetime import date
-    today = date.today().isoformat()
-
     for cat in SEARCH_CATEGORIES:
         try:
-            # 매번 동일한 결과가 나오지 않도록 검색 범위를 넓히고 (limit=20)
             search_results = retriever.search_text(
                 query=request.user_prefs,
                 limit=20,
@@ -276,18 +264,11 @@ async def get_category_places(request: CategoryPlacesRequest):
                 payload = res.payload or {}
                 pid = res.id
                 score = res.score
-                
-                # 여러 이미지 필드 후보 확인 및 유효성 검사
+
                 img_url = to_client_image_url(payload.get("image", payload.get("firstimage", "")))
-                
+
                 if not is_valid_image(img_url):
                     continue
-
-                # 팝업스토어는 진행 중인 항목만 포함
-                if cat == "팝업스토어":
-                    end_date = payload.get("end_date", "")
-                    if end_date and end_date < today:
-                        continue
 
                 items.append(
                     PlaceExploreItem(
@@ -297,8 +278,6 @@ async def get_category_places(request: CategoryPlacesRequest):
                         image_url=img_url,
                         score=round(score, 4),
                         description=payload.get("description", "")[:200],
-                        start_date=payload.get("start_date") if cat == "팝업스토어" else None,
-                        end_date=payload.get("end_date") if cat == "팝업스토어" else None,
                     )
                 )
 
