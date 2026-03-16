@@ -4,6 +4,7 @@ services:
     restart: unless-stopped
     ports:
       - "${QDRANT_PORT:-6333}:6333"
+      - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -18,16 +19,12 @@ services:
       - backend_uploads:/app/data/uploads
     depends_on:
       - qdrant
+    ports:
+      - "8000:8000"
     networks:
       - app-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/healthz', timeout=5)"
-        ]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/healthz', timeout=5)" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -40,6 +37,8 @@ services:
       - ${FRONTEND_ENV_FILE:-.env.frontend}
     depends_on:
       - backend
+    ports:
+      - "3000:3000"
     networks:
       - app-network
 
