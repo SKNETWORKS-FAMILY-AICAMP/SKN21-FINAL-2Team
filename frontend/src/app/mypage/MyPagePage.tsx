@@ -559,7 +559,7 @@ export function MyPagePage() {
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">여행 스타일</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.travelerSnapshot")}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
                         { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -612,7 +612,7 @@ export function MyPagePage() {
 
                   {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
                   <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">추가 특이사항</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.additionalPreference")}</h4>
                     <div className="flex flex-wrap gap-2.5">
                       {(isEditingPreferences
                         ? EXTRA_PREFER_OPTIONS

@@ -52,7 +52,7 @@ export function SurveyPage() {
         }).catch(err => {
             console.error("Failed to fetch prefers:", err);
             if (err.message === 'Unauthorized' || err.message === 'Session expired') {
-                alert("로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요.");
+                alert(t("survey.loginRequired"));
                 router.push("/signup"); // 로그인 페이지로 이동
             }
         });
@@ -75,7 +75,7 @@ export function SurveyPage() {
                 setDirection(1); // 애니메이션용 방향 설정
             } catch (e) {
                 console.error("Failed to submit survey:", e);
-                alert("Failed to save preferences.");
+                alert(t("survey.failedToSave"));
             } finally {
                 setIsSubmitting(false);
             }
@@ -122,7 +122,7 @@ export function SurveyPage() {
         router.replace("/signup");
     };
 
-    if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">{t("common.loading")}</div>;
 
     const currentQuestion = questions[currentQuestionIndex];
 
@@ -141,7 +141,7 @@ export function SurveyPage() {
                             disabled={!isClickable}
                             // 주의: 사용자가 마우스로 쉽게 클릭할 수 있도록 기존 h-1에서 클릭 영역을 높이기 위해 h-2로 변경했습니다.
                             className={`h-2 flex-1 rounded-full overflow-hidden transition-all ${isClickable ? 'cursor-pointer hover:opacity-75' : 'cursor-not-allowed opacity-50'} bg-gray-200`}
-                            aria-label={`${idx + 1}번째 질문으로 이동`}
+                            aria-label={t("survey.goToQuestion", { number: idx + 1 })}
                         >
                             <motion.div
                                 className="h-full bg-black"
@@ -171,8 +171,8 @@ export function SurveyPage() {
                             You&apos;re all set!
                         </h2>
                         <p className="text-gray-500 font-normal mb-12 text-lg">
-                            회원가입 및 취향 분석이 완료되었습니다. <br className="hidden md:block" />
-                            이제 맞춤형 여행 추천을 시작해 보세요.
+                            {t("survey.signupComplete")} <br className="hidden md:block" />
+                            {t("survey.startPersonalizedTrips")}
                         </p>
 
                         <button
@@ -210,9 +210,9 @@ export function SurveyPage() {
                                     onClick={handlePrevious}
                                     // 주의: 텍스트 블록의 정렬을 해치지 않으면서 우측 끝에 배치하기 위해 absolute right-0를 사용했습니다.
                                     className="absolute right-0 md:right-4 flex items-center gap-2 p-3 px-4 text-gray-600 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:text-black hover:bg-gray-50 rounded-full transition-all"
-                                    aria-label="이전 문항으로 돌아가기"
+                                    aria-label={t("survey.goToPrevious")}
                                 >
-                                    <span className="text-sm font-semibold hidden sm:block">이전</span>
+                                    <span className="text-sm font-semibold hidden sm:block">{t("common.previous")}</span>
                                     <ArrowLeft size={20} />
                                 </button>
                             )}

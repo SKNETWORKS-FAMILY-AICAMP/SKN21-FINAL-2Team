@@ -24,8 +24,10 @@ import { DiaryLocationPickerModal } from "./components/DiaryLocationPickerModal"
 import { EmptyDiaryState } from "./components/EmptyDiaryState";
 import { EditorState } from "./types";
 import { emptyEditorState, readExifGps, readFileAsDataUrl } from "./utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function MomentsPage() {
+    const { t } = useTranslation();
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
     // [Feature] 모달 열 때 에디터 스냅샷 (수정 여부 판단용)
@@ -57,7 +59,7 @@ export function MomentsPage() {
             const items = await fetchDiaries(nextQuery.trim() ? { query: nextQuery.trim() } : undefined);
             setDiaries(Array.isArray(items) ? items : []);
         } catch {
-            setError("일기 목록을 불러오지 못했습니다.");
+            setError(t("moments.failedToLoadList"));
         } finally {
             setLoading(false);
         }
@@ -74,7 +76,7 @@ export function MomentsPage() {
                 if (cancelled) return;
                 setDiaries(Array.isArray(diaryItems) ? diaryItems : []);
             } catch {
-                if (!cancelled) setError("일기장을 불러오지 못했습니다.");
+                if (!cancelled) setError(t("moments.failedToLoadDiaries"));
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -142,7 +144,7 @@ export function MomentsPage() {
             // [Feature] 기존 일기 초기 상태 스냅샷 저장
             initialEditorRef.current = JSON.stringify({ id: detail.id, title: detail.title, content: detail.content, entry_date: detail.entry_date, cover_image_path: detail.cover_image_path ?? null, linked_places: detail.linked_places });
         } catch {
-            setError("일기 상세 정보를 불러오지 못했습니다.");
+            setError(t("moments.failedToLoadDetail"));
         } finally {
             setDetailLoading(false);
         }
@@ -197,7 +199,7 @@ export function MomentsPage() {
                 setIsModalOpen(true);
             }
         } catch {
-            setError("이미지를 읽지 못했습니다.");
+            setError(t("moments.failedToReadImage"));
         } finally {
             event.target.value = "";
         }
@@ -219,7 +221,7 @@ export function MomentsPage() {
 
     const handleSave = async () => {
         if (!editor.title.trim() || !editor.content.trim() || !editor.entry_date) {
-            setError("제목, 날짜, 본문은 필수입니다.");
+            setError(t("moments.requiredFields"));
             return;
         }
 
@@ -243,7 +245,7 @@ export function MomentsPage() {
                 setIsModalOpen(true);
             }
         } catch {
-            setError("일기 저장에 실패했습니다.");
+            setError(t("moments.failedToSave"));
         } finally {
             setSaving(false);
         }
@@ -312,7 +314,7 @@ export function MomentsPage() {
             }
             await loadDiaries(query);
         } catch {
-            setError("일기 삭제에 실패했습니다.");
+            setError(t("moments.failedToDelete"));
         } finally {
             setDeletingDiaryId(null);
             setIsDeleteConfirmOpen(false);
@@ -391,9 +393,9 @@ export function MomentsPage() {
             >
                 <div className="space-y-4">
                     <p className="text-sm leading-6 text-gray-600">
-                        지금 창을 닫으면, 내용이 저장되지 않습니다.
+                        {t("moments.unsavedWarning")}
                         <br />
-                        <span className="font-semibold text-gray-900">Save</span> 버튼을 눌러 내용을 저장해주세요.
+                        {t("moments.savePrompt", { save: t("common.save") })}
                     </p>
                     <div className="flex justify-end gap-3">
                         <button
@@ -401,14 +403,14 @@ export function MomentsPage() {
                             onClick={() => setIsCloseConfirmOpen(false)}
                             className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
                         >
-                            back
+                            {t("common.back")}
                         </button>
                         <button
                             type="button"
                             onClick={handleConfirmClose}
                             className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
                         >
-                            Close
+                            {t("common.close")}
                         </button>
                     </div>
                 </div>
@@ -423,7 +425,7 @@ export function MomentsPage() {
             >
                 <div className="space-y-4">
                     <p className="text-sm leading-6 text-gray-600">
-                        당신의 Moments가 저장되었습니다!
+                        {t("moments.momentSaved")}
                     </p>
                     <div className="flex justify-end">
                         <button
@@ -431,7 +433,7 @@ export function MomentsPage() {
                             onClick={handleSaveConfirmClose}
                             className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
                         >
-                            확인
+                            {t("common.confirm")}
                         </button>
                     </div>
                 </div>
@@ -445,7 +447,7 @@ export function MomentsPage() {
             >
                 <div className="space-y-4">
                     <p className="text-sm leading-6 text-gray-600">
-                        정말로 추억을 지우시겠습니까?
+                        {t("moments.deleteConfirmation")}
                     </p>
                     <div className="flex justify-end gap-3">
                         <button
@@ -453,14 +455,14 @@ export function MomentsPage() {
                             onClick={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
                             className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
                         >
-                            아니요
+                            {t("common.no")}
                         </button>
                         <button
                             type="button"
                             onClick={() => void handleConfirmDelete()}
                             className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
                         >
-                            네
+                            {t("common.yes")}
                         </button>
                     </div>
                 </div>

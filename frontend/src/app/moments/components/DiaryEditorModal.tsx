@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Loader2, MapPin, Pencil, Save, X } from "lucide-react";
 
 import { DiaryListItem } from "@/services/api";
+import { useTranslation } from "@/i18n/useTranslation";
 
 import { EditorState } from "../types";
 import { todayString } from "../utils";
@@ -42,6 +43,7 @@ export function DiaryEditorModal({
   onClearLinkedPlace,
   onSave,
 }: DiaryEditorModalProps) {
+  const { t } = useTranslation();
   const linkedPlace = editor.linked_places[0] ?? null;
 
   return (
@@ -90,7 +92,7 @@ export function DiaryEditorModal({
                     <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-zinc-600">
                       <div className="text-center">
                         <Camera size={28} className="mx-auto mb-3" />
-                        <p className="text-sm">Add a cover photo</p>
+                        <p className="text-sm">{t("diary.addCoverPhoto")}</p>
                       </div>
                     </div>
                   )}
@@ -104,7 +106,7 @@ export function DiaryEditorModal({
                   {coverImagePath && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                       <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-                        <Camera size={14} /> Change Photo
+                        <Camera size={14} /> {t("diary.changePhoto")}
                       </span>
                     </div>
                   )}
@@ -121,7 +123,7 @@ export function DiaryEditorModal({
                     <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-zinc-700">
                       <div className="text-center">
                         <Camera size={28} className="mx-auto mb-3" />
-                        <p className="text-sm">No cover photo</p>
+                        <p className="text-sm">{t("diary.noCoverPhoto")}</p>
                       </div>
                     </div>
                   )}
@@ -135,7 +137,7 @@ export function DiaryEditorModal({
                     onChange={(event) =>
                       onEditorChange((prev) => ({ ...prev, title: event.target.value }))
                     }
-                    placeholder="Title your diary"
+                    placeholder={t("diary.titlePlaceholder")}
                     className="w-full border-b border-white/25 bg-transparent pb-2 text-2xl font-bold text-white outline-none placeholder:text-white/50"
                   />
                 ) : (
@@ -173,7 +175,7 @@ export function DiaryEditorModal({
                           className="inline-flex items-center gap-2 rounded-full border border-dashed border-white/20 bg-black/25 px-3 py-1.5 text-xs text-white/75 transition hover:bg-black/40"
                         >
                           <MapPin size={13} />
-                          Add location
+                          {t("diary.addLocation")}
                         </button>
                       )}
                       {linkedPlace && (
@@ -185,7 +187,7 @@ export function DiaryEditorModal({
                           }}
                           className="text-xs text-white/70 underline underline-offset-4 transition hover:text-white"
                         >
-                          Change location
+                          {t("diary.changeLocation")}
                         </button>
                       )}
                     </>
@@ -208,7 +210,7 @@ export function DiaryEditorModal({
 
             <div className="flex w-full flex-col overflow-hidden bg-zinc-950 p-5 md:w-[360px]">
               <div className="mb-4 flex flex-none items-center justify-between">
-                <div className="text-sm font-semibold text-zinc-200">Diary</div>
+                <div className="text-sm font-semibold text-zinc-200">{t("diary.label")}</div>
                 {isEditMode ? (
                   <input
                     type="date"
@@ -236,12 +238,12 @@ export function DiaryEditorModal({
                         onChange={(event) =>
                           onEditorChange((prev) => ({ ...prev, content: event.target.value }))
                         }
-                        placeholder="오늘의 동선, 감정, 기억하고 싶은 장면을 적어보세요."
+                        placeholder={t("diary.contentPlaceholder")}
                         className="min-h-[160px] flex-1 resize-none bg-transparent text-base leading-relaxed text-zinc-300 outline-none placeholder:text-zinc-700"
                       />
                     ) : (
                       <p className="flex-1 whitespace-pre-wrap text-base leading-relaxed text-zinc-300">
-                        {editor.content || <span className="text-zinc-700">내용 없음</span>}
+                        {editor.content || <span className="text-zinc-700">{t("diary.noContent")}</span>}
                       </p>
                     )}
 
@@ -268,7 +270,7 @@ export function DiaryEditorModal({
                         ) : (
                           <Save size={14} />
                         )}
-                        Save
+                        {t("common.save")}
                       </button>
                     ) : (
                       <button
@@ -276,7 +278,7 @@ export function DiaryEditorModal({
                         className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
                       >
                         <Pencil size={14} />
-                        Edit
+                        {t("common.edit")}
                       </button>
                     )}
                   </div>

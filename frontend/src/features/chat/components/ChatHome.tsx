@@ -393,10 +393,10 @@ export function ChatHome() {
         if (!userText && !attachedImageDataUrl && !attachedLocation) return;
 
         const fallbackParts = [
-            attachedFileName ? `[이미지 첨부] ${attachedFileName}` : attachedImageDataUrl ? "[이미지 첨부]" : "",
-            attachedLocationLabel ? `[위치 첨부] ${attachedLocationLabel}` : attachedLocation ? "[위치 첨부]" : "",
+            attachedFileName ? t("chat.imageAttached", { fileName: attachedFileName }) : attachedImageDataUrl ? t("chat.imageAttachedOnly") : "",
+            attachedLocationLabel ? t("chat.locationAttached", { label: attachedLocationLabel }) : attachedLocation ? t("chat.locationAttachedOnly") : "",
         ].filter(Boolean);
-        const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ")} 분석해줘.` : "메시지를 분석해줘.");
+        const messageToSend = userText || (fallbackParts.length > 0 ? t("chat.analyzeAttachments", { attachments: fallbackParts.join(" ") }) : t("chat.analyzeFallback"));
         const optimisticText = userText || fallbackParts.join(" ");
         const currentDataUrl = attachedImageDataUrl;   // 미리보기용 dataUrl
         const currentLocation = attachedLocation;

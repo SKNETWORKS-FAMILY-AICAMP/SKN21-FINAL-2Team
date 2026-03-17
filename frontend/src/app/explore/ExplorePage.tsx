@@ -8,11 +8,12 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
-const CONTENT_CATEGORY_LABELS: Record<string, string> = {
-    "공연": "PERFORMANCE",
-    "전시": "EXHIBITION",
-    "축제": "FESTIVAL",
-    "팝업스토어": "POPUP STORE",
+/** 백엔드 카테고리 값(한국어) → 번역 키 매핑 */
+const CONTENT_CATEGORY_KEY_MAP: Record<string, string> = {
+    "공연": "explore.categoryPerformance",
+    "전시": "explore.categoryExhibition",
+    "축제": "explore.categoryFestival",
+    "팝업스토어": "explore.categoryPopup",
 };
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
@@ -144,7 +145,7 @@ export function ExplorePage() {
     const handleTripModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             const selectedPlaces = pendingPlace ? [{
                 name: pendingPlace.name,
                 adress: pendingPlace.address,
@@ -402,7 +403,7 @@ export function ExplorePage() {
                                                 <div className="flex flex-col justify-center flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
-                                                            {CONTENT_CATEGORY_LABELS[item.category || ""] || "CONTENT"}
+                                                            {CONTENT_CATEGORY_KEY_MAP[item.category || ""] ? t(CONTENT_CATEGORY_KEY_MAP[item.category || ""]) : "CONTENT"}
                                                         </span>
                                                     </div>
                                                     <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
