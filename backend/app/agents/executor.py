@@ -15,7 +15,8 @@ from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.core.llm_factory import LLMFactory
-from app.utils.common import getattr_safe, build_naver_map_url
+from app.utils.common import getattr_safe, build_naver_map_url, dprint
+from app.utils.config import DEBUG_MODE
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
 from app.utils.geocoder import GeoCoder
@@ -98,6 +99,7 @@ def _collect_recommended_places(
         for place in places
         if place.name
     }
+
     recommended: list[PlaceInfo] = []
     for name in _extract_place_names_from_answer(answer_text):
         place = normalized_to_place.get(_normalize_place_name(name))
@@ -303,7 +305,7 @@ def _get_image_data_url(image_path: str) -> str:
                 encoded = base64.b64encode(f.read()).decode("utf-8")
                 return f"data:{mime_type};base64,{encoded}"
         except Exception as e:
-            print(f"[Executor] Failed to encode local image {image_path}: {e}")
+            dprint(f"[Executor] Failed to encode local image {image_path}: {e}")
             return image_path
             
     return image_path
@@ -344,7 +346,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     """
     최종 답변 생성
     """
-    print("--- Executor Agent ---")
+    dprint("--- Executor Agent ---")
     try:
         await adispatch_custom_event("pipeline_step", {"node": "executor", "status": "start"})
     except RuntimeError:
@@ -354,7 +356,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     candidate_pool = state.get("candidate_pool")
     user_input = get_effective_user_input(state)
     input_tags = state.get("input_tags", [])
-    messages = state.get("messages", [])[-10:]
+    messages = state.get("messages", [])[-6:]
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots: Optional[IntentSlots] = state.get("slots")
@@ -380,15 +382,16 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     candidate_names = "없음"
     if not candidates:
         # web_search_node가 미리 검색해 놓은 결과를 state에서 읽는다.
-        print("[Executor] No candidates — reading web_search results from state")
+        dprint("[Executor] No candidates — reading web_search results from state")
         fallback_places = state.get("web_search_places") or []
         web_context = state.get("web_search_context") or ""
         if not fallback_places:
-            print("[Executor] web_search_places empty — no fallback results available")
+            dprint("[Executor] web_search_places empty — no fallback results available")
     else:
-        print(f"candidate_pool : {len(candidate_pool)}")
-        print(f"candidates : {len(candidates)}")
-        pprint.pprint(candidates)
+        dprint(f"candidate_pool : {len(candidate_pool)}")
+        dprint(f"candidates : {len(candidates)}")
+        if DEBUG_MODE:
+            pprint.pprint(candidates)
 
         # 컨텍스트 구성
         candidate_places, place_context, candidate_names = _build_place_context(candidates)
@@ -444,13 +447,13 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     
     # astream을 사용하여 토큰 단위 스트리밍 (custom event로 SSE 레이어에 전달)
     full_content = await collect_streamed_text(
-        temperature=0.5, 
-        prompt_value=prompt_messages, 
+        temperature=0.2,
+        prompt_value=prompt_messages,
         config=config,
     )
 
     cleaned_answer = full_content.strip()
-    print(f"[Executor] Answer length: {len(cleaned_answer)}")
+    dprint(f"[Executor] Answer length: {len(cleaned_answer)}")
 
     # PlaceInfo 목록 구성 (Qdrant path: candidates 기반, Tavily path: 답변 파싱 + 지오코딩)
     if candidates:
@@ -468,7 +471,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             deprioritized_names=previous_recommendations,
         )
 
-    print(f"[Executor] place_info_list: {len(place_info_list)} items")
+    dprint(f"[Executor] place_info_list: {len(place_info_list)} items")
 
     return {
         "messages": AIMessage(content=cleaned_answer),
@@ -481,7 +484,7 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     """
     여행 계획에서 부족한 정보를 재질문하는 node
     """
-    print("--- Executor Missing Agent ---")
+    dprint("--- Executor Missing Agent ---")
     try:
         await adispatch_custom_event("pipeline_step", {"node": "executor_missing", "status": "start"})
     except RuntimeError:
@@ -490,12 +493,12 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
     user_input = get_effective_user_input(state)
-    messages = state.get("messages", [])[-10:]
+    messages = state.get("messages", [])[-6:]
     prefs_info = state.get("prefs_info", "")
     slots = state.get("slots")
     follow_up_questions = state.get("follow_up_questions", [])
 
-    print(f"[Executor] Missing slots: {missing_slots}")
+    dprint(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
     
     human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
@@ -522,7 +525,7 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     )
 
     answer = full_content.strip()
-    print(f"[Executor] Answer generated (length={len(answer)})")
+    dprint(f"[Executor] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}
 
@@ -531,14 +534,14 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     """
     일상 대화 node
     """
-    print("--- Executor General Agent ---")
+    dprint("--- Executor General Agent ---")
     try:
         await adispatch_custom_event("pipeline_step", {"node": "executor_general", "status": "start"})
     except RuntimeError:
         pass
 
     user_input = get_effective_user_input(state)
-    messages = state.get("messages", [])[-10:]
+    messages = state.get("messages", [])[-6:]
     prefs_info = state.get("prefs_info", "")
     slots = state.get("slots")
     follow_up_questions = state.get("follow_up_questions", [])
@@ -568,6 +571,6 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     )
 
     answer = full_content.strip()
-    print(f"[Executor General] Answer generated (length={len(answer)})")
+    dprint(f"[Executor General] Answer generated (length={len(answer)})")
 
     return {"messages": AIMessage(content=answer), "answer": answer}

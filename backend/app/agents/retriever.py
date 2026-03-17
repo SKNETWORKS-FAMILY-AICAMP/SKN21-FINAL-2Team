@@ -1,6 +1,7 @@
 import asyncio
 import random
 import re
+import time
 from typing import Dict, Any, List
 
 from langchain_core.callbacks.manager import adispatch_custom_event
@@ -10,7 +11,7 @@ from app.agents.models.output import IntentType, InputType
 from app.core.retrieval.place import PlaceRetriever
 from app.utils.geocoder import LANDMARK_DICTIONARY
 from app.utils.vision import describe_image
-from app.utils.common import getattr_safe, in_seoul_bbox, normalize_text
+from app.utils.common import getattr_safe, in_seoul_bbox, normalize_text, dprint
 from app.utils.place_id import get_candidate_point_id, get_place_id
 
 from app.utils.config import get_retrieval_params, CANDIDATE_THRESHOLD
@@ -207,7 +208,7 @@ async def _search_for_trip_planning(
     async def search_item(item):
         async with semaphore:
             search_query = item.get("search_query", "") or item.get("activity", "")
-            print("[Retriever - search planning] query: ", search_query)
+            dprint("[Retriever - search planning] query: ", search_query)
             if not search_query:
                 return []
 
@@ -238,7 +239,7 @@ async def _search_for_trip_planning(
                 return results
 
             except Exception as e:
-                print(f"[Retriever] Search error for '{search_query}': {e}")
+                dprint(f"[Retriever] Search error for '{search_query}': {e}")
                 return []
 
     all_results_lists = await asyncio.gather(*[search_item(item) for item in itinerary])
@@ -263,7 +264,7 @@ async def _search_for_general(
     longitude = state.get("input_lon")
     slots = state.get("slots")
 
-    print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
+    dprint(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
     query = user_input
 
     if state.get("semantic_input_image"):
@@ -290,7 +291,7 @@ async def _search_for_general(
     anchor_lat = state.get("location_anchor_lat")
     anchor_lon = state.get("location_anchor_lon")
     anchor_radius_m = state.get("location_anchor_radius_m")
-    print(f"[Retriever] anchor from state: lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
+    dprint(f"[Retriever] anchor from state: lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
 
     try:
         return await retriever.search_hybrid(
@@ -313,7 +314,7 @@ async def _search_for_general(
             input_tags=list(input_tags) if input_tags else None,
         )
     except Exception as e:
-        print(f"[Retriever] Hybrid search error: {e}")
+        dprint(f"[Retriever] Hybrid search error: {e}")
         return []
 
 
@@ -351,7 +352,8 @@ async def retriever_node(state: TravelState):
     결과가 없고 카운트가 0이면 route_after_retriever 가 다시 retriever 로 라우팅한다.
     """
     retry_count = int(state.get("retriever_retry_count") or 0)
-    print(f"--- Retriever Agent (retry_count={retry_count}) ---")
+    _node_start = time.perf_counter()
+    dprint(f"--- Retriever Agent (retry_count={retry_count}) ---")
     # 재시도 여부를 직접 알고 있으므로 step 이름을 명확하게 전달
     _step_key = "retriever_retry" if retry_count > 0 else "retriever"
     await adispatch_custom_event("pipeline_step", {"node": _step_key, "status": "start"})
@@ -372,12 +374,12 @@ async def retriever_node(state: TravelState):
     selection_seed = (hash(str(room_id)) + turn_count) % (2 ** 31)
 
     primary_intent = state.get("primary_intent")
-    print(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
+    dprint(f"[Retriever] primary_intent={primary_intent} itinerary_len={len(state.get('itinerary', []))} user_input={repr(user_input)}")
 
     image_path = state.get("input_image")
     emotional_text = state.get("semantic_input_image") or None
     if image_path and not emotional_text:
-        print("[Retriever] semantic_input_image missing, calling describe_image as fallback...")
+        dprint("[Retriever] semantic_input_image missing, calling describe_image as fallback...")
         emotional_text = await describe_image(image_path)
 
     search_scope = _resolve_search_scope(
@@ -385,7 +387,7 @@ async def retriever_node(state: TravelState):
         slots=state.get("slots"),
         image_path=image_path,
     )
-    print(f"[Retriever] search_scope={search_scope} geo_retry_count={retry_count}")
+    dprint(f"[Retriever] search_scope={search_scope} geo_retry_count={retry_count}")
 
     # TRIP_PLANNING: itinerary 기반 검색만 실행 (일반 검색 노이즈 제외).
     # 결과가 0이면(itinerary 없거나 검색 실패) 일반 검색으로 fallback.
@@ -396,9 +398,9 @@ async def retriever_node(state: TravelState):
             candidate_k=candidate_k,
             rerank_max_k=rerank_max_k,
         )
-        print(f"[Retriever] trip_candidates={len(candidate_pool)}")
+        dprint(f"[Retriever] trip_candidates={len(candidate_pool)}")
         if not candidate_pool:
-            print("[Retriever] trip search returned 0, fallback to general search")
+            dprint("[Retriever] trip search returned 0, fallback to general search")
             candidate_pool = await _search_for_general(
                 state,
                 emotional_text=emotional_text,
@@ -407,7 +409,7 @@ async def retriever_node(state: TravelState):
                 search_scope=search_scope,
                 geo_retry_count=retry_count,
             )
-            print(f"[Retriever] fallback general_pool={len(candidate_pool)}")
+            dprint(f"[Retriever] fallback general_pool={len(candidate_pool)}")
     else:
         candidate_pool = await _search_for_general(
             state,
@@ -417,9 +419,9 @@ async def retriever_node(state: TravelState):
             search_scope=search_scope,
             geo_retry_count=retry_count,
         )
-        print(f"[Retriever] general_pool={len(candidate_pool)}")
+        dprint(f"[Retriever] general_pool={len(candidate_pool)}")
 
-    print(f"[Retriever] candidate_pool total={len(candidate_pool)}")
+    dprint(f"[Retriever] candidate_pool total={len(candidate_pool)}")
 
     # pool 기준 dedup + 점수 정렬
     candidate_dict: Dict[str, Dict[str, Any]] = {}
@@ -430,7 +432,7 @@ async def retriever_node(state: TravelState):
         if not cid:
             skipped += 1
             payload = c.get("payload", {}) if isinstance(c, dict) else {}
-            print(
+            dprint(
                 f"[Retriever] SKIP candidate with empty place_id: "
                 f"point_id={get_candidate_point_id(c)!r} payload.contentid={(payload.get('contentid') if isinstance(payload, dict) else None)!r}"
             )
@@ -445,7 +447,7 @@ async def retriever_node(state: TravelState):
             name_dedup_dict[name_signature] = c
 
     deduped_candidates = list(name_dedup_dict.values()) if name_dedup_dict else list(candidate_dict.values())
-    print(
+    dprint(
         f"[Retriever] dedup: pool={len(candidate_pool)} skipped={skipped} "
         f"unique_id={len(candidate_dict)} unique_name={len(name_dedup_dict)}"
     )
@@ -454,7 +456,7 @@ async def retriever_node(state: TravelState):
     # CANDIDATE_THRESHOLD 미만 후보 제거
     # 단, 모두 탈락해도 최소 final_k개는 점수순으로 유지 (web_search fallback 방지)
     above = [c for c in candidates if _candidate_score(c) >= CANDIDATE_THRESHOLD]
-    print(
+    dprint(
         f"[Retriever] threshold={CANDIDATE_THRESHOLD} "
         f"before={len(candidates)} after={len(above)} "
         f"(dropped={len(candidates) - len(above)})"
@@ -463,10 +465,21 @@ async def retriever_node(state: TravelState):
         # reranker가 쿼리와 후보 간 관련성을 낮게 평가해 전원 탈락했더라도
         # 점수순 상위 final_k개는 무조건 유지 → 빈 결과로 web_search로 빠지는 현상 방지
         above = candidates[:max(final_k, len(above))]
-        print(
+        dprint(
             f"[Retriever] threshold dropped all → keeping top {len(above)} by score (min_k={final_k})"
         )
     candidates = above
+
+    # 이미 노출된 장소 제거 (fallback 없음 — final_k 미달이어도 허용)
+    shown_place_ids: list[str] = list(state.get("shown_place_ids") or [])
+    if shown_place_ids:
+        shown_set = set(shown_place_ids)
+        before_exc = len(candidates)
+        candidates = [c for c in candidates if get_place_id(c) not in shown_set]
+        dprint(
+            f"[Retriever] shown_place exclusion: before={before_exc} after={len(candidates)} "
+            f"excluded={before_exc - len(candidates)}"
+        )
 
     exposed_candidates = _pick_candidates(
         candidates,
@@ -487,9 +500,19 @@ async def retriever_node(state: TravelState):
     diagnostics["location_canonical_matched"] = canonical_matched
     diagnostics["location_geo_filter_applied"] = canonical_matched  # anchor 전달 여부와 동치
 
+    # 이번 턴 노출 장소 ID를 누적
+    newly_shown = [get_place_id(c) for c in exposed_candidates if get_place_id(c)]
+    updated_shown_place_ids = shown_place_ids + [pid for pid in newly_shown if pid not in shown_place_ids]
+    dprint(
+        f"[Retriever] shown_place_ids: prev={len(shown_place_ids)} "
+        f"new={len(newly_shown)} total={len(updated_shown_place_ids)}"
+    )
+
+    dprint(f"[TIMING] retriever_node DONE  total={time.perf_counter()-_node_start:.3f}s  exposed={len(exposed_candidates)}")
     return {
         "candidate_pool": candidate_pool,
         "candidates": exposed_candidates,
+        "shown_place_ids": updated_shown_place_ids,
         "retrieval_diagnostics": diagnostics,
         "selection_mode": selection_mode,
         # route_after_retriever 가 이 값을 보고 재시도 여부를 결정한다.

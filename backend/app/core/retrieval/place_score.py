@@ -14,6 +14,7 @@ PlaceScorer mixin:
 import asyncio
 import math
 import re
+import time
 from typing import Any
 from sentence_transformers import CrossEncoder
 
@@ -29,6 +30,7 @@ from app.utils.config import (
 )
 from app.scripts.preprocess_data import build_addr_tokens
 from app.utils.place_id import get_place_id_from_point
+from app.utils.common import dprint
 
 
 # ---------------------------------------------------------------------------
@@ -57,12 +59,12 @@ def _addr_token_stem(token: str) -> str:
 
 
 def _build_compact_text(payload: dict[str, Any]) -> str:
-    if payload.get("llm_text"):
-        return payload.get("llm_text")
+    # llm_text는 LLM 답변 생성용 장문 텍스트 → reranker 입력에 사용하지 않음
+    # (400~600자 무제한 전달 시 CrossEncoder attention 연산이 ~25배 증가)
     title = str(payload.get("title") or payload.get("name") or "").strip()
     category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
     addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "").strip()
-    desc = payload.get("summary") or ""
+    desc = str(payload.get("summary") or "").strip()
     return " ".join([part for part in (title, category, addr, desc) if part]).strip()
 
 
@@ -480,7 +482,7 @@ class PlaceScorer:
         if self._reranker_load_attempted:
             return
         self._reranker_load_attempted = True
-        _RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
+        _RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
         try:
             self._reranker = CrossEncoder(
                 _RERANKER_MODEL,
@@ -488,10 +490,10 @@ class PlaceScorer:
                 # MPS(Apple Silicon) 환경에서는 FP16 미지원 → CPU fallback 방지
                 model_kwargs={"torch_dtype": "auto"},
             )
-            print(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
+            dprint(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
         except Exception as e:
             self._reranker = None
-            print(f"[WARN] Reranker unavailable: {e}")
+            dprint(f"[WARN] Reranker unavailable: {e}")
 
     async def _rerank_candidates(self, query: str, candidates: list[dict], top_k: int) -> list[dict]:
         self._ensure_reranker()
@@ -504,7 +506,9 @@ class PlaceScorer:
 
         pairs = [(query, _build_compact_text(c.get("payload", {}))) for c in candidates]
         try:
+            _t0 = time.perf_counter()
             scores = await asyncio.to_thread(self._reranker.predict, pairs)
+            dprint(f"[TIMING] reranker.predict  pairs={len(pairs)}  elapsed={time.perf_counter()-_t0:.3f}s")
             for c, s in zip(candidates, scores):
                 # sentence-transformers CrossEncoder.predict()는 num_labels=1일 때
                 # 내부적으로 sigmoid를 적용해 [0.0, 1.0] 범위로 반환하므로
@@ -515,11 +519,11 @@ class PlaceScorer:
                 c["final_rank"] = idx
             return candidates[:top_k]
         except asyncio.CancelledError:
-            print("[INFO] Request cancelled during Reranker inference (Client disconnected).")
+            dprint("[INFO] Request cancelled during Reranker inference (Client disconnected).")
             # asyncio의 취소 신호는 상위로 올려보내서(raise) Uvicorn이 리소스를 정리할 수 있도록 해야 합니다.
             raise
         except Exception as e:
-            print(f"[WARN] Reranker inference failed: {e}")
+            dprint(f"[WARN] Reranker inference failed: {e}")
             for idx, c in enumerate(candidates[:top_k], start=1):
                 c["rerank_score"] = None
                 c["final_rank"] = idx

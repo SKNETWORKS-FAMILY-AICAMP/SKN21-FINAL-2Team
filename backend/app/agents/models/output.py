@@ -59,7 +59,7 @@ class IntentSlots(BaseModel):
     nice_to_have: Optional[str] = Field(default=None, description="있으면 좋은 조건")
 
 
-class IntentOutput(BaseModel):
+class IntentCoreOutput(BaseModel):
     update_user_input: Optional[str] = Field(
         default=None,
         description="사용자 입력이 단답이거나 의도가 불명확할 때, 직전 대화 맥락을 반영해 보강한 사용자 요청 문장. 이 값이 있으면 아래 intents/slots는 반드시 이 문장 기준으로 추출하십시오.",
@@ -68,6 +68,9 @@ class IntentOutput(BaseModel):
     primary_intent: IntentType = Field(description="사용자의 주요 의도")
     slots: IntentSlots = Field(description="사용자 입력에서 추출된 슬롯")
     input_tags: List[str] = Field(description="사용자 입력에서 추출된 태그 (장소, 카테고리, 키워드 등)")
+
+
+class SummaryOutput(BaseModel):
     summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
     summary_message: str = Field(default="", description="대화 요약")
 

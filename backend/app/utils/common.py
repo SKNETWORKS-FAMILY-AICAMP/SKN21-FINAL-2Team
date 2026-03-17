@@ -3,6 +3,13 @@ import re
 import urllib.parse
 from typing import Any, Optional
 
+from app.utils.config import DEBUG_MODE
+
+
+def dprint(*args, **kwargs):
+    if DEBUG_MODE:
+        print(*args, **kwargs)
+
 
 def normalize_text(value: str) -> str:
     """비교용 문자열 정규화."""

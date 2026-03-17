@@ -38,8 +38,7 @@ INTENT_PROMPT = """
 - REVIEWS: 리뷰, 평점, 후기 요청
 - BUDGET: 예산 관련 요청
 - ITINERARY_SAVE: 일정 저장 요청
-- INFO_QA: 특정 장소 또는 여행 정보 질문
-- IMAGE_SIMILAR: 이미지와 유사한 장소 검색
+- INFO_QA: 특정 장소 또는 여행 정보 질문{image_intent_type}
 
 ### Intent 분류 핵심 규칙
 - intents는 반드시 1개 이상 선택하십시오.
@@ -79,32 +78,37 @@ INTENT_PROMPT = """
 
 ---
 
-## 3. Summary (요약)
-
-summary_title과 summary_message를 대화 내용만 보고 추출하십시오.
-
-### summary_title
-- 사용자의 첫 질문이나 이전 대화를 참고해 새로운 장소, 활동, 기간 등 **구체적인 여행 맥락**이 포함되었을 때는 반드시 10자 이내의 제목을 추출하십시오.
-- 채팅방의 제목으로 사용될 예정입니다.
-- update_user_input이 있으면, update_user_input를 기준으로 summary_title 작성하십시오.
-- 인사말이나 단순 답변 등 정보량이 부족한 경우 또는 기존 제목({summary_title})이 이미 현재 대화 내용을 잘 대변하고 있다면 `null`을 반환하십시오.
-- 예: "홍대, 종로 1박2일 여행 일정", "강남역 핫플 추천"
-
-
-### summary_message
-- 제공된 이전 대화보다 오래된 대화들을 기억하기 위한 요약입니다.
-- 대화에 필요한 정보들을 요약하십시오.
-- 이전 요약 내용을 참고하여 사용자의 최근 대화 내용을 포함하여 요약하십시오.
-
-## 4. Input Tags (태그)
+## 3. Input Tags (태그)
 - 사용자 입력(update_user_input)을 기준으로 대화 맥락에서 장소, 카테고리, 분위기, 키워드 등을 태그 형태로 추출하십시오.
 - 예: ["성수동", "카페", "분위기 좋은", "주차 가능"]
 
 ---
 
 # 중요 규칙
-- 반드시 IntentOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
+- 반드시 IntentCoreOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
 - 스키마 description을 반드시 따르십시오.
+"""
+
+
+IMAGE_INTENT_TYPE = "\n- IMAGE_SIMILAR: 이미지와 유사한 장소 검색"
+
+SUMMARY_PROMPT = """
+당신은 한국 여행 채팅 기록을 요약하는 어시스턴트입니다.
+대화 내용을 읽고 summary_title과 summary_message를 추출하십시오.
+
+기존 채팅 제목: {summary_title}
+이전 요약 내용: {summary_message}
+
+### summary_title
+- 새로운 장소, 활동, 기간 등 구체적인 여행 맥락이 포함되었을 때만 10자 이내의 제목을 추출하십시오.
+- 인사말이나 단순 답변이거나 기존 제목이 이미 현재 대화를 잘 대변하면 `null`을 반환하십시오.
+- 예: "홍대, 종로 1박2일 여행 일정", "강남역 핫플 추천"
+
+### summary_message
+- 이전 요약을 참고하여 최근 대화 내용을 포함한 누적 요약을 작성하십시오.
+- 여행 관련 정보(장소, 날짜, 인원, 카테고리 등)를 중심으로 요약하십시오.
+
+반드시 SummaryOutput 스키마에 맞는 값만 생성하십시오.
 """
 
 

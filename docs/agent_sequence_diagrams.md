@@ -180,13 +180,13 @@ sequenceDiagram
         Intent-->>Graph: IntentType.IMAGE_SIMILAR 즉시 반환
     else user_input 존재
         Intent->>LLM: INTENT_PROMPT + messages + user_input
-        Note over LLM: Structured Output → IntentOutput
-        LLM-->>Intent: IntentOutput (intents, slots, summary)
+        Note over LLM: Structured Output → IntentCoreOutput
+        LLM-->>Intent: IntentCoreOutput (intents, slots, summary)
         Intent-->>Graph: State 업데이트<br/>(primary_intent, slots, summary_title, summary_message)
     end
 ```
 
-**IntentOutput 구조:**
+**IntentCoreOutput 구조:**
 - `intents`: 감지된 의도 목록 (List[IntentType])
 - `primary_intent`: 주 의도 (GENERAL / PLACE_INQUIRY / TRIP_PLANNING / IMAGE_SIMILAR 등)
 - `slots`: 추출된 정보 (location, category, dates, duration, party_size, budget_level 등)
@@ -486,7 +486,7 @@ flowchart LR
         IntentAgent --> CheckInput{"입력 타입"}
         CheckInput -->|"이미지만"| ImgIntent["IMAGE_SIMILAR"]
         CheckInput -->|"텍스트"| LLMIntent["LLM 분석"]
-        LLMIntent --> IntentOut["IntentOutput"]
+        LLMIntent --> IntentOut["IntentCoreOutput"]
         ImgIntent --> Route{"의도 분기"}
         IntentOut --> Route
     end

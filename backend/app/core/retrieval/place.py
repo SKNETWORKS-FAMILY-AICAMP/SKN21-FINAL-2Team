@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import asyncio
 
@@ -13,7 +14,7 @@ from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
     ENABLE_ADDR_SPARSE_BOOST, ENABLE_GEO_FILTER,
-    ENABLE_QDRANT_SPARSE,
+    ENABLE_QDRANT_SPARSE, ENABLE_RERANKER,
     BOOST_WEIGHT,
     CANDIDATE_LIMIT_MULTIPLIER,
     GEO_PROXIMITY_RADIUS_KM,
@@ -24,6 +25,7 @@ from app.utils.config import (
 )
 from app.scripts.preprocess_data import download_image, build_sparse_vector
 from app.utils.geocoder import GeoCoder
+from app.utils.common import dprint
 from app.utils.vision import describe_image
 from app.core.retrieval.place_score import PlaceScorer, _extract_place_id, _to_positive_int
 from app.agents.models.output import CategoryType
@@ -35,23 +37,23 @@ class PlaceRetriever(PlaceScorer):
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
-            print("[INFO] Initializing PlaceRetriever (Singleton)...")
+            dprint("[INFO] Initializing PlaceRetriever (Singleton)...")
             cls._instance = cls()
         return cls._instance
 
     def __init__(self):
         host = os.getenv('QDRANT_HOST', "localhost")
         port = os.getenv('QDRANT_PORT', 6333)
-        print(f"[INFO] Connecting to Qdrant at {host}:{port}")
+        dprint(f"[INFO] Connecting to Qdrant at {host}:{port}")
         self.client = QdrantClient(host=host, port=port)
 
-        print(f"[INFO] Loading models: Text={TEXT_MODEL}, Vision={VISION_MODEL}")
+        dprint(f"[INFO] Loading models: Text={TEXT_MODEL}, Vision={VISION_MODEL}")
         self.text_model = SentenceTransformer(TEXT_MODEL, device=DEVICE)
         self.vision_model = SentenceTransformer(VISION_MODEL, device=DEVICE)
         self._reranker = None
         self._reranker_load_attempted = False
 
-        print(f"[INFO] PlaceRetriever ready on {DEVICE}")
+        dprint(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
     @staticmethod
     def _resolve_category_values(categories: list[CategoryType] | None) -> list[str]:
@@ -129,7 +131,7 @@ class PlaceRetriever(PlaceScorer):
 
         if category_values:
             if len(category_values) >= 2:
-                print(f"[INFO] category candidates built: {category_values}")
+                dprint(f"[INFO] category candidates built: {category_values}")
             must_conditions.append(
                 FieldCondition(key="contenttypeid", match=MatchAny(any=category_values))
             )
@@ -169,7 +171,7 @@ class PlaceRetriever(PlaceScorer):
             must=must_conditions if must_conditions else None,
             must_not=must_not_conditions if must_not_conditions else None,
         )
-        print(f"[INFO] query_filter built: category={categories} values={category_values} geo={'bbox' if bbox else 'circle' if anchor_lat else 'no'}")
+        dprint(f"[INFO] query_filter built: category={categories} values={category_values} geo={'bbox' if bbox else 'circle' if anchor_lat else 'no'}")
         return built
 
     def search_text(self, query: str, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
@@ -177,7 +179,7 @@ class PlaceRetriever(PlaceScorer):
         Text-based search for places (Semantic).
         Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
         """
-        print(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} categories={categories} has_image={has_image}")
+        dprint(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} categories={categories} has_image={has_image}")
         query_vec = self.text_model.encode(query).astype(np.float32)
 
         query_filter = self._build_query_filter(categories, has_image)
@@ -189,7 +191,7 @@ class PlaceRetriever(PlaceScorer):
             with_payload=True,
             query_filter=query_filter,
         )
-        print(f"[INFO] search_text hits={len(response.points)}")
+        dprint(f"[INFO] search_text hits={len(response.points)}")
         return response.points
 
     def search_text_to_image(self, query: str, limit: int = 5, categories: list[CategoryType] = None):
@@ -197,7 +199,7 @@ class PlaceRetriever(PlaceScorer):
         Text-to-Image cross-modal search.
         Uses CLIP Text Encoder to find images in 'img_vec_agg'.
         """
-        print(f"[INFO] search_text_to_image (Cross-modal) start query='{query[:80]}'")
+        dprint(f"[INFO] search_text_to_image (Cross-modal) start query='{query[:80]}'")
         # Using CLIP to encode text for image matching
         query_vec = self.vision_model.encode(query).astype(np.float32)
 
@@ -218,7 +220,7 @@ class PlaceRetriever(PlaceScorer):
         Image-based search (Visual Similarity).
         Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
         """
-        print(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
+        dprint(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
 
         img = await asyncio.to_thread(download_image, image_url)
         if img is None:
@@ -268,8 +270,9 @@ class PlaceRetriever(PlaceScorer):
         scope = (search_scope or "auto").strip().lower()
         if scope not in {"auto", "place_only", "photo_only"}:
             scope = "auto"
-        print(
-            f"[INFO] search_hybrid start query='{query[:80]}' has_image={'yes' if image_url else 'no'} "
+        _hybrid_start = time.perf_counter()
+        dprint(
+            f"[TIMING] search_hybrid START query='{query[:80]}' has_image={'yes' if image_url else 'no'} "
             f"scope={scope}"
         )
 
@@ -304,12 +307,12 @@ class PlaceRetriever(PlaceScorer):
             gps_bbox = _km_to_bbox(user_latitude, user_lon, expanded_radius_km)
             anchor_bbox = _km_to_bbox(location_anchor_lat, location_anchor_lon, expanded_anchor_km)
             geo_bbox, geo_bbox_mode = self._merge_geo_bboxes(gps_bbox, anchor_bbox)
-            print(f"[INFO] combined bbox from GPS+anchor ({geo_bbox_mode}): {geo_bbox}")
+            dprint(f"[INFO] combined bbox from GPS+anchor ({geo_bbox_mode}): {geo_bbox}")
         elif apply_geo and has_gps:
             # GPS만 있을 때: GPS 기준 bbox
             expanded_radius_km = MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)
             geo_bbox = _km_to_bbox(user_latitude, user_lon, expanded_radius_km)
-            print(f"[INFO] GPS-only bbox: {geo_bbox}")
+            dprint(f"[INFO] GPS-only bbox: {geo_bbox}")
 
         expanded_radius_m = (location_radius_m * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0)) if location_radius_m else None
         
@@ -355,7 +358,9 @@ class PlaceRetriever(PlaceScorer):
         async def _ch_text_semantic():
             if not (has_text and scope in {"auto", "place_only"}):
                 return None
+            t0 = time.perf_counter()
             emb = np.asarray(await asyncio.to_thread(self.text_model.encode, query), dtype=np.float32)
+            t1 = time.perf_counter()
             resp = await asyncio.to_thread(
                 self.client.query_points,
                 collection_name=PLACES_COLLECTION,
@@ -364,16 +369,19 @@ class PlaceRetriever(PlaceScorer):
                 with_payload=True,
                 query_filter=places_filter,
             )
-            print(f"[INFO] text_semantic hits={len(resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
+            t2 = time.perf_counter()
+            dprint(f"[TIMING] text_semantic  encode={t1-t0:.3f}s  qdrant={t2-t1:.3f}s  hits={len(resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
             return ("text_semantic", PLACES_COLLECTION, resp.points, 1.0, None)
 
         async def _ch_sparse():
             if not (ENABLE_QDRANT_SPARSE and has_text and scope in {"auto", "place_only"}):
                 return None
             try:
+                t0 = time.perf_counter()
                 sparse_indices, sparse_values = await asyncio.to_thread(build_sparse_vector, query)
                 if not sparse_indices or not sparse_values:
                     return None
+                t1 = time.perf_counter()
                 resp = await asyncio.to_thread(
                     self.client.query_points,
                     collection_name=PLACES_COLLECTION,
@@ -383,16 +391,19 @@ class PlaceRetriever(PlaceScorer):
                     with_payload=True,
                     query_filter=places_filter,
                 )
-                print(f"[INFO] qdrant_sparse hits={len(resp.points)}")
+                t2 = time.perf_counter()
+                dprint(f"[TIMING] qdrant_sparse  build={t1-t0:.3f}s  qdrant={t2-t1:.3f}s  hits={len(resp.points)}")
                 return ("qdrant_sparse", PLACES_COLLECTION, resp.points, 0.85, None)
             except Exception as e:
-                print(f"[WARN] qdrant sparse channel failed: {e}")
+                dprint(f"[WARN] qdrant sparse channel failed: {e}")
                 return None
 
         async def _ch_text_to_image():
             if not (has_text and scope in {"auto", "photo_only"}):
                 return None
+            t0 = time.perf_counter()
             emb = np.asarray(await asyncio.to_thread(self.vision_model.encode, query), dtype=np.float32)
+            t1 = time.perf_counter()
             resp = await asyncio.to_thread(
                 self.client.query_points,
                 collection_name=PHOTOS_COLLECTION,
@@ -401,15 +412,20 @@ class PlaceRetriever(PlaceScorer):
                 with_payload=True,
                 query_filter=photos_filter,
             )
+            t2 = time.perf_counter()
+            dprint(f"[TIMING] text_to_image  encode={t1-t0:.3f}s  qdrant={t2-t1:.3f}s  hits={len(resp.points)}")
             return ("text_to_image", PHOTOS_COLLECTION, resp.points, 0.5, None)
 
         async def _ch_image_visual():
             if not (image_url and scope in {"auto", "photo_only"}):
                 return None
+            t0 = time.perf_counter()
             img = await asyncio.to_thread(download_image, image_url)
             if not img:
                 return None
+            t1 = time.perf_counter()
             emb = np.asarray(await asyncio.to_thread(self.vision_model.encode, img), dtype=np.float32)
+            t2 = time.perf_counter()
             resp = await asyncio.to_thread(
                 self.client.query_points,
                 collection_name=PHOTOS_COLLECTION,
@@ -418,15 +434,20 @@ class PlaceRetriever(PlaceScorer):
                 with_payload=True,
                 query_filter=photos_filter,
             )
+            t3 = time.perf_counter()
+            dprint(f"[TIMING] image_visual  download={t1-t0:.3f}s  encode={t2-t1:.3f}s  qdrant={t3-t2:.3f}s  hits={len(resp.points)}")
             return ("image_visual", PHOTOS_COLLECTION, resp.points, 1.0, None)
 
         async def _ch_image_emotional():
             if not (image_url and scope == "auto"):
                 return None
+            t0 = time.perf_counter()
             emo_text = emotional_text or await describe_image(image_url)
             if not emo_text:
                 return None
+            t1 = time.perf_counter()
             emb = np.asarray(await asyncio.to_thread(self.text_model.encode, emo_text), dtype=np.float32)
+            t2 = time.perf_counter()
             resp = await asyncio.to_thread(
                 self.client.query_points,
                 collection_name=PLACES_COLLECTION,
@@ -435,8 +456,11 @@ class PlaceRetriever(PlaceScorer):
                 with_payload=True,
                 query_filter=places_filter,
             )
+            t3 = time.perf_counter()
+            dprint(f"[TIMING] image_emotional  describe={t1-t0:.3f}s  encode={t2-t1:.3f}s  qdrant={t3-t2:.3f}s  hits={len(resp.points)}")
             return ("image_emotional", PLACES_COLLECTION, resp.points, 0.8, emo_text)
 
+        _gather_start = time.perf_counter()
         channel_outputs = await asyncio.gather(
             _ch_text_semantic(),
             _ch_sparse(),
@@ -445,12 +469,13 @@ class PlaceRetriever(PlaceScorer):
             _ch_image_emotional(),
             return_exceptions=True,
         )
+        dprint(f"[TIMING] gather total={time.perf_counter()-_gather_start:.3f}s")
 
         for output in channel_outputs:
             if output is None:
                 continue
             if isinstance(output, BaseException):
-                print(f"[WARN] channel exception: {output}")
+                dprint(f"[WARN] channel exception: {output}")
                 continue
             match_type, source_col, hits, weight, extra = output
             if match_type == "image_emotional" and extra:
@@ -468,12 +493,12 @@ class PlaceRetriever(PlaceScorer):
                 f"geo_retry_count={geo_retry_count}"
             )
             if geo_retry_count == 0:
-                print(
+                dprint(
                     f"[INFO] search_hybrid: geo filter returned 0 candidates ({radius_info}). "
                     f"Returning empty — graph will retry with {GEO_RETRY_MULTIPLIER:.1f}x expanded radius."
                 )
             else:
-                print(
+                dprint(
                     f"[INFO] search_hybrid: expanded geo filter still returned 0 candidates "
                     f"(expanded_by={GEO_RETRY_MULTIPLIER:.1f}x, {radius_info}). Returning empty."
                 )
@@ -573,19 +598,25 @@ class PlaceRetriever(PlaceScorer):
                 "score_boost_total":    round(min(1.0, boost_detail["total"] / MAX_BOOST_SUM), 4),
             })
 
-        print(f"[INFO] fusion & boosting returning {len(results)} candidates")
+        dprint(f"[TIMING] fusion & boosting  candidates={len(results)}")
 
         first_stage_results = results[:candidate_k]
-        if enable_rerank:
+        # ENABLE_RERANKER(config)가 False면 호출자의 enable_rerank 값과 무관하게 비활성화
+        _do_rerank = enable_rerank and ENABLE_RERANKER
+        if _do_rerank:
             # 이미지 전용 검색(query="")일 때 emotional_text를 fallback으로 사용.
             # 둘 다 없으면 _rerank_candidates 내부에서 rerank를 스킵하고 score 순 유지.
             rerank_query = (query or "").strip() or (emotional_text or "").strip()
+            _rerank_start = time.perf_counter()
             reranked = await self._rerank_candidates(
                 query=rerank_query,
                 candidates=first_stage_results,
                 top_k=min(rerank_top_k, candidate_k)
             )
+            dprint(f"[TIMING] rerank  input={len(first_stage_results)}  top_k={min(rerank_top_k, candidate_k)}  elapsed={time.perf_counter()-_rerank_start:.3f}s")
         else:
+            if not ENABLE_RERANKER:
+                dprint("[INFO] reranker disabled by ENABLE_RERANKER=False")
             reranked = first_stage_results[: min(rerank_top_k, candidate_k)]
             for idx, c in enumerate(reranked, start=1):
                 c["rerank_score"] = None
@@ -597,17 +628,19 @@ class PlaceRetriever(PlaceScorer):
         final_candidates = reranked
         if prox_lat is not None and prox_lon is not None:
             for c in reranked:
-                raw_rerank = float(c.get("rerank_score") or 0.0)
+                # reranker 비활성화 시 rerank_score=None → fused score를 fallback으로 사용
+                rerank_score = c.get("rerank_score")
+                raw_text = float(rerank_score) if rerank_score is not None else float(c.get("score", 0.0))
                 raw_geo = float(c.get("geo_proximity_boost") or 0.0)
                 normalized_geo = min(raw_geo / GEO_MAX_BOOST, 1.0)  # [0, 1]
                 c["blended_score"] = (
-                    (1 - RERANK_GEO_BLEND_WEIGHT) * raw_rerank
+                    (1 - RERANK_GEO_BLEND_WEIGHT) * raw_text
                     + RERANK_GEO_BLEND_WEIGHT * normalized_geo
                 )
             reranked.sort(key=lambda x: float(x.get("blended_score", 0.0)), reverse=True)
             for idx, c in enumerate(reranked, start=1):
                 c["final_rank"] = idx
-            print(f"[INFO] geo-blended reranking applied (blend_weight={RERANK_GEO_BLEND_WEIGHT})")
+            dprint(f"[INFO] geo-blended reranking applied (blend_weight={RERANK_GEO_BLEND_WEIGHT})")
             final_candidates = reranked
 
             # 안전망: 블렌딩 후에도 너무 먼 장소가 남아 있을 경우를 대비한 거리 하드 필터
@@ -620,14 +653,14 @@ class PlaceRetriever(PlaceScorer):
             if nearby_candidates:
                 final_candidates = nearby_candidates
             else:
-                print(
+                dprint(
                     f"[INFO] search_hybrid distance post-filter kept 0 candidates; "
                     f"falling back to blended results (anchor=({prox_lat}, {prox_lon}))"
                 )
 
         # 기존 인터페이스 호환: limit 기준으로 반환
         final = final_candidates[: max(int(limit or 0), 1)]
-        print(f"[INFO] search_hybrid returning {len(final)} candidates (score_map={len(score_map)} reranked={len(reranked)})")
+        dprint(f"[TIMING] search_hybrid DONE  total={time.perf_counter()-_hybrid_start:.3f}s  returned={len(final)}  score_map={len(score_map)}  reranked={len(reranked)}")
         return final
 
     def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
@@ -635,7 +668,7 @@ class PlaceRetriever(PlaceScorer):
         Search for places near a specific coordinate.
         GEO 인덱스 사용이 가능하면 반경 필터 기반으로 조회하고, 아니면 제한적 fallback scroll을 사용한다.
         """
-        print(f"[INFO] search_nearby start lat={lat} lng={lng} limit={limit} radius_km={radius_km}")
+        dprint(f"[INFO] search_nearby start lat={lat} lng={lng} limit={limit} radius_km={radius_km}")
         candidate_points = []
         radius_m = max(float(radius_km), 0.1) * 1000.0
         scan_limit = max(int(limit or 0) * 20, 50)
@@ -661,9 +694,9 @@ class PlaceRetriever(PlaceScorer):
                     with_vectors=False,
                 )
                 candidate_points = list(points)
-                print(f"[DEBUG] search_nearby geo-filter candidates={len(candidate_points)}")
+                dprint(f"[DEBUG] search_nearby geo-filter candidates={len(candidate_points)}")
             except Exception as e:
-                print(f"[WARN] search_nearby geo filter failed, fallback scroll: {e}")
+                dprint(f"[WARN] search_nearby geo filter failed, fallback scroll: {e}")
 
         # fallback: legacy scroll (제한된 수량만 조회)
         if not candidate_points:
@@ -674,7 +707,7 @@ class PlaceRetriever(PlaceScorer):
                 with_vectors=False,
             )
             candidate_points = list(points)
-            print(f"[DEBUG] search_nearby fallback candidates={len(candidate_points)}")
+            dprint(f"[DEBUG] search_nearby fallback candidates={len(candidate_points)}")
 
         results = []
         for p in candidate_points:
@@ -694,7 +727,7 @@ class PlaceRetriever(PlaceScorer):
 
         results.sort(key=lambda x: x["distance_km"])
         trimmed = results[:limit]
-        print(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")
+        dprint(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")
         return trimmed
 
 

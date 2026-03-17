@@ -6,6 +6,7 @@ from app.agents.models.state import TravelState, get_effective_user_input, get_s
 from app.agents.prompts.prompts import PLANNER_PROMPT
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import PlannerOutput
+from app.utils.common import dprint
 
 
 def build_current_itinerary_context(itinerary: List[Dict[str, Any]] | None) -> str:
@@ -48,13 +49,13 @@ async def planner_node(state: TravelState):
     여행 계획을 생성하는 Agent
     - 대화의 흐름과 사용자의 input을 분석해 장소 검색을 하기 위해서 어떤 정보들이 필요한지 llm이 결정해서 state에 저장한다.
     """
-    print("--- Planner Agent ---")
+    dprint("--- Planner Agent ---")
     await adispatch_custom_event("pipeline_step", {"node": "planner", "status": "start"})
 
     user_input = get_effective_user_input(state)
     user_lat = state.get("input_lat")
     user_lon = state.get("input_lon")
-    messages = state.get("messages", [])[-10:]
+    messages = state.get("messages", [])[-6:]
     slots_info = get_slots_info(state)
     prefs_info = state.get("prefs_info", "")
     current_itinerary = build_current_itinerary_context(state.get("itinerary"))
@@ -84,7 +85,7 @@ async def planner_node(state: TravelState):
             "current_itinerary": current_itinerary,
         })
 
-        print(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")
+        dprint(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")
 
         # Enum 값을 문자열로 직렬화하여 retriever 필터와 타입을 맞춘다.
         itinerary = [item.model_dump(mode="json") for item in result.itinerary]
@@ -103,7 +104,7 @@ async def planner_node(state: TravelState):
         return state_dict
 
     except Exception as e:
-        print(f"[Planner] Error: {e}")
+        dprint(f"[Planner] Error: {e}")
         return {
             "itinerary": [],
             "missing_slots": [],
