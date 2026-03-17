@@ -251,8 +251,8 @@ jobs:
             # Qdrant 스냅샷 적용 (workflow_dispatch에서 bool 옵션 선택 시)
             if [ "${APPLY_SNAPSHOTS}" = "true" ]; then
               echo "Applying Qdrant snapshots from S3..."
-              aws s3 cp s3://triver-assets-prod/private/snapshots/photos-9001122649727837-2026-03-16-05-19-19.snapshot.tar /tmp/photos.snapshot
-              aws s3 cp s3://triver-assets-prod/private/snapshots/places-9001122649727837-2026-03-16-05-19-53.snapshot.tar /tmp/places.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/photos.snapshot.tar /tmp/photos.snapshot
+              aws s3 cp s3://triver-assets-prod/private/snapshots/places.snapshot.tar /tmp/places.snapshot
 
               echo "Waiting for Qdrant to be ready..."
               for i in $(seq 1 12); do
@@ -263,6 +263,16 @@ jobs:
                 sleep 5
               done
 
+              # Ensure collections exist before uploading snapshots (Qdrant requires existing collection for snapshot upload)
+              echo "Ensuring collections exist..."
+              curl -X PUT "http://localhost:${QDRANT_PORT_HOST}/collections/photos" \
+                -H "Content-Type: application/json" \
+                --data '{"vectors": {"size": 768, "distance": "Cosine"}}' || true
+              curl -X PUT "http://localhost:${QDRANT_PORT_HOST}/collections/places" \
+                -H "Content-Type: application/json" \
+                --data '{"vectors": {"size": 1024, "distance": "Cosine"}}' || true
+
+              echo "Uploading and applying snapshots..."
               curl -fsS -X POST "http://localhost:${QDRANT_PORT_HOST}/collections/photos/snapshots/upload?priority=snapshot" \
                 -H "Content-Type: multipart/form-data" \
                 -F "snapshot=@/tmp/photos.snapshot"
