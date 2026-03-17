@@ -511,6 +511,10 @@ class PlaceScorer:
             for idx, c in enumerate(candidates[:top_k], start=1):
                 c["final_rank"] = idx
             return candidates[:top_k]
+        except asyncio.CancelledError:
+            print("[INFO] Request cancelled during Reranker inference (Client disconnected).")
+            # asyncio의 취소 신호는 상위로 올려보내서(raise) Uvicorn이 리소스를 정리할 수 있도록 해야 합니다.
+            raise
         except Exception as e:
             print(f"[WARN] Reranker inference failed: {e}")
             for idx, c in enumerate(candidates[:top_k], start=1):
