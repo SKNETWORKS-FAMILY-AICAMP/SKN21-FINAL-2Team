@@ -5,14 +5,13 @@ import asyncio
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Filter, FieldCondition, MatchValue, MatchAny, SparseVector,
-    GeoBoundingBox, GeoPoint, HasIdCondition,
+    GeoBoundingBox, GeoPoint,
 )
 from sentence_transformers import SentenceTransformer
 
 from app.utils.config import (
     PLACES_COLLECTION, PHOTOS_COLLECTION, DEVICE,
     TEXT_MODEL, VISION_MODEL, TEXT_VECTOR_SIZE, VISION_VECTOR_SIZE,
-    BM25_POOL_LIMIT, BM25_ENABLE_THRESHOLD, BM25_ENABLE_SCORE_THRESHOLD,
     ENABLE_ADDR_SPARSE_BOOST, ENABLE_GEO_FILTER,
     ENABLE_QDRANT_SPARSE,
     BOOST_WEIGHT,
@@ -174,50 +173,6 @@ class PlaceRetriever(PlaceScorer):
         print(f"[INFO] query_filter built: category={categories} values={category_values} geo={'bbox' if bbox else 'circle' if anchor_lat else 'no'}")
         return built
 
-    async def _get_geo_candidate_ids(
-        self,
-        bbox: tuple[float, float, float, float] | None = None,
-        anchor_lat: float | None = None,
-        anchor_lon: float | None = None,
-        radius_m: float | None = None,
-        limit: int = 500,
-    ) -> list | None:
-        """Geo 조건만으로 PLACES_COLLECTION을 scroll 조회해 후보 point 리스트 반환 (Stage 1).
-
-        - 카테고리 필터 없이 순수 geo 조건만 적용.
-          Stage 2(vector search)에서 HasIdCondition + category 필터를 조합해 사용.
-        - bbox 또는 anchor+radius 중 하나를 사용. 둘 다 없으면 None 반환.
-        - 실패하거나 결과가 없으면 None 반환 → 호출부에서 기존 방식 fallback.
-        """
-        # geo 조건만 담은 filter 생성 (categories=None → 카테고리 조건 없음)
-        geo_only_filter = self._build_query_filter(
-            categories=None,
-            bbox=bbox,
-            anchor_lat=anchor_lat if bbox is None else None,
-            anchor_lon=anchor_lon if bbox is None else None,
-            radius_m=radius_m if bbox is None else None,
-        )
-        if not geo_only_filter:
-            return None
-        try:
-            points, _ = await asyncio.to_thread(
-                self.client.scroll,
-                PLACES_COLLECTION,
-                scroll_filter=geo_only_filter,
-                limit=limit,
-                with_payload=True,
-                with_vectors=False,
-            )
-            pts = list(points) if points else []
-            print(
-                f"[INFO] _get_geo_candidate_ids: {len(pts)} geo candidates "
-                f"(geo={'bbox' if bbox else 'circle'}, limit={limit})"
-            )
-            return pts if pts else None
-        except Exception as e:
-            print(f"[WARN] _get_geo_candidate_ids failed: {e}")
-            return None
-
     def search_text(self, query: str, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
         """
         Text-based search for places (Semantic).
@@ -297,7 +252,6 @@ class PlaceRetriever(PlaceScorer):
         user_lon: float | None = None,
         preferred_location: str | None = None,
         candidate_k: int | None = None,
-        enable_bm25: bool = True,
         enable_rerank: bool = True,
         rerank_top_k: int | None = None,
         search_scope: str = "auto",
@@ -369,47 +323,6 @@ class PlaceRetriever(PlaceScorer):
         )
         photos_filter = self._build_query_filter(categories)  # geo 없이 category만
 
-        # --- Stage 1: Geo Pre-filter (2-stage geo-first) ---
-        # geo 정보가 있을 때 scroll로 geo 후보 IDs를 먼저 확보.
-        # Stage 2에서 HasIdCondition으로 vector ANN 범위를 geo 풀로 제한.
-        # → 불필요한 먼 거리 후보 완전 제거 + 검색 속도 향상 (~28ms).
-        # geo 정보 없거나 scroll 실패 시 기존 places_filter 방식으로 fallback.
-        geo_pool_points: list | None = None
-        places_filter_for_vector = places_filter  # default: 기존 geo+category inline 방식
-
-        if apply_geo and (has_gps or has_anchor):
-            # geo scroll 파라미터 결정 (search_hybrid bbox/circle 계산 결과 재활용)
-            _scroll_bbox = geo_bbox  # GPS 또는 GPS+anchor 병합 bbox (또는 None)
-            _scroll_anchor_lat = location_anchor_lat if (has_anchor and not has_gps and geo_bbox is None) else None
-            _scroll_anchor_lon = location_anchor_lon if (has_anchor and not has_gps and geo_bbox is None) else None
-            _scroll_radius_m = expanded_radius_m if (has_anchor and not has_gps and geo_bbox is None) else None
-
-            _geo_pool = await self._get_geo_candidate_ids(
-                bbox=_scroll_bbox,
-                anchor_lat=_scroll_anchor_lat,
-                anchor_lon=_scroll_anchor_lon,
-                radius_m=_scroll_radius_m,
-                limit=500,
-            )
-            if _geo_pool:
-                geo_pool_points = _geo_pool
-                geo_ids = [p.id for p in geo_pool_points]
-                # Stage 2 filter: HasIdCondition(geo IDs) + category
-                # (geo 조건은 Stage 1에서 이미 보장 → 중복 geo filter 불필요)
-                category_only_filter = self._build_query_filter(categories=categories)
-                if category_only_filter and category_only_filter.must:
-                    places_filter_for_vector = Filter(
-                        must=[HasIdCondition(has_id=geo_ids), *category_only_filter.must]
-                    )
-                else:
-                    places_filter_for_vector = Filter(must=[HasIdCondition(has_id=geo_ids)])
-                print(
-                    f"[INFO] Stage 2: HasIdCondition({len(geo_ids)} geo IDs) + "
-                    f"category={[c.value for c in (categories or [])]}"
-                )
-            else:
-                print("[INFO] Stage 1 geo scroll returned 0 → fallback to inline places_filter")
-
         candidate_k = max(int(candidate_k or defaults["candidate_k"]), int(limit or 0), 1)
         rerank_top_k = min(
             max(int(rerank_top_k or defaults["top_k"]), int(limit or 0), 1),
@@ -419,7 +332,6 @@ class PlaceRetriever(PlaceScorer):
         # 채널 수(최대 4)를 감안해도 candidate_k*3이면 RRF 융합에 충분한 pool 확보 가능.
         candidates_limit = max(candidate_k * CANDIDATE_LIMIT_MULTIPLIER, 20)
         score_map = {}  # place_id -> {score, payload, matches}
-        place_vector_points = []
         rrf_k = 60
 
         def collect_hits(hits, weight, match_type, source_collection):
@@ -449,10 +361,9 @@ class PlaceRetriever(PlaceScorer):
                 query=text_emb.tolist(),
                 limit=candidates_limit,
                 with_payload=True,
-                query_filter=places_filter_for_vector,
+                query_filter=places_filter,
             )
-            place_vector_points.extend(t_t_resp.points)
-            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'geo_pool' if geo_pool_points else 'inline'} geo={apply_geo})")
+            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
             collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
 
         if ENABLE_QDRANT_SPARSE and query and query.strip() and scope in {"auto", "place_only"}:
@@ -466,9 +377,8 @@ class PlaceRetriever(PlaceScorer):
                         using="text_sparse",
                         limit=candidates_limit,
                         with_payload=True,
-                        query_filter=places_filter_for_vector,  # Stage 1 geo pool or inline filter
+                        query_filter=places_filter,
                     )
-                    place_vector_points.extend(sparse_resp.points)
                     collect_hits(sparse_resp.points, 0.85, "qdrant_sparse", PLACES_COLLECTION)
                     print(f"[INFO] qdrant_sparse hits={len(sparse_resp.points)}")
             except Exception as e:
@@ -519,71 +429,9 @@ class PlaceRetriever(PlaceScorer):
                     query=emo_emb.tolist(),
                     limit=candidates_limit,
                     with_payload=True,
-                    query_filter=places_filter_for_vector,  # Stage 1 geo pool or inline filter
+                    query_filter=places_filter,
                 )
-                place_vector_points.extend(i_e_resp.points)
                 collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
-
-        if enable_bm25 and query and query.strip() and scope in {"auto", "place_only"}:
-            try:
-                # BM25 pool 구성:
-                # - geo_pool_points 있으면 Stage 1 geo 후보 전체 사용 (geo 조건 충족 보장 + 벡터 채널 미수록 후보 포함)
-                # - 없으면 기존 방식: vector 채널 결과 합산
-                unique_points: dict = {}
-                if geo_pool_points:
-                    for point in geo_pool_points:
-                        pid = point.id
-                        if pid is not None:
-                            unique_points[pid] = point
-                    print(f"[INFO] bm25 pool: using geo_pool ({len(unique_points)} points)")
-                else:
-                    for point in place_vector_points:
-                        pid = point.id
-                        if pid is None:
-                            continue
-                        unique_points[pid] = point
-
-                point_pool = list(unique_points.values())
-                top_vector_score = 0.0
-                if point_pool:
-                    try:
-                        top_vector_score = max(float(getattr(p, "score", 0.0) or 0.0) for p in point_pool)
-                    except Exception:
-                        top_vector_score = 0.0
-
-                bm25_needed = (
-                    len(point_pool) < BM25_ENABLE_THRESHOLD
-                    or top_vector_score < BM25_ENABLE_SCORE_THRESHOLD
-                )
-
-                if bm25_needed and point_pool:
-                    # BM25는 벡터 pool 재채점이므로 반환 상한은 candidate_k에 맞춤. (#10)
-                    # candidates_limit(채널 fetch 상한)이 아닌 실제 필요 후보 수 사용.
-                    lexical_hits = await self._search_bm25_lexical(
-                        query=query,
-                        categories=categories,
-                        candidate_points=point_pool,
-                        candidate_k=candidate_k,
-                        pool_limit=BM25_POOL_LIMIT,
-                    )
-                    for rank, item in enumerate(lexical_hits, start=1):
-                        pid = str(item.get("id") or "").strip() or None
-                        if pid is None:
-                            continue
-                        payload = item.get("payload") or {}
-                        if pid not in score_map:
-                            score_map[pid] = {"score": 0.0, "payload": payload, "matches": set()}
-                        elif payload and not score_map[pid].get("payload"):
-                            score_map[pid]["payload"] = payload
-                        score_map[pid]["score"] += 0.7 * (1.0 / (rrf_k + rank))
-                        score_map[pid]["matches"].add("bm25_lexical")
-                else:
-                    print(
-                        f"[INFO] bm25 skipped vector_pool={len(point_pool)} "
-                        f"top_vector_score={top_vector_score:.4f}"
-                    )
-            except Exception as e:
-                print(f"[WARN] bm25 lexical channel failed: {e}")
 
         # --- geo filter 0결과 ---
         # geo_retry_count > 0 (이미 확장 반경)인데도 후보가 없으면 빈 결과 반환.
