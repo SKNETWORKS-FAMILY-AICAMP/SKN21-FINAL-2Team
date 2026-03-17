@@ -2,6 +2,37 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 export type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
+type AppLanguage = "en" | "ko" | "ja";
+
+const LANGUAGE_STORAGE_KEY = "triver:language:v1";
+
+const STT_LANG_MAP: Record<AppLanguage, string> = {
+    en: "en-US",
+    ko: "ko-KR",
+    ja: "ja-JP",
+};
+
+const STT_MESSAGES: Record<AppLanguage, { unsupported: string; denied: string }> = {
+    en: {
+        unsupported: "Speech recognition is not supported in this browser. Please use Chrome.",
+        denied: "Microphone access is blocked.\nPlease allow microphone access and try again.",
+    },
+    ko: {
+        unsupported: "이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해주세요.",
+        denied: "마이크 권한이 차단되어 있습니다.\n마이크 권한을 '허용'으로 변경 후 다시 시도해 주세요.",
+    },
+    ja: {
+        unsupported: "このブラウザは音声認識をサポートしていません。Chromeをご使用ください。",
+        denied: "マイクへのアクセスがブロックされています。\nマイクのアクセスを「許可」に変更して再試行してください。",
+    },
+};
+
+const getAppLanguage = (): AppLanguage => {
+    const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (raw === "en" || raw === "ko" || raw === "ja") return raw;
+    return "en";
+};
+
 interface UseSpeechRecognitionProps {
     inputText: string;
     setInputText: (text: string) => void;
@@ -10,6 +41,7 @@ interface UseSpeechRecognitionProps {
 export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecognitionProps) => {
     const [isListening, setIsListening] = useState(false);
     const [sttPermission, setSttPermission] = useState<SttPermissionState>("unknown");
+    const [appLanguage, setAppLanguage] = useState<AppLanguage>(getAppLanguage);
 
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
@@ -56,19 +88,19 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
         if (!SpeechRecognitionAPI) {
             setSttPermission("unsupported");
-            alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome 브라우저를 사용해주세요.");
+            alert(STT_MESSAGES[appLanguage].unsupported);
             return;
         }
 
         if (sttPermission === "denied") {
-            alert("마이크 권한이 차단되어 있습니다.\n마이크 권한을 '허용'으로 변경 후 다시 시도해 주세요.");
+            alert(STT_MESSAGES[appLanguage].denied);
             return;
         }
 
         const baseText = inputText;
 
         const recognition = new SpeechRecognitionAPI();
-        recognition.lang = "ko-KR";
+        recognition.lang = STT_LANG_MAP[appLanguage];
         recognition.interimResults = true;
         recognition.continuous = true;
         recognition.maxAlternatives = 1;
@@ -117,7 +149,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             setIsListening(false);
             await syncMicPermission();
         }
-    }, [isListening, inputText, setInputText, syncMicPermission, sttPermission]);
+    }, [isListening, inputText, setInputText, syncMicPermission, sttPermission, appLanguage]);
 
     useEffect(() => {
         syncMicPermission();
@@ -128,9 +160,11 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
                 void syncMicPermission();
             }
         };
+        const onLanguageChange = () => { setAppLanguage(getAppLanguage()); };
 
         window.addEventListener("focus", onFocus);
         document.addEventListener("visibilitychange", onVisibilityChange);
+        window.addEventListener("triver:language", onLanguageChange);
 
         return () => {
             if (recognitionRef.current) {
@@ -143,6 +177,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             }
             window.removeEventListener("focus", onFocus);
             document.removeEventListener("visibilitychange", onVisibilityChange);
+            window.removeEventListener("triver:language", onLanguageChange);
         };
     }, [syncMicPermission]);
 

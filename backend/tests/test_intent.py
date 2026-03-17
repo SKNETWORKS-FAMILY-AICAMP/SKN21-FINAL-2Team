@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from app.agents.intent import intent_node
 from app.agents.models.output import IntentOutput, IntentSlots, IntentType, InputType
@@ -18,7 +18,7 @@ async def test_intent_node_uses_update_user_input_from_structured_output():
         input_tags=["서울", "여행 코스"],
     )
 
-    mock_llm = AsyncMock()
+    mock_llm = Mock()
     mock_llm.with_structured_output.return_value = mock_structured_llm
 
     with patch("app.agents.intent.LLMFactory.get_llm", return_value=mock_llm):

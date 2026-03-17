@@ -17,7 +17,7 @@ def login_google(
 ):
     # 1. Google Auth Code 교환 및 검증
     # verify_google_auth_code는 {id_info, access_token, refresh_token, ...} 반환
-    auth_result = verify_google_auth_code(request.code)
+    auth_result = verify_google_auth_code(request.code, request.redirect_uri)
     if not auth_result:
         raise AppException(ErrorCode.GOOGLE_AUTH_FAILED, "Invalid Google Auth Code (Unknown Error)", 400)
         

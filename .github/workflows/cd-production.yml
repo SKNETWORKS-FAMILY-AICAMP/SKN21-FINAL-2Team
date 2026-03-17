@@ -141,6 +141,7 @@ jobs:
             NEXT_PUBLIC_API_URL=/api
             NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
             NEXT_PUBLIC_NAVER_MAP_CLIENT_ID=${{ secrets.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID }}
+            NEXT_PUBLIC_S3_PUBLIC_BASE_URL=${{ secrets.NEXT_PUBLIC_S3_PUBLIC_BASE_URL }}
 
       - name: Build and push nginx image
         uses: docker/build-push-action@v6
@@ -236,6 +237,13 @@ jobs:
             # RDS schema migration (앱 기동 전 실행)
             docker compose --env-file .env.production -f docker-compose.ec2.yml \
               run --rm --no-deps backend alembic upgrade head
+
+            # 호스트 nginx가 포트 80을 점유하고 있으면 중지
+            if sudo systemctl is-active --quiet nginx 2>/dev/null; then
+              echo "Stopping host nginx to free port 80..."
+              sudo systemctl stop nginx
+              sudo systemctl disable nginx
+            fi
 
             # 앱 기동
             docker compose --env-file .env.production -f docker-compose.ec2.yml up -d --remove-orphans
