@@ -256,14 +256,10 @@ jobs:
                 sleep 5
               done
 
-              # Ensure collections exist before uploading snapshots (Qdrant requires existing collection for snapshot upload)
-              echo "Ensuring collections exist..."
-              curl -X PUT "http://localhost:${QDRANT_PORT_HOST}/collections/photos" \
-                -H "Content-Type: application/json" \
-                --data '{"vectors": {"size": 768, "distance": "Cosine"}}' || true
-              curl -X PUT "http://localhost:${QDRANT_PORT_HOST}/collections/places" \
-                -H "Content-Type: application/json" \
-                --data '{"vectors": {"size": 1024, "distance": "Cosine"}}' || true
+              # Delete existing collections before snapshot upload (upload endpoint creates fresh collections from snapshot)
+              echo "Deleting existing collections before snapshot restore..."
+              curl -X DELETE "http://localhost:${QDRANT_PORT_HOST}/collections/photos" || true
+              curl -X DELETE "http://localhost:${QDRANT_PORT_HOST}/collections/places" || true
 
               echo "Uploading and applying snapshots..."
               curl -fsS -X POST "http://localhost:${QDRANT_PORT_HOST}/collections/photos/snapshots/upload?priority=snapshot" \
