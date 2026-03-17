@@ -43,10 +43,23 @@ export function useChatMessages({
 
     const updatePipelineStep = useCallback((step: string, status: string) => {
         const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
-        setPipelineSteps((prev) => ({
-            ...prev,
-            [step]: mappedStatus,
-        }));
+        setPipelineSteps((prev) => {
+            if (mappedStatus === "running") {
+                const next = { ...prev };
+                for (const key of Object.keys(next)) {
+                    if (next[key] === "running" && key !== step) {
+                        next[key] = "done";
+                    }
+                }
+                next[step] = "running";
+                return next;
+            }
+
+            return {
+                ...prev,
+                [step]: mappedStatus,
+            };
+        });
     }, []);
 
     const flushBufferedToken = useCallback((streamingId: number, roomId: number) => {
@@ -176,6 +189,7 @@ export function useChatMessages({
         try {
             await sendChatMessageStream(roomId, message, {
                 onToken: (token) => {
+                    hidePipeline();
                     queueStreamToken(streamingId, roomId, token);
                 },
                 onStep: (step, status) => {
@@ -303,6 +317,7 @@ export function useChatMessages({
         try {
             await sendAutoStartChatRoomStream(roomId, payload, {
                 onToken: (token) => {
+                    hidePipeline();
                     queueStreamToken(streamingId, roomId, token);
                 },
                 onStep: (step, status) => {
@@ -383,7 +398,7 @@ export function useChatMessages({
         streamAbortControllerRef.current?.abort();
     };
 
-    const handleTogglePlaceBookmark = async (messageId: number, placeId: number, currentStatus: boolean) => {
+    const handleTogglePlaceBookmark = useCallback(async (messageId: number, placeId: number, currentStatus: boolean) => {
         try {
             const updatedPlace = await updatePlaceBookmark(placeId, !currentStatus);
             setMessages(prev => prev.map(m => {
@@ -398,7 +413,7 @@ export function useChatMessages({
         } catch (error) {
             console.error("Failed to toggle bookmark", error);
         }
-    };
+    }, [setMessages]);
 
     return {
         isTyping,

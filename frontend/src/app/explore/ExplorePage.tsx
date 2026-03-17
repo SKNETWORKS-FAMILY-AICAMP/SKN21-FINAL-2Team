@@ -6,7 +6,7 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 // Contents 섹션은 API에서 데이터를 가져옵니다.
 
 import { Sidebar } from "@/components/navigation/Sidebar";
-import { fetchRandomExplorePlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
+import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
 const CONTENT_CATEGORY_LABELS: Record<string, string> = {
     "공연": "PERFORMANCE",
@@ -44,8 +44,21 @@ const EXPLORE_DEDUPE_TTL_MS = 2000;
 const loadExploreData = async (): Promise<ExploreInitPayload> => {
     const user = await fetchCurrentUser();
 
-    // 1번의 API 호출로 5가지 카테고리를 한번에 모두 가져옵니다 (통합)
-    const randomData = await fetchRandomExplorePlaces("hot_places,tourist_spots,restaurants,tour_courses,콘텐츠", 3);
+    // 설문 결과를 user_prefs 텍스트로 조합 (개인화 벡터 검색용)
+    const userPrefsText = [
+        user.plan_prefer,
+        user.vibe_prefer,
+        user.places_prefer,
+        user.extra_prefer1,
+        user.extra_prefer2,
+        user.extra_prefer3,
+    ].filter(Boolean).join(", ") || "서울 여행 맛집 관광지";
+
+    // hot_places·콘텐츠(랜덤) + Your Choices(개인화 벡터 검색) 병렬 호출
+    const [randomData, categoryData] = await Promise.all([
+        fetchRandomExplorePlaces("hot_places,콘텐츠", 3),
+        fetchCategoryPlaces(userPrefsText),
+    ]);
 
     return {
         user,
@@ -60,9 +73,9 @@ const loadExploreData = async (): Promise<ExploreInitPayload> => {
         })) as unknown as HotPlace[],
         contents: randomData["콘텐츠"] || [],
         choices: {
-            restaurants: randomData["restaurants"] || [],
-            tourist: randomData["tourist_spots"] || [],
-            tours: randomData["tour_courses"] || [],
+            restaurants: categoryData["음식점"] || [],
+            tourist: categoryData["관광지"] || [],
+            tours: categoryData["투어"] || [],
         },
     };
 };

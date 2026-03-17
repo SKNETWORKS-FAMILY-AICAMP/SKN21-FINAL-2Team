@@ -28,8 +28,13 @@ const STT_MESSAGES: Record<AppLanguage, { unsupported: string; denied: string }>
 };
 
 const getAppLanguage = (): AppLanguage => {
-    const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (raw === "en" || raw === "ko" || raw === "ja") return raw;
+    if (typeof window === "undefined") return "en";
+    try {
+        const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (raw === "en" || raw === "ko" || raw === "ja") return raw;
+    } catch (e) {
+        console.warn("localStorage is not available:", e);
+    }
     return "en";
 };
 

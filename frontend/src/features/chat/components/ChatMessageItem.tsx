@@ -8,7 +8,7 @@ import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 import { cn } from "@/lib/utils";
 import { resolveImageUrl } from "@/lib/imageUrl";
 
-const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=400&q=60";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
     if (!steps) return false;
     return Object.values(steps).some((status) => status === "running" || status === "done");
@@ -78,8 +78,7 @@ export const ChatMessageItem = memo(({
     const shouldRenderPipeline = Boolean(
         isStreamingCurrentMessage &&
         showPipeline &&
-        hasVisiblePipelineSteps(pipelineSteps) &&
-        !msg.message // 답변 텍스트(msg.message)가 오기 시작하면 파이프라인(생성 중...)을 바로 숨깁니다!
+        hasVisiblePipelineSteps(pipelineSteps)
     );
     const shouldRenderWaitingBubble = Boolean(
         isStreamingCurrentMessage &&
@@ -191,28 +190,36 @@ export const ChatMessageItem = memo(({
                                             onMouseEnter={() => handleSelectMapPlace(mapId)}
                                             onClick={() => handleSelectMapPlace(mapId, msg.id)}
                                             className={cn(
-                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-all duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
+                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-[box-shadow,transform,border-color] duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
                                                 compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",
                                                 isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
                                             )}
                                             style={compactPlaces ? { width: "min(15rem, calc((100% - 1rem) / 3))", minWidth: "8.75rem" } : undefined}
                                         >
                                             <div className={cn(
-                                                "relative bg-slate-100 overflow-hidden",
+                                                "relative bg-slate-100",
                                                 compactPlaces ? "h-[104px] sm:h-[112px]" : "h-[120px]"
                                             )}>
                                                 <img
-                                                    src={place.image_path || DEFAULT_PLACEHOLDER}
+                                                    src={resolveImageUrl(place.image_path) || DEFAULT_PLACEHOLDER}
                                                     alt={place.name || "Place image"}
-                                                    className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    style={{ opacity: 0, transition: 'opacity 0.2s ease' }}
+                                                    onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
+                                                    onError={(e) => {
+                                                        e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                                                        e.currentTarget.style.opacity = '1';
+                                                    }}
+                                                    className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-110"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                                                 <button
                                                     onClick={(event) => {
-                                                        event.stopPropagation(); // 카드 클릭 이벤트 막기
+                                                        event.stopPropagation();
                                                         handleTogglePlaceBookmark(msg.id, place.id, !!place.bookmark_yn);
                                                     }}
-                                                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-md transition-colors shadow-sm ${place.bookmark_yn ? "text-yellow-400 bg-black/40 hover:bg-black/60" : "text-white/90 bg-black/20 hover:text-yellow-400 hover:bg-black/40"}`}
+                                                    className={`absolute top-2.5 right-2.5 p-1.5 rounded-full transition-colors shadow-sm ${place.bookmark_yn ? "text-yellow-400 bg-black/50 hover:bg-black/70" : "text-white/90 bg-black/30 hover:text-yellow-400 hover:bg-black/50"}`}
                                                 >
                                                     <Bookmark size={14} fill={place.bookmark_yn ? "currentColor" : "none"} />
                                                 </button>

@@ -1,3 +1,4 @@
+import re
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks.manager import adispatch_custom_event
 
@@ -31,6 +32,7 @@ async def intent_node(state: TravelState):
     - 요약과 의도 분석을 병렬로 실행하여 지연 최소화
     """
     print("--- Intent Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "intent", "status": "start"})
 
     # API 레이어에서 주입된 사용자 선호도 정보 사용
     print(f"[Intent] state keys: {list(state.keys())}")

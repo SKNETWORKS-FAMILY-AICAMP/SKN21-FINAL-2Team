@@ -1,6 +1,8 @@
 import asyncio
 import math
 
+from langchain_core.callbacks.manager import adispatch_custom_event
+
 from app.agents.models.state import TravelState
 from app.agents.models.place import PlaceInfo
 from app.utils.geocoder import GeoCoder
@@ -33,6 +35,7 @@ async def web_search_node(state: TravelState):
     Naver Local Search로 장소를 찾아 PlaceInfo 목록과 컨텍스트 텍스트를 state에 저장한다.
     """
     print("--- Web Search Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "web_search", "status": "start"})
 
     input_tags = state.get("input_tags") or []
     slots = state.get("slots")

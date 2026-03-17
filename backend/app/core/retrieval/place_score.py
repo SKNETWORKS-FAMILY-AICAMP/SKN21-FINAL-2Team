@@ -220,14 +220,22 @@ class PlaceScorer:
                 bonus += stem_weight
         return min(max_boost, bonus)
 
-    def _keyword_match_bonus(self, query: str, payload: dict) -> float:
+    def _keyword_match_bonus(
+        self,
+        query: str,
+        payload: dict,
+        location_hint: str | None = None,
+    ) -> float:
         """
         키워드 매칭 보너스.
         - 상호명 직접 검색(query 토큰 중 title이 완전히 일치)에만 강한 보너스 부여.
         - 문자열 부분 포함(in) 대신 토큰 단위 완전 일치로 비교:
             "홍대김밥" in "홍대김밥집" → True (오매칭)
             "홍대김밥" in {"홍대", "김밥집"} → False (올바른 판단)
-        - 주소 기반 행정구역 매칭은 _addr_sparse_bonus가 전담하므로 제거.
+        - 주소/지역 기반 매칭은 _location_text_bonus / _addr_sparse_bonus가 전담.
+        - location_hint: slots에서 추출된 지역명(예: "홍대", "강남구").
+          지역 토큰은 title 매칭에서 제외해 "홍대 맛집" 검색 시
+          이름에 '홍대'가 들어간 가게에만 보너스가 쏠리는 현상을 방지한다.
         """
         if not query or not payload:
             return 0.0
@@ -240,8 +248,11 @@ class PlaceScorer:
         if not title_norm:
             return 0.0
 
-        # query를 토큰 단위로 분리
+        # query 토큰에서 지역명 토큰을 제거 — _location_text_bonus가 담당
         query_tokens = set(self._tokenize(query))
+        if location_hint:
+            location_tokens = {t.lower() for t in self._tokenize(location_hint)}
+            query_tokens -= location_tokens
         if not query_tokens:
             return 0.0
 
@@ -466,12 +477,15 @@ class PlaceScorer:
         if self._reranker_load_attempted:
             return
         self._reranker_load_attempted = True
+        _RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
         try:
             self._reranker = CrossEncoder(
-                "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+                _RERANKER_MODEL,
                 device=DEVICE,
+                # MPS(Apple Silicon) 환경에서는 FP16 미지원 → CPU fallback 방지
+                model_kwargs={"torch_dtype": "auto"},
             )
-            print("[INFO] Reranker loaded: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
+            print(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
         except Exception as e:
             self._reranker = None
             print(f"[WARN] Reranker unavailable: {e}")
