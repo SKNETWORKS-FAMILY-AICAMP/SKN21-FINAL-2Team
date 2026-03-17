@@ -10,6 +10,7 @@ class TravelState(TypedDict, total=False):
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
     room_id: int
+    prefs_info: str
 
     input_lat: float | None
     input_lon: float | None
@@ -29,8 +30,6 @@ class TravelState(TypedDict, total=False):
     summary_title: str
     summary_message: str
     input_tags: List[str]
-    user_preferences: Dict[str, Any]           # 선호도 조사
-    prefs_info: str
     
     # planner
     itinerary: List[Dict[str, Any]]         # 시간순/일차별 정렬된 데이터

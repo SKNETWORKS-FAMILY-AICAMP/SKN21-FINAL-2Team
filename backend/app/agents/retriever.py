@@ -265,12 +265,19 @@ async def _search_for_general(
 
     print(f"[Retriever:general] user_input={repr(user_input)} slots={repr(slots)}")
     query = user_input
+
+    if state.get("semantic_input_image"):
+        query += f"\n입력 이미지에 대한 설명: {state.get('semantic_input_image')}"
+
     input_address = state.get("input_address")
     if input_address:
         query += f"\n현재 내 위치 주소: {input_address}"
 
     if input_tags:
-        query += f"\n핵심 키워드: {', '.join(input_tags)}"
+        query += f"\n입력 키워드: {', '.join(input_tags)}"
+
+    if state.get("prefs_info"):
+        query += f"\n사용자의 선호도(참고용): {state.get('prefs_info')}"
 
     categories = None
     raw_location = None

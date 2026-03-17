@@ -327,7 +327,7 @@ class PlaceRetriever(PlaceScorer):
             max(int(rerank_top_k or defaults["top_k"]), int(limit or 0), 1),
             min(defaults["rerank_max_k"], candidate_k),
         )
-        # 채널별 Qdrant fetch 상한. *5는 과도 → *CANDIDATE_LIMIT_MULTIPLIER(기본 3)으로 축소.
+        # 채널별 Qdrant fetch 상한. *CANDIDATE_LIMIT_MULTIPLIER(기본 3)으로 축소.
         # 채널 수(최대 4)를 감안해도 candidate_k*3이면 RRF 융합에 충분한 pool 확보 가능.
         candidates_limit = max(candidate_k * CANDIDATE_LIMIT_MULTIPLIER, 20)
         score_map = {}  # place_id -> {score, payload, matches}
@@ -349,88 +349,113 @@ class PlaceRetriever(PlaceScorer):
                 score_map[pid]["score"] += weight * (1.0 / (rrf_k + rank))
                 score_map[pid]["matches"].add(match_type)
 
-        # --- A. Text Search Channel ---
-        if query and query.strip() and scope in {"auto", "place_only"}:
-            # 1. Scenario: Semantic Text Search (BGE-M3) — PLACES_COLLECTION (geo filter 적용)
-            text_emb = await asyncio.to_thread(self.text_model.encode, query)
-            text_emb = np.asarray(text_emb, dtype=np.float32)
-            t_t_resp = await asyncio.to_thread(
+        # --- 검색 채널 병렬 실행 ---
+        has_text = bool(query and query.strip())
+
+        async def _ch_text_semantic():
+            if not (has_text and scope in {"auto", "place_only"}):
+                return None
+            emb = np.asarray(await asyncio.to_thread(self.text_model.encode, query), dtype=np.float32)
+            resp = await asyncio.to_thread(
                 self.client.query_points,
                 collection_name=PLACES_COLLECTION,
-                query=text_emb.tolist(),
+                query=emb.tolist(),
                 limit=candidates_limit,
                 with_payload=True,
                 query_filter=places_filter,
             )
-            print(f"[INFO] text_semantic hits={len(t_t_resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
-            collect_hits(t_t_resp.points, 1.0, "text_semantic", PLACES_COLLECTION)
+            print(f"[INFO] text_semantic hits={len(resp.points)} (filter={'yes' if places_filter else 'no'} geo={apply_geo})")
+            return ("text_semantic", PLACES_COLLECTION, resp.points, 1.0, None)
 
-        if ENABLE_QDRANT_SPARSE and query and query.strip() and scope in {"auto", "place_only"}:
+        async def _ch_sparse():
+            if not (ENABLE_QDRANT_SPARSE and has_text and scope in {"auto", "place_only"}):
+                return None
             try:
-                sparse_indices, sparse_values = build_sparse_vector(query)
-                if sparse_indices and sparse_values:
-                    sparse_resp = await asyncio.to_thread(
-                        self.client.query_points,
-                        collection_name=PLACES_COLLECTION,
-                        query=SparseVector(indices=sparse_indices, values=sparse_values),
-                        using="text_sparse",
-                        limit=candidates_limit,
-                        with_payload=True,
-                        query_filter=places_filter,
-                    )
-                    collect_hits(sparse_resp.points, 0.85, "qdrant_sparse", PLACES_COLLECTION)
-                    print(f"[INFO] qdrant_sparse hits={len(sparse_resp.points)}")
-            except Exception as e:
-                print(f"[WARN] qdrant sparse channel failed: {e}")
-
-        if query and query.strip() and scope in {"auto", "photo_only"}:
-            # 2. Scenario: Cross-modal Text-to-Image (CLIP Text) — PHOTOS_COLLECTION (geo 없음)
-            clip_text_emb = await asyncio.to_thread(self.vision_model.encode, query)
-            clip_text_emb = np.asarray(clip_text_emb, dtype=np.float32)
-            t_i_resp = await asyncio.to_thread(
-                self.client.query_points,
-                collection_name=PHOTOS_COLLECTION,
-                query=clip_text_emb.tolist(),
-                limit=candidates_limit,
-                with_payload=True,
-                query_filter=photos_filter,  # PHOTOS에는 geo 필드 없으므로 category만
-            )
-            collect_hits(t_i_resp.points, 0.5, "text_to_image", PHOTOS_COLLECTION)
-
-        # --- B. Image Search Channel ---
-        if image_url and scope in {"auto", "photo_only"}:
-            img = await asyncio.to_thread(download_image, image_url)
-            if img:
-                # 3. Scenario: Visual Similarity (CLIP Vision) — PHOTOS_COLLECTION (geo 없음)
-                img_emb = await asyncio.to_thread(self.vision_model.encode, img)
-                img_emb = np.asarray(img_emb, dtype=np.float32)
-                i_i_resp = await asyncio.to_thread(
-                    self.client.query_points,
-                    collection_name=PHOTOS_COLLECTION,
-                    query=img_emb.tolist(),
-                    limit=candidates_limit,
-                    with_payload=True,
-                    query_filter=photos_filter,  # geo 없음
-                )
-                collect_hits(i_i_resp.points, 1.0, "image_visual", PHOTOS_COLLECTION)
-
-        if image_url and scope == "auto":
-            # 4. Scenario: Emotional Enrichment (GPT-4o-mini -> BGE-M3) — PLACES_COLLECTION (geo filter 적용)
-            if not emotional_text:
-                emotional_text = await describe_image(image_url)
-
-            if emotional_text:
-                emo_emb = await asyncio.to_thread(self.text_model.encode, emotional_text)
-                emo_emb = np.asarray(emo_emb, dtype=np.float32)
-                i_e_resp = await asyncio.to_thread(
+                sparse_indices, sparse_values = await asyncio.to_thread(build_sparse_vector, query)
+                if not sparse_indices or not sparse_values:
+                    return None
+                resp = await asyncio.to_thread(
                     self.client.query_points,
                     collection_name=PLACES_COLLECTION,
-                    query=emo_emb.tolist(),
+                    query=SparseVector(indices=sparse_indices, values=sparse_values),
+                    using="text_sparse",
                     limit=candidates_limit,
                     with_payload=True,
                     query_filter=places_filter,
                 )
-                collect_hits(i_e_resp.points, 0.8, "image_emotional", PLACES_COLLECTION)
+                print(f"[INFO] qdrant_sparse hits={len(resp.points)}")
+                return ("qdrant_sparse", PLACES_COLLECTION, resp.points, 0.85, None)
+            except Exception as e:
+                print(f"[WARN] qdrant sparse channel failed: {e}")
+                return None
+
+        async def _ch_text_to_image():
+            if not (has_text and scope in {"auto", "photo_only"}):
+                return None
+            emb = np.asarray(await asyncio.to_thread(self.vision_model.encode, query), dtype=np.float32)
+            resp = await asyncio.to_thread(
+                self.client.query_points,
+                collection_name=PHOTOS_COLLECTION,
+                query=emb.tolist(),
+                limit=candidates_limit,
+                with_payload=True,
+                query_filter=photos_filter,
+            )
+            return ("text_to_image", PHOTOS_COLLECTION, resp.points, 0.5, None)
+
+        async def _ch_image_visual():
+            if not (image_url and scope in {"auto", "photo_only"}):
+                return None
+            img = await asyncio.to_thread(download_image, image_url)
+            if not img:
+                return None
+            emb = np.asarray(await asyncio.to_thread(self.vision_model.encode, img), dtype=np.float32)
+            resp = await asyncio.to_thread(
+                self.client.query_points,
+                collection_name=PHOTOS_COLLECTION,
+                query=emb.tolist(),
+                limit=candidates_limit,
+                with_payload=True,
+                query_filter=photos_filter,
+            )
+            return ("image_visual", PHOTOS_COLLECTION, resp.points, 1.0, None)
+
+        async def _ch_image_emotional():
+            if not (image_url and scope == "auto"):
+                return None
+            emo_text = emotional_text or await describe_image(image_url)
+            if not emo_text:
+                return None
+            emb = np.asarray(await asyncio.to_thread(self.text_model.encode, emo_text), dtype=np.float32)
+            resp = await asyncio.to_thread(
+                self.client.query_points,
+                collection_name=PLACES_COLLECTION,
+                query=emb.tolist(),
+                limit=candidates_limit,
+                with_payload=True,
+                query_filter=places_filter,
+            )
+            return ("image_emotional", PLACES_COLLECTION, resp.points, 0.8, emo_text)
+
+        channel_outputs = await asyncio.gather(
+            _ch_text_semantic(),
+            _ch_sparse(),
+            _ch_text_to_image(),
+            _ch_image_visual(),
+            _ch_image_emotional(),
+            return_exceptions=True,
+        )
+
+        for output in channel_outputs:
+            if output is None:
+                continue
+            if isinstance(output, BaseException):
+                print(f"[WARN] channel exception: {output}")
+                continue
+            match_type, source_col, hits, weight, extra = output
+            if match_type == "image_emotional" and extra:
+                emotional_text = extra
+            collect_hits(hits, weight, match_type, source_col)
 
         # --- geo filter 0결과 ---
         # geo_retry_count > 0 (이미 확장 반경)인데도 후보가 없으면 빈 결과 반환.
