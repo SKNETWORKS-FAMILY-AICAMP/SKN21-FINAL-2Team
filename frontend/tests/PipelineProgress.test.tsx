@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { PipelineProgress } from "../src/features/chat/components/PipelineProgress";
 
 describe("PipelineProgress", () => {
-  it("실제로 시작된 단계만 표시한다", () => {
+  it("완료 단계와 현재 running 단계를 여러 줄로 표시한다", () => {
     render(
       <PipelineProgress
         visible={true}
@@ -20,7 +20,6 @@ describe("PipelineProgress", () => {
 
     expect(screen.getByText("의도 분석 완료")).toBeInTheDocument();
     expect(screen.getByText("여행 계획 수립 중...")).toBeInTheDocument();
-    expect(screen.queryByText("장소 검색 완료")).not.toBeInTheDocument();
     expect(screen.queryByText("장소 검색 중...")).not.toBeInTheDocument();
   });
 

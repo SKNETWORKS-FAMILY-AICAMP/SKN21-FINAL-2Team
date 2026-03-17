@@ -3,6 +3,8 @@ import random
 import re
 from typing import Dict, Any, List
 
+from langchain_core.callbacks.manager import adispatch_custom_event
+
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, InputType
 from app.core.retrieval.place import PlaceRetriever
@@ -345,6 +347,9 @@ async def retriever_node(state: TravelState):
     """
     retry_count = int(state.get("retriever_retry_count") or 0)
     print(f"--- Retriever Agent (retry_count={retry_count}) ---")
+    # 재시도 여부를 직접 알고 있으므로 step 이름을 명확하게 전달
+    _step_key = "retriever_retry" if retry_count > 0 else "retriever"
+    await adispatch_custom_event("pipeline_step", {"node": _step_key, "status": "start"})
 
     serving_params = get_retrieval_params("serving")
     user_input = get_effective_user_input(state)

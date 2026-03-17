@@ -1,3 +1,5 @@
+from langchain_core.callbacks.manager import adispatch_custom_event
+
 from app.agents.models.state import TravelState
 from app.utils.geocoder import GeoCoder, LANDMARK_DICTIONARY, NormalizedLocation
 from app.utils.common import getattr_safe, in_seoul_bbox
@@ -6,11 +8,12 @@ from app.utils.common import getattr_safe, in_seoul_bbox
 async def geocoder_node(state: TravelState):
     """위치 anchor 좌표 확인 Agent.
 
-    slots.location → LANDMARK_DICTIONARY → NormalizedLocation → Naver API 순으로 anchor 좌표를 해석.
+    slots.location → LANDMARK_DICTIONARY → NormalizedLocation → Naver API → slots.location fallback 순으로 anchor 좌표를 해석.
     Seoul bbox 밖이면 'name + 서울' 재검색으로 교정.
     결과는 state의 location_anchor_lat / location_anchor_lon / location_anchor_radius_m 에 저장된다.
     """
     print("--- Geocoder Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "geocoder", "status": "start"})
 
     slots = state.get("slots")
     location_obj = getattr_safe(slots, "location") if slots else None
@@ -82,7 +85,17 @@ async def geocoder_node(state: TravelState):
             print(f"[Geocoder] Seoul anchor re-search failed for '{raw_location}': {e}")
             anchor_lat = anchor_lon = anchor_radius_m = None
 
+    # 모든 룩업 실패 시 → intent_node에서 정규화된 slots.location 좌표를 fallback으로 사용
+    if not anchor_lat and location_obj:
+        slots_lat = getattr(location_obj, "lat", None)
+        slots_lon = getattr(location_obj, "lon", None)
+        if slots_lat and slots_lon and in_seoul_bbox(slots_lat, slots_lon):
+            anchor_lat = slots_lat
+            anchor_lon = slots_lon
+            print(f"[Geocoder] fallback to slots.location coords: lat={anchor_lat} lon={anchor_lon}")
+
     print(f"[Geocoder] Final anchor: lat={anchor_lat} lon={anchor_lon} r={anchor_radius_m}m")
+    await adispatch_custom_event("pipeline_step", {"node": "geocoder", "status": "done"})
 
     # 사용자 현재 위치 reverse geocoding (한 번만 수행, state에 저장)
     input_address = None

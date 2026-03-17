@@ -598,20 +598,24 @@ def _build_streaming_response(
                 }
 
                 # 노드 시작/종료 이벤트
-                # node_name이 graph_nodes에 있거나, 정규화된 이름이 파이프라인 키에 포함되면 전송
-                is_step_node = node_name in graph_nodes or node_name in _PIPELINE_STEP_KEYS
+                # event["name"] == node_name 조건: 라우팅 함수(route_by_intent 등)가
+                # 이전 노드의 langgraph_node 메타데이터를 갖고 이벤트를 발화하는 것을 제외
+                is_step_node = (
+                    (node_name in graph_nodes or node_name in _PIPELINE_STEP_KEYS)
+                    and event_name == node_name
+                )
 
                 if kind == "on_chain_start" and is_step_node:
                     if node_name == "retriever":
                         retriever_start_count += 1
                         if retriever_start_count > 1:
-                            # 그래프 레벨 재시도 → 별도 step으로 표시
                             retriever_in_retry = True
                             yield _encode_sse({"step": "retriever_retry", "status": "start"})
                         else:
                             yield _encode_sse({"step": node_name, "status": "start"})
                     else:
                         yield _encode_sse({"step": node_name, "status": "start"})
+
                 elif kind == "on_chain_end" and is_step_node:
                     if node_name == "retriever" and retriever_in_retry:
                         yield _encode_sse({"step": "retriever_retry", "status": "done"})
@@ -622,21 +626,18 @@ def _build_streaming_response(
                     output = _normalize_event_output(event.get("data", {}).get("output", {}))
 
                     if node_name in _EXECUTOR_NODES:
-                        # executor 노드 종료 시 결과 캡처
                         if "place_info_list" in output:
                             place_info_list = output["place_info_list"]
                             print(f"[SSE] Captured place_info_list: {len(place_info_list)} items")
                         if "answer" in output:
                             final_answer = output["answer"]
 
-                    # Intent 노드 종료 시점에 summary_title 제목 즉시 업데이트
                     if node_name == "intent":
                         if should_update_title and output and _can_overwrite_room_title(room):
                             summary_title = output.get("summary_title")
                             if summary_title:
                                 if _save_room_title(db, room, summary_title):
                                     print(f"[ChatAPI] Room title updated to: {room.title}")
-                                    # 프론트엔드에 제목 즉시 전송 (done 이벤트 기다리지 않음)
                                     yield _encode_sse({"room_title": room.title})
 
                 # 이미지 분석 진행 상태 (intent_node 내부에서 dispatch)

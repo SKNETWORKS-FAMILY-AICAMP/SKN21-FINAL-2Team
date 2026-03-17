@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
@@ -459,6 +460,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     최종 답변 생성
     """
     print("--- Executor Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "executor", "status": "start"})
 
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
@@ -592,6 +594,7 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     여행 계획에서 부족한 정보를 재질문하는 node
     """
     print("--- Executor Missing Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "executor_missing", "status": "start"})
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
@@ -638,6 +641,7 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     일상 대화 node
     """
     print("--- Executor General Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "executor_general", "status": "start"})
 
     user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]

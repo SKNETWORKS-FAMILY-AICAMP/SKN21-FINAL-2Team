@@ -9,7 +9,7 @@ from app.utils.common import to_client_image_url
 from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, IsEmptyCondition, PayloadField
 from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
-from app.agents.models.output import CATEGORY_DB_FALLBACK, CategoryType
+from app.agents.models.output import CategoryType
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import os
@@ -69,16 +69,16 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
     # 쉼표로 구분된 카테고리 파싱, 안 들어오면 기본값 3개
     requested_cats = [c.strip() for c in categories.split(",")] if categories else ["hot_places", "tourist_spots", "restaurants"]
     
-    # 영문 키워드 → 한글 contenttypeid 1차 매핑
-    # 한글 카테고리(예: '팝업스토어')가 들어오면 그대로 사용합니다.
+    # 영문 키워드 → 한글 contenttypeid 매핑 (DB 실존 값: 관광지, 콘텐츠, 숙박, 음식점, 투어)
     qdrant_cat_map = {
         "tourist_spots": "관광지",
         "restaurants": "음식점",
         "tour_courses": "투어",
+        "accommodations": "숙박",
+        "contents": "콘텐츠",
         "콘텐츠": "콘텐츠",
+        "숙박": "숙박",
     }
-    # CATEGORY_DB_FALLBACK: DB에 없는 LLM 카테고리를 실제 DB 값으로 매핑
-    # 예) "팝업스토어" → ["콘텐츠"], "문화시설" → ["관광지"]
 
     results = {cat: [] for cat in requested_cats}
 
@@ -112,11 +112,9 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
     vector_cats = [cat for cat in requested_cats if cat != "hot_places"]
     
     for req_cat in vector_cats:
-        # 1차: 영문 → 한글 매핑
+        # 영문 → 한글 매핑 (매핑 없으면 그대로 사용)
         korean_val = qdrant_cat_map.get(req_cat, req_cat)
-        # 2차: CATEGORY_DB_FALLBACK으로 실제 DB 값 목록 해석
-        # (예: "팝업스토어" → ["콘텐츠"], "관광지" → ["관광지"])
-        db_values = CATEGORY_DB_FALLBACK.get(korean_val, [korean_val])
+        db_values = [korean_val]
 
         try:
             # MatchAny로 복수 DB값을 OR 조건으로 검색

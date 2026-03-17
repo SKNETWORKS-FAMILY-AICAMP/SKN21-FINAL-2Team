@@ -28,7 +28,7 @@ from app.scripts.preprocess_data import download_image, build_sparse_vector
 from app.utils.geocoder import GeoCoder
 from app.utils.vision import describe_image
 from app.core.retrieval.place_score import PlaceScorer, _extract_place_id, _to_positive_int
-from app.agents.models.output import CategoryType, CATEGORY_DB_FALLBACK
+from app.agents.models.output import CategoryType
 
 
 class PlaceRetriever(PlaceScorer):
@@ -57,21 +57,13 @@ class PlaceRetriever(PlaceScorer):
 
     @staticmethod
     def _resolve_category_values(categories: list[CategoryType] | None) -> list[str]:
-        """LLM 추출 카테고리 → DB 실존 contenttypeid 값으로 변환 (fallback 포함).
+        """LLM 추출 카테고리 → DB contenttypeid 값으로 변환.
 
         DB 실존 값: 음식점, 관광지, 숙박, 콘텐츠, 투어
-        LLM이 추출하는 문화시설/축제공연행사/팝업스토어/레포츠는 DB에 없으므로 fallback 적용.
         """
         if not categories:
             return []
-        resolved: set[str] = set()
-        for cat in categories:
-            val = cat.value
-            if val in CATEGORY_DB_FALLBACK:
-                resolved.update(CATEGORY_DB_FALLBACK[val])
-            else:
-                resolved.add(val)
-        return list(resolved)
+        return list({cat.value for cat in categories})
 
     @staticmethod
     def _merge_geo_bboxes(

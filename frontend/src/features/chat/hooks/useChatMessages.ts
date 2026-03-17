@@ -43,10 +43,23 @@ export function useChatMessages({
 
     const updatePipelineStep = useCallback((step: string, status: string) => {
         const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
-        setPipelineSteps((prev) => ({
-            ...prev,
-            [step]: mappedStatus,
-        }));
+        setPipelineSteps((prev) => {
+            if (mappedStatus === "running") {
+                const next = { ...prev };
+                for (const key of Object.keys(next)) {
+                    if (next[key] === "running" && key !== step) {
+                        next[key] = "done";
+                    }
+                }
+                next[step] = "running";
+                return next;
+            }
+
+            return {
+                ...prev,
+                [step]: mappedStatus,
+            };
+        });
     }, []);
 
     const flushBufferedToken = useCallback((streamingId: number, roomId: number) => {
