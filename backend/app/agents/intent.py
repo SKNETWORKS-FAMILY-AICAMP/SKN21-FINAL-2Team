@@ -14,13 +14,19 @@ from app.utils.vision import describe_image
 
 async def _analyze_image(image_path: str) -> str | None:
     """이미지 분석 + custom event 발행 (pipeline 'image_analysis' step 표시용)"""
-    await adispatch_custom_event("image_analysis", {"status": "start"})
+    try:
+        await adispatch_custom_event("image_analysis", {"status": "start"})
+    except RuntimeError:
+        pass
     try:
         result = await describe_image(image_path)
     except Exception as e:
         print(f"[Intent] describe_image failed: {e}")
         result = None
-    await adispatch_custom_event("image_analysis", {"status": "done"})
+    try:
+        await adispatch_custom_event("image_analysis", {"status": "done"})
+    except RuntimeError:
+        pass
     return result
 
 
@@ -32,7 +38,10 @@ async def intent_node(state: TravelState):
     - 요약과 의도 분석을 병렬로 실행하여 지연 최소화
     """
     print("--- Intent Agent ---")
-    await adispatch_custom_event("pipeline_step", {"node": "intent", "status": "start"})
+    try:
+        await adispatch_custom_event("pipeline_step", {"node": "intent", "status": "start"})
+    except RuntimeError:
+        pass
 
     # API 레이어에서 주입된 사용자 선호도 정보 사용
     print(f"[Intent] state keys: {list(state.keys())}")

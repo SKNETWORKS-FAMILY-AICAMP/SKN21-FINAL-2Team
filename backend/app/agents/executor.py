@@ -345,7 +345,10 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     최종 답변 생성
     """
     print("--- Executor Agent ---")
-    await adispatch_custom_event("pipeline_step", {"node": "executor", "status": "start"})
+    try:
+        await adispatch_custom_event("pipeline_step", {"node": "executor", "status": "start"})
+    except RuntimeError:
+        pass
 
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
@@ -479,7 +482,10 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     여행 계획에서 부족한 정보를 재질문하는 node
     """
     print("--- Executor Missing Agent ---")
-    await adispatch_custom_event("pipeline_step", {"node": "executor_missing", "status": "start"})
+    try:
+        await adispatch_custom_event("pipeline_step", {"node": "executor_missing", "status": "start"})
+    except RuntimeError:
+        pass
 
     # missing_slots가 있으면 (planner의 재질문) 바로 반환
     missing_slots = state.get("missing_slots", [])
@@ -526,7 +532,10 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     일상 대화 node
     """
     print("--- Executor General Agent ---")
-    await adispatch_custom_event("pipeline_step", {"node": "executor_general", "status": "start"})
+    try:
+        await adispatch_custom_event("pipeline_step", {"node": "executor_general", "status": "start"})
+    except RuntimeError:
+        pass
 
     user_input = get_effective_user_input(state)
     messages = state.get("messages", [])[-10:]
