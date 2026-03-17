@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.state import TravelState, get_effective_user_input, get_slots_info
 from app.agents.prompts.prompts import PLANNER_PROMPT
@@ -48,6 +49,7 @@ async def planner_node(state: TravelState):
     - 대화의 흐름과 사용자의 input을 분석해 장소 검색을 하기 위해서 어떤 정보들이 필요한지 llm이 결정해서 state에 저장한다.
     """
     print("--- Planner Agent ---")
+    await adispatch_custom_event("pipeline_step", {"node": "planner", "status": "start"})
 
     user_input = get_effective_user_input(state)
     user_lat = state.get("input_lat")

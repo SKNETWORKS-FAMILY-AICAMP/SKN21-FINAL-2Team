@@ -24,7 +24,7 @@ PHOTOS_COLLECTION = "photos"
 RETRIEVAL_PROFILE = os.getenv("RETRIEVAL_PROFILE", "serving").lower()
 
 SERVING_RETRIEVER_CANDIDATE_K = 20
-SERVING_RETRIEVER_RERANK_MAX_K = 8
+SERVING_RETRIEVER_RERANK_MAX_K = 20
 SERVING_RETRIEVER_TOP_K = 5
 
 EVAL_RETRIEVER_CANDIDATE_K = 60
@@ -84,7 +84,7 @@ MAX_DISTANCE_KM = 3.0
 GEO_RETRY_MULTIPLIER = 2.0
 
 # Candidate threshold
-CANDIDATE_THRESHOLD = 0.4
+CANDIDATE_THRESHOLD = 0.05
 
 # Rerank 후 geo proximity 블렌딩 가중치
 # reranker(CrossEncoder)는 텍스트 유사도만 보므로, 거리 점수를 일부 반영해 근거리 장소 우선도를 유지.

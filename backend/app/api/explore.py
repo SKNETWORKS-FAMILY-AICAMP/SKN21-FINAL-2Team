@@ -6,9 +6,10 @@ import random
 from app.core.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
 from app.utils.common import to_client_image_url
-from qdrant_client.models import Filter, FieldCondition, MatchValue, IsEmptyCondition, PayloadField
+from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, IsEmptyCondition, PayloadField
 from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
+from app.agents.models.output import CategoryType
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import os
@@ -68,13 +69,15 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
     # 쉼표로 구분된 카테고리 파싱, 안 들어오면 기본값 3개
     requested_cats = [c.strip() for c in categories.split(",")] if categories else ["hot_places", "tourist_spots", "restaurants"]
     
-    # Qdrant 내부 contenttypeid 매핑용 (영문 키워드가 들어올 수 있으므로 매핑)
-    # 한글 카테고리(예: '팝업스토어')가 들어오면 그대로 사용합니다.
+    # 영문 키워드 → 한글 contenttypeid 매핑 (DB 실존 값: 관광지, 콘텐츠, 숙박, 음식점, 투어)
     qdrant_cat_map = {
         "tourist_spots": "관광지",
         "restaurants": "음식점",
         "tour_courses": "투어",
+        "accommodations": "숙박",
+        "contents": "콘텐츠",
         "콘텐츠": "콘텐츠",
+        "숙박": "숙박",
     }
 
     results = {cat: [] for cat in requested_cats}
@@ -109,16 +112,17 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
     vector_cats = [cat for cat in requested_cats if cat != "hot_places"]
     
     for req_cat in vector_cats:
-        # 매핑된 한글 분류값 가져오기 (매핑 시도가 없으면 요청된 문자열 그대로, ex: "팝업스토어")
-        actual_qdrant_val = qdrant_cat_map.get(req_cat, req_cat)
-        
+        # 영문 → 한글 매핑 (매핑 없으면 그대로 사용)
+        korean_val = qdrant_cat_map.get(req_cat, req_cat)
+        db_values = [korean_val]
+
         try:
-            # Category 명칭으로 Qdrant 검색
+            # MatchAny로 복수 DB값을 OR 조건으로 검색
             points, _ = client.scroll(
                 collection_name=PLACES_COLLECTION,
                 scroll_filter=Filter(
                     must=[
-                        FieldCondition(key="contenttypeid", match=MatchValue(value=actual_qdrant_val))
+                        FieldCondition(key="contenttypeid", match=MatchAny(any=db_values))
                     ]
                 ),
                 limit=100,
@@ -144,7 +148,7 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
                             address=payload.get("addr") or payload.get("address") or "주소 정보 없음",
                             image_url=to_client_image_url(img_url),
                             description=payload.get("description", "")[:200],
-                            category=payload.get("category") if actual_qdrant_val == "콘텐츠" else None,
+                            category=payload.get("category") if "콘텐츠" in db_values else None,
                         )
                     )
         except Exception as e:
@@ -241,52 +245,46 @@ SEARCH_CATEGORIES = ["관광지", "음식점", "투어"]
 
 
 @router.post("/category-places", response_model=Dict[str, List[PlaceExploreItem]])
-async def get_category_places(request: CategoryPlacesRequest):
+def get_category_places(request: CategoryPlacesRequest):
     """
     사용자 취향(user_prefs)을 기반으로 카테고리별 장소 3개를 추천합니다.
     - places 컬렉션의 contenttypeid 필드로 카테고리 필터링
+    - 동기 def: FastAPI가 자동으로 스레드풀에서 실행 (search_text 동기 메서드와 호환)
     """
     retriever = PlaceRetriever.get_instance()
-
     results: Dict[str, List[PlaceExploreItem]] = {}
 
     for cat in SEARCH_CATEGORIES:
+        matched_enum = next((ct for ct in CategoryType if ct.value == cat), None)
         try:
             search_results = retriever.search_text(
                 query=request.user_prefs,
                 limit=20,
-                category=cat,
-                has_image=True
+                categories=[matched_enum] if matched_enum else None,
+                has_image=True,
             )
-
-            items = []
-            for res in search_results:
-                payload = res.payload or {}
-                pid = res.id
-                score = res.score
-
-                img_url = to_client_image_url(payload.get("image", payload.get("firstimage", "")))
-
-                if not is_valid_image(img_url):
-                    continue
-
-                items.append(
-                    PlaceExploreItem(
-                        contentid=str(pid),
-                        title=payload.get("title", "Unknown"),
-                        address=payload.get("addr") or payload.get("address") or payload.get("road_address", "주소 없음"),
-                        image_url=img_url,
-                        score=round(score, 4),
-                        description=payload.get("description", "")[:200],
-                    )
-                )
-
-            # 결과 중 3개를 무작위로 샘플링
-            results[cat] = random.sample(items, min(3, len(items)))
-
         except Exception as e:
             print(f"[WARN] Category '{cat}' search failed: {e}")
             results[cat] = []
+            continue
+
+        items = []
+        for res in search_results:
+            payload = res.payload or {}
+            img_url = to_client_image_url(payload.get("image", payload.get("firstimage", "")))
+            if not is_valid_image(img_url):
+                continue
+            items.append(
+                PlaceExploreItem(
+                    contentid=str(res.id),
+                    title=payload.get("title", "Unknown"),
+                    address=payload.get("addr") or payload.get("address") or payload.get("road_address", "주소 없음"),
+                    image_url=img_url,
+                    score=round(res.score, 4),
+                    description=payload.get("description", "")[:200],
+                )
+            )
+        results[cat] = random.sample(items, min(3, len(items)))
 
     return results
 

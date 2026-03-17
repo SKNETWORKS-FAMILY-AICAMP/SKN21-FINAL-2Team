@@ -8,6 +8,7 @@ type PlaceMapSheetProps = {
   open: boolean;
   onClose: () => void;
   places: ChatMapPlace[];
+  focusPlaces?: ChatMapPlace[];
   groups: ChatMapPlaceGroup[];
   selectedMapPlaceId: string | null;
   onSelectPlace: (mapId: string) => void;
@@ -18,6 +19,7 @@ export function PlaceMapSheet({
   open,
   onClose,
   places,
+  focusPlaces,
   groups,
   selectedMapPlaceId,
   onSelectPlace,
@@ -61,6 +63,7 @@ export function PlaceMapSheet({
             <PlaceMapPanel
               className="h-[calc(72dvh-56px)] max-h-[calc(100dvh-8.5rem)]"
               places={places}
+              focusPlaces={focusPlaces}
               groups={groups}
               selectedMapPlaceId={selectedMapPlaceId}
               onSelectPlace={onSelectPlace}

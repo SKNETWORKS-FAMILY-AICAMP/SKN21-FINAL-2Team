@@ -1,6 +1,6 @@
 # 프로젝트 분석 및 실행 점검
 
-> 2026-03-14 기준 전체 프로젝트 구조, 실행 검증 결과, 개선 포인트를 정리한 문서
+> 2026-03-17 기준 전체 프로젝트 구조, 실행 검증 결과, 개선 포인트를 정리한 문서
 
 ---
 
@@ -32,7 +32,7 @@
   - `backend/app/core/retrieval/tavily_search.py` 추가
 - 스트리밍 응답 및 채팅 저장 로직 보강
   - `backend/app/core/llm_streaming.py`
-  - `backend/app/api/chat.py`
+  - `backend/app/api/chat.py`: **SSE 스트리밍 파이프라인 복구 (custom_event 'token' 처리 추가)**
 - CORS 및 정적 파일 노출 경로 정리
   - `backend/app/main.py`
 
@@ -72,6 +72,7 @@
    - `PlaceInfo` import 경로를 `output.py`에서 `place.py`로 수정
 2. `backend/app/core/llm_factory.py`
    - 정의되지 않은 `TavilySearchResults` 타입 주석 제거
+3. `frontend/src/hooks/common/useSpeechRecognition.ts`: SSR 환경에서 localStorage 접근 시 발생하는 ReferenceError 수정 (window 체크 추가)
 
 ### 3.2 프론트엔드
 

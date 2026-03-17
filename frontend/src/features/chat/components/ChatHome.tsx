@@ -137,6 +137,7 @@ export function ChatHome() {
         isMapResizing,
         mapPanelWidth,
         mapPlaces,
+        focusPlaces,
         mapPlaceGroups,
         toMapId,
         startMapResizeDrag,
@@ -499,23 +500,26 @@ export function ChatHome() {
                             </div>
                         )}
 
-                        {visibleMessages.map((msg) => (
-                            <ChatMessageItem
-                                key={msg.id}
-                                msg={msg}
-                                isStreaming={isStreaming}
-                                streamingMsgId={streamingMsgId}
-                                showPipeline={showPipeline}
-                                pipelineSteps={pipelineSteps}
-                                streamBufferingReason={streamBufferingReason}
-                                selectedMapPlaceId={selectedMapPlaceId}
-                                toMapId={toMapId}
-                                handleSelectMapPlace={handleSelectMapPlace}
-                                handleTogglePlaceBookmark={handleTogglePlaceBookmark}
-                                placeCardRefs={placeCardRefs}
-                                compactPlaces={isMapPanelOpen}
-                            />
-                        ))}
+                        {visibleMessages.map((msg) => {
+                            const isThisStreaming = msg.id === streamingMsgId;
+                            return (
+                                <ChatMessageItem
+                                    key={msg.id}
+                                    msg={msg}
+                                    isStreaming={isStreaming}
+                                    streamingMsgId={streamingMsgId}
+                                    showPipeline={isThisStreaming ? showPipeline : false}
+                                    pipelineSteps={isThisStreaming ? pipelineSteps : undefined}
+                                    streamBufferingReason={isThisStreaming ? streamBufferingReason : null}
+                                    selectedMapPlaceId={selectedMapPlaceId}
+                                    toMapId={toMapId}
+                                    handleSelectMapPlace={handleSelectMapPlace}
+                                    handleTogglePlaceBookmark={handleTogglePlaceBookmark}
+                                    placeCardRefs={placeCardRefs}
+                                    compactPlaces={isMapPanelOpen}
+                                />
+                            );
+                        })}
 
                         <div ref={messagesEndRef} />
                     </div>
@@ -592,6 +596,7 @@ export function ChatHome() {
                             <PlaceMapPanel
                                 className="h-full"
                                 places={mapPlaces}
+                                focusPlaces={focusPlaces}
                                 groups={mapPlaceGroups}
                                 selectedMapPlaceId={selectedMapPlaceId}
                                 onSelectPlace={handleSelectMapPlace}
@@ -609,6 +614,7 @@ export function ChatHome() {
                 open={isMapSheetOpen}
                 onClose={() => setIsMapSheetOpen(false)}
                 places={mapPlaces}
+                focusPlaces={focusPlaces}
                 groups={mapPlaceGroups}
                 selectedMapPlaceId={selectedMapPlaceId}
                 onSelectPlace={handleSelectMapPlace}

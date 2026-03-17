@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
       ? apiUrl
       : 'http://backend:8000/api';
     return {
-      beforeFiles: [
+      // fallback: 모든 route handler 체크 후 마지막에 적용 → 스트리밍 route handler가 완전 우선
+      fallback: [
         {
           source: "/api/:path*",
           destination: `${backendBase}/:path*`,

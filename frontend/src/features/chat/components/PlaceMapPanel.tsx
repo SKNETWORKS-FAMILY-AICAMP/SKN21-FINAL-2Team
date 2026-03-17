@@ -21,6 +21,7 @@ export type ChatMapPlaceGroup = {
 
 type PlaceMapPanelProps = {
   places: ChatMapPlace[];
+  focusPlaces?: ChatMapPlace[];
   groups?: ChatMapPlaceGroup[];
   selectedMapPlaceId: string | null;
   onSelectPlace: (mapId: string) => void;
@@ -50,6 +51,7 @@ function escapeHtml(raw: string) {
 
 export function PlaceMapPanel({
   places,
+  focusPlaces,
   groups,
   selectedMapPlaceId,
   onSelectPlace,
@@ -185,12 +187,15 @@ export function PlaceMapPanel({
       bounds.extend(marker.getPosition());
     });
 
-    if (sortedPlaces.length === 1) {
-      const only = sortedPlaces[0];
-      map.setCenter(new naver.maps.LatLng(only.latitude, only.longitude));
+    // fitBounds: focusPlaces(새 메시지 장소)가 있으면 그것만, 없으면 전체
+    const fitTargets = (focusPlaces && focusPlaces.length > 0) ? focusPlaces : sortedPlaces;
+    if (fitTargets.length === 1) {
+      map.setCenter(new naver.maps.LatLng(fitTargets[0].latitude, fitTargets[0].longitude));
       map.setZoom(14);
-    } else if (sortedPlaces.length > 1) {
-      map.fitBounds(bounds, { top: 50, right: 40, bottom: 50, left: 40 });
+    } else if (fitTargets.length > 1) {
+      const fitBounds = new naver.maps.LatLngBounds();
+      fitTargets.forEach((p) => fitBounds.extend(new naver.maps.LatLng(p.latitude, p.longitude)));
+      map.fitBounds(fitBounds, { top: 50, right: 40, bottom: 50, left: 40 });
     }
 
     if (selectedMapPlaceId && infoWindowRef.current) {
@@ -206,7 +211,7 @@ export function PlaceMapPanel({
     } else if (infoWindowRef.current) {
       infoWindowRef.current.close();
     }
-  }, [status, naver, sortedPlaces, selectedMapPlaceId, onMarkerClick, onSelectPlace]);
+  }, [status, naver, sortedPlaces, focusPlaces, selectedMapPlaceId, onMarkerClick, onSelectPlace]);
 
   if (!clientId) {
     return (
