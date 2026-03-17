@@ -183,6 +183,11 @@
   "survey.restaurants": "美食",
   "survey.historicalSites": "历史名胜",
   "survey.kCulture": "K-culture",
+  "survey.halal": "清真",
+  "survey.kosher": "犹太洁食",
+  "survey.vegan": "纯素",
+  "survey.wheelchair": "轮椅无障碍",
+  "survey.pets": "宠物",
 
   "header.features": "功能",
   "header.destinations": "目的地",
@@ -241,6 +246,14 @@
   "incomplete.surveyButton": "完成问卷",
   "incomplete.later": "稍后",
   "incomplete.switchAccount": "使用其他账号登录",
+
+  "explore.choicesSubtitle": "为{name}推荐的旅行地",
+  "explore.choicesSubtitleDefault": "根据您的喜好推荐的旅行地",
+  "explore.trendingNeighborhoods": "热门地区",
+  "explore.eventsExhibitions": "活动和展览",
+  "explore.noPopupStores": "暂无快闪店信息",
+  "explore.noImg": "No img",
+  "explore.ongoing": "进行中",
 
   "banner.switchPrompt": "要切换到其他语言吗？",
   "banner.switch": "设置",

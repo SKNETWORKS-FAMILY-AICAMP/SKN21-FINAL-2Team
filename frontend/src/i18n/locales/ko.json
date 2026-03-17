@@ -183,6 +183,11 @@
   "survey.restaurants": "맛집",
   "survey.historicalSites": "역사적 명소",
   "survey.kCulture": "K-culture",
+  "survey.halal": "할랄",
+  "survey.kosher": "코셔",
+  "survey.vegan": "비건",
+  "survey.wheelchair": "휠체어 이용 가능",
+  "survey.pets": "반려동물",
 
   "header.features": "Features",
   "header.destinations": "Destinations",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Sans_JP, Noto_Sans_SC, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { LanguageProvider } from "@/i18n/LanguageContext";
@@ -12,6 +12,18 @@ const notoSans = Noto_Sans({
 
 const notoSansKr = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSansSc = Noto_Sans_SC({
+  variable: "--font-noto-sans-sc",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
@@ -48,7 +60,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${notoSans.variable} ${notoSansKr.variable} ${geistMono.variable} ${notoSerifKr.variable} antialiased bg-slate-50 text-slate-900`}
+        className={`${notoSans.variable} ${notoSansKr.variable} ${notoSansJp.variable} ${notoSansSc.variable} ${geistMono.variable} ${notoSerifKr.variable} antialiased bg-slate-50 text-slate-900`}
       >
         <GoogleOAuthProvider clientId={CLIENT_ID}>
           <LanguageProvider>{children}</LanguageProvider>

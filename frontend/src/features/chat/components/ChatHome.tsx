@@ -35,6 +35,7 @@ type RoomDraft = {
 
 export function ChatHome() {
     const { t } = useTranslation();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const roomIdParam = searchParams.get("roomId");
     const parsedRouteRoomId = roomIdParam ? parseInt(roomIdParam, 10) : null;
@@ -242,11 +243,11 @@ export function ChatHome() {
                 try {
                     const data = await fetchCurrentUser();
                     if (!data.is_join) {
-                        window.location.href = "/signup/profile";
+                        router.push("/signup/profile");
                         return;
                     }
                     if (!data.is_prefer) {
-                        window.location.href = "/survey";
+                        router.push("/survey");
                         return;
                     }
                     setUserProfile(data);

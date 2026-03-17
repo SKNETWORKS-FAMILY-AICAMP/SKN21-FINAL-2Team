@@ -183,6 +183,11 @@
   "survey.restaurants": "グルメ",
   "survey.historicalSites": "歴史的名所",
   "survey.kCulture": "K-culture",
+  "survey.halal": "ハラール",
+  "survey.kosher": "コーシャ",
+  "survey.vegan": "ヴィーガン",
+  "survey.wheelchair": "車椅子対応",
+  "survey.pets": "ペット",
 
   "header.features": "Features",
   "header.destinations": "Destinations",
@@ -241,6 +246,14 @@
   "incomplete.surveyButton": "アンケートを完成",
   "incomplete.later": "後で",
   "incomplete.switchAccount": "別のアカウントでログイン",
+
+  "explore.choicesSubtitle": "{name}さんにおすすめの旅行先",
+  "explore.choicesSubtitleDefault": "あなたの好みに合わせたおすすめスポット",
+  "explore.trendingNeighborhoods": "人気エリア",
+  "explore.eventsExhibitions": "イベント＆展示",
+  "explore.noPopupStores": "ポップアップストア情報はありません",
+  "explore.noImg": "No img",
+  "explore.ongoing": "開催中",
 
   "banner.switchPrompt": "他の言語に設定しますか？",
   "banner.switch": "設定",

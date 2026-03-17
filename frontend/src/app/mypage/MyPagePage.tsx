@@ -21,8 +21,12 @@ import {
   SURVEY_ITEM_LABELS,
   SNAPSHOT_OPTIONS,
   EXTRA_PREFER_OPTIONS,
+  SURVEY_LABEL_KEY_MAP,
+  EXTRA_PREFER_LABEL_KEY_MAP,
 } from "./constants";
 import type { ReservationItem, TripSummary } from "./types";
+import { useTranslation } from "@/i18n/useTranslation";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
 import {
   fetchBookmarkedRooms,
@@ -571,7 +575,7 @@ export function MyPagePage() {
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 p-4">
                                 <p className="text-[10px] text-white/80 font-semibold uppercase tracking-[0.12em]">{item.label}</p>
-                                <p className="text-sm text-white font-semibold mt-1">{item.value || "-"}</p>
+                                <p className="text-sm text-white font-semibold mt-1">{item.value ? (SURVEY_LABEL_KEY_MAP[item.value] ? t(SURVEY_LABEL_KEY_MAP[item.value]) : item.value) : "-"}</p>
                               </div>
                             </div>
                             {isEditingPreferences && (
@@ -595,7 +599,7 @@ export function MyPagePage() {
                                       : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
                                       }`}
                                   >
-                                    {opt}
+                                    {SURVEY_LABEL_KEY_MAP[opt] ? t(SURVEY_LABEL_KEY_MAP[opt]) : opt}
                                   </button>
                                 ))}
                               </div>
@@ -625,7 +629,7 @@ export function MyPagePage() {
                               : "bg-gray-900 text-white border-gray-900"
                               }`}
                           >
-                            {pref}
+                            {EXTRA_PREFER_LABEL_KEY_MAP[pref] ? t(EXTRA_PREFER_LABEL_KEY_MAP[pref]) : pref}
                           </button>
                         ))}
                     </div>

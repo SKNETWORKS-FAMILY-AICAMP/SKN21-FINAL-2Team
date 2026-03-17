@@ -26,11 +26,21 @@ html {
   background: var(--background);
 }
 
-/* 글로벌 폰트 스택: 영문(라틴) 및 한국어는 Pretendard, 그 외 언어(일어, 중어 등)는 시스템 폴백 폰트 적용 */
+/* 글로벌 폰트 스택: 기본은 Pretendard(한국어/영문), 언어별로 :lang()으로 오버라이드 */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Pretendard Variable", Pretendard, var(--font-noto-sans-kr), var(--font-noto-sans), system-ui, sans-serif;
+}
+
+/* 일본어: Noto Sans JP 우선 */
+:lang(ja) {
+  font-family: var(--font-noto-sans-jp), "Pretendard Variable", Pretendard, var(--font-noto-sans), system-ui, sans-serif;
+}
+
+/* 중국어: Noto Sans SC 우선 */
+:lang(zh) {
+  font-family: var(--font-noto-sans-sc), "Pretendard Variable", Pretendard, var(--font-noto-sans), system-ui, sans-serif;
 }
 
 .font-serif-korean {

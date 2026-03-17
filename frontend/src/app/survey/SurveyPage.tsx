@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, ArrowLeft, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
-import { IMAGE_MAP, QUESTION_METADATA, QUESTION_ORDER } from "./constants";
+import { IMAGE_MAP, QUESTION_METADATA, QUESTION_ORDER, SURVEY_LABEL_KEY_MAP } from "./constants";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type QuestionType = {
     id: string; // 'plan', 'member' ...
@@ -15,6 +16,7 @@ type QuestionType = {
 };
 
 export function SurveyPage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const [questions, setQuestions] = useState<QuestionType[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -234,7 +236,7 @@ export function SurveyPage() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
                                     <div className="absolute bottom-0 left-0 w-full p-8 flex items-end justify-between">
                                         <div className="text-left">
-                                            <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-md">{option.value}</h3>
+                                            <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-md">{SURVEY_LABEL_KEY_MAP[option.value] ? t(SURVEY_LABEL_KEY_MAP[option.value]) : option.value}</h3>
                                             <div className="h-0.5 w-0 bg-white group-hover:w-full transition-all duration-500 ease-out" />
                                         </div>
                                     </div>
