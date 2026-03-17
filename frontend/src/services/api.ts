@@ -483,6 +483,7 @@ const streamSseRequest = async (
                 await callbacks.onToken(data.token);
                 await yieldToUI();
             } else if (data.step) {
+                console.log(`[STEP_TIMING] recv ${data.step} ${data.status} @ ${Date.now()}`);
                 await callbacks.onStep(data.step, data.status);
                 await yieldToUI();
             } else if ("buffering" in data) {

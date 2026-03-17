@@ -2,6 +2,7 @@ import re
 import json
 import asyncio
 import math
+import time
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
@@ -77,6 +78,10 @@ def _encode_sse(payload: dict) -> str:
 def _encode_sse_padding() -> str:
     # 브라우저가 작은 초기 chunk를 늦게 flush하는 경우를 줄이기 위한 프리앰블 패딩
     return f": {' ' * 2048}\n\n"
+
+
+# step 이벤트용 flush 패딩 — Next.js rewrite가 작은 청크를 버퍼링하지 않도록 강제
+_STEP_FLUSH_PADDING = ": " + " " * 512 + "\n\n"
 
 
 def _resolve_graph_event_node_name(event: dict) -> str:
@@ -610,18 +615,23 @@ def _build_streaming_response(
                         retriever_start_count += 1
                         if retriever_start_count > 1:
                             retriever_in_retry = True
-                            yield _encode_sse({"step": "retriever_retry", "status": "start"})
+                            print(f"[STEP_TIMING] emit retriever_retry start @ {time.time():.3f}")
+                            yield _encode_sse({"step": "retriever_retry", "status": "start"}) + _STEP_FLUSH_PADDING
                         else:
-                            yield _encode_sse({"step": node_name, "status": "start"})
+                            print(f"[STEP_TIMING] emit {node_name} start @ {time.time():.3f}")
+                            yield _encode_sse({"step": node_name, "status": "start"}) + _STEP_FLUSH_PADDING
                     else:
-                        yield _encode_sse({"step": node_name, "status": "start"})
+                        print(f"[STEP_TIMING] emit {node_name} start @ {time.time():.3f}")
+                        yield _encode_sse({"step": node_name, "status": "start"}) + _STEP_FLUSH_PADDING
 
                 elif kind == "on_chain_end" and is_step_node:
                     if node_name == "retriever" and retriever_in_retry:
-                        yield _encode_sse({"step": "retriever_retry", "status": "done"})
+                        print(f"[STEP_TIMING] emit retriever_retry done @ {time.time():.3f}")
+                        yield _encode_sse({"step": "retriever_retry", "status": "done"}) + _STEP_FLUSH_PADDING
                         retriever_in_retry = False
                     else:
-                        yield _encode_sse({"step": node_name, "status": "done"})
+                        print(f"[STEP_TIMING] emit {node_name} done @ {time.time():.3f}")
+                        yield _encode_sse({"step": node_name, "status": "done"}) + _STEP_FLUSH_PADDING
 
                     output = _normalize_event_output(event.get("data", {}).get("output", {}))
 
@@ -644,7 +654,7 @@ def _build_streaming_response(
                 elif kind == "on_custom_event" and event_name == "image_analysis":
                     status = (event.get("data") or {}).get("status")
                     if status in ("start", "done"):
-                        yield _encode_sse({"step": "image_analysis", "status": status})
+                        yield _encode_sse({"step": "image_analysis", "status": status}) + _STEP_FLUSH_PADDING
 
                 # LLM 토큰 스트리밍 (Custom Event 우선 처리 - llm_streaming.py에서 dispatch)
                 elif kind == "on_custom_event" and event_name == "token":

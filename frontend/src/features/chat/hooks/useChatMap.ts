@@ -61,49 +61,84 @@ export function useChatMap({
         return null;
     }, [messages, focusMessageId, latestAiMessageId]);
 
-    const mapPlaces = useMemo<ChatMapPlace[]>(() => {
-        if (!activeMessage || !activeMessage.places) return [];
-        
-        const dedup = new Map<string, ChatMapPlace>();
-        for (const place of activeMessage.places) {
-            const lat = Number(place.latitude ?? 0);
-            const lng = Number(place.longitude ?? 0);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) continue;
-
-            const mapId = toMapId(place);
-            if (dedup.has(mapId)) continue;
-
-            dedup.set(mapId, {
-                mapId,
-                name: (place.name || "").trim() || "Recommended place",
-                adress: place.adress,
-                latitude: lat,
-                longitude: lng,
-                map_url: place.map_url,
-            });
-        }
-        return Array.from(dedup.values());
-    }, [activeMessage, toMapId]);
+    const toMapPlace = useCallback((place: ChatPlaceItem): ChatMapPlace | null => {
+        const lat = Number(place.latitude ?? 0);
+        const lng = Number(place.longitude ?? 0);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) return null;
+        return {
+            mapId: toMapId(place),
+            name: (place.name || "").trim() || "Recommended place",
+            adress: place.adress,
+            latitude: lat,
+            longitude: lng,
+            map_url: place.map_url,
+        };
+    }, [toMapId]);
 
     const mapPlaceGroups = useMemo<ChatMapPlaceGroup[]>(() => {
-        if (!mapPlaces.length || !activeMessage) return [];
+        const groups: ChatMapPlaceGroup[] = [];
+        let msgIndex = 0;
+        for (const msg of messages) {
+            if (msg.role !== "ai" || !msg.places?.length) continue;
+            const seen = new Set<string>();
+            const groupPlaces: ChatMapPlace[] = [];
+            for (const place of msg.places) {
+                const mp = toMapPlace(place);
+                if (!mp || seen.has(mp.mapId)) continue;
+                seen.add(mp.mapId);
+                groupPlaces.push(mp);
+            }
+            if (!groupPlaces.length) continue;
+            msgIndex++;
+            groups.push({
+                groupId: `msg:${msg.id}`,
+                label: `답변 ${msgIndex} · ${new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+                places: groupPlaces,
+            });
+        }
+        return groups;
+    }, [messages, toMapPlace]);
 
-        return [{
-            groupId: `msg:${activeMessage.id}`,
-            label: `AI Reply · ${new Date(activeMessage.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-            places: mapPlaces,
-        }];
-    }, [activeMessage, mapPlaces]);
+    const mapPlaces = useMemo<ChatMapPlace[]>(() => {
+        const dedup = new Map<string, ChatMapPlace>();
+        for (const group of mapPlaceGroups) {
+            for (const place of group.places) {
+                if (!dedup.has(place.mapId)) dedup.set(place.mapId, place);
+            }
+        }
+        return Array.from(dedup.values());
+    }, [mapPlaceGroups]);
+
+    // 새 메시지 도착 시 fit 대상: activeMessage의 장소만
+    const focusPlaces = useMemo<ChatMapPlace[]>(() => {
+        if (!activeMessage?.places?.length) return [];
+        const seen = new Set<string>();
+        const result: ChatMapPlace[] = [];
+        for (const place of activeMessage.places) {
+            const mp = toMapPlace(place);
+            if (!mp || seen.has(mp.mapId)) continue;
+            seen.add(mp.mapId);
+            result.push(mp);
+        }
+        return result;
+    }, [activeMessage, toMapPlace]);
 
     const hasMapPlaces = mapPlaces.length > 0 && messages.length > 0;
     const isMapPanelOpen = hasMapPlaces && isMapPanelOpenRaw;
     const selectedMapPlaceId = useMemo(() => {
         if (!mapPlaces.length) return null;
-        if (selectedMapPlaceIdRaw && mapPlaces.some((place) => place.mapId === selectedMapPlaceIdRaw)) {
+        if (selectedMapPlaceIdRaw && mapPlaces.some((p) => p.mapId === selectedMapPlaceIdRaw)) {
             return selectedMapPlaceIdRaw;
         }
+        // 기본값: 활성 메시지의 첫 번째 장소
+        if (activeMessage?.places) {
+            for (const place of activeMessage.places) {
+                const mid = toMapId(place);
+                if (mapPlaces.some((p) => p.mapId === mid)) return mid;
+            }
+        }
         return mapPlaces[0].mapId;
-    }, [mapPlaces, selectedMapPlaceIdRaw]);
+    }, [mapPlaces, selectedMapPlaceIdRaw, activeMessage, toMapId]);
 
     const handleMapResizeDrag = useCallback((e: MouseEvent) => {
         const deltaX = e.clientX - resizeStartXRef.current;
@@ -173,6 +208,7 @@ export function useChatMap({
         isMapResizing,
         mapPanelWidth,
         mapPlaces,
+        focusPlaces,
         mapPlaceGroups,
         toMapId,
         startMapResizeDrag,

@@ -54,7 +54,7 @@ export function PipelineProgress({ steps, visible }: PipelineProgressProps) {
 
                     return (
                         <motion.span
-                            key={`${step.key}-${status}`}
+                            key={step.key}
                             initial={{ opacity: 0, y: 3 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.12, ease: "easeOut" }}
