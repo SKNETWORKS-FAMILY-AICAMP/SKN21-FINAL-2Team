@@ -11,10 +11,19 @@ function setLangCookie(lang: string) {
   document.cookie = `${LANGUAGE_COOKIE_KEY}=${lang};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+interface LanguageProviderProps {
+  children: React.ReactNode;
+  initialLang?: string;
+}
+
+export function LanguageProvider({ children, initialLang = "en" }: LanguageProviderProps) {
   const router = useRouter();
 
-  // 마운트 시 cookie 동기화 + html lang 설정
+  // 서버에서 전달받은 언어로 i18n 동기화 — SSR과 클라이언트 렌더링 일치시킴
+  if (i18n.language !== initialLang) {
+    i18n.changeLanguage(initialLang);
+  }
+
   useEffect(() => {
     setLangCookie(i18n.language);
     document.documentElement.lang = i18n.language;
@@ -22,7 +31,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const handleLanguageChanged = (lng: string) => {
       setLangCookie(lng);
       document.documentElement.lang = lng;
-      // Next.js Router Cache 무효화 — 뒤로 가기해도 새 언어로 렌더링
       router.refresh();
     };
     i18n.on("languageChanged", handleLanguageChanged);

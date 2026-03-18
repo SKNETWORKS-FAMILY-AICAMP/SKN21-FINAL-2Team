@@ -80,7 +80,7 @@ export default async function RootLayout({
         className={`${notoSans.variable} ${notoSansKr.variable} ${notoSansJp.variable} ${notoSansSc.variable} ${geistMono.variable} ${notoSerifKr.variable} ${notoSerifJp.variable} ${notoSerifSc.variable} antialiased bg-slate-50 text-slate-900`}
       >
         <GoogleOAuthProvider clientId={CLIENT_ID}>
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider initialLang={lang}>{children}</LanguageProvider>
         </GoogleOAuthProvider>
       </body>
     </html>
