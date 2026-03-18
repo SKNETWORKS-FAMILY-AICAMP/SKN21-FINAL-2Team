@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X, Trash2 } from "lucide-react";
+import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X, Trash2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/common/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -11,6 +11,7 @@ import { clearAuth } from "@/services/errorHandler";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 import { useTranslation } from "@/i18n/useTranslation";
 import { SIDEBAR_MENUS } from "@/config/navigation";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
 interface SidebarUserProfile {
     name: string;
@@ -505,6 +506,7 @@ function SidebarContent() {
 
                 {!actuallyCollapsed ? (
                     <div className="mt-2 px-2 flex items-center justify-between text-[10px] text-gray-400 font-medium pt-2">
+                        <LanguageSwitcher variant="dropdown" className="text-[10px]" />
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -517,16 +519,19 @@ function SidebarContent() {
                         </button>
                     </div>
                 ) : (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSignOut();
-                        }}
-                        className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
-                        title={t("sidebar.signOut")}
-                    >
-                        <LogOut size={16} strokeWidth={1.5} />
-                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                        <LanguageSwitcher variant="dropdown" className="text-[10px]" />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSignOut();
+                            }}
+                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                            title={t("sidebar.signOut")}
+                        >
+                            <LogOut size={16} strokeWidth={1.5} />
+                        </button>
+                    </div>
                 )}
             </div>
             {/* 주의: 모달은 fixed 포지션이라 aside 안에 있어도 화면 전체를 덮습니다 */}

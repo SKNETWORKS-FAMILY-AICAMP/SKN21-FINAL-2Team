@@ -387,7 +387,7 @@ export function MomentsPage() {
             />
             <SimpleModal
                 open={isCloseConfirmOpen}
-                title="Unsaved Diary"
+                title={t("moments.unsavedTitle")}
                 maxWidth="sm"
                 onClose={() => setIsCloseConfirmOpen(false)}
             >
@@ -419,7 +419,7 @@ export function MomentsPage() {
             {/* [Feature] Diary 저장 성공 확인 팝업 */}
             <SimpleModal
                 open={isSaveConfirmOpen}
-                title="Moment Saved"
+                title={t("moments.savedTitle")}
                 onClose={handleSaveConfirmClose}
                 maxWidth="sm"
             >
@@ -441,7 +441,7 @@ export function MomentsPage() {
             {/* [Feature] Delete Memory - 삭제 확인 팝업 */}
             <SimpleModal
                 open={isDeleteConfirmOpen}
-                title="Delete Memory"
+                title={t("moments.deleteMemory")}
                 onClose={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
                 maxWidth="sm"
             >

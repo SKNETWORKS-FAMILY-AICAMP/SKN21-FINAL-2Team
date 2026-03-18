@@ -71,7 +71,7 @@ export function DiaryEditorModal({
             <div className="group relative flex-1 overflow-hidden bg-black">
               <button
                 onClick={onClose}
-                aria-label="Close diary modal"
+                aria-label={t("diary.closeDiaryModal")}
                 className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white transition-colors hover:bg-black/70"
               >
                 <X size={18} />
@@ -85,7 +85,7 @@ export function DiaryEditorModal({
                   {coverImagePath ? (
                     <img
                       src={coverImagePath}
-                      alt={editor.title || "Diary cover"}
+                      alt={editor.title || t("diary.coverAlt")}
                       className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
                     />
                   ) : (
@@ -116,7 +116,7 @@ export function DiaryEditorModal({
                   {coverImagePath ? (
                     <img
                       src={coverImagePath}
-                      alt={editor.title || "Diary cover"}
+                      alt={editor.title || t("diary.coverAlt")}
                       className="h-full w-full object-cover opacity-90"
                     />
                   ) : (
@@ -142,7 +142,7 @@ export function DiaryEditorModal({
                   />
                 ) : (
                   <p className="w-full pb-2 text-2xl font-bold text-white">
-                    {editor.title || <span className="text-white/50">No title</span>}
+                    {editor.title || <span className="text-white/50">{t("diary.noTitle")}</span>}
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/70">

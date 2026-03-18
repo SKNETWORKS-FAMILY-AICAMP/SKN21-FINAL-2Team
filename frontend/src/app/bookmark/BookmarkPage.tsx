@@ -15,11 +15,13 @@ import {
     updateRoomBookmark,
 } from "@/services/api";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
 export function BookmarkPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<"sessions" | "places">("sessions");
     const [selectedPlacesForPlan, setSelectedPlacesForPlan] = useState<number[]>([]);
     const [isDeletingSessions, setIsDeletingSessions] = useState<boolean>(false);
@@ -50,7 +52,7 @@ export function BookmarkPage() {
                 setPlaces(bookmarkedPlaces);
             } catch {
                 if (cancelled) return;
-                setError("북마크를 불러오지 못했습니다.");
+                setError(t("bookmark.loadFailed"));
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -148,7 +150,7 @@ export function BookmarkPage() {
             }
             setConfirmOpen(false);
         } catch {
-            setError("삭제에 실패했습니다.");
+            setError(t("bookmark.deleteFailed"));
             setConfirmOpen(false);
         } finally {
             setIsDeletingSubmitting(false);
@@ -158,13 +160,13 @@ export function BookmarkPage() {
     const confirmMessage = useMemo(() => {
         if (confirmKind === "sessions") {
             const count = selectedSessionIdsForDelete.length;
-            if (count <= 1) return "Are you sure you want to delete this selected session?";
-            return "Are you sure you want to delete these selected sessions?";
+            if (count <= 1) return t("bookmark.confirmDeleteSession");
+            return t("bookmark.confirmDeleteSessions");
         }
         const count = selectedPlaceIdsForDelete.length;
-        if (count <= 1) return "Are you sure you want to delete this selected place?";
-        return "Are you sure you want to delete these selected places?";
-    }, [confirmKind, selectedPlaceIdsForDelete.length, selectedSessionIdsForDelete.length]);
+        if (count <= 1) return t("bookmark.confirmDeletePlace");
+        return t("bookmark.confirmDeletePlaces");
+    }, [confirmKind, selectedPlaceIdsForDelete.length, selectedSessionIdsForDelete.length, t]);
 
     const handlePlanWithSelection = async () => {
         if (selectedPlaceItems.length === 0) return;
@@ -177,8 +179,8 @@ export function BookmarkPage() {
                 .filter((name): name is string => !!name)
                 .slice(0, 2);
             const roomTitle = topNames.length > 0
-                ? `${topNames.join(", ")} 여행 계획`
-                : "선택 장소 여행 계획";
+                ? `${topNames.join(", ")} ${t("bookmark.travelPlan")}`
+                : t("bookmark.selectedPlacesPlan");
 
             const newRoom = await createRoom(roomTitle);
 
@@ -197,7 +199,7 @@ export function BookmarkPage() {
             window.dispatchEvent(new CustomEvent("triver:rooms-updated"));
             router.push(`/chatbot?roomId=${newRoom.id}`);
         } catch {
-            setError("새 채팅방 생성에 실패했습니다.");
+            setError(t("bookmark.createRoomFailed"));
         } finally {
             setIsCreatingRoom(false);
         }
@@ -212,9 +214,9 @@ export function BookmarkPage() {
                 <header className="flex-none p-6 pb-4 border-b border-gray-100 flex items-center justify-between bg-white z-10">
                     <div>
                         <h1 className="page-title text-gray-900 flex items-center gap-2">
-                            Bookmarks <BookmarkIcon size={16} className="text-gray-400" />
+                            {t("bookmark.pageTitle")} <BookmarkIcon size={16} className="text-gray-400" />
                         </h1>
-                        <p className="page-subtitle mt-1">Saved Chats & Spots</p>
+                        <p className="page-subtitle mt-1">{t("bookmark.pageSubtitle")}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         {activeTab === "sessions" ? (
@@ -224,7 +226,7 @@ export function BookmarkPage() {
                                     onClick={handleCancelDeleteSessions}
                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
                                 >
-                                    Cancel
+                                    {t("bookmark.cancel")}
                                 </button>
                             ) : (
                                 <button
@@ -232,7 +234,7 @@ export function BookmarkPage() {
                                     onClick={handleEnterDeleteSessions}
                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
                                 >
-                                    Delete Chat
+                                    {t("bookmark.deleteChat")}
                                 </button>
                             )
                         ) : activeTab === "places" ? (
@@ -242,7 +244,7 @@ export function BookmarkPage() {
                                     onClick={handleCancelDeletePlaces}
                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
                                 >
-                                    Cancel
+                                    {t("bookmark.cancel")}
                                 </button>
                             ) : (
                                 <button
@@ -250,7 +252,7 @@ export function BookmarkPage() {
                                     onClick={handleEnterDeletePlaces}
                                     className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
                                 >
-                                    Delete Place
+                                    {t("bookmark.deletePlace")}
                                 </button>
                             )
                         ) : null}
@@ -266,7 +268,7 @@ export function BookmarkPage() {
                                 }}
                                 className={`px-4 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${activeTab === "sessions" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
                             >
-                                Sessions
+                                {t("bookmark.tabSessions")}
                             </button>
                             <button
                                 onClick={() => {
@@ -277,7 +279,7 @@ export function BookmarkPage() {
                                 }}
                                 className={`px-4 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${activeTab === "places" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
                             >
-                                Places
+                                {t("bookmark.tabPlaces")}
                             </button>
                         </div>
                     </div>
@@ -296,7 +298,7 @@ export function BookmarkPage() {
                                 <motion.div key="sessions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
                                     {sessions.length === 0 ? (
                                         <div className="h-56 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
-                                            북마크된 채팅방이 없습니다.
+                                            {t("bookmark.noSessions")}
                                         </div>
                                     ) : (
                                         sessions.map((session) => (
@@ -327,7 +329,7 @@ export function BookmarkPage() {
                                                     <div className="min-w-0">
                                                         <h3 className="font-bold text-sm text-gray-900 mb-0.5 truncate">{session.title}</h3>
                                                         <p className="text-xs text-gray-500 mb-2 truncate">
-                                                            {session.latest_message_preview || "대화 내역이 없습니다."}
+                                                            {session.latest_message_preview || t("bookmark.noHistory")}
                                                         </p>
                                                         <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
                                                             {new Date(session.created_at).toLocaleDateString()}
@@ -353,7 +355,7 @@ export function BookmarkPage() {
                                 <motion.div key="places" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {places.length === 0 ? (
                                         <div className="col-span-full h-56 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-sm text-gray-500">
-                                            북마크된 장소가 없습니다.
+                                            {t("bookmark.noPlaces")}
                                         </div>
                                     ) : (
                                         places.map((place) => {
@@ -367,7 +369,7 @@ export function BookmarkPage() {
                                                     onClick={() => (isDeletingPlaces ? togglePlaceSelectionForDelete(place.id) : togglePlaceSelectionForPlan(place.id))}
                                                     className={`group relative h-60 rounded-lg overflow-hidden cursor-pointer border-2 transition-all duration-200 ${isSelected ? "border-black shadow-lg" : "border-transparent"}`}
                                                 >
-                                                    <img src={imageUrl} alt={place.name || "Bookmarked place"} className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
+                                                    <img src={imageUrl} alt={place.name || t("bookmark.placeAlt")} className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-90" />
                                                     <div className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center">
                                                         {isSelected ? (
@@ -380,7 +382,7 @@ export function BookmarkPage() {
                                                     </div>
                                                     <div className="absolute bottom-0 left-0 w-full p-5">
                                                         <h3 className="text-white font-medium text-xl mb-1 leading-none truncate">
-                                                            {place.name || "Unnamed place"}
+                                                            {place.name || t("bookmark.unnamedPlace")}
                                                         </h3>
                                                         <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 min-w-0">
                                                             <MapPin size={10} className="flex-none" />
@@ -412,7 +414,7 @@ export function BookmarkPage() {
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedPlacesForPlan.length}</span>
-                                    <span>{isCreatingRoom ? "Creating Room..." : "Plan Trip with Selection"}</span>
+                                    <span>{isCreatingRoom ? t("bookmark.creatingRoom") : t("bookmark.planWithSelection")}</span>
                                 </div>
                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </button>
@@ -436,7 +438,7 @@ export function BookmarkPage() {
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedSessionIdsForDelete.length}</span>
-                                    <span>Delete Selected</span>
+                                    <span>{t("bookmark.deleteSelected")}</span>
                                 </div>
                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </button>
@@ -460,7 +462,7 @@ export function BookmarkPage() {
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedPlaceIdsForDelete.length}</span>
-                                    <span>Delete Selected</span>
+                                    <span>{t("bookmark.deleteSelected")}</span>
                                 </div>
                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </button>
@@ -489,7 +491,7 @@ export function BookmarkPage() {
                                 className="relative z-10 w-full max-w-xl rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden"
                             >
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                                    <h3 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">Confirm</h3>
+                                    <h3 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">{t("bookmark.confirmTitle")}</h3>
                                     <button
                                         type="button"
                                         onClick={closeConfirm}
@@ -508,7 +510,7 @@ export function BookmarkPage() {
                                             disabled={isDeletingSubmitting}
                                             className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
                                         >
-                                            No
+                                            {t("common.no")}
                                         </button>
                                         <button
                                             type="button"
@@ -516,7 +518,7 @@ export function BookmarkPage() {
                                             disabled={isDeletingSubmitting}
                                             className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
                                         >
-                                            {isDeletingSubmitting ? "Deleting..." : "Yes"}
+                                            {isDeletingSubmitting ? t("bookmark.deleting") : t("common.yes")}
                                         </button>
                                     </div>
                                 </div>
