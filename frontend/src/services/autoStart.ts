@@ -8,7 +8,7 @@ export interface StoredTripContext {
 
 export interface StoredSelectedPlaceSeed {
     id?: number;
-    place_id?: number | null;
+    contenttypeid?: number | null;
     name?: string | null;
     adress?: string | null;
     image_path?: string | null;

@@ -14,7 +14,7 @@ from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.common import build_naver_map_url, dprint, dpprint
 from app.core.llm_streaming import collect_streamed_text
-from app.utils.place_id import get_place_id
+from app.utils.place_id import get_contenttypeid
 from app.utils.geocoder import GeoCoder
 from app.agents.models.state import IntentSlots
 from app.agents.models.place import PlaceInfo
@@ -66,7 +66,7 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
         result.append((
             c,
             PlaceInfo(
-                place_id=get_place_id(c) or "",
+                contenttypeid=get_contenttypeid(c) or "",
                 name=name,
                 address=address,
                 image_path=payload.get("image") or "",

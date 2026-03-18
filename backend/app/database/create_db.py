@@ -30,6 +30,13 @@ Enum role_type {
   ai
 }
 
+Enum language_type {
+  en
+  ko
+  ja
+  zh
+}
+
 Table country {
     code varchar [primary key]
     name varchar
@@ -43,7 +50,9 @@ Table users {
   nickname varchar
   profile_picture varchar
   gender gender_type // 정의한 Enum 사용
+  birthday date
   country_code varchar
+  language language_type [not null, default: 'en']
 
   // Google Login
   social_provider varchar
@@ -94,7 +103,8 @@ Table chat_messages {
 Table chat_places {
   id integer [primary key, increment]
   messages_id integer
-  place_id integer
+  contenttypeid integer
+  llm_text text
   name varchar
   adress varchar
   image_path varchar
@@ -142,7 +152,7 @@ Table diary_entry_places {
   id integer [primary key, increment]
   entry_id integer [not null]
   chat_place_id integer
-  place_id integer
+  contenttypeid integer
   name varchar
   adress varchar
   image_path varchar

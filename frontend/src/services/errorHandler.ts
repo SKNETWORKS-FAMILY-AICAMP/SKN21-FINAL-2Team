@@ -101,7 +101,10 @@ export const handleApiError = (
             // 세션 완전 만료 → 로그인 페이지로 이동
             clearAuth();
             if (typeof window !== "undefined") {
-                window.location.href = "/signup";
+                // 이미 /signup 경로에 있다면 리다이렉트하지 않음 (루프 방지)
+                if (!window.location.pathname.startsWith("/signup")) {
+                    window.location.href = "/signup";
+                }
             }
             return "redirect";
 

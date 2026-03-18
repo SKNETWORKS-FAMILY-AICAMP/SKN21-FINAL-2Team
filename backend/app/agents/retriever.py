@@ -12,7 +12,7 @@ from app.core.retrieval.place import PlaceRetriever
 from app.utils.geocoder import LANDMARK_DICTIONARY
 from app.utils.vision import describe_image
 from app.utils.common import getattr_safe, in_seoul_bbox, normalize_text, dprint
-from app.utils.place_id import get_candidate_point_id, get_place_id
+from app.utils.place_id import get_candidate_point_id, get_contenttypeid
 
 from app.utils.config import get_retrieval_params, CANDIDATE_THRESHOLD
 
@@ -110,9 +110,9 @@ def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], fin
                 return selected
 
     # 2차: 같은 카테고리여도 장소명이 다르면 채움
-    selected_ids = {get_place_id(c) for c in selected}
+    selected_ids = {get_contenttypeid(c) for c in selected}
     for c in pool:
-        cid = get_place_id(c)
+        cid = get_contenttypeid(c)
         name_signature = _candidate_name_signature(c)
         if not name_signature or name_signature in used_name_signatures:
             continue
@@ -124,9 +124,9 @@ def _pick_diverse_candidates_deterministic(candidates: List[Dict[str, Any]], fin
                 return selected
 
     # 3차: 남은 슬롯은 점수 순으로 채움
-    selected_ids = {get_place_id(c) for c in selected}
+    selected_ids = {get_contenttypeid(c) for c in selected}
     for c in pool:
-        cid = get_place_id(c)
+        cid = get_contenttypeid(c)
         if cid and cid not in selected_ids:
             selected.append(c)
             selected_ids.add(cid)
@@ -361,7 +361,7 @@ def _build_retrieval_diagnostics(candidate_pool: List[Dict[str, Any]]) -> Dict[s
             channel_hits[channel] = channel_hits.get(channel, 0) + 1
         top_preview.append(
             {
-                "id": get_place_id(c),
+                "id": get_contenttypeid(c),
                 "score": float(c.get("score", 0.0)),
                 "first_stage_rank": c.get("first_stage_rank"),
                 "final_rank": c.get("final_rank"),
@@ -521,7 +521,7 @@ async def retriever_node(state: TravelState):
     name_dedup_dict: Dict[str, Dict[str, Any]] = {}
     skipped = 0
     for c in candidate_pool:
-        cid = get_place_id(c)
+        cid = get_contenttypeid(c)
         if not cid:
             skipped += 1
             payload = c.get("payload", {}) if isinstance(c, dict) else {}
@@ -568,7 +568,7 @@ async def retriever_node(state: TravelState):
     if shown_place_ids:
         shown_set = set(shown_place_ids)
         before_exc = len(candidates)
-        candidates = [c for c in candidates if get_place_id(c) not in shown_set]
+        candidates = [c for c in candidates if get_contenttypeid(c) not in shown_set]
         dprint(
             f"[Retriever] shown_place exclusion: before={before_exc} after={len(candidates)} "
             f"excluded={before_exc - len(candidates)}"
@@ -599,7 +599,7 @@ async def retriever_node(state: TravelState):
     diagnostics["location_geo_filter_applied"] = canonical_matched  # anchor 전달 여부와 동치
 
     # 이번 턴 노출 장소 ID를 누적
-    newly_shown = [get_place_id(c) for c in exposed_candidates if get_place_id(c)]
+    newly_shown = [get_contenttypeid(c) for c in exposed_candidates if get_contenttypeid(c)]
     updated_shown_place_ids = shown_place_ids + [pid for pid in newly_shown if pid not in shown_place_ids]
     dprint(
         f"[Retriever] shown_place_ids: prev={len(shown_place_ids)} "

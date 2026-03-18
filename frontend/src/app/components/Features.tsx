@@ -4,56 +4,55 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Calendar, MapPin, Sparkles, X, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-
-const features = [
-    {
-        title: "Hyper personalized",
-        shortTitle: "당신의 취향을 반영한 여행",
-        description: "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 \n맞춤 여행지를 추천합니다.",
-        icon: Sparkles,
-        mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Dashboard/User page mock
-    },
-    {
-        title: "Smart itinerary",
-        shortTitle: "최적의 코스로 스마트한 여행",
-        description: "가고 싶은 장소들을 선택만 해도,\n 최적의 루트로 동선을 계획해요.\nTriever와 함께 간편하게 \n여행 코스를 만들어보세요.",
-        icon: Calendar,
-        mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", // Chatbot/Search mock
-    },
-    {
-        title: "Integrated booking",
-        shortTitle: "준비도, 관리도 간편한 여행",
-        description: "여기저기 흩어져 있던 예약 일정과 티켓들.\n일일이 사이트와 앱을 켜서\n확인하는 건 이제 그만.\n모두 모아서 한번에 확인할 수 있어요.",
-        icon: MapPin,
-        mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop", // Calendar/Schedule mock
-    },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function Features() {
+    const { t } = useTranslation();
+
+    const features = [
+        {
+            title: t("features.hyperPersonalized.title"),
+            shortTitle: t("features.hyperPersonalized.shortTitle"),
+            description: t("features.hyperPersonalized.description"),
+            icon: Sparkles,
+            mockupImage: "https://plus.unsplash.com/premium_photo-1663013548362-cb77800e7439?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            title: t("features.smartItinerary.title"),
+            shortTitle: t("features.smartItinerary.shortTitle"),
+            description: t("features.smartItinerary.description"),
+            icon: Calendar,
+            mockupImage: "https://images.unsplash.com/photo-1542121123-4418d14b0ec7?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        },
+        {
+            title: t("features.integratedBooking.title"),
+            shortTitle: t("features.integratedBooking.shortTitle"),
+            description: t("features.integratedBooking.description"),
+            icon: MapPin,
+            mockupImage: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1000&auto=format&fit=crop",
+        },
+    ];
+
     // 선택된 탭(카드)의 인덱스를 관리하는 상태 (기본값: 0번째 항목)
     const [activeIndex, setActiveIndex] = useState(0);
     const activeFeature = features[activeIndex];
 
-    // [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정
     return (
-        // [Fix] min-h + justify-center: 뷰포트 채움 + 세로 중앙, py-[3vh]: 패딩도 뷰포트 비율로 반응
-        <section id="features" className="py-[3vh] bg-gray-50 overflow-hidden relative min-h-[calc(100vh-64px)] flex flex-col justify-center">
-            {/* [Fix] max-w-7xl → xl:max-w-[90%]: 큰 화면에서 콘텐츠가 화면 너비에 맞게 유동 확장 */}
+        // justify-center 제거 → 콘텐츠 높이 변해도 위치 재배치 안 됨
+        <section id="features" className="py-16 bg-gray-50 overflow-hidden relative">
             <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8 flex flex-col items-center">
 
                 {/* 1단 (상단): 헤더 영역 */}
-                {/* [Fix] mb-[3vh]: 타이틀 하단 간격도 뷰포트 비율로 반응 */}
-                <div className="text-center mb-[3vh]">
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">With  Triever</h2>
-                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">Cutting-Edge Technology Meets Traveling</p>
+                <div className="text-center mb-12">
+                    <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">{t("features.heading")}</h2>
+                    <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">{t("features.subheading")}</p>
                 </div>
 
-                {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) 통합 영역 */}
-                {/* [Fix] max-w-6xl → xl:max-w-none: 내부 콘텐츠도 유동 확장 허용 */}
-                <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10">
+                {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) */}
+                <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-10">
 
-                    {/* 이미지 영역 (좌측) */}
-                    <div className="w-full lg:w-3/5 relative perspective-[1000px]">
+                    {/* 이미지 영역 (좌측) — aspect-ratio로 비율 고정, 너비 기반이라 절대 안 변함 */}
+                    <div className="w-full lg:w-3/5 shrink-0 relative perspective-[1000px]">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeIndex}
@@ -61,8 +60,7 @@ export function Features() {
                                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
                                 exit={{ opacity: 0, x: 30, rotateY: -5 }}
                                 transition={{ duration: 0.5, ease: "easeOut" }}
-                                // [Fix] max-h-[45vh]: 짧은 화면에서 이미지가 뷰포트에 맞게 축소
-                                className="w-full aspect-[16/10] max-h-[45vh] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
+                                className="w-full aspect-[16/10] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
                             >
                                 <img
                                     src={activeFeature.mockupImage}
@@ -75,7 +73,7 @@ export function Features() {
                     </div>
 
                     {/* 텍스트 및 네비게이션 영역 (우측) */}
-                    <div className="w-full lg:w-2/5 flex flex-col items-start min-h-[300px]">
+                    <div className="w-full lg:w-2/5 flex flex-col items-start">
 
                         {/* 네비게이션 탭 (아이콘 + 텍스트) */}
                         <div className="flex flex-col gap-6 w-full pr-4">
