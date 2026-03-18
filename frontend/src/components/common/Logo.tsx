@@ -49,7 +49,7 @@ export function Logo({
                 <div className="inline-flex items-center gap-2">  {/* 아이콘과 워드마크 표시 */}
                     <BrandMark tone={tone} size={size} />
                     <span
-                        className={cn("font-serif italic", tone === "light" ? "text-white" : "text-black")}
+                        className={cn("font-fixed-en italic", tone === "light" ? "text-white" : "text-black")}
                         style={{
                             fontSize: Math.round(size * 0.84),
                             fontWeight: 700,

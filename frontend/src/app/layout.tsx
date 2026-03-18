@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Sans_JP, Noto_Sans_SC, Noto_Serif_KR } from "next/font/google";
+import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Sans_JP, Noto_Sans_SC, Noto_Serif_KR, Noto_Serif_JP, Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { LanguageProvider } from "@/i18n/LanguageContext";
@@ -19,13 +19,13 @@ const notoSansKr = Noto_Sans_KR({
 const notoSansJp = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "900"],
 });
 
 const notoSansSc = Noto_Sans_SC({
   variable: "--font-noto-sans-sc",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -36,7 +36,19 @@ const geistMono = Geist_Mono({
 const notoSerifKr = Noto_Serif_KR({
   variable: "--font-noto-serif-kr",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSerifJp = Noto_Serif_JP({
+  variable: "--font-noto-serif-jp",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSerifSc = Noto_Serif_SC({
+  variable: "--font-noto-serif-sc",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -60,7 +72,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${notoSans.variable} ${notoSansKr.variable} ${notoSansJp.variable} ${notoSansSc.variable} ${geistMono.variable} ${notoSerifKr.variable} antialiased bg-slate-50 text-slate-900`}
+        className={`${notoSans.variable} ${notoSansKr.variable} ${notoSansJp.variable} ${notoSansSc.variable} ${geistMono.variable} ${notoSerifKr.variable} ${notoSerifJp.variable} ${notoSerifSc.variable} antialiased bg-slate-50 text-slate-900`}
       >
         <GoogleOAuthProvider clientId={CLIENT_ID}>
           <LanguageProvider>{children}</LanguageProvider>

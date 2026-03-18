@@ -93,15 +93,21 @@ export function Hero() {
                     <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-xs font-semibold tracking-widest uppercase mb-8">
                         {t("hero.badge")}
                     </span>
-                    <h1 className="text-6xl md:text-8xl font-serif italic font-light tracking-tight leading-none mb-10 opacity-90">
-                        {t("hero.titleLine1")}
-                        <br />
-                        {t("hero.titleLine2")}
+                    <h1 className="text-6xl md:text-8xl font-serif-display italic font-light tracking-tight leading-none mb-10 opacity-90">
+                        {t("hero.title").split("\n").map((line, i, arr) => (
+                            <span key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br />}
+                            </span>
+                        ))}
                     </h1>
-                    <p className="text-lg md:text-2xl text-white/90 max-w-4xl mx-auto font-light leading-normal mb-12 drop-shadow-md">
-                        {t("hero.descriptionLine1")}
-                        <br className="hidden md:block" />
-                        {t("hero.descriptionLine2")}
+                    <p className="text-base md:text-xl text-white/90 max-w-4xl mx-auto font-light leading-relaxed mb-12 drop-shadow-md">
+                        {t("hero.description").split("\n").map((line, i, arr) => (
+                            <span key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br className="hidden md:block" />}
+                            </span>
+                        ))}
                     </p>
                 </motion.div>
 

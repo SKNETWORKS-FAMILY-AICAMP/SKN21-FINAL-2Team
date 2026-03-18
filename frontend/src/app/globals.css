@@ -54,6 +54,34 @@ body {
   letter-spacing: -0.025em; /* tracking-tight */
 }
 
+/* 언어 설정에 영향받지 않는 고정 영문 폰트 — 로고 등 영어 고정 텍스트용 */
+/* :lang() specificity (0,1,0) < html .class specificity (0,1,1) → !important 없이 자연스럽게 우선 */
+html .font-fixed-en {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+/* 언어별 세리프 폰트 — 슬로건, 히어로 타이틀 등 격식체가 필요한 텍스트용 */
+/* 기본(en/ko): Georgia, 일본어: Noto Serif JP(明朝体), 중국어: Noto Serif SC(宋体) */
+/* Georgia는 획 자체가 두꺼워서 font-light(300)도 두꺼워 보이지만, */
+/* Noto Serif JP/SC는 획이 가벼워 같은 weight면 얇아 보임 → weight를 한 단계 올려서 시각적 균형 맞춤 */
+.font-serif-display {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+:lang(ja) .font-serif-display {
+  font-family: var(--font-noto-serif-jp), "Noto Serif JP", Georgia, ui-serif, serif;
+  font-weight: 400;
+}
+
+:lang(zh) .font-serif-display {
+  font-family: var(--font-noto-serif-sc), "Noto Serif SC", Georgia, ui-serif, serif;
+  font-weight: 400;
+}
+
+html .font-fixed-sans {
+  font-family: var(--font-noto-sans), system-ui, -apple-system, sans-serif;
+}
+
 /* Utility tweaks to align with imported UI kit vibes */
 .shadow-soft {
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);

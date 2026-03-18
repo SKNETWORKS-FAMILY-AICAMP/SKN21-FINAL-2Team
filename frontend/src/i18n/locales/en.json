@@ -182,14 +182,12 @@
   "header.goToProfile": "Go to My Profile",
   "header.profileAlt": "Profile",
   "hero.badge": "Discover Seoul with AI",
-  "hero.titleLine1": "Travel smarter,",
-  "hero.titleLine2": "not harder",
-  "hero.descriptionLine1": "Experience hyper-personalized travel planning.",
-  "hero.descriptionLine2": "Let our AI curate your perfect Seoul itinerary in seconds.",
+  "hero.title": "Travel smarter,\nnot harder",
+  "hero.description": "Experience hyper-personalized travel planning.\nLet our AI curate your perfect Seoul itinerary in seconds.",
   "hero.placeholder": "Where is your next destination?",
   "hero.start": "Start",
   "hero.scroll": "Scroll",
-  "features.heading": "With  Triever",
+  "features.heading": "WITH TRIVER",
   "features.subheading": "Cutting-Edge Technology Meets Traveling",
   "features.hyperPersonalized.title": "Hyper personalized",
   "features.hyperPersonalized.shortTitle": "Personalized",
@@ -282,5 +280,18 @@
 
   "banner.switchPrompt": "Switch to another language?",
   "banner.switch": "Settings",
-  "languageSwitcher.label": "Language"
+  "languageSwitcher.label": "Language",
+
+  "pipeline.imageAnalysis": "Image analysis",
+  "pipeline.intent": "Intent analysis",
+  "pipeline.planner": "Trip planning",
+  "pipeline.geocoder": "Location coordinates",
+  "pipeline.retriever": "Place search",
+  "pipeline.retrieverRetry": "Expanded place search",
+  "pipeline.webSearch": "Web search",
+  "pipeline.executor": "Generating response",
+  "pipeline.executorMissing": "Checking additional info",
+  "pipeline.executorGeneral": "General response",
+  "pipeline.running": "{label} in progress...",
+  "pipeline.done": "{label} complete"
 }

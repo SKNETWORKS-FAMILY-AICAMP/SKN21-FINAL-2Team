@@ -2,19 +2,20 @@
 
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
-// 파이프라인 단계 정의
+// 파이프라인 단계 정의 — label은 번역 키
 const PIPELINE_STEPS = [
-    { key: "image_analysis", label: "이미지 분석" },
-    { key: "intent", label: "의도 분석" },
-    { key: "planner", label: "여행 계획 수립" },
-    { key: "geocoder", label: "위치 좌표 확인" },
-    { key: "retriever", label: "장소 검색" },
-    { key: "retriever_retry", label: "반경 확대 후 장소 검색" },
-    { key: "web_search", label: "웹 검색" },
-    { key: "executor", label: "답변 생성" },
-    { key: "executor_missing", label: "추가 정보 확인" },
-    { key: "executor_general", label: "일반 답변 생성" },
+    { key: "image_analysis", labelKey: "pipeline.imageAnalysis" },
+    { key: "intent", labelKey: "pipeline.intent" },
+    { key: "planner", labelKey: "pipeline.planner" },
+    { key: "geocoder", labelKey: "pipeline.geocoder" },
+    { key: "retriever", labelKey: "pipeline.retriever" },
+    { key: "retriever_retry", labelKey: "pipeline.retrieverRetry" },
+    { key: "web_search", labelKey: "pipeline.webSearch" },
+    { key: "executor", labelKey: "pipeline.executor" },
+    { key: "executor_missing", labelKey: "pipeline.executorMissing" },
+    { key: "executor_general", labelKey: "pipeline.executorGeneral" },
 ] as const;
 
 export type StepStatus = "pending" | "running" | "done";
@@ -29,6 +30,8 @@ interface PipelineProgressProps {
 }
 
 export function PipelineProgress({ steps, visible }: PipelineProgressProps) {
+    const { t } = useTranslation();
+
     if (!visible) return null;
 
     const visibleSteps = PIPELINE_STEPS.filter((step) => {
@@ -50,7 +53,8 @@ export function PipelineProgress({ steps, visible }: PipelineProgressProps) {
                 {visibleSteps.map((step) => {
                     const status = steps[step.key];
                     const isStepRunning = status === "running";
-                    const text = isStepRunning ? `${step.label} 중...` : `${step.label} 완료`;
+                    const label = t(step.labelKey);
+                    const text = isStepRunning ? t("pipeline.running", { label }) : t("pipeline.done", { label });
 
                     return (
                         <motion.span

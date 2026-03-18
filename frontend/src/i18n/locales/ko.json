@@ -197,15 +197,13 @@
   "header.profileAlt": "프로필",
 
   "hero.badge": "Discover Seoul with AI",
-  "hero.titleLine1": "Travel smarter,",
-  "hero.titleLine2": "not harder",
-  "hero.descriptionLine1": "당신의 취향에 딱 맞는 그 여행지, Triver가 찾아드릴게요.",
-  "hero.descriptionLine2": "사진 한 장, 대화 한 번으로 완성되는 맞춤형 여행 계획.",
+  "hero.title": "Travel smarter,\nnot harder",
+  "hero.description": "당신의 취향에 딱 맞는 그 여행지, Triver가 찾아드릴게요.\n사진 한 장, 대화 한 번으로 완성되는 맞춤형 여행 계획.",
   "hero.placeholder": "어디로 떠나볼까요?",
   "hero.start": "Start",
   "hero.scroll": "Scroll",
 
-  "features.heading": "WITH TRIVER",
+  "features.heading": "Triver와 함께",
   "features.subheading": "Cutting-Edge Technology Meets Traveling",
   "features.hyperPersonalized.title": "Hyper personalized",
   "features.hyperPersonalized.shortTitle": "당신의 취향을 반영한 여행",
@@ -226,8 +224,8 @@
   "destinations.noImage": "No Image",
   "destinations.planTrip": "Plan Trip",
 
-  "cta.heading": "Your journey begins",
-  "cta.headingHighlight": "here.",
+  "cta.heading": "당신의 여행이 시작되는",
+  "cta.headingHighlight": "곳.",
   "cta.description": "Start planning your dream trip to Seoul today with our AI-powered travel assistant. No hidden fees, just pure exploration.",
   "cta.button": "Start for Free",
 
@@ -306,5 +304,18 @@
   "banner.switchPrompt": "다른 언어로 설정할까요?",
   "banner.switch": "설정",
 
-  "languageSwitcher.label": "언어"
+  "languageSwitcher.label": "언어",
+
+  "pipeline.imageAnalysis": "이미지 분석",
+  "pipeline.intent": "의도 분석",
+  "pipeline.planner": "여행 계획 수립",
+  "pipeline.geocoder": "위치 좌표 확인",
+  "pipeline.retriever": "장소 검색",
+  "pipeline.retrieverRetry": "반경 확대 후 장소 검색",
+  "pipeline.webSearch": "웹 검색",
+  "pipeline.executor": "답변 생성",
+  "pipeline.executorMissing": "추가 정보 확인",
+  "pipeline.executorGeneral": "일반 답변 생성",
+  "pipeline.running": "{label} 중...",
+  "pipeline.done": "{label} 완료"
 }
