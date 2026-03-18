@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile, uploadImageDataUrl } from "@/services/api";
+import { useTranslation } from "@/i18n/useTranslation";
 import { TripContextModal } from "@/features/chat/components/TripContextModal";
 import { PlaceMapPanel } from "@/features/chat/components/PlaceMapPanel";
 import { PlaceMapSheet } from "@/features/chat/components/PlaceMapSheet";
@@ -33,6 +34,8 @@ type RoomDraft = {
 };
 
 export function ChatHome() {
+    const { t } = useTranslation();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const roomIdParam = searchParams.get("roomId");
     const parsedRouteRoomId = roomIdParam ? parseInt(roomIdParam, 10) : null;
@@ -241,11 +244,11 @@ export function ChatHome() {
                 try {
                     const data = await fetchCurrentUser();
                     if (!data.is_join) {
-                        window.location.href = "/signup/profile";
+                        router.push("/signup/profile");
                         return;
                     }
                     if (!data.is_prefer) {
-                        window.location.href = "/survey";
+                        router.push("/survey");
                         return;
                     }
                     setUserProfile(data);
@@ -333,7 +336,7 @@ export function ChatHome() {
                     selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
-                        place_id: p.place_id ?? 0,
+                        contenttypeid: p.contenttypeid ?? 0,
                     })),
                     save_user_message: false,
                 },
@@ -349,7 +352,7 @@ export function ChatHome() {
                     selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
-                        place_id: p.place_id ?? 0,
+                        contenttypeid: p.contenttypeid ?? 0,
                     })),
                     save_user_message: false,
                 },
@@ -390,10 +393,10 @@ export function ChatHome() {
         if (!userText && !attachedImageDataUrl && !attachedLocation) return;
 
         const fallbackParts = [
-            attachedFileName ? `[이미지 첨부] ${attachedFileName}` : attachedImageDataUrl ? "[이미지 첨부]" : "",
-            attachedLocationLabel ? `[위치 첨부] ${attachedLocationLabel}` : attachedLocation ? "[위치 첨부]" : "",
+            attachedFileName ? t("chat.imageAttached", { fileName: attachedFileName }) : attachedImageDataUrl ? t("chat.imageAttachedOnly") : "",
+            attachedLocationLabel ? t("chat.locationAttached", { label: attachedLocationLabel }) : attachedLocation ? t("chat.locationAttachedOnly") : "",
         ].filter(Boolean);
-        const messageToSend = userText || (fallbackParts.length > 0 ? `${fallbackParts.join(" ")} 분석해줘.` : "메시지를 분석해줘.");
+        const messageToSend = userText || (fallbackParts.length > 0 ? t("chat.analyzeAttachments", { attachments: fallbackParts.join(" ") }) : t("chat.analyzeFallback"));
         const optimisticText = userText || fallbackParts.join(" ");
         const currentDataUrl = attachedImageDataUrl;   // 미리보기용 dataUrl
         const currentLocation = attachedLocation;
@@ -434,7 +437,7 @@ export function ChatHome() {
 
     const handleAttachLocation = useCallback(async () => {
         if (typeof window === "undefined" || !("geolocation" in navigator)) {
-            window.alert("이 브라우저에서는 위치 첨부를 지원하지 않습니다.");
+            window.alert(t("chat.locationNotSupported"));
             return;
         }
 
@@ -451,10 +454,10 @@ export function ChatHome() {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             setAttachedLocation(`${latitude}, ${longitude}`);
-            setAttachedLocationLabel("현재 위치");
+            setAttachedLocationLabel(t("chat.currentLocation"));
         } catch (error) {
             console.error("Failed to get current location", error);
-            window.alert("현재 위치를 가져오지 못했습니다. 위치 권한을 확인해주세요.");
+            window.alert(t("chat.locationFailed"));
         } finally {
             setIsLocating(false);
         }
@@ -486,7 +489,7 @@ export function ChatHome() {
                 {isRouteRoomSynced && roomTripContext && roomTripContext.travelDuration && (
                     <div className="flex-none px-3 pb-2 sm:px-4 lg:px-6 bg-white">
                         <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
-                            {roomTripContext.travelDuration} · 성인 {roomTripContext.adultCount ?? 0}명 / 어린이 {roomTripContext.childCount ?? 0}명
+                            {t("chat.tripContext", { duration: roomTripContext.travelDuration, adults: roomTripContext.adultCount ?? 0, children: roomTripContext.childCount ?? 0 })}
                         </div>
                     </div>
                 )}
@@ -496,7 +499,7 @@ export function ChatHome() {
                         {visibleMessages.length === 0 && !isTyping && (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
                                 <Sparkles className="w-8 h-8 mb-4 opacity-40 text-slate-300" />
-                                <p className="text-sm font-medium tracking-tight">채팅을 시작해보세요!</p>
+                                <p className="text-sm font-medium tracking-tight">{t("chat.startChatPrompt")}</p>
                             </div>
                         )}
 
@@ -544,7 +547,7 @@ export function ChatHome() {
                         const file = e.target.files?.[0];
                         if (!file) return;
                         if (!file.type.startsWith("image/")) {
-                            window.alert("이미지 파일만 첨부할 수 있어요.");
+                            window.alert(t("chat.imageOnly"));
                             e.target.value = "";
                             return;
                         }

@@ -2,6 +2,7 @@
 import { MapPin, Trash2 } from "lucide-react";
 
 import { DiaryListItem } from "@/services/api";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
@@ -18,6 +19,7 @@ export function DiaryGallery({
   onSelect,
   isDeleteMode = false,
 }: DiaryGalleryProps) {
+  const { t } = useTranslation();
   return (
     <div className="columns-1 gap-4 space-y-4 md:columns-2 xl:columns-3 2xl:columns-4">
       {diaries.map((diary) => (
@@ -50,7 +52,7 @@ export function DiaryGallery({
             </p>
             <p className="line-clamp-1 text-lg font-medium text-white">{diary.title}</p>
             <p className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-white">
-              <MapPin size={10} /> Places {diary.linked_places_count}
+              <MapPin size={10} /> {t("moments.places")} {diary.linked_places_count}
             </p>
           </div>
         </button>

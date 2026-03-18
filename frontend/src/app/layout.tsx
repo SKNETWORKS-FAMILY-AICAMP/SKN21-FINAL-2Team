@@ -1,11 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Serif_KR } from "next/font/google";
+import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Sans_JP, Noto_Sans_SC, Noto_Serif_KR, Noto_Serif_JP, Noto_Serif_SC } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { LanguageProvider } from "@/i18n/LanguageContext";
+import { LANGUAGE_COOKIE_KEY } from "@/i18n/constants";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const notoSans = Noto_Sans({
+  variable: "--font-noto-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSansKr = Noto_Sans_KR({
+  variable: "--font-noto-sans-kr",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "900"],
+});
+
+const notoSansSc = Noto_Sans_SC({
+  variable: "--font-noto-sans-sc",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -16,7 +38,19 @@ const geistMono = Geist_Mono({
 const notoSerifKr = Noto_Serif_KR({
   variable: "--font-noto-serif-kr",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSerifJp = Noto_Serif_JP({
+  variable: "--font-noto-serif-jp",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const notoSerifSc = Noto_Serif_SC({
+  variable: "--font-noto-serif-sc",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -26,17 +60,28 @@ export const metadata: Metadata = {
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const lang = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value || "en";
+
   return (
-    <html lang="en">
+    <html lang={lang}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSerifKr.variable} antialiased bg-slate-50 text-slate-900`}
+        className={`${notoSans.variable} ${notoSansKr.variable} ${notoSansJp.variable} ${notoSansSc.variable} ${geistMono.variable} ${notoSerifKr.variable} ${notoSerifJp.variable} ${notoSerifSc.variable} antialiased bg-slate-50 text-slate-900`}
       >
-        <GoogleOAuthProvider clientId={CLIENT_ID}>{children}</GoogleOAuthProvider>
+        <GoogleOAuthProvider clientId={CLIENT_ID}>
+          <LanguageProvider initialLang={lang}>{children}</LanguageProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

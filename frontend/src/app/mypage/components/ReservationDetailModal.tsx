@@ -287,7 +287,7 @@ export function ReservationDetailModal({
                             >
                                 <X size={16} />
                             </button>
-                            <h2 className="text-3xl font-bold text-gray-900 text-center pr-12">예약 상세</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 text-center">예약 상세</h2>
                         </div>
 
                         <div className="px-6 pb-4 max-h-[70vh] overflow-y-auto space-y-4">

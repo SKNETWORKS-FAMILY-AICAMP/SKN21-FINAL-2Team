@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, ArrowLeft, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchPrefers, PreferItem, submitSurvey } from "@/services/api";
-import { IMAGE_MAP, QUESTION_METADATA, QUESTION_ORDER } from "./constants";
+import { IMAGE_MAP, QUESTION_METADATA, QUESTION_ORDER, SURVEY_LABEL_KEY_MAP } from "./constants";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type QuestionType = {
     id: string; // 'plan', 'member' ...
@@ -15,6 +16,7 @@ type QuestionType = {
 };
 
 export function SurveyPage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const [questions, setQuestions] = useState<QuestionType[]>([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -50,7 +52,7 @@ export function SurveyPage() {
         }).catch(err => {
             console.error("Failed to fetch prefers:", err);
             if (err.message === 'Unauthorized' || err.message === 'Session expired') {
-                alert("로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요.");
+                alert(t("survey.loginRequired"));
                 router.push("/signup"); // 로그인 페이지로 이동
             }
         });
@@ -73,7 +75,7 @@ export function SurveyPage() {
                 setDirection(1); // 애니메이션용 방향 설정
             } catch (e) {
                 console.error("Failed to submit survey:", e);
-                alert("Failed to save preferences.");
+                alert(t("survey.failedToSave"));
             } finally {
                 setIsSubmitting(false);
             }
@@ -120,7 +122,7 @@ export function SurveyPage() {
         router.replace("/signup");
     };
 
-    if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (questions.length === 0) return <div className="min-h-screen flex items-center justify-center">{t("common.loading")}</div>;
 
     const currentQuestion = questions[currentQuestionIndex];
 
@@ -139,7 +141,7 @@ export function SurveyPage() {
                             disabled={!isClickable}
                             // 주의: 사용자가 마우스로 쉽게 클릭할 수 있도록 기존 h-1에서 클릭 영역을 높이기 위해 h-2로 변경했습니다.
                             className={`h-2 flex-1 rounded-full overflow-hidden transition-all ${isClickable ? 'cursor-pointer hover:opacity-75' : 'cursor-not-allowed opacity-50'} bg-gray-200`}
-                            aria-label={`${idx + 1}번째 질문으로 이동`}
+                            aria-label={t("survey.goToQuestion", { number: idx + 1 })}
                         >
                             <motion.div
                                 className="h-full bg-black"
@@ -166,11 +168,11 @@ export function SurveyPage() {
                             <Check size={40} />
                         </div>
                         <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
-                            You&apos;re all set!
+                            {t("survey.allSet")}
                         </h2>
                         <p className="text-gray-500 font-normal mb-12 text-lg">
-                            회원가입 및 취향 분석이 완료되었습니다. <br className="hidden md:block" />
-                            이제 맞춤형 여행 추천을 시작해 보세요.
+                            {t("survey.signupComplete")} <br className="hidden md:block" />
+                            {t("survey.startPersonalizedTrips")}
                         </p>
 
                         <button
@@ -178,7 +180,7 @@ export function SurveyPage() {
                             // [Feature] 버튼명 Sign Up → Start 변경 — 설문 완료 후 서비스 시작 의미 전달
                             className="w-full sm:w-auto px-12 py-4 bg-black text-white text-lg font-semibold rounded-full hover:bg-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
                         >
-                            Start <ArrowRight size={20} />
+                            {t("survey.start")} <ArrowRight size={20} />
                         </button>
                     </motion.div>
                 ) : (
@@ -194,7 +196,7 @@ export function SurveyPage() {
                         <div className="w-full relative flex items-center justify-center mb-12 min-h-[100px]">
                             <div className="text-center">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
-                                    Question {currentQuestionIndex + 1} of {questions.length}
+                                    {t("survey.questionProgress", { current: currentQuestionIndex + 1, total: questions.length })}
                                 </span>
                                 <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
                                     {currentQuestion.title}
@@ -208,9 +210,9 @@ export function SurveyPage() {
                                     onClick={handlePrevious}
                                     // 주의: 텍스트 블록의 정렬을 해치지 않으면서 우측 끝에 배치하기 위해 absolute right-0를 사용했습니다.
                                     className="absolute right-0 md:right-4 flex items-center gap-2 p-3 px-4 text-gray-600 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:text-black hover:bg-gray-50 rounded-full transition-all"
-                                    aria-label="이전 문항으로 돌아가기"
+                                    aria-label={t("survey.goToPrevious")}
                                 >
-                                    <span className="text-sm font-semibold hidden sm:block">이전</span>
+                                    <span className="text-sm font-semibold hidden sm:block">{t("common.previous")}</span>
                                     <ArrowLeft size={20} />
                                 </button>
                             )}
@@ -234,7 +236,7 @@ export function SurveyPage() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
                                     <div className="absolute bottom-0 left-0 w-full p-8 flex items-end justify-between">
                                         <div className="text-left">
-                                            <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-md">{option.value}</h3>
+                                            <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-md">{SURVEY_LABEL_KEY_MAP[option.value] ? t(SURVEY_LABEL_KEY_MAP[option.value]) : option.value}</h3>
                                             <div className="h-0.5 w-0 bg-white group-hover:w-full transition-all duration-500 ease-out" />
                                         </div>
                                     </div>

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { Send, Mic, MicOff, Square, Map as MapIcon, Plus, ImagePlus, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface ChatInputAreaProps {
     inputText: string;
@@ -43,6 +44,7 @@ export function ChatInputArea({
     setAttachedFileName,
     clearAttachedLocation,
 }: ChatInputAreaProps) {
+    const { t } = useTranslation();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
     const attachMenuRef = useRef<HTMLDivElement>(null);
@@ -93,12 +95,12 @@ export function ChatInputArea({
                 : "text-gray-400 hover:text-black hover:bg-gray-100";
 
     const micButtonTitle = isListening
-        ? "음성 인식 중지"
+        ? t("chatInput.voiceStop")
         : sttPermission === "denied"
-            ? "마이크 권한 거부됨 - 다시 시도"
+            ? t("chatInput.voiceDenied")
             : sttPermission === "unsupported"
-                ? "브라우저 미지원"
-                : "음성으로 입력";
+                ? t("chatInput.voiceUnsupported")
+                : t("chatInput.voiceStart");
 
     return (
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/0 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] px-3 sm:px-4 z-20 pointer-events-none">
@@ -114,7 +116,7 @@ export function ChatInputArea({
                             className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
                         >
                             <ImagePlus size={16} />
-                            사진 첨부
+                            {t("chatInput.attachPhoto")}
                         </button>
                         <button
                             type="button"
@@ -125,7 +127,7 @@ export function ChatInputArea({
                             className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
                         >
                             <MapPin size={16} />
-                            {isLocating ? "위치 확인 중..." : "위치 첨부"}
+                            {isLocating ? t("chatInput.locating") : t("chatInput.attachLocation")}
                         </button>
                     </div>
                 )}
@@ -145,7 +147,7 @@ export function ChatInputArea({
                                 {attachedImageDataUrl && (
                                     <img
                                         src={attachedImageDataUrl}
-                                        alt="첨부 이미지"
+                                        alt={t("chatInput.attachedImage")}
                                         className="w-6 h-6 rounded-full object-cover border border-white/20"
                                     />
                                 )}
@@ -157,7 +159,7 @@ export function ChatInputArea({
                                         setAttachedFileName("");
                                     }}
                                     className="text-white/80 hover:text-white transition-colors"
-                                    aria-label="첨부 파일 제거"
+                                    aria-label={t("chatInput.removeAttachment")}
                                 >
                                     ×
                                 </button>
@@ -171,7 +173,7 @@ export function ChatInputArea({
                                         type="button"
                                         onClick={clearAttachedLocation}
                                         className="text-slate-500 hover:text-slate-800 transition-colors"
-                                        aria-label="첨부 위치 제거"
+                                        aria-label={t("chatInput.removeLocation")}
                                     >
                                         ×
                                     </button>
@@ -186,7 +188,7 @@ export function ChatInputArea({
                                 type="button"
                                 onClick={() => setIsAttachMenuOpen((prev) => !prev)}
                                 className="p-2.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
-                                title="첨부"
+                                title={t("chatInput.attach")}
                             >
                                 <Plus size={18} />
                             </button>
@@ -197,7 +199,7 @@ export function ChatInputArea({
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             onKeyDown={handleKeyPress}
-                            placeholder="어디로 떠나고 싶으신가요?"
+                            placeholder={t("chatInput.placeholder")}
                             className="flex-1 bg-transparent border-none outline-none resize-none text-[15px] leading-[1.5] font-medium text-slate-800 placeholder:text-slate-400 custom-scrollbar py-2"
                             rows={1}
                             style={{ minHeight: "40px", maxHeight: "130px" }}
@@ -208,7 +210,7 @@ export function ChatInputArea({
                                 type="button"
                                 onClick={() => setIsMapSheetOpen(true)}
                                 className="p-2.5 rounded-full transition-all duration-300 text-slate-500 hover:text-black hover:bg-slate-100 lg:hidden"
-                                title="지도 보기"
+                                title={t("chatInput.viewMap")}
                             >
                                 <MapIcon size={18} />
                             </button>
@@ -237,7 +239,7 @@ export function ChatInputArea({
                                     animate={{ scale: 1, opacity: 1 }}
                                     onClick={handleStopMessage}
                                     className="p-2.5 rounded-full transition-all duration-300 shadow-md bg-slate-800 text-white shadow-slate-800/20 hover:shadow-slate-800/40 hover:-translate-y-0.5"
-                                    title="응답 중지"
+                                    title={t("chatInput.stopResponse")}
                                 >
                                     <Square size={16} fill="currentColor" strokeWidth={0} />
                                 </motion.button>
@@ -248,7 +250,7 @@ export function ChatInputArea({
                                     onClick={handleSendMessage}
                                     disabled={!inputText.trim() && !attachedImageDataUrl && !attachedLocationLabel}
                                     className={`p-2.5 rounded-full transition-all duration-300 shadow-md ${(inputText.trim() || attachedImageDataUrl || attachedLocationLabel) ? "bg-black text-white shadow-black/20 hover:shadow-black/40 hover:-translate-y-0.5" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"}`}
-                                    title="전송"
+                                    title={t("chatInput.send")}
                                 >
                                     <Send size={18} />
                                 </motion.button>
@@ -258,7 +260,7 @@ export function ChatInputArea({
                 </div>
 
                 <p className="text-[10px] sm:text-[11px] text-center text-slate-400 mt-3 font-medium tracking-wide px-2">
-                    Triver AI can make mistakes. Please check important info.
+                    {t("chatInput.disclaimer")}
                 </p>
             </div>
         </div>

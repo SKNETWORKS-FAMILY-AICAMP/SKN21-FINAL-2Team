@@ -9,12 +9,7 @@ import { TripContextModal, type TripContext } from "@/features/chat/components/T
 import { createRoom, fetchRandomExplorePlaces, fetchCurrentUser, type UserProfile, type CategoryPlaceItem } from "@/services/api";
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
-
-const categories = [
-    { id: "hot-places", label: "Hot Places" },
-    { id: "tourist-spot", label: "Tourist Spot" },
-    { id: "foods", label: "Foods" },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 // ✅ 세 API의 다른 필드명을 하나로 통합한 타입 설계도
 export interface Destination {
@@ -24,27 +19,20 @@ export interface Destination {
     address: string;
 }
 
-// ✅ tourist-spot, foods 탭의 임시 더미 데이터 (통합 필드명 사용)
-const staticDestinations: Record<string, Destination[]> = {
-    "tourist-spot": [
-        { id: "101", name: "Gyeongbokgung Palace", image: "https://images.unsplash.com/photo-1604640213-0251ead81922?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Sajik-ro, Jongno-gu" },
-        { id: "102", name: "N Seoul Tower", image: "https://images.unsplash.com/photo-1614935151651-0bea6508db6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Namsan-gongwon-gil, Yongsan-gu" },
-        { id: "103", name: "Bukchon Hanok Village", image: "https://images.unsplash.com/photo-1707925679578-2a2d1a1b3fcd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Gahoe-dong, Jongno-gu" },
-    ],
-    foods: [
-        { id: "201", name: "Gwangjang Market", image: "https://images.unsplash.com/photo-1583394293214-cce78e594a77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jongno-gu, Seoul" },
-        { id: "202", name: "Myeongdong Street Food", image: "https://images.unsplash.com/photo-1548943487-a2e4e43b4853?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Myeongdong, Jung-gu" },
-        { id: "203", name: "Tongin Market", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080", address: "Jahamun-ro, Jongno-gu" },
-    ],
-};
-
 // fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
 // hot_place: id(number) | attractions·restaurants: contentid(string)
 // name: 세 API 모두 동일
 // image: API 응답 이미지 URL
 // address: hot_place: adress(오타) | 나머지: address 로 통일
 export function Destinations() {
+    const { t } = useTranslation();
     const router = useRouter();
+
+    const categories = [
+        { id: "hot-places", label: t("destinations.hotPlaces") },
+        { id: "tourist-spot", label: t("destinations.touristSpot") },
+        { id: "foods", label: t("destinations.foods") },
+    ];
     const [activeTab, setActiveTab] = useState("hot-places");
     const [displayItems, setDisplayItems] = useState<Destination[]>([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -110,11 +98,11 @@ export function Destinations() {
     const handleModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             const selectedPlaces = pendingPlace ? [{
                 name: pendingPlace.name,
                 adress: pendingPlace.address || (pendingPlace as Destination & { adress?: string }).adress,
-                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
@@ -138,14 +126,6 @@ export function Destinations() {
         }
     };
 
-    const shuffleArray = <T,>(array: T[]): T[] => {
-        const newArr = [...array];
-        for (let i = newArr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-        }
-        return newArr;
-    };
     const [isLoading, setIsLoading] = useState(false);
 
     // ✅ 탭이 바뀔 때마다 서버에서 새로운 랜덤 데이터를 가져옵니다.
@@ -184,26 +164,10 @@ export function Destinations() {
                 }));
 
                 // 현재 탭에 맞는 데이터로 즉시 업데이트
-                if (mappedData[activeTab] && mappedData[activeTab].length > 0) {
-                    setDisplayItems(mappedData[activeTab]);
-                } else {
-                    // 데이터가 없는 경우 더미 데이터 폴백
-                    if (activeTab === "tourist-spot") {
-                        setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));
-                    } else if (activeTab === "foods") {
-                        setDisplayItems(shuffleArray(staticDestinations["foods"]));
-                    } else {
-                        setDisplayItems([]);
-                    }
-                }
+                setDisplayItems(mappedData[activeTab] ?? []);
             } catch (error) {
                 console.warn("Failed to fetch random places on tab change:", error);
-                // 에러 발생 시 더미 데이터 폴백
-                if (activeTab === "tourist-spot") {
-                    setDisplayItems(shuffleArray(staticDestinations["tourist-spot"]));
-                } else if (activeTab === "foods") {
-                    setDisplayItems(shuffleArray(staticDestinations["foods"]));
-                }
+                setDisplayItems([]);
             } finally {
                 setIsLoading(false);
             }
@@ -217,11 +181,11 @@ export function Destinations() {
             {/* [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정 */}
             {/* [Fix] min-h-[calc(100vh-64px)] + flex justify-center: Header(64px) 제외 뷰포트 채움 + 세로 중앙 */}
             <section id="destinations" className="py-24 bg-gray-50/30 min-h-[calc(100vh-64px)] flex flex-col justify-center">
-                <div className="w-full mx-auto px-20 lg:px-32">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+                <div className="w-full mx-auto px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-16 gap-6">
                         <div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">Explore Seoul</h2>
-                            <p className="text-gray-500 text-lg max-w-xl font-light">From historic palaces to neon-lit streets, find your perfect spot.</p>
+                            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">{t("destinations.heading")}</h2>
+                            <p className="text-gray-500 text-lg max-w-xl font-light">{t("destinations.subheading")}</p>
                         </div>
                         <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-lg overflow-hidden backdrop-blur-sm border border-gray-200">
                             {categories.map((category) => (
@@ -236,12 +200,12 @@ export function Destinations() {
                         </div>
                     </div>
 
-                    <div className="min-h-[400px] relative">
+                    <div className="min-h-[300px] sm:min-h-[400px] relative">
                         {isLoading && (
                             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Refreshing...</span>
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t("destinations.refreshing")}</span>
                                 </div>
                             </div>
                         )}
@@ -252,10 +216,10 @@ export function Destinations() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.4 }}
-                                className="grid grid-cols-3 gap-8"
+                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-full aspect-[11/10]">
+                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-full sm:aspect-[11/10]">
                                         <div className="relative w-full h-[52.5%] overflow-hidden bg-gray-100 flex-shrink-0">
                                             {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
                                             {place.image && place.image.trim() !== "" ? (
@@ -292,7 +256,7 @@ export function Destinations() {
                                                     ) : (
                                                         <MapPin size={40} className="text-gray-300" />
                                                     )}
-                                                    <span className="text-xs font-medium text-gray-400">No Image</span>
+                                                    <span className="text-xs font-medium text-gray-400">{t("destinations.noImage")}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -306,7 +270,7 @@ export function Destinations() {
                                                     onClick={(e) => handlePlanTripClick(place, e)}
                                                     className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
                                                 >
-                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />Plan Trip
+                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />{t("destinations.planTrip")}
                                                 </button>
                                             </div>
                                         </div>

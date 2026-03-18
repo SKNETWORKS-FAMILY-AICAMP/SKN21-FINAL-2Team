@@ -119,7 +119,7 @@ export function useChatRooms({
                     selectedPlaces = [{
                         name: place.name,
                         adress: place.address || place.adress,
-                        place_id: typeof place.id === "number" ? place.id : 0,
+                        contenttypeid: typeof place.id === "number" ? place.id : 0,
                     }];
                 } catch {
                 } finally {

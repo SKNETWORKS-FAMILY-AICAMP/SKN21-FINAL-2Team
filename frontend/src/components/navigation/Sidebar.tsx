@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X, Trash2 } from "lucide-react";
+import { Home, Grid, Bookmark, Settings, LogOut, Edit3, MessageSquare, Menu, X, Trash2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/common/Logo";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -9,46 +9,15 @@ import { fetchRooms, fetchCurrentUser, type ChatRoom, type UserProfile as ApiUse
 import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { clearAuth } from "@/services/errorHandler";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
+import { useTranslation } from "@/i18n/useTranslation";
+import { SIDEBAR_MENUS } from "@/config/navigation";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
 interface SidebarUserProfile {
     name: string;
     nickname: string;
     profile_picture: string | null;
 }
-
-type AppLanguage = "en" | "ko" | "ja";
-
-const LANGUAGE_STORAGE_KEY = "triver:language:v1";
-
-const SIDEBAR_I18N: Record<AppLanguage, Record<string, string>> = {
-    en: {
-        home: "Home",
-        moments: "Moments",
-        bookmark: "Bookmark",
-        newChat: "+ New Chat",
-        recentChats: "Recent Chats",
-        profile: "Profile",
-        signOut: "Sign out",
-    },
-    ko: {
-        home: "홈",
-        moments: "Moments",
-        bookmark: "북마크",
-        newChat: "+ 새 채팅",
-        recentChats: "최근 채팅",
-        profile: "프로필",
-        signOut: "로그아웃",
-    },
-    ja: {
-        home: "ホーム",
-        moments: "Moments",
-        bookmark: "ブックマーク",
-        newChat: "+ 新規チャット",
-        recentChats: "最近のチャット",
-        profile: "プロフィール",
-        signOut: "ログアウト",
-    },
-};
 
 type SidebarCacheState = {
     userProfile: SidebarUserProfile | null;
@@ -131,11 +100,12 @@ function SidebarContent() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const [language, setLanguage] = useState<AppLanguage>("en");
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
     const [pendingDeleteRoom, setPendingDeleteRoom] = useState<ChatRoom | null>(null);
     const [isDeletingRoom, setIsDeletingRoom] = useState(false);
+
+    const { t } = useTranslation();
 
     const canCollapse = isDesktop;
     const actuallyCollapsed = isDesktop ? isCollapsed : false;
@@ -163,23 +133,10 @@ function SidebarContent() {
         };
         applyViewportState(mediaQuery.matches);
 
-        const applyLanguage = () => {
-            const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-            if (raw === "en" || raw === "ko" || raw === "ja") {
-                setLanguage(raw);
-            } else {
-                setLanguage("en");
-            }
-        };
-        applyLanguage();
-
         const onViewportChange = (event: MediaQueryListEvent) => {
             applyViewportState(event.matches);
         };
         mediaQuery.addEventListener("change", onViewportChange);
-
-        const onLang = () => applyLanguage();
-        window.addEventListener("triver:language", onLang);
 
         const hydrateSidebar = async () => {
             try {
@@ -226,7 +183,6 @@ function SidebarContent() {
         return () => {
             cancelled = true;
             mediaQuery.removeEventListener("change", onViewportChange);
-            window.removeEventListener("triver:language", onLang);
             window.removeEventListener("triver:rooms-updated", onRoomsUpdated);
             window.removeEventListener("triver:profile-updated", onProfileUpdated);
         };
@@ -248,20 +204,26 @@ function SidebarContent() {
         };
     }, [isDesktop, isMobileOpen]);
 
-    const dict = SIDEBAR_I18N[language] ?? SIDEBAR_I18N.en;
+    // 아이콘 매핑용
+    const getMenuIcon = (id: string) => {
+        if (id === "home") return Home;
+        if (id === "moments") return Grid;
+        if (id === "mypage") return Settings;
+        return Bookmark;
+    };
 
-    const menuItems = [
-        { icon: Home, label: dict.home, path: "/explore" },
-        { icon: Grid, label: dict.moments, path: "/moments" },
-        { icon: Bookmark, label: dict.bookmark, path: "/bookmark" },
-    ];
+    const menuItems = SIDEBAR_MENUS.map(menu => ({
+        ...menu,
+        icon: getMenuIcon(menu.id),
+        label: menu.isTranslated ? t(menu.labelKey) : menu.labelKey
+    }));
 
     // + 새 채팅 버튼 클릭 → 모달에서 컨텍스트 수집 후 방 생성
     const handleModalConfirm = async (context: TripContext) => {
         // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → API 완료 후 페이지 전환 시 자연 unmount
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             setRooms((prev) => {
                 const next = [newRoom, ...prev];
                 sidebarCache.rooms = next;
@@ -315,7 +277,7 @@ function SidebarContent() {
             }
         } catch (error) {
             console.error("Failed to delete room", error);
-            window.alert("채팅방 삭제에 실패했습니다.");
+            window.alert(t("sidebar.deleteRoomFailed"));
         } finally {
             setIsDeletingRoom(false);
         }
@@ -434,13 +396,13 @@ function SidebarContent() {
                                 ? "p-3 rounded-2xl"
                                 : "w-full justify-between gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium"
                         )}
-                        title={actuallyCollapsed ? dict.newChat : undefined}
+                        title={actuallyCollapsed ? t("sidebar.newChat") : undefined}
                     >
                         {actuallyCollapsed ? (
                             <Edit3 size={16} strokeWidth={1.5} />
                         ) : (
                             <div className="flex items-center gap-3">
-                                <span className="tracking-wide">{dict.newChat}</span>
+                                <span className="tracking-wide">{t("sidebar.newChat")}</span>
                             </div>
                         )}
                     </button>
@@ -480,8 +442,8 @@ function SidebarContent() {
                                                 "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
                                                 isActiveRoom && "group-focus-within/item:opacity-100"
                                             )}
-                                            aria-label={`${room.title} 삭제`}
-                                            title="채팅방 삭제"
+                                            aria-label={`${room.title} ${t("common.delete")}`}
+                                            title={t("sidebar.deleteRoom")}
                                         >
                                             <Trash2 size={14} />
                                         </button>
@@ -495,7 +457,7 @@ function SidebarContent() {
                         <button
                             onClick={() => setIsCollapsed(false)}
                             className="p-3 text-gray-400 hover:text-black hover:bg-gray-50 rounded-2xl transition-colors"
-                            title={dict.recentChats}
+                            title={t("sidebar.recentChats")}
                         >
                             <MessageSquare size={16} strokeWidth={1.5} />
                         </button>
@@ -504,15 +466,16 @@ function SidebarContent() {
             </div>
 
             {/* User Profile */}
-            <div className={cn("mt-auto border-t border-gray-100", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+            <div className={cn("mt-auto border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+                {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
+                <div className="absolute bottom-20 right-3 z-50">
+                    <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />
+                </div>
                 <div
-                    onClick={() => router.push("/mypage")}
                     className={cn(
-                        "flex items-center group cursor-pointer transition-all duration-300 rounded-2xl",
-                        pathname === "/mypage" ? "bg-gray-100 shadow-sm" : "hover:bg-gray-50",
+                        "flex items-center transition-all duration-300 rounded-2xl",
                         actuallyCollapsed ? "justify-center p-2" : "justify-between p-3"
                     )}
-                    title={actuallyCollapsed ? dict.profile : undefined}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-9 h-9 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
@@ -533,18 +496,22 @@ function SidebarContent() {
                         )}
                     </div>
                     {!actuallyCollapsed && (
-                        <Settings
-                            size={14}
-                            className={cn(
-                                "flex-shrink-0 transition-colors ml-2",
-                                pathname === "/mypage" ? "text-black" : "text-gray-400 group-hover:text-black",
-                            )}
-                        />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const event = new CustomEvent("triver:open-language-switcher");
+                                window.dispatchEvent(event);
+                            }}
+                            className="p-1 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100 flex-shrink-0 ml-2"
+                            title={t("sidebar.language")}
+                        >
+                            <Globe size={14} />
+                        </button>
                     )}
                 </div>
 
                 {!actuallyCollapsed ? (
-                    <div className="mt-2 px-2 flex items-center justify-between text-[10px] text-gray-400 font-medium pt-2">
+                    <div className="mt-2 px-2 flex items-center justify-end text-[10px] text-gray-400 font-medium pt-2">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -553,20 +520,33 @@ function SidebarContent() {
                             className="flex items-center gap-1 hover:text-red-600 transition-colors"
                         >
                             <LogOut size={10} />
-                            {dict.signOut}
+                            {t("sidebar.signOut")}
                         </button>
                     </div>
                 ) : (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSignOut();
-                        }}
-                        className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
-                        title={dict.signOut}
-                    >
-                        <LogOut size={16} strokeWidth={1.5} />
-                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const event = new CustomEvent("triver:open-language-switcher");
+                                window.dispatchEvent(event);
+                            }}
+                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-black hover:bg-gray-50 transition-colors w-full"
+                            title={t("sidebar.language")}
+                        >
+                            <Globe size={16} strokeWidth={1.5} />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSignOut();
+                            }}
+                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                            title={t("sidebar.signOut")}
+                        >
+                            <LogOut size={16} strokeWidth={1.5} />
+                        </button>
+                    </div>
                 )}
             </div>
             {/* 주의: 모달은 fixed 포지션이라 aside 안에 있어도 화면 전체를 덮습니다 */}
@@ -590,10 +570,9 @@ function SidebarContent() {
                     />
                     <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl">
                         <div className="mb-5">
-                            <h3 className="text-lg font-semibold tracking-tight text-gray-900">채팅방 삭제</h3>
+                            <h3 className="text-lg font-semibold tracking-tight text-gray-900">{t("sidebar.deleteRoomTitle")}</h3>
                             <p className="mt-2 text-sm leading-6 text-gray-500">
-                                <span className="font-medium text-gray-700">&quot;{pendingDeleteRoom.title || "새 채팅"}&quot;</span>을 삭제할까요?
-                                삭제하면 대화 내용과 추천 장소 기록도 함께 사라집니다.
+                                {t("sidebar.deleteRoomMessage", { title: pendingDeleteRoom.title || t("sidebar.newChat") })}
                             </p>
                         </div>
                         <div className="flex items-center justify-end gap-2">
@@ -603,7 +582,7 @@ function SidebarContent() {
                                 disabled={isDeletingRoom}
                                 className="h-10 rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                취소
+                                {t("common.cancel")}
                             </button>
                             <button
                                 type="button"
@@ -611,7 +590,7 @@ function SidebarContent() {
                                 disabled={isDeletingRoom}
                                 className="h-10 rounded-full bg-red-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {isDeletingRoom ? "삭제 중..." : "삭제"}
+                                {isDeletingRoom ? t("common.deleting") : t("common.delete")}
                             </button>
                         </div>
                     </div>

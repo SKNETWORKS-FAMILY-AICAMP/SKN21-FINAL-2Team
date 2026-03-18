@@ -7,6 +7,7 @@ import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 import { cn } from "@/lib/utils";
 import { resolveImageUrl } from "@/lib/imageUrl";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=400&q=60";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
@@ -42,6 +43,7 @@ export const ChatMessageItem = memo(({
     placeCardRefs,
     compactPlaces = false,
 }: ChatMessageItemProps) => {
+    const { t } = useTranslation();
     const isStreamingCurrentMessage = Boolean(msg.id === streamingMsgId);
 
     // 유저 메시지 처리
@@ -134,7 +136,7 @@ export const ChatMessageItem = memo(({
                                         <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:120ms]" />
                                         <span className="h-1.5 w-1.5 rounded-full bg-slate-300 animate-pulse [animation-delay:240ms]" />
                                     </span>
-                                    <span className="text-[12px] font-medium tracking-wide">응답 준비 중...</span>
+                                    <span className="text-[12px] font-medium tracking-wide">{t("chat.preparingResponse")}</span>
                                 </div>
                             )}
 

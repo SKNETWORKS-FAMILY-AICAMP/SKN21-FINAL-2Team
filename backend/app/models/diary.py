@@ -32,7 +32,7 @@ class DiaryEntryPlace(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     entry_id = Column(Integer, ForeignKey("diary_entries.id"), nullable=False, index=True)
     chat_place_id = Column(Integer, ForeignKey("chat_places.id"), nullable=True)
-    place_id = Column(Integer, nullable=True)
+    contenttypeid = Column(Integer, nullable=True)
     name = Column(String(255), nullable=True)
     adress = Column(String(255), nullable=True)
     image_path = Column(String(1000), nullable=True)
