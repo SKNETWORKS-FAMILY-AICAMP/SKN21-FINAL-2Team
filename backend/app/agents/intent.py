@@ -145,6 +145,10 @@ async def intent_node(state: TravelState):
                 # 좌표가 서울 밖에 있으면 일반 검색으로 변경
                 primary_intent = IntentType.GENERAL
 
+    new_summary_title = summary_result.summary_title
+    if new_summary_title and new_summary_title.strip().lower() == "null":
+        new_summary_title = None
+
     # State에 결과 저장
     dprint(f"[TIMING] intent_node DONE  total={time.perf_counter()-_intent_start:.3f}s  primary_intent={primary_intent}")
     return {
@@ -152,7 +156,7 @@ async def intent_node(state: TravelState):
         "primary_intent": primary_intent,
         "slots": slots,
         "update_user_input": update_user_input,
-        "summary_title": summary_result.summary_title or summary_title,
+        "summary_title": new_summary_title or summary_title,
         "summary_message": summary_result.summary_message,
         "input_tags": result.input_tags,
         "prefs_info": prefs_info,

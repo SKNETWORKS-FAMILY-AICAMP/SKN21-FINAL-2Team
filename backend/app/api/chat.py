@@ -539,7 +539,7 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         if should_update_title and _can_overwrite_room_title(room):
             # 방 제목 자동 설정 (LLM이 제목을 생성했을 때만)
             title = result.get("summary_title")
-            if title:
+            if title and str(title).strip().lower() != "null":
                 _save_room_title(db, room, title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
@@ -567,10 +567,16 @@ def _build_streaming_response(
     message_in: ChatMessageCreate,
     current_user: User,
     db: Session,
+    pinned_places: list | None = None,
+    is_auto_start: bool = False,
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
     inputs = _build_graph_inputs(current_user, room, message_in)
+    if pinned_places:
+        inputs["pinned_places"] = pinned_places
+    if is_auto_start:
+        inputs["is_auto_start"] = True
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
     async def event_generator():
@@ -645,7 +651,7 @@ def _build_streaming_response(
                     if node_name == "intent":
                         if should_update_title and output and _can_overwrite_room_title(room):
                             summary_title = output.get("summary_title")
-                            if summary_title:
+                            if summary_title and str(summary_title).strip().lower() != "null":
                                 if _save_room_title(db, room, summary_title):
                                     print(f"[ChatAPI] Room title updated to: {room.title}")
                                     yield _encode_sse({"room_title": room.title})
@@ -834,10 +840,23 @@ async def auto_start_chat_room_stream(
     else:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported auto start mode", 400)
 
+    # selected_places → pinned_places: 구조화된 데이터로 그래프 state에 주입
+    pinned_places = None
+    if auto_start_in.selected_places:
+        pinned_places = [
+            {
+                "name": p.name or "",
+                "address": p.adress or "",
+                "place_id": p.place_id,
+            }
+            for p in auto_start_in.selected_places
+            if (p.name or "").strip()
+        ] or None
+
     message_in = ChatMessageCreate(
         room_id=room_id,
         message=prompt,
         role=RoleType.human,
         save_user_message=auto_start_in.save_user_message,
     )
-    return _build_streaming_response(room_id, room, message_in, current_user, db)
+    return _build_streaming_response(room_id, room, message_in, current_user, db, pinned_places=pinned_places, is_auto_start=True)

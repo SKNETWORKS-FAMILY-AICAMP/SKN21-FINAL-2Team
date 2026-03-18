@@ -33,6 +33,8 @@ class TravelState(TypedDict, total=False):
     
     # planner
     itinerary: List[Dict[str, Any]]         # 시간순/일차별 정렬된 데이터
+    pinned_places: List[Dict[str, Any]]     # auto_start 선택 장소 (반드시 일정에 포함)
+    is_auto_start: bool                     # auto_start 엔드포인트에서 시작된 요청 여부
     
     # geocoder
     location_anchor_lat: float | None         # LANDMARK_DICTIONARY 또는 Naver API로 확정된 anchor 위도
