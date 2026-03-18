@@ -378,6 +378,8 @@ class GeoCoder:
                     "lon": geocoded.get("lon"),
                     "road_address": geocoded.get("road_address") or address,
                     "jibun_address": geocoded.get("jibun_address") or address,
+                    "category": item.get("category"),
+                    "description": item.get("description"),
                 }
             )
             if len(results) >= limit:
@@ -425,11 +427,15 @@ class GeoCoder:
             title = re.sub(r"<[^>]+>", "", item.get("title") or "").strip()
             road_address = (item.get("roadAddress") or "").strip() or None
             jibun_address = (item.get("address") or "").strip() or None
+            category = (item.get("category") or "").strip() or None
+            description = re.sub(r"<[^>]+>", "", item.get("description") or "").strip() or None
             results.append(
                 {
                     "name": title or query,
                     "road_address": road_address,
                     "jibun_address": jibun_address,
+                    "category": category,
+                    "description": description,
                 }
             )
         return results

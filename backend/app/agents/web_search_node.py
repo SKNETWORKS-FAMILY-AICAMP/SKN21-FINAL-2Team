@@ -53,7 +53,8 @@ async def web_search_node(state: TravelState):
     # 검색 키워드 조합
     search_keywords: list[str] = []
     if loc_name and categories:
-        search_keywords.append(f"{loc_name} {categories}")
+        category = categories[:1]
+        search_keywords.append(f"{loc_name} {category}")
     if tags:
         search_keywords.append(tags)
     if not search_keywords:
@@ -74,6 +75,8 @@ async def web_search_node(state: TravelState):
     seen_names: set[str] = set()
     if loc_name:
         seen_names.add(loc_name.lower().replace(" ", ""))
+
+    web_context_lines = ["## 웹 검색 결과"]
     naver_places: list[PlaceInfo] = []
 
     for items in naver_results_lists:
@@ -90,33 +93,33 @@ async def web_search_node(state: TravelState):
             if norm in seen_names:
                 continue
             seen_names.add(norm)
+            
+            map_url = build_naver_map_url(name, lat, lon)
+            
             naver_places.append(PlaceInfo(
                 place_id="",
                 name=name,
                 address=address,
                 image_path="",
-                map_url=build_naver_map_url(name, lat, lon),
+                map_url=map_url,
                 longitude=lon,
                 latitude=lat,
             ))
-
-    # 위치 기준 정렬
-    slots_lat = location.lat if location else None
-    slots_lon = location.lon if location else None
-    if slots_lat and slots_lon:
-        naver_places.sort(key=lambda p: _haversine_km(slots_lat, slots_lon, p.latitude, p.longitude))
-    elif input_lat and input_lon:
-        naver_places.sort(key=lambda p: _haversine_km(input_lat, input_lon, p.latitude, p.longitude))
-
-    # 컨텍스트 텍스트 구성
-    web_context_lines = ["## 웹 검색 결과"]
-    for i, place in enumerate(naver_places, 1):
-        block = [f"### {i}. {place.name}"]
-        if place.address:
-            block.append(f"- 주소: {place.address}")
-        if place.map_url:
-            block.append(f"- 지도: {place.map_url}")
-        web_context_lines.append("\n".join(block))
+            
+            # 컨텍스트 텍스트 구성
+            category = (item.get("category") or "")
+            description = (item.get("description") or "")
+            block = [f"### {i}. {name}"]
+            if category:
+                block.append(f"- 업종: {category}")
+            if address:
+                block.append(f"- 주소: {address}")
+            if description:
+                block.append(f"- 설명: {description}")
+            if map_url:
+                block.append(f"- 지도: {map_url}")
+                
+            web_context_lines.append("\n".join(block))
 
     web_context = "\n\n".join(web_context_lines) if naver_places else ""
     print(f"[WebSearch] Done: {len(naver_places)} places found")

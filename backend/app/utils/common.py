@@ -1,7 +1,20 @@
 import os
 import re
 import urllib.parse
+import pprint
 from typing import Any, Optional
+
+from app.utils.config import DEBUG_MODE
+
+
+def dpprint(*args, **kwargs):
+    if DEBUG_MODE:
+        pprint.pprint(args, **kwargs)
+
+
+def dprint(*args, **kwargs):
+    if DEBUG_MODE:
+        print(*args, **kwargs)
 
 
 def normalize_text(value: str) -> str:

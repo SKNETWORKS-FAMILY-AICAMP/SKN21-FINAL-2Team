@@ -1,26 +1,34 @@
+import asyncio
 import re
+import time
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks.manager import adispatch_custom_event
 
-from app.agents.models.output import IntentOutput, IntentType, IntentSlots, InputType
-from app.agents.prompts.prompts import INTENT_PROMPT
+from app.agents.models.output import IntentCoreOutput, SummaryOutput, IntentType, IntentSlots, InputType
+from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
 from app.utils.geocoder import NormalizedLocation
-from app.utils.common import in_seoul_bbox
+from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
 
 
 async def _analyze_image(image_path: str) -> str | None:
     """이미지 분석 + custom event 발행 (pipeline 'image_analysis' step 표시용)"""
-    await adispatch_custom_event("image_analysis", {"status": "start"})
+    try:
+        await adispatch_custom_event("image_analysis", {"status": "start"})
+    except RuntimeError:
+        pass
     try:
         result = await describe_image(image_path)
     except Exception as e:
-        print(f"[Intent] describe_image failed: {e}")
+        dprint(f"[Intent] describe_image failed: {e}")
         result = None
-    await adispatch_custom_event("image_analysis", {"status": "done"})
+    try:
+        await adispatch_custom_event("image_analysis", {"status": "done"})
+    except RuntimeError:
+        pass
     return result
 
 
@@ -31,11 +39,15 @@ async def intent_node(state: TravelState):
     - 대화 요약(summary_message)도 여기서 누적 업데이트
     - 요약과 의도 분석을 병렬로 실행하여 지연 최소화
     """
-    print("--- Intent Agent ---")
-    await adispatch_custom_event("pipeline_step", {"node": "intent", "status": "start"})
+    _intent_start = time.perf_counter()
+    dprint("--- Intent Agent ---")
+    try:
+        await adispatch_custom_event("pipeline_step", {"node": "intent", "status": "start"})
+    except RuntimeError:
+        pass
 
     # API 레이어에서 주입된 사용자 선호도 정보 사용
-    print(f"[Intent] state keys: {list(state.keys())}")
+    dprint(f"[Intent] state keys: {list(state.keys())}")
     prefs_info = state.get("prefs_info", "[DEBUG] PREFS_INFO_MISSING_IN_STATE")
 
     user_input = state.get("user_input")
@@ -46,54 +58,65 @@ async def intent_node(state: TravelState):
     # 이미지가 있으면 가장 먼저 분석 (결과를 state에 저장하여 이후 노드에서 재사용)
     semantic_input_image = state.get("semantic_input_image")
     if image_path and not semantic_input_image:
-        print("[Intent] Analyzing image before LLM intent...")
+        dprint("[Intent] Analyzing image before LLM intent...")
+        _t0 = time.perf_counter()
         semantic_input_image = await _analyze_image(image_path)
-        print(f"[Intent] semantic_input_image={semantic_input_image}")
+        dprint(f"[TIMING] intent describe_image elapsed={time.perf_counter()-_t0:.3f}s  result={repr(semantic_input_image)[:80]}")
 
     if not user_input and not image_path:
-        # if image_path:
-        #     return {
-        #         "intents": [IntentType.IMAGE_SIMILAR],
-        #         "primary_intent": IntentType.IMAGE_SIMILAR,
-        #         "slots": IntentSlots(input_type=InputType.IMAGE),
-        #         "summary_title": "이미지 검색",
-        #         "summary_message": "이미지 기반 장소 검색 요청",
-        #         "semantic_input_image": semantic_input_image,
-        #     }
         return {
             "intents": [IntentType.GENERAL],
             "primary_intent": IntentType.GENERAL,
         }
 
-    # 최근 10개 메시지만 사용
-    messages = state.get("messages", [])[-10:]
+    # 최근 6개 메시지만 사용
+    messages = state.get("messages", [])[-6:]
 
     # LLM 및 Structured Output 설정
     llm = LLMFactory.get_llm()
-    structured_llm = llm.with_structured_output(IntentOutput)
+    intent_llm = llm.with_structured_output(IntentCoreOutput)
+    summary_llm = llm.with_structured_output(SummaryOutput)
 
     human_input = user_input
     if semantic_input_image:
         human_input += f"\n입력 이미지에 대한 설명 : {semantic_input_image}"
 
-    prompt = ChatPromptTemplate.from_messages([
+    intent_prompt = ChatPromptTemplate.from_messages([
         ("system", INTENT_PROMPT),
         MessagesPlaceholder(variable_name="messages"),
         ("human", human_input)
     ])
+    summary_prompt = ChatPromptTemplate.from_messages([
+        ("system", SUMMARY_PROMPT),
+        MessagesPlaceholder(variable_name="messages"),
+        ("human", human_input)
+    ])
 
-    chain = prompt | structured_llm
+    intent_chain = intent_prompt | intent_llm
+    summary_chain = summary_prompt | summary_llm
 
-    print(f"[Intent] Prefs info from state: {prefs_info}")
+    dprint(f"[Intent] Prefs info from state: {prefs_info}")
 
-    result = await chain.ainvoke({
+    _llm_start = time.perf_counter()
+    dprint(f"[TIMING] intent+summary LLM parallel START  messages={len(messages)}  has_image={'yes' if image_path else 'no'}")
+    result, summary_result = await asyncio.gather(
+        intent_chain.ainvoke({
             "messages": messages,
             "category_desc": CategoryType.description(),
             "summary_title": summary_title,
             "summary_message": summary_message,
-        })
+            "image_intent_type": IMAGE_INTENT_TYPE if image_path else "",
+        }),
+        summary_chain.ainvoke({
+            "messages": messages,
+            "summary_title": summary_title,
+            "summary_message": summary_message,
+        }),
+    )
+    dprint(f"[TIMING] intent+summary LLM parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
 
-    print("Intent Result : ", result)
+    dprint("Intent Result : ", result)
+    dprint("Summary Result : ", summary_result)
 
     primary_intent = result.primary_intent
     update_user_input = result.update_user_input or ""
@@ -112,7 +135,7 @@ async def intent_node(state: TravelState):
                     slots.location.name = norm.normalized_location
                 slots.location.lat = norm.lat
                 slots.location.lon = norm.lon
-                print(
+                dprint(
                     f"[Intent] location resolved from LANDMARK_DICTIONARY: {slots.location.name!r} "
                     f"lat={norm.lat} lon={norm.lon} (canonical_matched=True)"
                 )
@@ -121,15 +144,16 @@ async def intent_node(state: TravelState):
             if not in_seoul_bbox(slots.location.lat, slots.location.lon):
                 # 좌표가 서울 밖에 있으면 일반 검색으로 변경
                 primary_intent = IntentType.GENERAL
-    
+
     # State에 결과 저장
+    dprint(f"[TIMING] intent_node DONE  total={time.perf_counter()-_intent_start:.3f}s  primary_intent={primary_intent}")
     return {
         "intents": result.intents,
         "primary_intent": primary_intent,
         "slots": slots,
         "update_user_input": update_user_input,
-        "summary_title": result.summary_title,
-        "summary_message": result.summary_message,
+        "summary_title": summary_result.summary_title or summary_title,
+        "summary_message": summary_result.summary_message,
         "input_tags": result.input_tags,
         "prefs_info": prefs_info,
         "semantic_input_image": semantic_input_image,

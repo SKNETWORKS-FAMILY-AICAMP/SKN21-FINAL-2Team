@@ -10,6 +10,7 @@ class TravelState(TypedDict, total=False):
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
     room_id: int
+    prefs_info: str
 
     input_lat: float | None
     input_lon: float | None
@@ -29,8 +30,6 @@ class TravelState(TypedDict, total=False):
     summary_title: str
     summary_message: str
     input_tags: List[str]
-    user_preferences: Dict[str, Any]           # 선호도 조사
-    prefs_info: str
     
     # planner
     itinerary: List[Dict[str, Any]]         # 시간순/일차별 정렬된 데이터
@@ -46,6 +45,7 @@ class TravelState(TypedDict, total=False):
     rerank_max_k: int
     candidate_pool: List[Dict[str, Any]]      # 검색된 TopK 후보 풀
     candidates: List[Dict[str, Any]]          # 최종 노출용 TopN 후보
+    shown_place_ids: List[str]                # 대화 전체에서 이미 노출된 장소 ID 누적 목록
     retrieval_diagnostics: Dict[str, Any]     # 채널별 hit/점수/순위 진단 정보
     selection_mode: str                       # deterministic | explore
     retriever_retry_count: int                # 그래프 레벨 재검색 횟수 (0=초회, 1=재시도)

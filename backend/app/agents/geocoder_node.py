@@ -45,7 +45,8 @@ async def geocoder_node(state: TravelState):
                 if results:
                     anchor_lat = results[0].get("lat")
                     anchor_lon = results[0].get("lon")
-                    print(f"[Geocoder] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_lon})")
+                    anchor_radius_m = 700
+                    print(f"[Geocoder] Naver search anchor: '{raw_location}' → ({anchor_lat}, {anchor_lon}) r=700m")
             except Exception as e:
                 print(f"[Geocoder] Naver search anchor failed for '{raw_location}': {e}")
 
@@ -78,6 +79,8 @@ async def geocoder_node(state: TravelState):
                 if new_lat and new_lon and in_seoul_bbox(new_lat, new_lon):
                     print(f"[Geocoder] anchor resolved to Seoul: ({new_lat}, {new_lon})")
                     anchor_lat, anchor_lon = new_lat, new_lon
+                    if not anchor_radius_m:
+                        anchor_radius_m = 700
                 else:
                     print(f"[Geocoder] Seoul re-search still outside bbox — clearing anchor")
                     anchor_lat = anchor_lon = anchor_radius_m = None

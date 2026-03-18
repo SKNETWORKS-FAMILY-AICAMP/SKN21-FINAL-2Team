@@ -14,6 +14,7 @@ PlaceScorer mixin:
 import asyncio
 import math
 import re
+import time
 from typing import Any
 from sentence_transformers import CrossEncoder
 
@@ -29,6 +30,7 @@ from app.utils.config import (
 )
 from app.scripts.preprocess_data import build_addr_tokens
 from app.utils.place_id import get_place_id_from_point
+from app.utils.common import dprint
 
 
 # ---------------------------------------------------------------------------
@@ -57,10 +59,13 @@ def _addr_token_stem(token: str) -> str:
 
 
 def _build_compact_text(payload: dict[str, Any]) -> str:
+    # llm_text는 LLM 답변 생성용 장문 텍스트 → reranker 입력에 사용하지 않음
+    # (400~600자 무제한 전달 시 CrossEncoder attention 연산이 ~25배 증가)
     title = str(payload.get("title") or payload.get("name") or "").strip()
     category = str(payload.get("contenttypeid") or payload.get("category") or "").strip()
     addr = str(payload.get("addr") or payload.get("address") or payload.get("road_address") or "").strip()
-    return " ".join([part for part in (title, category, addr) if part]).strip()
+    desc = str(payload.get("summary") or "").strip()
+    return " ".join([part for part in (title, category, addr, desc) if part]).strip()
 
 
 def _to_positive_int(value: Any) -> int | None:
@@ -380,94 +385,94 @@ class PlaceScorer:
     # BM25 lexical 검색 (vector pool 재채점)
     # ------------------------------------------------------------------
 
-    def _payload_matches_category(self, payload: dict, categories: list[CategoryType] | None) -> bool:
-        if not categories:
-            return True
-        category_values = [c.value for c in categories]
-        payload_values = {
-            str(payload.get("contenttypeid") or "").strip(),
-            str(payload.get("category") or "").strip(),
-        }
-        payload_values.discard("")
-        return any(value in payload_values for value in category_values)
+    # def _payload_matches_category(self, payload: dict, categories: list[CategoryType] | None) -> bool:
+    #     if not categories:
+    #         return True
+    #     category_values = [c.value for c in categories]
+    #     payload_values = {
+    #         str(payload.get("contenttypeid") or "").strip(),
+    #         str(payload.get("category") or "").strip(),
+    #     }
+    #     payload_values.discard("")
+    #     return any(value in payload_values for value in category_values)
 
-    def _bm25_like_score(
-        self,
-        query: str,
-        payload: dict,
-        doc_freq: dict[str, int] | None = None,
-        num_docs: int = 1,
-    ) -> float:
-        """
-        title과 addr에 대한 BM25 유사도 점수.
-        doc_freq / num_docs 가 제공되면 IDF 가중치를 적용한다.
-        (IDF 없을 시 고빈도 범용 단어가 고유명사와 동일하게 취급되는 문제 해결)
-        """
-        tokens = self._tokenize(query)
-        if not tokens:
-            return 0.0
-        doc_text = _build_compact_text(payload)
-        doc_tokens = self._tokenize(doc_text)
-        if not doc_tokens:
-            return 0.0
+    # def _bm25_like_score(
+    #     self,
+    #     query: str,
+    #     payload: dict,
+    #     doc_freq: dict[str, int] | None = None,
+    #     num_docs: int = 1,
+    # ) -> float:
+    #     """
+    #     title과 addr에 대한 BM25 유사도 점수.
+    #     doc_freq / num_docs 가 제공되면 IDF 가중치를 적용한다.
+    #     (IDF 없을 시 고빈도 범용 단어가 고유명사와 동일하게 취급되는 문제 해결)
+    #     """
+    #     tokens = self._tokenize(query)
+    #     if not tokens:
+    #         return 0.0
+    #     doc_text = _build_compact_text(payload)
+    #     doc_tokens = self._tokenize(doc_text)
+    #     if not doc_tokens:
+    #         return 0.0
 
-        freq: dict[str, int] = {}
-        for tok in doc_tokens:
-            freq[tok] = freq.get(tok, 0) + 1
+    #     freq: dict[str, int] = {}
+    #     for tok in doc_tokens:
+    #         freq[tok] = freq.get(tok, 0) + 1
 
-        k1, b, avgdl = 1.2, 0.75, 120.0
-        doc_len = len(doc_tokens)
-        n = max(num_docs, 1)
-        score = 0.0
-        for t in tokens:
-            tf = freq.get(t, 0)
-            if tf <= 0:
-                continue
-            # Robertson smoothed IDF
-            df = (doc_freq or {}).get(t, 0)
-            idf = math.log((n - df + 0.5) / (df + 0.5) + 1)
-            tf_component = ((k1 + 1) * tf) / (tf + k1 * (1 - b + b * (doc_len / avgdl)))
-            score += idf * tf_component
-        return float(1 - math.exp(-score))
+    #     k1, b, avgdl = 1.2, 0.75, 120.0
+    #     doc_len = len(doc_tokens)
+    #     n = max(num_docs, 1)
+    #     score = 0.0
+    #     for t in tokens:
+    #         tf = freq.get(t, 0)
+    #         if tf <= 0:
+    #             continue
+    #         # Robertson smoothed IDF
+    #         df = (doc_freq or {}).get(t, 0)
+    #         idf = math.log((n - df + 0.5) / (df + 0.5) + 1)
+    #         tf_component = ((k1 + 1) * tf) / (tf + k1 * (1 - b + b * (doc_len / avgdl)))
+    #         score += idf * tf_component
+    #     return float(1 - math.exp(-score))
 
-    async def _search_bm25_lexical(
-        self,
-        query: str,
-        categories: list[CategoryType] | None,
-        candidate_points: list,
-        candidate_k: int,
-        pool_limit: int = BM25_POOL_LIMIT,
-    ) -> list[dict]:
-        pool = list(candidate_points)[: max(int(pool_limit or 0), 1)]
+    # async def _search_bm25_lexical(
+    #     self,
+    #     query: str,
+    #     categories: list[CategoryType] | None,
+    #     candidate_points: list,
+    #     candidate_k: int,
+    #     pool_limit: int = BM25_POOL_LIMIT,
+    # ) -> list[dict]:
+    #     pool = list(candidate_points)[: max(int(pool_limit or 0), 1)]
 
-        # IDF 계산을 위한 DF 사전 구축 (pool 전체 1회 스캔)
-        num_docs = 0
-        doc_freq: dict[str, int] = {}
-        for p in pool:
-            payload = p.payload or {}
-            doc_tokens = set(self._tokenize(_build_compact_text(payload)))
-            num_docs += 1
-            for tok in doc_tokens:
-                doc_freq[tok] = doc_freq.get(tok, 0) + 1
+    #     # IDF 계산을 위한 DF 사전 구축 (pool 전체 1회 스캔)
+    #     num_docs = 0
+    #     doc_freq: dict[str, int] = {}
+    #     for p in pool:
+    #         payload = p.payload or {}
+    #         doc_tokens = set(self._tokenize(_build_compact_text(payload)))
+    #         num_docs += 1
+    #         for tok in doc_tokens:
+    #             doc_freq[tok] = doc_freq.get(tok, 0) + 1
 
-        scored = []
-        for p in pool:
-            payload = p.payload or {}
-            if not self._payload_matches_category(payload, categories):
-                continue
-            lexical_score = self._bm25_like_score(
-                query, payload, doc_freq=doc_freq, num_docs=num_docs
-            )
-            if lexical_score <= 0:
-                continue
-            scored.append({
-                "id": _extract_place_id(p, PLACES_COLLECTION),
-                "payload": payload,
-                "score": lexical_score,
-            })
+    #     scored = []
+    #     for p in pool:
+    #         payload = p.payload or {}
+    #         if not self._payload_matches_category(payload, categories):
+    #             continue
+    #         lexical_score = self._bm25_like_score(
+    #             query, payload, doc_freq=doc_freq, num_docs=num_docs
+    #         )
+    #         if lexical_score <= 0:
+    #             continue
+    #         scored.append({
+    #             "id": _extract_place_id(p, PLACES_COLLECTION),
+    #             "payload": payload,
+    #             "score": lexical_score,
+    #         })
 
-        scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:candidate_k]
+    #     scored.sort(key=lambda x: x["score"], reverse=True)
+    #     return scored[:candidate_k]
 
     # ------------------------------------------------------------------
     # Reranker (CrossEncoder)
@@ -477,7 +482,7 @@ class PlaceScorer:
         if self._reranker_load_attempted:
             return
         self._reranker_load_attempted = True
-        _RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
+        _RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
         try:
             self._reranker = CrossEncoder(
                 _RERANKER_MODEL,
@@ -485,10 +490,10 @@ class PlaceScorer:
                 # MPS(Apple Silicon) 환경에서는 FP16 미지원 → CPU fallback 방지
                 model_kwargs={"torch_dtype": "auto"},
             )
-            print(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
+            dprint(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
         except Exception as e:
             self._reranker = None
-            print(f"[WARN] Reranker unavailable: {e}")
+            dprint(f"[WARN] Reranker unavailable: {e}")
 
     async def _rerank_candidates(self, query: str, candidates: list[dict], top_k: int) -> list[dict]:
         self._ensure_reranker()
@@ -501,18 +506,24 @@ class PlaceScorer:
 
         pairs = [(query, _build_compact_text(c.get("payload", {}))) for c in candidates]
         try:
+            _t0 = time.perf_counter()
             scores = await asyncio.to_thread(self._reranker.predict, pairs)
+            dprint(f"[TIMING] reranker.predict  pairs={len(pairs)}  elapsed={time.perf_counter()-_t0:.3f}s")
             for c, s in zip(candidates, scores):
-                # sigmoid 적용: CrossEncoder raw logit(-∞~+∞) → [0.0, 1.0]
-                # 음수 오버플로우 방지를 위해 -500 clamp 적용
-                logit = max(-500.0, float(s))
-                c["rerank_score"] = round(1.0 / (1.0 + math.exp(-logit)), 4)
+                # sentence-transformers CrossEncoder.predict()는 num_labels=1일 때
+                # 내부적으로 sigmoid를 적용해 [0.0, 1.0] 범위로 반환하므로
+                # 추가 sigmoid 변환 없이 그대로 사용한다.
+                c["rerank_score"] = round(float(s), 4)
             candidates.sort(key=lambda x: float(x.get("rerank_score", 0.0)), reverse=True)
             for idx, c in enumerate(candidates[:top_k], start=1):
                 c["final_rank"] = idx
             return candidates[:top_k]
+        except asyncio.CancelledError:
+            dprint("[INFO] Request cancelled during Reranker inference (Client disconnected).")
+            # asyncio의 취소 신호는 상위로 올려보내서(raise) Uvicorn이 리소스를 정리할 수 있도록 해야 합니다.
+            raise
         except Exception as e:
-            print(f"[WARN] Reranker inference failed: {e}")
+            dprint(f"[WARN] Reranker inference failed: {e}")
             for idx, c in enumerate(candidates[:top_k], start=1):
                 c["rerank_score"] = None
                 c["final_rank"] = idx
