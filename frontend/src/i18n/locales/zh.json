@@ -313,6 +313,7 @@
   "location.noResults": "没有搜索结果。",
   "location.searchFailed": "地点搜索失败。",
   "location.selectFirst": "请先选择一个位置。",
+  "location.mapInitError": "无法加载地图。请检查Naver地图的域名设置和Dynamic Map配置。",
 
   "bookmark.pageTitle": "收藏夹",
   "bookmark.pageSubtitle": "已保存的对话和地点",

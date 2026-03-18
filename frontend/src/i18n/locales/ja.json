@@ -313,6 +313,7 @@
   "location.noResults": "検索結果がありません。",
   "location.searchFailed": "場所の検索に失敗しました。",
   "location.selectFirst": "まず場所を選択してください。",
+  "location.mapInitError": "地図を読み込めませんでした。Naverマップのドメイン設定とDynamic Mapの使用状況を確認してください。",
 
   "bookmark.pageTitle": "ブックマーク",
   "bookmark.pageSubtitle": "保存したチャット＆スポット",

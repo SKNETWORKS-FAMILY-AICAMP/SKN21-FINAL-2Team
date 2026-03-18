@@ -176,7 +176,7 @@ export function DiaryLocationPickerModal({
     const timer = window.setTimeout(() => {
       const hasCanvas = Boolean(mapRef.current?.querySelector("canvas, img, svg"));
       if (!hasCanvas) {
-        setMapInitError("지도를 불러오지 못했습니다. 네이버 지도 도메인 설정과 Dynamic Map 사용 여부를 확인해주세요.");
+        setMapInitError(t("location.mapInitError"));
       }
     }, 1500);
 

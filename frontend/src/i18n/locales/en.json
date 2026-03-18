@@ -290,6 +290,7 @@
   "location.noResults": "No results found.",
   "location.searchFailed": "Place search failed.",
   "location.selectFirst": "Please select a location first.",
+  "location.mapInitError": "Failed to load the map. Please check the Naver Maps domain settings and Dynamic Map configuration.",
 
   "bookmark.pageTitle": "Bookmarks",
   "bookmark.pageSubtitle": "Saved Chats & Places",
