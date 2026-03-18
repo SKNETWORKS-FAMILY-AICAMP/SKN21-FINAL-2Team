@@ -152,6 +152,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-nginx:${{ steps.meta.outputs.image_tag }}
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-nginx:staging-latest
+          build-args: |
+            CONF=default.ec2.conf
 
   deploy:
     name: Deploy To Staging EC2
