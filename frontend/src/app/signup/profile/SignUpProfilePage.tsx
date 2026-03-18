@@ -16,6 +16,7 @@ export function SignUpProfilePage() {
   const [nickname, setNickname] = useState("");
   const [nicknameError, setNicknameError] = useState(""); // 닉네임 에러 키
   const [gender, setGender] = useState("");
+  const [birthday, setBirthday] = useState("");
 
   // 사용자 정보 State
   const [userInfo] = useState(() => {
@@ -64,6 +65,7 @@ export function SignUpProfilePage() {
       await updateCurrentUser({
         nickname,
         gender: genderValue,
+        birthday: birthday || null,
         country_code: countryCode,
         language,
       });
@@ -166,6 +168,17 @@ export function SignUpProfilePage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Birthday */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-900 uppercase tracking-wide">{t("profile.birthday")}</label>
+              <input
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black/10 transition-all"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

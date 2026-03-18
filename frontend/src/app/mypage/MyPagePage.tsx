@@ -107,6 +107,7 @@ export function MyPagePage() {
     countryCode: "",
     preferences: [] as string[],
     profile_picture: "",
+    birthday: "",
   });
   const [userInsight, setUserInsight] = useState({
     planPrefer: "",
@@ -145,6 +146,7 @@ export function MyPagePage() {
     nickname: "",
     countryCode: "",
     profilePicture: "",
+    birthday: "",
   });
   const settingsPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -186,6 +188,7 @@ export function MyPagePage() {
           bio: user.email || "",
           countryCode: user.country_code || "",
           profile_picture: user.profile_picture || "",
+          birthday: user.birthday || "",
           preferences: dbPrefs,
         });
         setUserInsight({
@@ -304,6 +307,7 @@ export function MyPagePage() {
       nickname: userProfile.nickname,
       countryCode: userProfile.countryCode,
       profilePicture: userProfile.profile_picture,
+      birthday: userProfile.birthday,
     });
     setSettingsModalView("settings");
     setDeactivateGoogleConfirmed(false);
@@ -379,12 +383,14 @@ export function MyPagePage() {
         nickname: settingsDraft.nickname.trim() || null,
         country_code: settingsDraft.countryCode || null,
         profile_picture: resolvedProfilePicture || null,
+        birthday: settingsDraft.birthday || null,
       });
       setUserProfile((prev) => ({
         ...prev,
         nickname: settingsDraft.nickname.trim() || prev.nickname,
         countryCode: settingsDraft.countryCode,
         profile_picture: resolvedProfilePicture || "",
+        birthday: settingsDraft.birthday,
       }));
       window.dispatchEvent(new Event("triver:profile-updated"));
       setSettingsOpen(false);
@@ -995,6 +1001,16 @@ export function MyPagePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("profile.birthday")}</label>
+                <input
+                  type="date"
+                  value={settingsDraft.birthday}
+                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, birthday: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
+                />
               </div>
 
               <div className="space-y-2">

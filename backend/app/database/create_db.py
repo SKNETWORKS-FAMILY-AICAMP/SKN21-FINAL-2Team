@@ -50,6 +50,7 @@ Table users {
   nickname varchar
   profile_picture varchar
   gender gender_type // 정의한 Enum 사용
+  birthday date
   country_code varchar
   language language_type [not null, default: 'en']
 

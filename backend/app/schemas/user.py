@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 from app.models.enums import GenderType, LanguageType
 
 
@@ -10,7 +10,7 @@ class UserBase(BaseModel):
     nickname: Optional[str] = None
     profile_picture: Optional[str] = None
     gender: Optional[GenderType] = None
-    birthday: Optional[datetime] = None
+    birthday: Optional[date] = None
 
     # 선호도 조사 및 특이사항
     plan_prefer: Optional[str] = None
@@ -31,7 +31,7 @@ class UserUpdate(BaseModel):
     nickname: Optional[str] = None
     profile_picture: Optional[str] = None
     gender: Optional[GenderType] = None
-    birthday: Optional[datetime] = None
+    birthday: Optional[date] = None
 
     # 선호도 조사 및 특이사항
     plan_prefer: Optional[str] = None
