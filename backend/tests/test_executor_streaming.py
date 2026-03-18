@@ -21,8 +21,7 @@ async def test_executor_node_passes_runnable_config_to_streaming():
     }
     config = {"tags": ["stream-test"]}
 
-    with patch("app.agents.executor._build_web_context", new=AsyncMock(return_value=([], "없음"))), \
-         patch("app.agents.executor._build_location_context", new=AsyncMock(return_value="")), \
+    with patch("app.agents.executor._build_location_context", new=AsyncMock(return_value="")), \
          patch("app.agents.executor.collect_streamed_text", new=AsyncMock(return_value="추천 답변입니다.")) as mock_collect:
         await executor_node(state, config=config)
 

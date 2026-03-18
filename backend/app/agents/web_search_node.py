@@ -109,7 +109,7 @@ async def web_search_node(state: TravelState):
             # 컨텍스트 텍스트 구성
             category = (item.get("category") or "")
             description = (item.get("description") or "")
-            block = [f"### {i}. {name}"]
+            block = [f"### {len(naver_places)}. {name}"]
             if category:
                 block.append(f"- 업종: {category}")
             if address:

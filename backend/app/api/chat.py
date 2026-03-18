@@ -803,6 +803,7 @@ async def auto_start_chat_room_stream(
         if auto_start_in.trip_context is None:
             raise AppException(ErrorCode.VALIDATION_ERROR, "trip_context is required for mode=trip_context", 400)
         prompt = render_auto_start_prompt(
+            prefs_info=current_user.build_preferences(),
             travel_duration=auto_start_in.trip_context.travel_duration,
             adult_count=auto_start_in.trip_context.adult_count,
             child_count=auto_start_in.trip_context.child_count,
@@ -810,13 +811,17 @@ async def auto_start_chat_room_stream(
     elif auto_start_in.mode == "selected_places":
         if not auto_start_in.selected_places:
             raise AppException(ErrorCode.VALIDATION_ERROR, "selected_places is required for mode=selected_places", 400)
-        prompt = render_auto_start_place_prompt(auto_start_in.selected_places)
+        prompt = render_auto_start_place_prompt(
+            prefs_info=current_user.build_preferences(),
+            selected_places=auto_start_in.selected_places
+        )
     elif auto_start_in.mode == "combined":
         if auto_start_in.trip_context is None:
             raise AppException(ErrorCode.VALIDATION_ERROR, "trip_context is required for mode=combined", 400)
         if not auto_start_in.selected_places:
             raise AppException(ErrorCode.VALIDATION_ERROR, "selected_places is required for mode=combined", 400)
         prompt = render_auto_start_combined_prompt(
+            prefs_info=current_user.build_preferences(),
             travel_duration=auto_start_in.trip_context.travel_duration,
             adult_count=auto_start_in.trip_context.adult_count,
             child_count=auto_start_in.trip_context.child_count,
