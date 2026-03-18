@@ -1,24 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./config";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
+  // html lang 속성을 i18n 언어와 동기화
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    document.documentElement.lang = i18n.language;
 
-  useEffect(() => {
-    if (mounted) {
-      document.documentElement.lang = i18n.language;
-    }
-  }, [i18n.language, mounted]);
-
-  // 언어 변경 이벤트 리스너: html lang 태그 업데이트 목적 등
-  useEffect(() => {
     const handleLanguageChanged = (lng: string) => {
       document.documentElement.lang = lng;
     };

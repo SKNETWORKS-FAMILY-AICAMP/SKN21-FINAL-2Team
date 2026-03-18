@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Noto_Sans, Noto_Sans_KR, Noto_Sans_JP, Noto_Sans_SC, Noto_Serif_KR, Noto_Serif_JP, Noto_Serif_SC } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { LANGUAGE_COOKIE_KEY } from "@/i18n/constants";
 
 const notoSans = Noto_Sans({
   variable: "--font-noto-sans",
@@ -58,13 +60,16 @@ export const metadata: Metadata = {
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const lang = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value || "en";
+
   return (
-    <html lang="en">
+    <html lang={lang}>
       <head>
         <link
           rel="stylesheet"
