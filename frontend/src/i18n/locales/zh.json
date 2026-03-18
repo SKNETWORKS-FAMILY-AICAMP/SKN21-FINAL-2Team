@@ -47,6 +47,7 @@
   "sidebar.recentChats": "最近对话",
   "sidebar.profile": "个人资料",
   "sidebar.signOut": "退出登录",
+  "sidebar.mypage": "我的页面",
   "sidebar.deleteRoom": "删除聊天室",
   "sidebar.deleteRoomTitle": "删除聊天室",
   "sidebar.deleteRoomMessage": "删除「{title}」？对话内容和推荐地点记录也将一并删除。",

@@ -26,7 +26,7 @@ i18n
     fallbackLng: "en",
 
     detection: {
-      order: ["cookie", "localStorage", "navigator"],
+      order: ["cookie", "localStorage"],
       lookupCookie: "triver_lang",
       lookupLocalStorage: "triver:language:v1",
       caches: ["cookie", "localStorage"],

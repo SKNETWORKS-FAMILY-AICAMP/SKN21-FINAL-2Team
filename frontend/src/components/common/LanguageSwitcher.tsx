@@ -10,12 +10,14 @@ interface LanguageSwitcherProps {
   variant?: "dropdown" | "select";
   onLanguageChange?: (lang: SupportedLanguage) => void;
   className?: string;
+  dropDirection?: "up" | "down";
 }
 
 export function LanguageSwitcher({
   variant = "dropdown",
   onLanguageChange,
   className = "",
+  dropDirection = "down",
 }: LanguageSwitcherProps) {
   const { language, setLanguage } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -84,7 +86,7 @@ export function LanguageSwitcher({
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white shadow-lg ring-1 ring-black/5 z-50 overflow-hidden">
+        <div className={`absolute right-0 w-44 rounded-xl bg-white shadow-lg ring-1 ring-black/5 z-50 overflow-hidden ${dropDirection === "up" ? "bottom-full mb-2" : "mt-2"}`}>
           {SUPPORTED_LANGUAGES.map((l) => (
             <button
               key={l.code}

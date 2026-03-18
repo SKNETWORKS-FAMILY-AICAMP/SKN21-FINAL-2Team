@@ -17,4 +17,10 @@ export const SIDEBAR_MENUS = [
     isTranslated: true,
     path: "/bookmark",
   },
+  {
+    id: "mypage",
+    labelKey: "sidebar.mypage",
+    isTranslated: true,
+    path: "/mypage",
+  },
 ];

@@ -208,6 +208,7 @@ function SidebarContent() {
     const getMenuIcon = (id: string) => {
         if (id === "home") return Home;
         if (id === "moments") return Grid;
+        if (id === "mypage") return Settings;
         return Bookmark;
     };
 
@@ -465,15 +466,16 @@ function SidebarContent() {
             </div>
 
             {/* User Profile */}
-            <div className={cn("mt-auto border-t border-gray-100", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+            <div className={cn("mt-auto border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+                {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
+                <div className="absolute bottom-20 right-3 z-50">
+                    <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />
+                </div>
                 <div
-                    onClick={() => router.push("/mypage")}
                     className={cn(
-                        "flex items-center group cursor-pointer transition-all duration-300 rounded-2xl",
-                        pathname === "/mypage" ? "bg-gray-100 shadow-sm" : "hover:bg-gray-50",
+                        "flex items-center transition-all duration-300 rounded-2xl",
                         actuallyCollapsed ? "justify-center p-2" : "justify-between p-3"
                     )}
-                    title={actuallyCollapsed ? t("sidebar.profile") : undefined}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-9 h-9 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
@@ -494,19 +496,22 @@ function SidebarContent() {
                         )}
                     </div>
                     {!actuallyCollapsed && (
-                        <Settings
-                            size={14}
-                            className={cn(
-                                "flex-shrink-0 transition-colors ml-2",
-                                pathname === "/mypage" ? "text-black" : "text-gray-400 group-hover:text-black",
-                            )}
-                        />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const event = new CustomEvent("triver:open-language-switcher");
+                                window.dispatchEvent(event);
+                            }}
+                            className="p-1 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100 flex-shrink-0 ml-2"
+                            title={t("sidebar.language")}
+                        >
+                            <Globe size={14} />
+                        </button>
                     )}
                 </div>
 
                 {!actuallyCollapsed ? (
-                    <div className="mt-2 px-2 flex items-center justify-between text-[10px] text-gray-400 font-medium pt-2">
-                        <LanguageSwitcher variant="dropdown" className="text-[10px]" />
+                    <div className="mt-2 px-2 flex items-center justify-end text-[10px] text-gray-400 font-medium pt-2">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -520,7 +525,17 @@ function SidebarContent() {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-1">
-                        <LanguageSwitcher variant="dropdown" className="text-[10px]" />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const event = new CustomEvent("triver:open-language-switcher");
+                                window.dispatchEvent(event);
+                            }}
+                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-black hover:bg-gray-50 transition-colors w-full"
+                            title={t("sidebar.language")}
+                        >
+                            <Globe size={16} strokeWidth={1.5} />
+                        </button>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
