@@ -40,7 +40,7 @@ def _apply_manual_place_snapshots(entry: DiaryEntry, places: List[DiaryLinkedPla
         entry.linked_places.append(
             DiaryEntryPlace(
                 chat_place_id=place.chat_place_id,
-                place_id=place.place_id,
+                contenttypeid=place.contenttypeid,
                 name=place.name,
                 adress=place.adress,
                 image_path=place.image_path,
@@ -63,7 +63,7 @@ def _serialize_diary_detail(item: DiaryEntry) -> DiaryDetailResponse:
         {
             "id": place.id,
             "chat_place_id": place.chat_place_id,
-            "place_id": place.place_id,
+            "contenttypeid": place.contenttypeid,
             "name": place.name,
             "adress": place.adress,
             "image_path": to_client_image_url(place.image_path),

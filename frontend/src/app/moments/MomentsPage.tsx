@@ -113,7 +113,7 @@ export function MomentsPage() {
                 image_path: place.image_path ?? null,
                 longitude: place.longitude ?? 0,
                 latitude: place.latitude ?? 0,
-                place_id: place.place_id ?? null,
+                contenttypeid: place.contenttypeid ?? null,
                 chat_place_id: place.chat_place_id ?? null,
             })).filter((place) => Boolean(place.adress)),
         });
@@ -179,9 +179,9 @@ export function MomentsPage() {
                         };
                         if (target === "create" && !isModalOpen) {
                             openCreateModal(dataUrl);
-                            setEditor((prev) => ({ ...prev, linked_places: [{ ...autoPlace, image_path: null, place_id: null, chat_place_id: null }] }));
+                            setEditor((prev) => ({ ...prev, linked_places: [{ ...autoPlace, image_path: null, contenttypeid: null, chat_place_id: null }] }));
                         } else {
-                            setEditor((prev) => ({ ...prev, cover_image_path: dataUrl, linked_places: [{ ...autoPlace, image_path: null, place_id: null, chat_place_id: null }] }));
+                            setEditor((prev) => ({ ...prev, cover_image_path: dataUrl, linked_places: [{ ...autoPlace, image_path: null, contenttypeid: null, chat_place_id: null }] }));
                             setIsEditMode(true);
                             setIsModalOpen(true);
                         }
@@ -280,7 +280,7 @@ export function MomentsPage() {
                 latitude: place.latitude,
                 longitude: place.longitude,
                 image_path: null,
-                place_id: null,
+                contenttypeid: null,
                 chat_place_id: null,
             }],
         }));

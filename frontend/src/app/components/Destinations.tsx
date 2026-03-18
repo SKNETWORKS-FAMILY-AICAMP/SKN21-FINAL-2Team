@@ -102,7 +102,7 @@ export function Destinations() {
             const selectedPlaces = pendingPlace ? [{
                 name: pendingPlace.name,
                 adress: pendingPlace.address || (pendingPlace as Destination & { adress?: string }).adress,
-                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {

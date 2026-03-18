@@ -24,8 +24,8 @@ export function useChatMap({
     const stopMapResizeDragRef = useRef<() => void>(() => {});
 
     const toMapId = useCallback((place: ChatPlaceItem) => {
-        if (typeof place.place_id === "number" && Number.isFinite(place.place_id) && place.place_id > 0) {
-            return `pid:${place.place_id}`;
+        if (typeof place.contenttypeid === "number" && Number.isFinite(place.contenttypeid) && place.contenttypeid > 0) {
+            return `pid:${place.contenttypeid}`;
         }
         const safeName = (place.name || "").trim().toLowerCase();
         return `mid:${place.id}:${safeName}`;

@@ -336,7 +336,7 @@ export function ChatHome() {
                     selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
-                        place_id: p.place_id ?? 0,
+                        contenttypeid: p.contenttypeid ?? 0,
                     })),
                     save_user_message: false,
                 },
@@ -352,7 +352,7 @@ export function ChatHome() {
                     selected_places: pendingMeta.selectedPlaces.map((p) => ({
                         name: p.name,
                         adress: p.adress,
-                        place_id: p.place_id ?? 0,
+                        contenttypeid: p.contenttypeid ?? 0,
                     })),
                     save_user_message: false,
                 },

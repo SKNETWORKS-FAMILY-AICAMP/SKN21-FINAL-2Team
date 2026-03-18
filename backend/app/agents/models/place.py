@@ -4,7 +4,7 @@ import json
 @dataclass
 class PlaceInfo:
     """ Executor 노드에서 구성한 장소 정보 """
-    place_id: str
+    contenttypeid: str
     name: str
     address: str
     image_path: str

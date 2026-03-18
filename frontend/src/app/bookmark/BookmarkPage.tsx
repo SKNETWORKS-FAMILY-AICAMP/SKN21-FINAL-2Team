@@ -188,7 +188,7 @@ export function BookmarkPage() {
                 mode: "selected_places",
                 selectedPlaces: selectedPlaceItems.map((place) => ({
                     id: place.id,
-                    place_id: place.place_id,
+                    contenttypeid: place.contenttypeid,
                     name: place.name,
                     adress: place.adress,
                     image_path: place.image_path,

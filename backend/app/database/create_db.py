@@ -103,7 +103,8 @@ Table chat_messages {
 Table chat_places {
   id integer [primary key, increment]
   messages_id integer
-  place_id integer
+  contenttypeid integer
+  llm_text text
   name varchar
   adress varchar
   image_path varchar
@@ -151,7 +152,7 @@ Table diary_entry_places {
   id integer [primary key, increment]
   entry_id integer [not null]
   chat_place_id integer
-  place_id integer
+  contenttypeid integer
   name varchar
   adress varchar
   image_path varchar

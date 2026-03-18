@@ -16,7 +16,7 @@ class DiaryLinkedRoomResponse(BaseModel):
 class DiaryLinkedPlaceResponse(BaseModel):
     id: int
     chat_place_id: Optional[int] = None
-    place_id: Optional[int] = None
+    contenttypeid: Optional[int] = None
     name: Optional[str] = None
     adress: Optional[str] = None
     image_path: Optional[str] = None
@@ -34,7 +34,7 @@ class DiaryLinkedPlaceInput(BaseModel):
     image_path: Optional[str] = None
     longitude: float
     latitude: float
-    place_id: Optional[int] = None
+    contenttypeid: Optional[int] = None
     chat_place_id: Optional[int] = None
 
 

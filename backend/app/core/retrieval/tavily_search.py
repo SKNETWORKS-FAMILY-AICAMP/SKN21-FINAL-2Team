@@ -128,7 +128,7 @@ class TavilySearch:
             lat, lon = await GeoCoder.get_coordinates(place.address)
 
             place_info = PlaceInfo(
-                place_id="",
+                contenttypeid="",
                 name=place.name,
                 address=place.address,
                 image_path=place.image_url,

@@ -44,7 +44,8 @@ class ChatPlace(BaseModel):
 
     id = Column(Integer, primary_key=True, index=True)
     messages_id = Column(Integer, ForeignKey("chat_messages.id"))
-    place_id = Column(Integer, nullable=True)
+    contenttypeid = Column(Integer, nullable=True, default=0)
+    llm_text = Column(Text, nullable=True, comment="LLM 생성 텍스트")
     name = Column(String(255), nullable=True)
     adress = Column(String(255), nullable=True)
     image_path = Column(String(255), nullable=True)
