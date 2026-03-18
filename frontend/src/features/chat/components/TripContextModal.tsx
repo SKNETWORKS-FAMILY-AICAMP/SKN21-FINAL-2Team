@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Users, ArrowRight, CalendarDays, Loader2 } from "lucide-react";
 
@@ -28,6 +28,8 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
     const [endDate, setEndDate] = useState<string>("");
     const [adultCount, setAdultCount] = useState<number>(1);
     const [childCount, setChildCount] = useState<number>(0);
+    const endDateDesktopRef = useRef<HTMLInputElement>(null);
+    const endDateMobileRef = useRef<HTMLInputElement>(null);
 
     const resetState = () => {
         setStartDate("");
@@ -119,6 +121,11 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                             if (endDate && nextStart && endDate < nextStart) {
                                                 setEndDate(nextStart);
                                             }
+                                            if (nextStart) {
+                                                setTimeout(() => {
+                                                    endDateDesktopRef.current?.showPicker?.();
+                                                }, 50);
+                                            }
                                         }}
                                         className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
                                     />
@@ -128,6 +135,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                         귀국
                                     </label>
                                     <input
+                                        ref={endDateDesktopRef}
                                         type="date"
                                         value={endDate}
                                         min={endMin}
@@ -269,6 +277,11 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                             if (endDate && nextStart && endDate < nextStart) {
                                                 setEndDate(nextStart);
                                             }
+                                            if (nextStart) {
+                                                setTimeout(() => {
+                                                    endDateMobileRef.current?.showPicker?.();
+                                                }, 50);
+                                            }
                                         }}
                                         className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
                                     />
@@ -278,6 +291,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                         귀국
                                     </label>
                                     <input
+                                        ref={endDateMobileRef}
                                         type="date"
                                         value={endDate}
                                         min={endMin}

@@ -1,10 +1,8 @@
 import os
-import asyncio
 import base64
 import math
 import mimetypes
 import re
-import pprint
 from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
@@ -14,15 +12,12 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
-from app.core.llm_factory import LLMFactory
-from app.utils.common import getattr_safe, build_naver_map_url, dprint
-from app.utils.config import DEBUG_MODE
+from app.utils.common import build_naver_map_url, dprint, dpprint
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_place_id
 from app.utils.geocoder import GeoCoder
 from app.agents.models.state import IntentSlots
 from app.agents.models.place import PlaceInfo
-from app.core.retrieval.tavily_search import TavilySearch
 
 def _extract_place_names_from_answer(answer_text: str) -> list[str]:
     """
@@ -390,8 +385,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     else:
         dprint(f"candidate_pool : {len(candidate_pool)}")
         dprint(f"candidates : {len(candidates)}")
-        if DEBUG_MODE:
-            pprint.pprint(candidates)
+        dpprint(candidates)
 
         # 컨텍스트 구성
         candidate_places, place_context, candidate_names = _build_place_context(candidates)

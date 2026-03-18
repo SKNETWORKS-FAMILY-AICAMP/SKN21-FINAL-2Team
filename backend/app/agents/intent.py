@@ -64,15 +64,6 @@ async def intent_node(state: TravelState):
         dprint(f"[TIMING] intent describe_image elapsed={time.perf_counter()-_t0:.3f}s  result={repr(semantic_input_image)[:80]}")
 
     if not user_input and not image_path:
-        # if image_path:
-        #     return {
-        #         "intents": [IntentType.IMAGE_SIMILAR],
-        #         "primary_intent": IntentType.IMAGE_SIMILAR,
-        #         "slots": IntentSlots(input_type=InputType.IMAGE),
-        #         "summary_title": "이미지 검색",
-        #         "summary_message": "이미지 기반 장소 검색 요청",
-        #         "semantic_input_image": semantic_input_image,
-        #     }
         return {
             "intents": [IntentType.GENERAL],
             "primary_intent": IntentType.GENERAL,
