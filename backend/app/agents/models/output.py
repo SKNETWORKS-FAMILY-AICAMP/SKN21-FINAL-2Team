@@ -84,8 +84,8 @@ class PlannerNeedType(str, Enum): # 계획 필수 타입
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
-    time_slot: Literal["morning", "afternoon", "evening"] = Field(description="시간대")
-    activity: str = Field(description="활동 설명")
+    time_slot: str = Field(description="시간대 (아침 | 오전 | 점심 | 오후 | 늦은 오후 | 저녁 | 밤)")
+    activity: str = Field(description="활동 설명 (시간대 맥락 포함 가능, 예: '늦은 아침 브런치 카페', '저녁 노을 야경 맛집')")
     category: CategoryType = Field(description="장소 카테고리")
     search_query: str = Field(description="Qdrant 검색에 유리한 구체적 한국어 키워드 (사용자 선호 반영)")
 

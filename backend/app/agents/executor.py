@@ -11,7 +11,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
-from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
+from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.common import build_naver_map_url, dprint, dpprint
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_contenttypeid
@@ -226,6 +226,29 @@ def _build_place_context(candidates: List[Dict[str, Any]]) -> tuple[list[PlaceIn
     return [info for _, info in candidate_place_pairs], "\n\n".join(lines), candidate_names_str
 
 
+def _build_planner_itinerary_str(itinerary: List[Dict[str, Any]]) -> str:
+    """planner가 생성한 raw itinerary를 executor에 전달할 backbone 텍스트로 변환."""
+    if not itinerary:
+        return "없음"
+
+    # day별로 그룹핑 (입력 순서 유지)
+    days: dict[int, list] = {}
+    for item in itinerary:
+        day = int(item.get("day", 1) or 1)
+        days.setdefault(day, []).append(item)
+
+    lines = []
+    for day in sorted(days.keys()):
+        lines.append(f"{day}일차:")
+        for item in days[day]:
+            time_slot = item.get("time_slot", "")
+            activity = item.get("activity", "")
+            search_query = item.get("search_query", "")
+            prefix = f"  - [{time_slot}] " if time_slot else "  - "
+            lines.append(f"{prefix}{activity} (장소 키워드: {search_query})")
+    return "\n".join(lines)
+
+
 def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
     """TRIP_PLANNING일 때, itinerary 연결 정보가 있는 candidates를 일정 형태로 구성"""
     has_itinerary_info = any(c.get("itinerary_day") for c in candidates)
@@ -424,14 +447,24 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
     if primary_intent == IntentType.TRIP_PLANNING:
-        system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
-            prefs_info=prefs_info,
-            location_context=location_context,
-            candidate_names=candidate_names,
-            place_context=place_context or "없음",
-            itinerary_context=itinerary_context or "없음",
-            follow_up_questions=follow_up_questions,
-        )
+        raw_itinerary = state.get("itinerary") or []
+        planner_itinerary_str = _build_planner_itinerary_str(raw_itinerary)
+        if state.get("is_auto_start"):
+            # auto_start: retriever 건너뜀 → 가벼운 초안 응답 전용 프롬프트
+            system_prompt = EXECUTOR_AUTO_START_PROMPT.format(
+                prefs_info=prefs_info,
+                planner_itinerary=planner_itinerary_str,
+            )
+        else:
+            system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
+                prefs_info=prefs_info,
+                location_context=location_context,
+                candidate_names=candidate_names,
+                place_context=place_context or "없음",
+                itinerary_context=itinerary_context or "없음",
+                planner_itinerary=planner_itinerary_str,
+                follow_up_questions=follow_up_questions,
+            )
     else:
         system_prompt = EXECUTOR_PROMPT.format(
             prefs_info=prefs_info,

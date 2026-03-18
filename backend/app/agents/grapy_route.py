@@ -21,11 +21,15 @@ def route_by_missing(state: TravelState):
     """planner 노드 이후 라우팅.
 
     - missing_slots 있음 → executor_missing (재질문)
+    - is_auto_start=True → executor (retriever 건너뜀: 가벼운 초안 응답)
     - missing_slots 없음 → geocoder (위치 anchor 확인 후 retriever)
     """
     missing = state.get("missing_slots", [])
     if len(missing) > 0:
         return "executor_missing"
+
+    if state.get("is_auto_start"):
+        return "executor"
 
     return "geocoder"
 
