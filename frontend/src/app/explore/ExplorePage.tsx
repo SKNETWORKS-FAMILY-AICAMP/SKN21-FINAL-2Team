@@ -8,11 +8,12 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
-const CONTENT_CATEGORY_LABELS: Record<string, string> = {
-    "공연": "PERFORMANCE",
-    "전시": "EXHIBITION",
-    "축제": "FESTIVAL",
-    "팝업스토어": "POPUP STORE",
+/** 백엔드 카테고리 값(한국어) → 번역 키 매핑 */
+const CONTENT_CATEGORY_KEY_MAP: Record<string, string> = {
+    "공연": "explore.categoryPerformance",
+    "전시": "explore.categoryExhibition",
+    "축제": "explore.categoryFestival",
+    "팝업스토어": "explore.categoryPopup",
 };
 import { isAuthFailureError } from "@/services/authError";
 import { clearAuth } from "@/services/errorHandler";
@@ -21,6 +22,7 @@ import { useRouter } from "next/navigation";
 // [Feature] 장소 카드 클릭 → 여행 컨텍스트 설정 팝업 → 챗봇 이동
 import { TripContextModal, type TripContext } from "@/features/chat/components/TripContextModal";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type YourChoicesState = {
     restaurants: CategoryPlaceItem[];
@@ -102,6 +104,7 @@ const getExploreDataOnce = async (): Promise<ExploreInitPayload> => {
 };
 
 export function ExplorePage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [yourChoices, setYourChoices] = useState<YourChoicesState>({
@@ -142,11 +145,11 @@ export function ExplorePage() {
     const handleTripModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             const selectedPlaces = pendingPlace ? [{
                 name: pendingPlace.name,
                 adress: pendingPlace.address,
-                place_id: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
@@ -178,7 +181,7 @@ export function ExplorePage() {
 
                 // 주의: 가입(is_join)이나 설문(is_prefer)을 완료하지 않고 /explore 등 정상 서비스 페이지로 이탈한 경우 다시 돌려보냅니다.
                 if (!payload.user.is_join) {
-                    window.location.href = "/signup/profile";
+                    router.push("/signup/profile");
                     return;
                 }
                 if (!payload.user.is_prefer) {
@@ -225,15 +228,15 @@ export function ExplorePage() {
                             <div className="flex justify-between items-center mb-4 z-10 flex-none">
                                 <div>
                                     <h3 className="page-title text-gray-900 flex items-center gap-2">
-                                        Your Choices <Sparkles size={16} className="text-yellow-500" />
+                                        {t("explore.yourChoices")} <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
                                     <p className="section-subtitle mt-1">
-                                        {userProfile?.name ? `${userProfile.name}님을 위한 맞춤 여행지` : "Curated recommendations based on your preferences"}
+                                        {userProfile?.name ? t("explore.choicesSubtitle", { name: userProfile.name }) : t("explore.choicesSubtitleDefault")}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400 border border-gray-100 rounded-full px-3 py-1">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    Personalized
+                                    {t("explore.personalized")}
                                 </div>
                             </div>
 
@@ -249,7 +252,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    🍽️ Local Eats
+                                                    {t("explore.localEats")}
                                                 </h4>
                                             </div>
                                             {/* [Fix] 이미지를 aspect-ratio 기반으로 변경하여 화면 크기에 맞게 유동 확장 */}
@@ -270,7 +273,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    📸 Must-Visit Spots
+                                                    {t("explore.mustVisitSpots")}
                                                 </h4>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -290,7 +293,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    🗺️ Tour Courses
+                                                    {t("explore.tourCourses")}
                                                 </h4>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -322,8 +325,8 @@ export function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="page-title text-gray-900">Hot Places</h3>
-                                    <p className="section-subtitle mt-1">Trending neighborhoods</p>
+                                    <h3 className="page-title text-gray-900">{t("explore.hotPlacesTitle")}</h3>
+                                    <p className="section-subtitle mt-1">{t("explore.trendingNeighborhoods")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <MapPin size={16} className="text-gray-400" />
@@ -366,8 +369,8 @@ export function ExplorePage() {
                         <div className="border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden h-[calc((100vh-80px-24px)/2)]">
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="page-title text-gray-900">Contents</h3>
-                                    <p className="section-subtitle mt-1">Events & Exhibitions</p>
+                                    <h3 className="page-title text-gray-900">{t("explore.contentsTitle")}</h3>
+                                    <p className="section-subtitle mt-1">{t("explore.eventsExhibitions")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
                                     <Calendar size={16} className="text-gray-400" />
@@ -381,7 +384,7 @@ export function ExplorePage() {
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
                                         </div>
                                     ) : contents.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-6">콘텐츠 정보가 없습니다</p>
+                                        <p className="text-xs text-gray-400 text-center py-6">{t("explore.noContents")}</p>
                                     ) : (
                                         contents.map((item) => (
                                             <motion.div
@@ -394,19 +397,24 @@ export function ExplorePage() {
                                                     {item.image_url ? (
                                                         <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No img</div>
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">{t("explore.noImg")}</div>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col justify-center flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
-                                                            {CONTENT_CATEGORY_LABELS[item.category || ""] || "CONTENT"}
+                                                            {CONTENT_CATEGORY_KEY_MAP[item.category || ""] ? t(CONTENT_CATEGORY_KEY_MAP[item.category || ""]) : t("explore.contentFallback")}
                                                         </span>
                                                     </div>
                                                     <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
+                                                    {item.start_date && (
+                                                        <p className="text-[11px] text-gray-500 mt-0.5">
+                                                            {item.start_date}{item.end_date ? ` ~ ${item.end_date}` : ""}
+                                                        </p>
+                                                    )}
                                                     <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
                                                         <MapPin size={10} />
-                                                        {item.address || "주소 없음"}
+                                                        {item.address || t("explore.noAddress")}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-center text-gray-300 group-hover:text-black transition-colors">

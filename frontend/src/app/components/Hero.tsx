@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { verifyAndRefreshToken, fetchCurrentUser } from "@/services/api";
 // [Feature] 가입/설문 미완료 시 경고 팝업 — Destinations.tsx와 동일한 IncompleteSignupModal 재사용
 import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function Hero() {
+    const { t } = useTranslation();
     const router = useRouter();
     const [isNavigating, setIsNavigating] = useState(false);
 
@@ -89,17 +91,23 @@ export function Hero() {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                 >
                     <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-xs font-semibold tracking-widest uppercase mb-8">
-                        Discover Seoul with AI
+                        {t("hero.badge")}
                     </span>
-                    <h1 className="text-6xl md:text-8xl font-serif italic font-light tracking-tight leading-none mb-10 opacity-90">
-                        Travel smarter,
-                        <br />
-                        not harder
+                    <h1 className="text-6xl md:text-8xl font-serif-display italic font-light tracking-tight leading-none mb-10 opacity-90">
+                        {t("hero.title").split("\n").map((line, i, arr) => (
+                            <span key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br />}
+                            </span>
+                        ))}
                     </h1>
-                    <p className="text-lg md:text-2xl text-white/90 max-w-4xl mx-auto font-light leading-normal mb-12 drop-shadow-md">
-                        Experience hyper-personalized travel planning.
-                        <br className="hidden md:block" />
-                        Let our AI curate your perfect Seoul itinerary in seconds.
+                    <p className="text-base md:text-xl text-white/90 max-w-4xl mx-auto font-light leading-relaxed mb-12 drop-shadow-md">
+                        {t("hero.description").split("\n").map((line, i, arr) => (
+                            <span key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br className="hidden md:block" />}
+                            </span>
+                        ))}
                     </p>
                 </motion.div>
 
@@ -112,16 +120,16 @@ export function Hero() {
                     <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/30 rounded-full p-2 pl-6 transition-colors hover:bg-white/20">
                         <input
                             type="text"
-                            placeholder="Where is your next destination?"
+                            placeholder={t("hero.placeholder")}
                             className="w-full bg-transparent text-white placeholder-white/70 outline-none text-lg font-light cursor-default"
                             readOnly
                         />
                         <button
                             onClick={handleNavigation}
                             disabled={isNavigating}
-                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="ml-2 bg-white text-black hover:bg-gray-100 shadow-lg px-8 h-12 text-sm font-semibold rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                         >
-                            {isNavigating ? "..." : "Start"}
+                            {isNavigating ? "..." : t("hero.start")}
                         </button>
                     </div>
                 </motion.div>
@@ -133,7 +141,7 @@ export function Hero() {
                 transition={{ delay: 1, duration: 1 }}
                 className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/70 text-sm flex flex-col items-center gap-2"
             >
-                <span className="uppercase tracking-[0.3em] text-[10px]">Scroll</span>
+                <span className="uppercase tracking-[0.3em] text-[10px]">{t("hero.scroll")}</span>
                 <div className="w-[1px] h-16 bg-white/50" />
             </motion.div>
         </section>

@@ -9,7 +9,8 @@ def get_candidate_point_id(candidate: dict[str, Any] | None) -> str:
     return str(candidate.get("id") or "").strip()
 
 
-def get_place_id(candidate: dict[str, Any] | None, fallback_to_candidate_id: bool = True) -> str:
+def get_contenttypeid(candidate: dict[str, Any] | None, fallback_to_candidate_id: bool = True) -> str:
+    """candidate dict에서 contenttypeid(contentid)를 추출한다."""
     if not isinstance(candidate, dict):
         return ""
 

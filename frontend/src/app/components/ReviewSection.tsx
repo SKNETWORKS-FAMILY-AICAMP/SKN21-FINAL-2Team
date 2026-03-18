@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Quote, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const reviews = [
     {
@@ -38,6 +39,7 @@ const reviews = [
 ];
 
 export function ReviewSection() {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(0);
     // 슬라이드 방향을 추적해 애니메이션 방향을 결정 (1: 앞으로, -1: 뒤로)
     const [direction, setDirection] = useState(1);
@@ -85,8 +87,8 @@ export function ReviewSection() {
             <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-                        <h2 className="text-4xl md:text-6xl font-black tracking-tight text-black mb-6 uppercase">Community Voices</h2>
-                        <p className="text-gray-500 font-light max-w-xl mx-auto">Hear from the explorers who have redefined their travel experiences with Triver.</p>
+                        <h2 className="text-4xl md:text-6xl font-black tracking-tight text-black mb-6 uppercase">{t("reviews.heading")}</h2>
+                        <p className="text-gray-500 font-light max-w-xl mx-auto">{t("reviews.subheading")}</p>
                     </motion.div>
                 </div>
 
@@ -96,7 +98,7 @@ export function ReviewSection() {
                     <button
                         onClick={goPrev}
                         className="flex-shrink-0 p-2 text-gray-300 hover:text-gray-500 transition-colors duration-200"
-                        aria-label="Previous review"
+                        aria-label={t("reviews.previousReview")}
                     >
                         <ChevronLeft size={28} strokeWidth={1.5} />
                     </button>
@@ -151,7 +153,7 @@ export function ReviewSection() {
                     <button
                         onClick={goNext}
                         className="flex-shrink-0 p-2 text-gray-300 hover:text-gray-500 transition-colors duration-200"
-                        aria-label="Next review"
+                        aria-label={t("reviews.nextReview")}
                     >
                         <ChevronRight size={28} strokeWidth={1.5} />
                     </button>

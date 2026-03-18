@@ -501,13 +501,14 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
     return [
         {
             "id": place.id,
-            "place_id": _normalize_int_or_zero(place.place_id),
+            "contenttypeid": _normalize_int_or_zero(place.contenttypeid),
             "name": place.name,
             "adress": place.adress,
             "image_path": to_client_image_url(place.image_path),
             "longitude": _normalize_float_or_zero(place.longitude),
             "latitude": _normalize_float_or_zero(place.latitude),
             "bookmark_yn": place.bookmark_yn,
+            "llm_text": place.llm_text,
             "messages_id": place.messages_id,
             "room_id": room_id,
             "room_title": room_title or "새 채팅",
@@ -724,12 +725,12 @@ def _build_streaming_response(
         if place_info_list:
             for info in place_info_list:
                 try:
-                    place_id_int = int(info.place_id) if (info.place_id or "").isdigit() else 0
+                    contenttypeid_int = int(info.contenttypeid) if (info.contenttypeid or "").isdigit() else 0
                 except (AttributeError, ValueError):
-                    place_id_int = 0
+                    contenttypeid_int = 0
                 new_place = ChatPlace(
                     messages_id=ai_message.id,
-                    place_id=place_id_int,
+                    contenttypeid=contenttypeid_int,
                     name=info.name or None,
                     adress=info.address or None,      # ORM 컬럼명 오타(adress) 유지
                     image_path=info.image_path or None,
@@ -747,13 +748,14 @@ def _build_streaming_response(
         places_data = [
             {
                 "id": p.id,
-                "place_id": _normalize_int_or_zero(p.place_id),
+                "contenttypeid": _normalize_int_or_zero(p.contenttypeid),
                 "name": p.name,
                 "adress": p.adress,
                 "image_path": to_client_image_url(p.image_path),
                 "longitude": _normalize_float_or_zero(p.longitude),
                 "latitude": _normalize_float_or_zero(p.latitude),
-                "bookmark_yn": p.bookmark_yn
+                "bookmark_yn": p.bookmark_yn,
+                "llm_text": p.llm_text
             } for p in final_places
         ]
         

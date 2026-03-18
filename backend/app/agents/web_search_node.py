@@ -97,7 +97,7 @@ async def web_search_node(state: TravelState):
             map_url = build_naver_map_url(name, lat, lon)
             
             naver_places.append(PlaceInfo(
-                place_id="",
+                contenttypeid="",
                 name=name,
                 address=address,
                 image_path="",

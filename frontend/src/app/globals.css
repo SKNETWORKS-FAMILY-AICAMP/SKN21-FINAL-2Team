@@ -14,22 +14,72 @@ html {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* font-sans는 inline 밖에서 선언해야 :lang(ko) 오버라이드 가능 */
+@theme {
+  --font-sans: var(--font-noto-sans);
 }
 
 html {
   background: var(--background);
 }
 
+/* 글로벌 폰트 스택: 기본은 Pretendard(한국어/영문), 언어별로 :lang()으로 오버라이드 */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, var(--font-noto-sans-kr), var(--font-noto-sans), system-ui, sans-serif;
+}
+
+/* 일본어: Noto Sans JP 우선 */
+:lang(ja) {
+  font-family: var(--font-noto-sans-jp), "Pretendard Variable", Pretendard, var(--font-noto-sans), system-ui, sans-serif;
+}
+
+/* 중국어: Noto Sans SC 우선 */
+:lang(zh) {
+  font-family: var(--font-noto-sans-sc), "Pretendard Variable", Pretendard, var(--font-noto-sans), system-ui, sans-serif;
 }
 
 .font-serif-korean {
   font-family: var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.font-brand {
+  font-family: Georgia, var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Cambria, "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 600; /* font-semibold */
+  letter-spacing: -0.025em; /* tracking-tight */
+}
+
+/* 언어 설정에 영향받지 않는 고정 영문 폰트 — 로고 등 영어 고정 텍스트용 */
+/* :lang() specificity (0,1,0) < html .class specificity (0,1,1) → !important 없이 자연스럽게 우선 */
+html .font-fixed-en {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+/* 언어별 세리프 폰트 — 슬로건, 히어로 타이틀 등 격식체가 필요한 텍스트용 */
+/* 기본(en/ko): Georgia, 일본어: Noto Serif JP(明朝体), 중국어: Noto Serif SC(宋体) */
+/* Georgia는 획 자체가 두꺼워서 font-light(300)도 두꺼워 보이지만, */
+/* Noto Serif JP/SC는 획이 가벼워 같은 weight면 얇아 보임 → weight를 한 단계 올려서 시각적 균형 맞춤 */
+.font-serif-display {
+  font-family: Georgia, "Times New Roman", ui-serif, serif;
+}
+
+:lang(ja) .font-serif-display {
+  font-family: var(--font-noto-serif-jp), "Noto Serif JP", Georgia, ui-serif, serif;
+  font-weight: 400;
+}
+
+:lang(zh) .font-serif-display {
+  font-family: var(--font-noto-serif-sc), "Noto Serif SC", Georgia, ui-serif, serif;
+  font-weight: 400;
+}
+
+html .font-fixed-sans {
+  font-family: var(--font-noto-sans), system-ui, -apple-system, sans-serif;
 }
 
 /* Utility tweaks to align with imported UI kit vibes */

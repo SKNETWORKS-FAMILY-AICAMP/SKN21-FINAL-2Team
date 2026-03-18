@@ -25,6 +25,7 @@ export interface UserProfile {
     extra_prefer3?: string | null;
 
     country_code?: string | null;
+    language?: "en" | "ko" | "ja" | "zh" | null;
     is_join?: boolean | null;
     is_prefer?: boolean | null;
 }
@@ -77,7 +78,7 @@ export interface ChatMessage {
 
 export interface ChatPlaceItem {
     id: number;
-    place_id?: number;
+    contenttypeid?: number;
     name?: string | null;
     category?: string | null;
     adress?: string | null;
@@ -86,6 +87,7 @@ export interface ChatPlaceItem {
     latitude?: number;
     map_url?: string | null;
     bookmark_yn?: boolean | null;
+    llm_text?: string | null;
 }
 
 export interface ChatRoom {
@@ -108,7 +110,7 @@ export interface BookmarkedRoomItem {
 
 export interface BookmarkedPlaceItem {
     id: number;
-    place_id?: number;
+    contenttypeid?: number;
     name?: string | null;
     adress?: string | null;
     image_path?: string | null;
@@ -118,6 +120,7 @@ export interface BookmarkedPlaceItem {
     messages_id: number;
     room_id: number;
     room_title: string;
+    llm_text?: string | null;
 }
 
 export interface TodayRecommendationItem {
@@ -143,7 +146,7 @@ export interface AutoStartTripContextPayload {
 export interface AutoStartPlaceSeedPayload {
     name?: string | null;
     adress?: string | null;
-    place_id?: number;
+    contenttypeid?: number;
 }
 
 export interface AutoStartChatRoomRequestPayload {
@@ -646,7 +649,7 @@ export interface DiaryLinkedRoom {
 export interface DiaryLinkedPlace {
     id: number;
     chat_place_id?: number | null;
-    place_id?: number | null;
+    contenttypeid?: number | null;
     name?: string | null;
     adress?: string | null;
     image_path?: string | null;
@@ -661,7 +664,7 @@ export interface DiaryLinkedPlaceInput {
     image_path?: string | null;
     longitude: number;
     latitude: number;
-    place_id?: number | null;
+    contenttypeid?: number | null;
     chat_place_id?: number | null;
 }
 

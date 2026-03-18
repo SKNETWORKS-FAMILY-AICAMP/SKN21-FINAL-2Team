@@ -149,6 +149,8 @@ def get_random_places(categories: Optional[str] = None, limit: int = 3, db: Sess
                             image_url=to_client_image_url(img_url),
                             description=payload.get("description", "")[:200],
                             category=payload.get("category") if "콘텐츠" in db_values else None,
+                            start_date=payload.get("start_date") if "콘텐츠" in db_values else None,
+                            end_date=payload.get("end_date") if "콘텐츠" in db_values else None,
                         )
                     )
         except Exception as e:

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertCircle, ArrowRight, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface IncompleteSignupModalProps {
     isOpen: boolean;
@@ -12,11 +13,12 @@ interface IncompleteSignupModalProps {
 }
 
 export function IncompleteSignupModal({ isOpen, missingStep, onConfirm, onClose }: IncompleteSignupModalProps) {
-    const title = missingStep === "profile" ? "회원 정보 입력이 필요해요" : "취향 분석 설문이 필요해요";
+    const { t } = useTranslation();
+    const title = missingStep === "profile" ? t("incomplete.profileTitle") : t("incomplete.surveyTitle");
     const description = missingStep === "profile"
-        ? "Triver의 맞춤형 추천을 위해 기본 프로필 정보를 먼저 입력해주세요."
-        : "더 완벽한 여행 추천을 위해 3가지 짧은 설문을 완료해주세요.";
-    const buttonText = missingStep === "profile" ? "프로필 입력하러 가기" : "설문하러 가기";
+        ? t("incomplete.profileDescription")
+        : t("incomplete.surveyDescription");
+    const buttonText = missingStep === "profile" ? t("incomplete.profileButton") : t("incomplete.surveyButton");
     const router = useRouter();
 
     const handleLogout = () => {
@@ -85,7 +87,7 @@ export function IncompleteSignupModal({ isOpen, missingStep, onConfirm, onClose 
                                     onClick={onClose}
                                     className="w-full py-3.5 text-gray-500 rounded-2xl text-sm font-medium hover:bg-gray-50 transition-colors"
                                 >
-                                    다음에 할게요
+                                    {t("incomplete.later")}
                                 </button>
                             </div>
 
@@ -94,7 +96,7 @@ export function IncompleteSignupModal({ isOpen, missingStep, onConfirm, onClose 
                                 className="mt-6 w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <LogOut size={12} />
-                                다른 구글 계정으로 로그인하기
+                                {t("incomplete.switchAccount")}
                             </button>
                         </div>
                     </motion.div>

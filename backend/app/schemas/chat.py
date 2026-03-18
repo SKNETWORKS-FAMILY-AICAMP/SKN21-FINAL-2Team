@@ -33,17 +33,18 @@ class ChatRoomCreate(ChatRoomBase):
 
 
 class ChatPlaceBase(BaseModel):
-    place_id: int = 0
+    contenttypeid: int = 0
     name: Optional[str] = None
     adress: Optional[str] = None
     image_path: Optional[str] = None
     longitude: float = 0.0
     latitude: float = 0.0
     bookmark_yn: Optional[bool] = False
+    llm_text: Optional[str] = None
 
-    @field_validator("place_id", mode="before")
+    @field_validator("contenttypeid", mode="before")
     @classmethod
-    def _normalize_place_id(cls, value):
+    def _normalize_contenttypeid(cls, value):
         if value in (None, "", 0, 0.0):
             return 0
         try:
@@ -109,20 +110,21 @@ class BookmarkedRoomResponse(BaseModel):
 
 class BookmarkedPlaceResponse(BaseModel):
     id: int
-    place_id: int = 0
+    contenttypeid: int = 0
     name: Optional[str] = None
     adress: Optional[str] = None
     image_path: Optional[str] = None
     longitude: float = 0.0
     latitude: float = 0.0
     bookmark_yn: bool = False
+    llm_text: Optional[str] = None
     messages_id: int
     room_id: int
     room_title: str
 
-    @field_validator("place_id", mode="before")
+    @field_validator("contenttypeid", mode="before")
     @classmethod
-    def _normalize_bookmarked_place_id(cls, value):
+    def _normalize_bookmarked_contenttypeid(cls, value):
         if value in (None, "", 0, 0.0):
             return 0
         try:

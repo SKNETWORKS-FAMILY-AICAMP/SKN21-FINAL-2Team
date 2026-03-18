@@ -1,4 +1,4 @@
-from app.utils.place_id import get_candidate_point_id, get_place_id, get_place_id_from_point
+from app.utils.place_id import get_candidate_point_id, get_contenttypeid, get_place_id_from_point
 
 
 class _Point:
@@ -7,14 +7,14 @@ class _Point:
         self.payload = payload
 
 
-def test_get_place_id_prefers_payload_contentid():
+def test_get_contenttypeid_prefers_payload_contentid():
     candidate = {"id": "photo-uuid", "payload": {"contentid": "1234"}}
-    assert get_place_id(candidate) == "1234"
+    assert get_contenttypeid(candidate) == "1234"
 
 
-def test_get_place_id_falls_back_to_candidate_id_when_missing_contentid():
+def test_get_contenttypeid_falls_back_to_candidate_id_when_missing_contentid():
     candidate = {"id": "5678", "payload": {"title": "테스트"}}
-    assert get_place_id(candidate) == "5678"
+    assert get_contenttypeid(candidate) == "5678"
 
 
 def test_get_candidate_point_id_returns_raw_candidate_id():
