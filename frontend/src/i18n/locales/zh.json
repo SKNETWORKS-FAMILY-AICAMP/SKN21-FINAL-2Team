@@ -317,5 +317,25 @@
   "pipeline.executorMissing": "确认补充信息",
   "pipeline.executorGeneral": "生成通用回答",
   "pipeline.running": "{label}中...",
-  "pipeline.done": "{label}完成"
+  "pipeline.done": "{label}完成",
+
+  "signup.quote": "旅行即生活。",
+  "signup.journeyStart": "与Triver一起开启旅程。\n为您量身定制的特别体验正在等待。",
+  "signup.copyright": "© 2026 Triver Inc.",
+
+  "explore.newTripPlan": "新旅行计划",
+  "explore.yourChoices": "为您推荐",
+  "explore.personalized": "个性推荐",
+  "explore.localEats": "🍽️ 本地美食",
+  "explore.mustVisitSpots": "📸 必游景点",
+  "explore.tourCourses": "🗺️ 旅游路线",
+  "explore.hotPlacesTitle": "热门地点",
+  "explore.contentsTitle": "内容",
+  "explore.noContents": "暂无内容信息",
+  "explore.contentFallback": "内容",
+  "explore.noAddress": "暂无地址",
+
+  "survey.allSet": "准备就绪！",
+  "survey.start": "开始",
+  "survey.questionProgress": "问题 {current} / {total}"
 }

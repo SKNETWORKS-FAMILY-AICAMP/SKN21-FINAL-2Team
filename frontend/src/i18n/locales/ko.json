@@ -1,7 +1,6 @@
 {
   "common.back": "뒤로",
   "common.continue": "계속",
-
   "signup.welcomeTitle": "Welcome to Triver!",
   "signup.welcomeSubtitle": "나만의 여행 계획을 시작해보세요.",
   "signup.continueGoogle": "Google로 계속하기",
@@ -13,7 +12,6 @@
   "signup.profileSaveFailed": "프로필 저장에 실패했습니다.",
   "signup.signupFailed": "Google 회원가입에 실패했습니다",
   "signup.switchAccount": "다른 Google 계정으로 로그인하기",
-
   "profile.title": "마지막 단계입니다, {name}",
   "profile.subtitle": "맞춤형 여행 경험을 위해 정보를 입력해주세요.",
   "profile.fullName": "이름",
@@ -30,14 +28,11 @@
   "profile.privacyConsent": "서비스 제공을 위한 개인정보 수집 및 이용에 동의합니다.",
   "profile.privacyNote": "귀하의 데이터는 안전하게 보호되며 동의 없이 공유되지 않습니다.",
   "profile.continueButton": "취향 설정으로 이동",
-
   "validation.nicknameSpecialChar": "닉네임은 한글, 영문, 숫자만 입력 가능합니다.",
   "validation.nicknameTooLong": "닉네임은 한글 10자, 영문/숫자 16자 이내로 입력해주세요.",
-
   "common.delete": "삭제",
   "common.deleting": "삭제 중...",
   "common.cancel": "취소",
-
   "sidebar.home": "Home",
   "sidebar.moments": "Moments",
   "sidebar.bookmark": "Bookmark",
@@ -49,7 +44,6 @@
   "sidebar.deleteRoomTitle": "채팅방 삭제",
   "sidebar.deleteRoomMessage": "\"{title}\"을 삭제할까요? 삭제하면 대화 내용과 추천 장소 기록도 함께 사라집니다.",
   "sidebar.deleteRoomFailed": "채팅방 삭제에 실패했습니다.",
-
   "chat.travelAssistant": "여행 어시스턴트",
   "chat.bookmarkToggle": "채팅방 북마크 토글",
   "chat.mapOpen": "지도 열기",
@@ -63,7 +57,6 @@
   "chat.locationFailed": "현재 위치를 가져오지 못했습니다. 위치 권한을 확인해주세요.",
   "chat.currentLocation": "현재 위치",
   "chat.creatingRoom": "채팅방을 만드는 중...",
-
   "chatInput.placeholder": "어디로 떠나고 싶으신가요?",
   "chatInput.send": "전송",
   "chatInput.stopResponse": "응답 중지",
@@ -80,7 +73,6 @@
   "chatInput.removeLocation": "첨부 위치 제거",
   "chatInput.attachedImage": "첨부 이미지",
   "chatInput.disclaimer": "Triver AI는 실수할 수 있습니다. 중요한 정보는 확인해주세요.",
-
   "tripContext.label": "Trip Context",
   "tripContext.heading": "여행 날짜와 인원을 선택해주세요",
   "tripContext.departure": "출발",
@@ -92,14 +84,12 @@
   "tripContext.childrenAge": "만 12세 이하",
   "tripContext.startChat": "채팅 시작하기",
   "tripContext.skipAndStart": "건너뛰고 바로 시작하기",
-
   "common.save": "저장",
   "common.saving": "저장 중...",
   "common.close": "닫기",
   "common.confirm": "확인",
   "common.yes": "예",
   "common.no": "아니요",
-
   "mypage.title": "마이 페이지",
   "mypage.subtitle": "여행자 프로필",
   "mypage.rooms": "채팅방",
@@ -166,16 +156,13 @@
   "mypage.surveyPlan": "여행 일정",
   "mypage.surveyVibe": "여행 분위기",
   "mypage.surveyPlaces": "관심사",
-
   "mypage.journeyDetail": "여행 상세",
   "mypage.noChatHistory": "이 채팅방에 대화 기록이 없습니다.",
   "mypage.menu": "메뉴",
-
   "mypage.reservationDetails": "예약 상세",
   "mypage.reservationImage": "예약 이미지",
   "mypage.uploadImageHint": "(이미지가 없으면 여기를 클릭하여 업로드)",
   "mypage.changeImage": "이미지 변경",
-
   "survey.busySchedule": "빽빽한 일정",
   "survey.relaxedSchedule": "느슨한 일정",
   "survey.crowdedCity": "붐비는 도시",
@@ -188,33 +175,29 @@
   "survey.vegan": "비건",
   "survey.wheelchair": "휠체어 이용 가능",
   "survey.pets": "반려동물",
-
   "header.features": "Features",
   "header.destinations": "Destinations",
   "header.reviews": "Reviews",
   "header.getStarted": "Get Started",
   "header.goToProfile": "내 프로필로 이동",
   "header.profileAlt": "프로필",
-
   "hero.badge": "Discover Seoul with AI",
   "hero.title": "Travel smarter,\nnot harder",
   "hero.description": "당신의 취향에 딱 맞는 그 여행지, Triver가 찾아드릴게요.\n사진 한 장, 대화 한 번으로 완성되는 맞춤형 여행 계획.",
   "hero.placeholder": "어디로 떠나볼까요?",
   "hero.start": "Start",
   "hero.scroll": "Scroll",
-
-  "features.heading": "Triver와 함께",
+  "features.heading": "WITH TRIVER",
   "features.subheading": "Cutting-Edge Technology Meets Traveling",
   "features.hyperPersonalized.title": "Hyper personalized",
   "features.hyperPersonalized.shortTitle": "당신의 취향을 반영한 여행",
-  "features.hyperPersonalized.description": "단순 검색이 아닌, 나에게 맞는 추천.\n사진 한 장이나 대화만으로 \n당신의 취향에 꼭 맞는 \n맞춤 여행지를 추천합니다.",
+  "features.hyperPersonalized.description": "단순 검색이 아닌, 나에게 맞는 추천. 간단한 대화나 사진만으로 당신의 취향에 꼭 맞는 맞춤 여행지를 추천합니다.",
   "features.smartItinerary.title": "Smart itinerary",
   "features.smartItinerary.shortTitle": "최적의 코스로 스마트한 여행",
-  "features.smartItinerary.description": "가고 싶은 장소들을 선택만 해도,\n 최적의 루트로 동선을 계획해요.\nTriver와 함께 간편하게 \n여행 코스를 만들어보세요.",
+  "features.smartItinerary.description": "가고 싶은 장소들을 선택만 해도, 최적의 루트로 동선을 계획해요. Triver와 함께 간편하게 여행 코스를 만들어보세요.",
   "features.integratedBooking.title": "Integrated booking",
   "features.integratedBooking.shortTitle": "준비도, 관리도 간편한 여행",
-  "features.integratedBooking.description": "여기저기 흩어져 있던 예약 일정과 티켓들.\n일일이 사이트와 앱을 켜서\n확인하는 건 이제 그만.\n모두 모아서 한번에 확인할 수 있어요.",
-
+  "features.integratedBooking.description": "여기저기 흩어져 있던 예약 일정과 티켓들. 일일이 사이트와 앱을 켜서 확인하는 건 이제 그만. 모두 모아서 한번에 확인할 수 있어요.",
   "destinations.heading": "EXPLORE SEOUL",
   "destinations.subheading": "From historic palaces to neon-lit streets, find your perfect spot.",
   "destinations.hotPlaces": "Hot Places",
@@ -223,19 +206,15 @@
   "destinations.refreshing": "Refreshing...",
   "destinations.noImage": "No Image",
   "destinations.planTrip": "Plan Trip",
-
   "cta.heading": "당신의 여행이 시작되는",
   "cta.headingHighlight": "곳.",
   "cta.description": "Start planning your dream trip to Seoul today with our AI-powered travel assistant. No hidden fees, just pure exploration.",
   "cta.button": "Start for Free",
-
   "footer.copyright": "© {year} Triver. All rights reserved.",
-
   "reviews.heading": "Traveler Stories",
   "reviews.subheading": "See what our community has to say about their experiences with Triver.",
   "reviews.previousReview": "Previous review",
   "reviews.nextReview": "Next review",
-
   "incomplete.profileTitle": "회원 정보 입력이 필요해요",
   "incomplete.surveyTitle": "취향 분석 설문이 필요해요",
   "incomplete.profileDescription": "Triver의 맞춤형 추천을 위해 기본 프로필 정보를 먼저 입력해주세요.",
@@ -244,19 +223,18 @@
   "incomplete.surveyButton": "설문하러 가기",
   "incomplete.later": "다음에 할게요",
   "incomplete.switchAccount": "다른 구글 계정으로 로그인하기",
-
   "explore.choicesSubtitle": "{name}님을 위한 맞춤 여행지",
   "explore.choicesSubtitleDefault": "당신의 취향에 맞춘 추천 여행지",
-  "explore.trendingNeighborhoods": "인기 지역",
-  "explore.eventsExhibitions": "이벤트 & 전시",
+  "explore.trendingNeighborhoods": "요즘 서울에서 가장 핫한 곳은?",
+  "explore.eventsExhibitions": "지금 진행 중인 전시 & 공연 & 팝업스토어",
   "explore.noPopupStores": "팝업스토어 정보가 없습니다",
   "explore.noImg": "No img",
   "explore.ongoing": "진행 중",
-
+  "explore.newTripPlan": "새로운 여행 계획",
+  "explore.newTripPlanDescription": "새로운 여행 계획을 세워보세요!",
   "common.loading": "로딩 중...",
   "common.edit": "수정",
   "common.previous": "이전",
-
   "moments.failedToLoadList": "일기 목록을 불러오지 못했습니다.",
   "moments.failedToLoadDiaries": "일기장을 불러오지 못했습니다.",
   "moments.failedToLoadDetail": "일기 상세 정보를 불러오지 못했습니다.",
@@ -268,7 +246,6 @@
   "moments.savePrompt": "{save} 버튼을 눌러 내용을 저장해주세요.",
   "moments.momentSaved": "당신의 Moments가 저장되었습니다!",
   "moments.deleteConfirmation": "정말로 추억을 지우시겠습니까?",
-
   "diary.addCoverPhoto": "커버 사진 추가",
   "diary.changePhoto": "사진 변경",
   "diary.noCoverPhoto": "커버 사진 없음",
@@ -278,7 +255,6 @@
   "diary.label": "일기",
   "diary.contentPlaceholder": "오늘의 동선, 감정, 기억하고 싶은 장면을 적어보세요.",
   "diary.noContent": "내용 없음",
-
   "survey.loginRequired": "로그인이 필요하거나 세션이 만료되었습니다. 다시 로그인해주세요.",
   "survey.failedToSave": "설문 저장에 실패했습니다.",
   "survey.goToQuestion": "{number}번째 질문으로 이동",
@@ -286,7 +262,6 @@
   "survey.startPersonalizedTrips": "이제 맞춤형 여행 추천을 시작해 보세요.",
   "survey.goToPrevious": "이전 문항으로 돌아가기",
   "survey.questionOf": "질문 {current} / {total}",
-
   "chat.imageAttached": "[이미지 첨부] {fileName}",
   "chat.imageAttachedOnly": "[이미지 첨부]",
   "chat.locationAttached": "[위치 첨부] {label}",
@@ -294,18 +269,14 @@
   "chat.analyzeAttachments": "{attachments} 분석해줘.",
   "chat.analyzeFallback": "메시지를 분석해줘.",
   "chat.preparingResponse": "응답 준비 중...",
-
   "explore.newTripPlan": "새로운 여행 계획",
-  "explore.categoryPerformance": "공연",
-  "explore.categoryExhibition": "전시",
-  "explore.categoryFestival": "축제",
-  "explore.categoryPopup": "팝업스토어",
-
+  "explore.categoryPerformance": "Performance",
+  "explore.categoryExhibition": "Exhibition",
+  "explore.categoryFestival": "Festival",
+  "explore.categoryPopup": "Popup Store",
   "banner.switchPrompt": "다른 언어로 설정할까요?",
   "banner.switch": "설정",
-
   "languageSwitcher.label": "언어",
-
   "pipeline.imageAnalysis": "이미지 분석",
   "pipeline.intent": "의도 분석",
   "pipeline.planner": "여행 계획 수립",
@@ -317,5 +288,21 @@
   "pipeline.executorMissing": "추가 정보 확인",
   "pipeline.executorGeneral": "일반 답변 생성",
   "pipeline.running": "{label} 중...",
-  "pipeline.done": "{label} 완료"
+  "pipeline.done": "{label} 완료",
+  "signup.quote": "여행은 곧 삶이다.",
+  "signup.journeyStart": "Triver와 함께 여행을 시작하세요.\n당신만을 위한 특별한 경험이 기다리고 있습니다.",
+  "signup.copyright": "© 2026 Triver Inc.",
+  "explore.yourChoices": "Your Choices",
+  "explore.personalized": "Personalized",
+  "explore.localEats": "🍽️ Local Eats",
+  "explore.mustVisitSpots": "📸 Must-Visit Spots",
+  "explore.tourCourses": "🗺️ Tour Courses",
+  "explore.hotPlacesTitle": "Hot Places",
+  "explore.contentsTitle": "Contents",
+  "explore.noContents": "콘텐츠 정보가 없습니다",
+  "explore.contentFallback": "CONTENT",
+  "explore.noAddress": "주소 없음",
+  "survey.allSet": "준비 완료!",
+  "survey.start": "Start",
+  "survey.questionProgress": "Question {current} of {total}"
 }

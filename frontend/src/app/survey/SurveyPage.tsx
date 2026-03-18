@@ -168,7 +168,7 @@ export function SurveyPage() {
                             <Check size={40} />
                         </div>
                         <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
-                            You&apos;re all set!
+                            {t("survey.allSet")}
                         </h2>
                         <p className="text-gray-500 font-normal mb-12 text-lg">
                             {t("survey.signupComplete")} <br className="hidden md:block" />
@@ -180,7 +180,7 @@ export function SurveyPage() {
                             // [Feature] 버튼명 Sign Up → Start 변경 — 설문 완료 후 서비스 시작 의미 전달
                             className="w-full sm:w-auto px-12 py-4 bg-black text-white text-lg font-semibold rounded-full hover:bg-gray-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
                         >
-                            Start <ArrowRight size={20} />
+                            {t("survey.start")} <ArrowRight size={20} />
                         </button>
                     </motion.div>
                 ) : (
@@ -196,7 +196,7 @@ export function SurveyPage() {
                         <div className="w-full relative flex items-center justify-center mb-12 min-h-[100px]">
                             <div className="text-center">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
-                                    Question {currentQuestionIndex + 1} of {questions.length}
+                                    {t("survey.questionProgress", { current: currentQuestionIndex + 1, total: questions.length })}
                                 </span>
                                 <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-3">
                                     {currentQuestion.title}

@@ -221,7 +221,7 @@ function SidebarContent() {
         // 주의: 모달을 즉시 닫지 않고 로딩 스피너 표시 → API 완료 후 페이지 전환 시 자연 unmount
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             setRooms((prev) => {
                 const next = [newRoom, ...prev];
                 sidebarCache.rooms = next;

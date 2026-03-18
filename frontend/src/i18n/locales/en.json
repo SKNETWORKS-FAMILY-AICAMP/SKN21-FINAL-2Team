@@ -293,5 +293,25 @@
   "pipeline.executorMissing": "Checking additional info",
   "pipeline.executorGeneral": "General response",
   "pipeline.running": "{label} in progress...",
-  "pipeline.done": "{label} complete"
+  "pipeline.done": "{label} complete",
+
+  "signup.quote": "To travel is to live.",
+  "signup.journeyStart": "Start your journey with Triver today.\nCurated experiences awaiting.",
+  "signup.copyright": "© 2026 Triver Inc.",
+
+  "explore.newTripPlan": "New Travel Plan",
+  "explore.yourChoices": "Your Choices",
+  "explore.personalized": "Personalized",
+  "explore.localEats": "🍽️ Local Eats",
+  "explore.mustVisitSpots": "📸 Must-Visit Spots",
+  "explore.tourCourses": "🗺️ Tour Courses",
+  "explore.hotPlacesTitle": "Hot Places",
+  "explore.contentsTitle": "Contents",
+  "explore.noContents": "No content information available",
+  "explore.contentFallback": "CONTENT",
+  "explore.noAddress": "No address",
+
+  "survey.allSet": "You're all set!",
+  "survey.start": "Start",
+  "survey.questionProgress": "Question {current} of {total}"
 }

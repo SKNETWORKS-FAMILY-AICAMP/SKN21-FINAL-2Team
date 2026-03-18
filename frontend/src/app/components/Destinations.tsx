@@ -112,7 +112,7 @@ export function Destinations() {
     const handleModalConfirm = async (context: TripContext) => {
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom(t("explore.newTripPlan"));
             const selectedPlaces = pendingPlace ? [{
                 name: pendingPlace.name,
                 adress: pendingPlace.address || (pendingPlace as Destination & { adress?: string }).adress,

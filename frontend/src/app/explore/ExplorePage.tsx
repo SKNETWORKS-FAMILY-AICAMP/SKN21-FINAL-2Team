@@ -228,7 +228,7 @@ export function ExplorePage() {
                             <div className="flex justify-between items-center mb-4 z-10 flex-none">
                                 <div>
                                     <h3 className="page-title text-gray-900 flex items-center gap-2">
-                                        Your Choices <Sparkles size={16} className="text-yellow-500" />
+                                        {t("explore.yourChoices")} <Sparkles size={16} className="text-yellow-500" />
                                     </h3>
                                     <p className="section-subtitle mt-1">
                                         {userProfile?.name ? t("explore.choicesSubtitle", { name: userProfile.name }) : t("explore.choicesSubtitleDefault")}
@@ -236,7 +236,7 @@ export function ExplorePage() {
                                 </div>
                                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400 border border-gray-100 rounded-full px-3 py-1">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    Personalized
+                                    {t("explore.personalized")}
                                 </div>
                             </div>
 
@@ -252,7 +252,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    🍽️ Local Eats
+                                                    {t("explore.localEats")}
                                                 </h4>
                                             </div>
                                             {/* [Fix] 이미지를 aspect-ratio 기반으로 변경하여 화면 크기에 맞게 유동 확장 */}
@@ -273,7 +273,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    📸 Must-Visit Spots
+                                                    {t("explore.mustVisitSpots")}
                                                 </h4>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -293,7 +293,7 @@ export function ExplorePage() {
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                                    🗺️ Tour Courses
+                                                    {t("explore.tourCourses")}
                                                 </h4>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -325,7 +325,7 @@ export function ExplorePage() {
                             {/* Fixed Header */}
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="page-title text-gray-900">Hot Places</h3>
+                                    <h3 className="page-title text-gray-900">{t("explore.hotPlacesTitle")}</h3>
                                     <p className="section-subtitle mt-1">{t("explore.trendingNeighborhoods")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
@@ -369,7 +369,7 @@ export function ExplorePage() {
                         <div className="border border-gray-200 rounded-[32px] p-6 flex flex-col shadow-sm bg-white overflow-hidden h-[calc((100vh-80px-24px)/2)]">
                             <div className="flex justify-between items-start mb-4 flex-none">
                                 <div>
-                                    <h3 className="page-title text-gray-900">Contents</h3>
+                                    <h3 className="page-title text-gray-900">{t("explore.contentsTitle")}</h3>
                                     <p className="section-subtitle mt-1">{t("explore.eventsExhibitions")}</p>
                                 </div>
                                 <div className="p-2 bg-gray-50 rounded-full">
@@ -384,7 +384,7 @@ export function ExplorePage() {
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
                                         </div>
                                     ) : contents.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-6">콘텐츠 정보가 없습니다</p>
+                                        <p className="text-xs text-gray-400 text-center py-6">{t("explore.noContents")}</p>
                                     ) : (
                                         contents.map((item) => (
                                             <motion.div
@@ -403,13 +403,18 @@ export function ExplorePage() {
                                                 <div className="flex flex-col justify-center flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="text-[10px] font-bold text-black uppercase tracking-wider border border-gray-200 px-1.5 rounded-sm bg-white">
-                                                            {CONTENT_CATEGORY_KEY_MAP[item.category || ""] ? t(CONTENT_CATEGORY_KEY_MAP[item.category || ""]) : "CONTENT"}
+                                                            {CONTENT_CATEGORY_KEY_MAP[item.category || ""] ? t(CONTENT_CATEGORY_KEY_MAP[item.category || ""]) : t("explore.contentFallback")}
                                                         </span>
                                                     </div>
                                                     <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-black transition-colors">{item.title}</h4>
+                                                    {item.start_date && (
+                                                        <p className="text-[11px] text-gray-500 mt-0.5">
+                                                            {item.start_date}{item.end_date ? ` ~ ${item.end_date}` : ""}
+                                                        </p>
+                                                    )}
                                                     <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
                                                         <MapPin size={10} />
-                                                        {item.address || "주소 없음"}
+                                                        {item.address || t("explore.noAddress")}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-center text-gray-300 group-hover:text-black transition-colors">

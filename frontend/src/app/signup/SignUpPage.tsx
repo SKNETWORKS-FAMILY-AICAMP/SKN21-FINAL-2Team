@@ -159,16 +159,21 @@ export function SignUpPage() {
             className="max-w-sm"
           >
             <h2 className="text-3xl font-semibold leading-snug mb-4 text-white/90">
-              &quot;To travel is to live.&quot;
+              &quot;{t("signup.quote")}&quot;
             </h2>
             <div className="h-[1px] w-12 bg-white/30 my-6"></div>
             <p className="text-white/50 text-sm font-normal leading-relaxed">
-              Start your journey with <span className="font-brand pr-[1px]">Triver</span> today.<br></br>Curated experiences awaiting.
+              {t("signup.journeyStart").split("\n").map((line, i, arr) => (
+                <span key={i}>
+                  {line}
+                  {i < arr.length - 1 && <br />}
+                </span>
+              ))}
             </p>
           </motion.div>
 
           <div className="text-[10px] text-white/30 font-medium tracking-widest uppercase">
-            © 2026 <span className="font-brand pr-[1px] tracking-normal lowercase capitalize">Triver</span> Inc.
+            {t("signup.copyright")}
           </div>
         </div>
       </div>

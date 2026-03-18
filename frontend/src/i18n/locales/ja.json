@@ -317,5 +317,25 @@
   "pipeline.executorMissing": "追加情報確認",
   "pipeline.executorGeneral": "一般回答生成",
   "pipeline.running": "{label}中...",
-  "pipeline.done": "{label}完了"
+  "pipeline.done": "{label}完了",
+
+  "signup.quote": "旅することは、生きること。",
+  "signup.journeyStart": "Triverで旅を始めましょう。\nあなただけの特別な体験が待っています。",
+  "signup.copyright": "© 2026 Triver Inc.",
+
+  "explore.newTripPlan": "新しい旅行プラン",
+  "explore.yourChoices": "あなたへのおすすめ",
+  "explore.personalized": "パーソナライズ",
+  "explore.localEats": "🍽️ ローカルグルメ",
+  "explore.mustVisitSpots": "📸 必見スポット",
+  "explore.tourCourses": "🗺️ ツアーコース",
+  "explore.hotPlacesTitle": "ホットプレイス",
+  "explore.contentsTitle": "コンテンツ",
+  "explore.noContents": "コンテンツ情報がありません",
+  "explore.contentFallback": "コンテンツ",
+  "explore.noAddress": "住所なし",
+
+  "survey.allSet": "準備完了！",
+  "survey.start": "スタート",
+  "survey.questionProgress": "質問 {current} / {total}"
 }
