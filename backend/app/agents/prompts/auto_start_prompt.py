@@ -6,28 +6,33 @@ COMMON_RESPONSE_RULES = """
 [공통 응답 규약]
 - 본 대화의 여행 범위는 서울로 고정한다.
 - 모든 제안/선택지는 반드시 서울 안에서 즐길 수 있는 내용만 제시한다.
-- 첫 응답은 확정 일정표가 아니라 가벼운 제안 초안으로 작성한다.
-- 첫 응답은 상세 시간표(시간대별 플랜)나 빡빡한 동선은 제시하지 않는다.
-- 단정형 표현(예: 무조건, 반드시)은 쓰지 않고 추천 가설 톤으로 작성한다.
-- '왜 이 제안인지'를 사용자 입력 정보/취향 기준으로 1~2줄 설명한다.
+- 첫 응답은 '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.  
+- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.  
+- 제안은 가설적 추천 톤(강제X, 단정X, 예: 많이 찾는 편, 추천드림)으로 작성하세요.  
+- 제안의 이유(선택지 설명)는 입력된 일정/인원 정보 및 최신 서울 트렌드와 사용자 선호도를 기반해 1~2문장 서술합니다.  
 - 한국 서울 여행 트렌드는 완곡하게 반영한다(예: 요즘 많이 찾는 편).
-- 답변 형식은 반드시 아래 순서를 지킨다.
+- 모든 답변(첫 응답 포함)은 아래 순서를 반드시 지킵니다:  
   1) 인사
   2) 제안 요약
-  3) 선택지 2~3개
-  4) 선택형 질문 1개(문장 마지막)
+  3) 선택지 최소 2개(권역 또는 테마 기준 일수 배분)  
+  4) 선택형 질문 최소 1개(문단 마지막, 다음 선택 관련)
+
+사용자 선호도 (참고):
+{prefs_info}
 """
 
 AUTO_START_TRIP_CONTEXT_RULES = """
-[모드 지침: 일정+인원(trip_context)]
-입력 정보:
-- 여행 기간: {travel_duration}
-- 성인 인원: {adult_count}명
-- 어린이 인원: {child_count}명
+서울 여행 일정 및 인원(성인/어린이) 정보에 따라, 서울 내 권역 또는 테마 기반으로 일수 배분을 제안하시오.  
+
+- 여행 날짜({travel_duration}), 성인 인원({adult_count}명), 어린이 인원({child_count}명) 정보를 참조하시오.  
+- 각 제안은 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 혹은 서울 테마(예: 음식, 역사, 가족 등)를 기준으로 며칠 배분하면 좋을지 이동 동선의 피로도 관점과 함께 설명하세요.  
+- 반드시 서울 도시 내에서만 즐길 수 있는 선택지만 제시합니다(서울 이외 언급 금지).  
+- '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.  
+- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.  
 
 작성 방식:
 - 일수 배분 수준의 러프 제안만 한다.
-- 서울 내 권역(예: 홍대/성수/강남/잠실 등) 또는 서울 테마 기준으로 며칠 배분하면 좋은지와 이동 피로도 관점을 함께 제안한다.
+- 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 또는 서울 테마 기준으로 며칠 배분하면 좋은지와 이동 피로도 관점을 함께 제안한다.
 - 확정 동선이나 예약 전제 문장은 피한다.
 """
 
@@ -44,6 +49,7 @@ AUTO_START_SELECTED_PLACES_RULES = """
 
 AUTO_START_COMBINED_RULES = """
 [모드 지침: 일정+인원+선택 장소(combined)]
+
 입력 정보:
 - 여행 기간: {travel_duration}
 - 성인 인원: {adult_count}명
@@ -63,16 +69,11 @@ AUTO_START_GREETING_RULES = """
 사용자 입력 정보가 거의 없으므로, 일정 제안은 하지 않는다.
 
 작성 방식:
-- 인사 후 취향 탐색 중심으로 대화를 연다.
 - 아래 축에서 빠르게 선택할 수 있도록 2~3개 선택지를 제안한다.
   - 서울 여행 분위기(예: 활기/여유)
   - 서울 관심 테마(예: K-pop, 미식, 전시, 한강 야경, 로컬 골목)
   - 서울 동행 형태(혼자/친구/가족)
 - 마지막 문장은 반드시 '어떤 걸 자세히 알아볼까요?' 형태의 질문으로 끝낸다.
-- primary_intent는 GENERAL로 설정한다.
-
-# 사용자 취향:
-{prefs_info}
 """
 
 
@@ -98,32 +99,37 @@ def _format_selected_places_block(selected_places: List[AutoStarterPlaceSeed]) -
     return "\n".join(lines) if lines else "1. 이름 없는 장소 (ID: unknown) / 주소: 주소 정보 없음"
 
 
-def render_auto_start_prompt(travel_duration: str, adult_count: int, child_count: int) -> str:
+def render_auto_start_prompt(prefs_info: str, travel_duration: str, adult_count: int, child_count: int) -> str:
     duration = (travel_duration or "").strip() or "미정"
     adult = _normalize_count(adult_count)
     child = _normalize_count(child_count)
     return _render_prompt(
         "새 여행 계획 채팅을 시작한다.",
-        COMMON_RESPONSE_RULES,
         AUTO_START_TRIP_CONTEXT_RULES.format(
             travel_duration=duration,
             adult_count=adult,
             child_count=child,
         ),
+        COMMON_RESPONSE_RULES.format(
+            prefs_info=prefs_info
+        ),
     )
 
 
-def render_auto_start_place_prompt(selected_places: List[AutoStarterPlaceSeed]) -> str:
+def render_auto_start_place_prompt(prefs_info: str, selected_places: List[AutoStarterPlaceSeed]) -> str:
     return _render_prompt(
-        "사용자가 북마크한 장소를 선택해 새 채팅을 시작했다.",
-        COMMON_RESPONSE_RULES,
+        "사용자가 원하는 장소를 선택해 새 채팅을 시작했다.",
         AUTO_START_SELECTED_PLACES_RULES.format(
             selected_places_block=_format_selected_places_block(selected_places),
+        ),
+        COMMON_RESPONSE_RULES.format(
+            prefs_info=prefs_info
         ),
     )
 
 
 def render_auto_start_combined_prompt(
+    prefs_info: str,
     travel_duration: str,
     adult_count: int,
     child_count: int,
@@ -133,13 +139,15 @@ def render_auto_start_combined_prompt(
     adult = _normalize_count(adult_count)
     child = _normalize_count(child_count)
     return _render_prompt(
-        "사용자가 여행 기본 정보와 선택 장소를 함께 입력해 새 채팅을 시작했다.",
-        COMMON_RESPONSE_RULES,
+        "사용자가 여행 기본 정보와 원하는 장소를 함께 입력해 새 채팅을 시작했다.",
         AUTO_START_COMBINED_RULES.format(
             travel_duration=duration,
             adult_count=adult,
             child_count=child,
             selected_places_block=_format_selected_places_block(selected_places),
+        ),
+        COMMON_RESPONSE_RULES.format(
+            prefs_info=prefs_info
         ),
     )
 
@@ -147,6 +155,8 @@ def render_auto_start_combined_prompt(
 def render_auto_start_greeting_prompt(prefs_info: str) -> str:
     return _render_prompt(
         "사용자는 새 여행 채팅을 시작했다.",
-        COMMON_RESPONSE_RULES,
-        AUTO_START_GREETING_RULES.format(prefs_info=prefs_info),
+        AUTO_START_GREETING_RULES,
+        COMMON_RESPONSE_RULES.format(
+            prefs_info=prefs_info
+        ),
     )

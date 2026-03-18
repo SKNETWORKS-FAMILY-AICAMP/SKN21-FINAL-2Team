@@ -258,6 +258,7 @@ backend/tmp
 
 .claude/
 .cursor/
+skills/
 CLAUDE.md
 .gemini
 
