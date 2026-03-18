@@ -187,6 +187,37 @@ def _pick_candidates(
     return _pick_diverse_candidates_deterministic(candidates, final_k=final_k, top_pool=top_pool)
 
 
+def _pick_candidates_for_trip_planning(
+    candidate_pool: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """TRIP_PLANNING 전용: (day, time_slot)별로 최고 점수 후보 1개씩 선택.
+
+    - 슬롯별로 점수 순 정렬 후 아직 선택되지 않은 장소명 중 최고점 1개 선택
+    - 다른 슬롯에서 이미 선택된 장소는 중복 배치하지 않음
+    """
+    slot_groups: dict[tuple, List[Dict[str, Any]]] = {}
+    for c in candidate_pool:
+        day = c.get("itinerary_day") or 0
+        time_slot = c.get("itinerary_time_slot") or ""
+        if not day:
+            continue
+        slot_groups.setdefault((day, time_slot), []).append(c)
+
+    selected: List[Dict[str, Any]] = []
+    used_name_signatures: set[str] = set()
+
+    for key in sorted(slot_groups.keys()):
+        slot_candidates = sorted(slot_groups[key], key=_candidate_score, reverse=True)
+        for c in slot_candidates:
+            name_sig = _candidate_name_signature(c)
+            if name_sig and name_sig not in used_name_signatures:
+                selected.append(c)
+                used_name_signatures.add(name_sig)
+                break
+
+    return selected
+
+
 async def _search_for_trip_planning(
     state: TravelState,
     emotional_text: str | None = None,
@@ -481,13 +512,18 @@ async def retriever_node(state: TravelState):
             f"excluded={before_exc - len(candidates)}"
         )
 
-    exposed_candidates = _pick_candidates(
-        candidates,
-        final_k=final_k,
-        top_pool=min(candidate_k, 30),
-        selection_mode=selection_mode,
-        seed=selection_seed,
-    )
+    if primary_intent == IntentType.TRIP_PLANNING:
+        # 슬롯별 top-1 선택: global final_k 제한 없이 (day, time_slot)당 1개
+        exposed_candidates = _pick_candidates_for_trip_planning(candidate_pool)
+        dprint(f"[Retriever] trip_planning slot-based selection: {len(exposed_candidates)} candidates")
+    else:
+        exposed_candidates = _pick_candidates(
+            candidates,
+            final_k=final_k,
+            top_pool=min(candidate_k, 30),
+            selection_mode=selection_mode,
+            seed=selection_seed,
+        )
 
     diagnostics = _build_retrieval_diagnostics(candidate_pool)
 

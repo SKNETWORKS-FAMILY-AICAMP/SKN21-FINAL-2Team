@@ -13,7 +13,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
-from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
+from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.core.llm_factory import LLMFactory
 from app.utils.common import getattr_safe, build_naver_map_url, dprint
 from app.utils.config import DEBUG_MODE
@@ -429,16 +429,26 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
-    system_prompt = EXECUTOR_PROMPT.format(
-        prefs_info=prefs_info,
-        location_context=location_context,
-        candidate_names=candidate_names,
-        place_context=place_context or "없음",
-        itinerary_context=itinerary_context or "없음",
-        web_context=web_context or "없음",
-        follow_up_questions=follow_up_questions,
-        previous_recommendations=", ".join(previous_recommendations) if previous_recommendations else "없음",
-    )
+    if primary_intent == IntentType.TRIP_PLANNING:
+        system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
+            prefs_info=prefs_info,
+            location_context=location_context,
+            candidate_names=candidate_names,
+            place_context=place_context or "없음",
+            itinerary_context=itinerary_context or "없음",
+            follow_up_questions=follow_up_questions,
+        )
+    else:
+        system_prompt = EXECUTOR_PROMPT.format(
+            prefs_info=prefs_info,
+            location_context=location_context,
+            candidate_names=candidate_names,
+            place_context=place_context or "없음",
+            itinerary_context=itinerary_context or "없음",
+            web_context=web_context or "없음",
+            follow_up_questions=follow_up_questions,
+            previous_recommendations=", ".join(previous_recommendations) if previous_recommendations else "없음",
+        )
 
     # state의 messages에는 이미 현재 턴 HumanMessage가 포함되어 있음(chat API에서 invoke 시 추가).
     # 이미지 등 멀티모달을 위해 현재 턴은 content_blocks로 한 번만 보내고, 과거 대화만 history로 사용.
