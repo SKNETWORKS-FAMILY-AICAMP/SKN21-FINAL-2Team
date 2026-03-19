@@ -824,6 +824,81 @@ export interface OcrResult {
  * 이미지 파일을 백엔드로 전송해 OCR로 날짜·시간을 추출합니다.
  * 주의: FormData 전송이라 fetchWithAuth 대신 직접 fetch 사용
  */
+// ---------------------------------------------------------------------------
+// Naver Directions (길찾기)
+// ---------------------------------------------------------------------------
+
+export interface DirectionsPlace {
+    longitude: number;
+    latitude: number;
+    name?: string;
+}
+
+export interface DirectionsResult {
+    distance: number;           // 총 거리 (m)
+    duration: number;           // 총 소요시간 (ms)
+    path: [number, number][];   // [lng, lat][]
+    toll_fare: number;
+    fuel_price: number;
+}
+
+export type DirectionsOption = "trafast" | "tracomfort" | "traoptimal" | "tradistance";
+
+export const fetchDirections = async (
+    places: DirectionsPlace[],
+    option: DirectionsOption = "trafast",
+): Promise<DirectionsResult> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/directions`, {
+        method: "POST",
+        body: { places, option },
+    });
+    return response.json();
+};
+
+// ---------------------------------------------------------------------------
+// ODsay 대중교통 길찾기
+// ---------------------------------------------------------------------------
+
+export interface TransitSegment {
+    traffic_type: number;    // 1=지하철, 2=버스, 3=도보
+    distance: number;
+    duration: number;        // 분
+    lane_name: string;
+    bus_no: string;
+    bus_type: number;
+    start_name: string;
+    end_name: string;
+    station_count: number;
+    path: [number, number][];
+}
+
+export interface TransitLeg {
+    duration: number;
+    fare: number;
+    transfers: number;
+    distance: number;
+    segments: TransitSegment[];
+}
+
+export interface TransitDirectionsResult {
+    duration: number;        // 총 소요시간 (분)
+    fare: number;            // 총 요금 (원)
+    transfers: number;       // 총 환승 횟수
+    distance: number;
+    segments: TransitSegment[];
+    legs: TransitLeg[];
+}
+
+export const fetchTransitDirections = async (
+    places: DirectionsPlace[],
+): Promise<TransitDirectionsResult> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/directions/transit`, {
+        method: "POST",
+        body: { places },
+    });
+    return response.json();
+};
+
 export const ocrReservationImage = async (file: File, category?: string): Promise<OcrResult> => {
     const token = safeLocalGet('access_token');
     const formData = new FormData();

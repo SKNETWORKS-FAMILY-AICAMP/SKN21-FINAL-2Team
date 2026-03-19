@@ -862,3 +862,114 @@ async def auto_start_chat_room_stream(
         save_user_message=auto_start_in.save_user_message,
     )
     return _build_streaming_response(room_id, room, message_in, current_user, db, pinned_places=pinned_places, is_auto_start=True)
+
+
+# ---------------------------------------------------------------------------
+# Naver Directions (길찾기)
+# ---------------------------------------------------------------------------
+
+class DirectionsPlace(BaseModel):
+    longitude: float
+    latitude: float
+    name: str | None = None
+
+
+class DirectionsRequest(BaseModel):
+    places: List[DirectionsPlace]
+    option: str = "trafast"  # trafast | tracomfort | traoptimal | tradistance
+
+
+class DirectionsResponse(BaseModel):
+    distance: int         # 총 거리 (m)
+    duration: int         # 총 소요시간 (ms)
+    path: list[list[float]]  # [[lng, lat], ...]
+    toll_fare: int = 0
+    fuel_price: int = 0
+
+
+@router.post("/directions", response_model=DirectionsResponse)
+async def get_directions(
+    req: DirectionsRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """선택한 장소들의 좌표로 네이버 길찾기 경로를 반환한다."""
+    if len(req.places) < 2:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "최소 2개 장소가 필요합니다", 400)
+    if len(req.places) > 7:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "최대 7개 장소까지 가능합니다 (경유지 5개)", 400)
+
+    valid_options = {"trafast", "tracomfort", "traoptimal", "tradistance"}
+    if req.option not in valid_options:
+        raise AppException(ErrorCode.VALIDATION_ERROR, f"option은 {valid_options} 중 하나여야 합니다", 400)
+
+    from app.utils.geocoder import GeoCoder
+
+    coords = [(p.longitude, p.latitude) for p in req.places]
+    geocoder = GeoCoder.get_instance()
+    result = await geocoder.get_directions(coords, option=req.option)
+
+    if not result:
+        raise AppException(ErrorCode.INTERNAL_ERROR, "경로 조회에 실패했습니다", 502)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# ODsay 대중교통 길찾기
+# ---------------------------------------------------------------------------
+
+class TransitSegment(BaseModel):
+    traffic_type: int        # 1=지하철, 2=버스, 3=도보
+    distance: int = 0
+    duration: int = 0        # 분
+    lane_name: str = ""      # 지하철 노선명
+    bus_no: str = ""         # 버스 번호
+    bus_type: int = 0
+    start_name: str = ""
+    end_name: str = ""
+    station_count: int = 0
+    path: list[list[float]] = []  # [[lng, lat], ...]
+
+
+class TransitLeg(BaseModel):
+    duration: int = 0
+    fare: int = 0
+    transfers: int = 0
+    distance: int = 0
+    segments: list[TransitSegment] = []
+
+
+class TransitDirectionsRequest(BaseModel):
+    places: List[DirectionsPlace]
+
+
+class TransitDirectionsResponse(BaseModel):
+    duration: int           # 총 소요시간 (분)
+    fare: int               # 총 요금 (원)
+    transfers: int          # 총 환승 횟수
+    distance: int = 0       # 총 거리 (m)
+    segments: list[TransitSegment] = []
+    legs: list[TransitLeg] = []
+
+
+@router.post("/directions/transit", response_model=TransitDirectionsResponse)
+async def get_transit_directions(
+    req: TransitDirectionsRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """선택한 장소들의 좌표로 대중교통 경로를 반환한다."""
+    if len(req.places) < 2:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "최소 2개 장소가 필요합니다", 400)
+    if len(req.places) > 10:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "최대 10개 장소까지 가능합니다", 400)
+
+    from app.utils.geocoder import GeoCoder
+
+    coords = [(p.longitude, p.latitude) for p in req.places]
+    geocoder = GeoCoder.get_instance()
+    result = await geocoder.get_transit_directions_multi(coords)
+
+    if not result:
+        raise AppException(ErrorCode.INTERNAL_ERROR, "대중교통 경로 조회에 실패했습니다", 502)
+
+    return result

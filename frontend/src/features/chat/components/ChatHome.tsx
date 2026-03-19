@@ -16,6 +16,7 @@ import { ChatInputArea } from "@/features/chat/components/ChatInputArea";
 import { useChatRooms } from "@/features/chat/hooks/useChatRooms";
 import { useChatMessages } from "@/features/chat/hooks/useChatMessages";
 import { useChatMap } from "@/features/chat/hooks/useChatMap";
+import { useDirections } from "@/features/chat/hooks/useDirections";
 import { useSpeechRecognition } from "@/hooks/common/useSpeechRecognition";
 
 import {
@@ -147,6 +148,40 @@ export function ChatHome() {
         focusPlaceCardFromMap,
         handleSelectMapPlace
     } = useChatMap({ messages, placeCardRefs });
+
+    // --- 3b. Directions Hook ---
+    const {
+        routePath,
+        routeInfo,
+        isLoading: isDirLoading,
+        error: dirError,
+        selectedIds: dirSelectedIds,
+        option: dirOption,
+        setOption: setDirOption,
+        togglePlace: toggleDirPlace,
+        calculateRoute,
+        clearRoute: clearDirRoute,
+        clearAll: clearDirAll,
+        transitInfo,
+        mode: transportMode,
+        setMode: setTransportMode,
+    } = useDirections();
+
+    const handleRequestDirections = useCallback(() => {
+        const selected = mapPlaces.filter((p) => dirSelectedIds.has(p.mapId));
+        if (selected.length < 2) return;
+        const places = selected.map((p) => ({
+            longitude: p.longitude,
+            latitude: p.latitude,
+            name: p.name,
+        }));
+        calculateRoute(places);
+    }, [mapPlaces, dirSelectedIds, calculateRoute]);
+
+    // 장소 목록이 바뀌면 길찾기 선택/결과 초기화
+    useEffect(() => {
+        clearDirAll();
+    }, [mapPlaces.length, clearDirAll]);
 
     const currentRoom = currentRoomId ? rooms.find((r) => r.id === currentRoomId) : null;
     const isRouteRoomSynced = parsedRouteRoomId == null || currentRoomId === parsedRouteRoomId;
@@ -607,6 +642,19 @@ export function ChatHome() {
                                 isPanelOpen={isMapPanelOpen}
                                 panelWidth={mapPanelWidth}
                                 isResizing={isMapResizing}
+                                dirSelectedIds={dirSelectedIds}
+                                onToggleDirPlace={toggleDirPlace}
+                                routePath={routePath}
+                                routeInfo={routeInfo}
+                                dirOption={dirOption}
+                                onDirOptionChange={setDirOption}
+                                onRequestDirections={handleRequestDirections}
+                                onClearRoute={clearDirRoute}
+                                isDirLoading={isDirLoading}
+                                dirError={dirError}
+                                transitInfo={transitInfo}
+                                transportMode={transportMode}
+                                onTransportModeChange={setTransportMode}
                             />
                         </div>
                     </aside>

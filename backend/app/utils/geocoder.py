@@ -2,7 +2,7 @@ import os
 import re
 import urllib.parse
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -472,6 +472,227 @@ class GeoCoder:
         }
     
     
+    # -----------------------------------------------------------------------
+    # Naver Directions API
+    # -----------------------------------------------------------------------
+    _directions_cache: Dict[tuple, Any] = {}
+
+    async def get_directions(
+        self,
+        coordinates: List[tuple[float, float]],
+        option: str = "trafast",
+    ) -> Optional[Dict[str, Any]]:
+        """
+        네이버 Directions 5 API로 경로를 조회한다.
+
+        Args:
+            coordinates: [(lng, lat), ...] 최소 2개, 최대 7개 (start + 5 waypoints + goal)
+            option: trafast(빠른길) | tracomfort(편한길) | traoptimal(최적) | tradistance(최단)
+        Returns:
+            { distance, duration, path, toll_fare, fuel_price } 또는 None
+        """
+        if len(coordinates) < 2:
+            return None
+
+        cache_key = (tuple(coordinates), option)
+        if cache_key in self._directions_cache:
+            return self._directions_cache[cache_key]
+
+        start = f"{coordinates[0][0]},{coordinates[0][1]}"
+        goal = f"{coordinates[-1][0]},{coordinates[-1][1]}"
+
+        params: Dict[str, str] = {
+            "start": start,
+            "goal": goal,
+            "option": option,
+        }
+
+        if len(coordinates) > 2:
+            waypoints = "|".join(
+                f"{lng},{lat}" for lng, lat in coordinates[1:-1]
+            )
+            params["waypoints"] = waypoints
+
+        url = "https://maps.apigw.ntruss.com/map-direction/v1/driving"
+        data = await self._get_json(url, headers=self._headers(), params=params)
+
+        if not data or data.get("code") != 0:
+            error_msg = data.get("message", "Unknown error") if data else "No response"
+            print(f"[Directions] API error: {error_msg}")
+            return None
+
+        try:
+            route = data["route"][option][0]
+            summary = route["summary"]
+            result = {
+                "distance": summary.get("distance", 0),
+                "duration": summary.get("duration", 0),
+                "path": route.get("path", []),
+                "toll_fare": summary.get("tollFare", 0),
+                "fuel_price": summary.get("fuelPrice", 0),
+            }
+        except (KeyError, IndexError) as e:
+            print(f"[Directions] Response parsing error: {e}")
+            return None
+
+        if len(self._directions_cache) >= self._CACHE_MAX:
+            self._directions_cache.pop(next(iter(self._directions_cache)))
+        self._directions_cache[cache_key] = result
+        return result
+
+    # -----------------------------------------------------------------------
+    # ODsay 대중교통 API
+    # -----------------------------------------------------------------------
+    _transit_cache: Dict[tuple, Any] = {}
+
+    async def get_transit_directions(
+        self,
+        start: tuple[float, float],
+        goal: tuple[float, float],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        ODsay API로 대중교통 경로를 조회한다 (1구간).
+
+        Args:
+            start: (lng, lat)
+            goal:  (lng, lat)
+        Returns:
+            { duration, fare, transfers, segments: [...] } 또는 None
+        """
+        odsay_key = os.getenv("ODSAY_API_KEY", "")
+        if not odsay_key:
+            print("[Transit] ODSAY_API_KEY is not configured.")
+            return None
+
+        cache_key = (start, goal)
+        if cache_key in self._transit_cache:
+            return self._transit_cache[cache_key]
+
+        # ODsay API 키에 +, / 등 특수문자가 포함될 수 있어
+        # httpx params의 자동 URL 인코딩을 우회하기 위해 직접 요청
+        import httpx
+        raw_url = (
+            f"https://api.odsay.com/v1/api/searchPubTransPathT"
+            f"?SX={start[0]}&SY={start[1]}&EX={goal[0]}&EY={goal[1]}"
+            f"&apiKey={odsay_key}&output=json"
+        )
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(raw_url)
+                data = response.json()
+        except Exception as e:
+            print(f"[Transit] ODsay request error: {e}")
+            data = None
+
+        if not data or "result" not in data:
+            error_msg = data.get("message", "Unknown error") if data else "No response"
+            print(f"[Transit] ODsay API error: {error_msg} | Full response: {data}")
+            return None
+
+        try:
+            path = data["result"]["path"][0]  # 첫 번째 추천 경로
+            info = path["info"]
+
+            segments = []
+            for sub in path.get("subPath", []):
+                traffic_type = sub.get("trafficType")  # 1=지하철, 2=버스, 3=도보
+                segment: Dict[str, Any] = {
+                    "traffic_type": traffic_type,
+                    "distance": sub.get("distance", 0),
+                    "duration": sub.get("sectionTime", 0),
+                }
+
+                if traffic_type == 1:  # 지하철
+                    lane = sub.get("lane", [{}])
+                    segment["lane_name"] = lane[0].get("name", "") if lane else ""
+                    segment["start_name"] = sub.get("startName", "")
+                    segment["end_name"] = sub.get("endName", "")
+                    segment["station_count"] = sub.get("stationCount", 0)
+                elif traffic_type == 2:  # 버스
+                    lane = sub.get("lane", [{}])
+                    segment["bus_no"] = lane[0].get("busNo", "") if lane else ""
+                    segment["bus_type"] = lane[0].get("type", 0) if lane else 0
+                    segment["start_name"] = sub.get("startName", "")
+                    segment["end_name"] = sub.get("endName", "")
+                    segment["station_count"] = sub.get("stationCount", 0)
+                elif traffic_type == 3:  # 도보
+                    segment["start_name"] = sub.get("startName", "")
+                    segment["end_name"] = sub.get("endName", "")
+
+                # 구간별 좌표 (폴리라인용)
+                pass_stop = sub.get("passStopList", {})
+                stations = pass_stop.get("stations", []) if pass_stop else []
+                if stations:
+                    segment["path"] = [
+                        [float(s["x"]), float(s["y"])] for s in stations
+                        if s.get("x") and s.get("y")
+                    ]
+
+                segments.append(segment)
+
+            result: Dict[str, Any] = {
+                "duration": info.get("totalTime", 0),
+                "fare": info.get("payment", 0),
+                "transfers": info.get("busTransitCount", 0) + info.get("subwayTransitCount", 0),
+                "distance": info.get("totalDistance", 0),
+                "segments": segments,
+            }
+        except (KeyError, IndexError) as e:
+            print(f"[Transit] Response parsing error: {e}")
+            return None
+
+        if len(self._transit_cache) >= self._CACHE_MAX:
+            self._transit_cache.pop(next(iter(self._transit_cache)))
+        self._transit_cache[cache_key] = result
+        return result
+
+    async def get_transit_directions_multi(
+        self,
+        coordinates: List[tuple[float, float]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        여러 장소를 구간별로 나눠 대중교통 경로를 조회한다.
+        A→B, B→C, ... 를 각각 호출 후 합산.
+        """
+        if len(coordinates) < 2:
+            return None
+
+        cache_key = tuple(coordinates)
+        if cache_key in self._transit_cache:
+            return self._transit_cache[cache_key]
+
+        all_segments = []
+        total_duration = 0
+        total_fare = 0
+        total_transfers = 0
+        total_distance = 0
+        legs = []
+
+        for i in range(len(coordinates) - 1):
+            leg = await self.get_transit_directions(coordinates[i], coordinates[i + 1])
+            if not leg:
+                return None
+            legs.append(leg)
+            total_duration += leg["duration"]
+            total_fare += leg["fare"]
+            total_transfers += leg["transfers"]
+            total_distance += leg["distance"]
+            all_segments.extend(leg["segments"])
+
+        result = {
+            "duration": total_duration,
+            "fare": total_fare,
+            "transfers": total_transfers,
+            "distance": total_distance,
+            "segments": all_segments,
+            "legs": legs,
+        }
+
+        if len(self._transit_cache) >= self._CACHE_MAX:
+            self._transit_cache.pop(next(iter(self._transit_cache)))
+        self._transit_cache[cache_key] = result
+        return result
+
     @classmethod
     async def get_coordinates(cls, address: str) -> tuple[float, float]:
         """

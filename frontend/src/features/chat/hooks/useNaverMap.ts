@@ -23,6 +23,11 @@ export type NaverInfoWindow = {
 export type NaverLatLngBounds = {
   extend: (latLng: NaverLatLng) => void;
 };
+export type NaverPolyline = {
+  setMap: (map: NaverMapInstance | null) => void;
+  setPath: (path: NaverLatLng[]) => void;
+  getPath: () => NaverLatLng[];
+};
 
 export type NaverMapsNamespace = {
   maps: {
@@ -31,6 +36,7 @@ export type NaverMapsNamespace = {
     Marker: new (options: Record<string, unknown>) => NaverMarker;
     InfoWindow: new (options: Record<string, unknown>) => NaverInfoWindow;
     LatLngBounds: new () => NaverLatLngBounds;
+    Polyline: new (options: Record<string, unknown>) => NaverPolyline;
     Size: new (width: number, height: number) => unknown;
     Point: new (x: number, y: number) => unknown;
     Service: {

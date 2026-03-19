@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { MapPin, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { NaverInfoWindow, NaverMapInstance, NaverMarker, useNaverMap } from "../hooks/useNaverMap";
+import { MapPin, RefreshCw, ChevronLeft, ChevronRight, ExternalLink, Navigation, Loader2, Car, TrainFront } from "lucide-react";
+import { NaverInfoWindow, NaverMapInstance, NaverMarker, NaverPolyline, useNaverMap } from "../hooks/useNaverMap";
 import { useTranslation } from "@/i18n/useTranslation";
+import type { DirectionsOption } from "@/services/api";
+import type { RouteInfo, TransitInfo, TransportMode } from "../hooks/useDirections";
 
 export type ChatMapPlace = {
   mapId: string;
@@ -32,6 +34,21 @@ type PlaceMapPanelProps = {
   isPanelOpen?: boolean;
   panelWidth?: number;
   isResizing?: boolean;
+  // 길찾기 관련
+  dirSelectedIds?: Set<string>;
+  onToggleDirPlace?: (mapId: string) => void;
+  routePath?: [number, number][] | null;
+  routeInfo?: RouteInfo | null;
+  dirOption?: DirectionsOption;
+  onDirOptionChange?: (option: DirectionsOption) => void;
+  onRequestDirections?: () => void;
+  onClearRoute?: () => void;
+  isDirLoading?: boolean;
+  dirError?: string | null;
+  // 대중교통
+  transitInfo?: TransitInfo | null;
+  transportMode?: TransportMode;
+  onTransportModeChange?: (mode: TransportMode) => void;
 };
 
 const SEOUL_BOUNDS = {
@@ -62,6 +79,19 @@ export function PlaceMapPanel({
   isPanelOpen = true,
   panelWidth,
   isResizing = false,
+  dirSelectedIds,
+  onToggleDirPlace,
+  routePath,
+  routeInfo,
+  dirOption = "trafast",
+  onDirOptionChange,
+  onRequestDirections,
+  onClearRoute,
+  isDirLoading = false,
+  dirError,
+  transitInfo,
+  transportMode = "driving",
+  onTransportModeChange,
 }: PlaceMapPanelProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const { language } = useTranslation();
@@ -71,6 +101,7 @@ export function PlaceMapPanel({
   const mapInstanceRef = useRef<NaverMapInstance | null>(null);
   const markersRef = useRef<Map<string, NaverMarker>>(new Map());
   const infoWindowRef = useRef<NaverInfoWindow | null>(null);
+  const polylineRef = useRef<NaverPolyline | null>(null);
 
   const sortedPlaces = useMemo(() => {
     return [...places].sort((a, b) => a.name.localeCompare(b.name));
@@ -215,6 +246,42 @@ export function PlaceMapPanel({
     }
   }, [status, naver, sortedPlaces, focusPlaces, selectedMapPlaceId, onMarkerClick, onSelectPlace]);
 
+  // 폴리라인 렌더링
+  useEffect(() => {
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+
+    if (!routePath || routePath.length < 2 || !naver?.maps || !mapInstanceRef.current) return;
+
+    const path = routePath.map(([lng, lat]) => new naver.maps.LatLng(lat, lng));
+    polylineRef.current = new naver.maps.Polyline({
+      map: mapInstanceRef.current,
+      path,
+      strokeColor: "#2563eb",
+      strokeWeight: 5,
+      strokeOpacity: 0.85,
+      strokeStyle: "solid",
+      strokeLineCap: "round",
+      strokeLineJoin: "round",
+    });
+
+    // 경로에 맞게 지도 범위 조정
+    const bounds = new naver.maps.LatLngBounds();
+    path.forEach((p) => bounds.extend(p));
+    mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 40, bottom: 120, left: 40 });
+  }, [routePath, naver]);
+
+  const dirSelectedCount = dirSelectedIds?.size ?? 0;
+
+  const OPTION_LABELS: Record<DirectionsOption, string> = {
+    trafast: "빠른길",
+    tracomfort: "편한길",
+    traoptimal: "최적",
+    tradistance: "최단거리",
+  };
+
   if (!clientId) {
     return (
       <div className={className}>
@@ -267,6 +334,136 @@ export function PlaceMapPanel({
           <div className="flex-1 relative min-h-[320px]">
             <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
+            {/* 경로 정보 오버레이 — 자동차 */}
+            {routeInfo && (
+              <div className="absolute top-3 left-3 z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 px-4 py-2.5 flex items-center gap-3">
+                <Car size={14} className="text-blue-600 flex-shrink-0" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold text-gray-900">
+                    {routeInfo.distance >= 1000
+                      ? `${(routeInfo.distance / 1000).toFixed(1)}km`
+                      : `${routeInfo.distance}m`}
+                  </span>
+                </div>
+                <div className="w-px h-4 bg-gray-300" />
+                <span className="text-sm font-semibold text-gray-700">
+                  {routeInfo.duration >= 3600000
+                    ? `${Math.floor(routeInfo.duration / 3600000)}시간 ${Math.round((routeInfo.duration % 3600000) / 60000)}분`
+                    : `${Math.round(routeInfo.duration / 60000)}분`}
+                </span>
+                {routeInfo.tollFare > 0 && (
+                  <>
+                    <div className="w-px h-4 bg-gray-300" />
+                    <span className="text-xs text-gray-500">톨비 {routeInfo.tollFare.toLocaleString()}원</span>
+                  </>
+                )}
+                <button type="button" onClick={onClearRoute} className="ml-1 text-gray-400 hover:text-gray-600 text-xs font-medium">✕</button>
+              </div>
+            )}
+
+            {/* 경로 정보 오버레이 — 대중교통 */}
+            {transitInfo && (
+              <div className="absolute top-3 left-3 z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 px-4 py-2.5 max-w-[320px]">
+                <div className="flex items-center gap-3 mb-2">
+                  <TrainFront size={14} className="text-green-600 flex-shrink-0" />
+                  <span className="text-sm font-bold text-gray-900">
+                    {transitInfo.duration >= 60
+                      ? `${Math.floor(transitInfo.duration / 60)}시간 ${transitInfo.duration % 60}분`
+                      : `${transitInfo.duration}분`}
+                  </span>
+                  <div className="w-px h-4 bg-gray-300" />
+                  <span className="text-sm font-semibold text-gray-700">{transitInfo.fare.toLocaleString()}원</span>
+                  {transitInfo.transfers > 0 && (
+                    <>
+                      <div className="w-px h-4 bg-gray-300" />
+                      <span className="text-xs text-gray-500">환승 {transitInfo.transfers}회</span>
+                    </>
+                  )}
+                  <button type="button" onClick={onClearRoute} className="ml-1 text-gray-400 hover:text-gray-600 text-xs font-medium">✕</button>
+                </div>
+                {/* 구간 상세 */}
+                <div className="flex flex-wrap gap-1">
+                  {transitInfo.segments.filter(s => s.traffic_type !== 3).map((seg, i) => (
+                    <span
+                      key={i}
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        seg.traffic_type === 1
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {seg.traffic_type === 1 ? seg.lane_name : seg.bus_no}
+                      <span className="font-normal opacity-70">{seg.station_count}정거장</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 에러 표시 */}
+            {dirError && (
+              <div className="absolute top-3 left-3 z-20 bg-red-50/95 backdrop-blur-md rounded-2xl shadow-lg border border-red-200 px-4 py-2.5">
+                <span className="text-sm text-red-600">{dirError}</span>
+              </div>
+            )}
+
+            {/* 길찾기 컨트롤 바 */}
+            {onToggleDirPlace && (
+              <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+                {/* 자동차 / 대중교통 모드 전환 */}
+                {onTransportModeChange && dirSelectedCount >= 2 && (
+                  <div className="flex h-8 rounded-lg border border-gray-200 bg-white/95 backdrop-blur-md overflow-hidden shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => onTransportModeChange("driving")}
+                      className={`px-2.5 flex items-center gap-1 text-xs font-medium transition-colors ${
+                        transportMode === "driving"
+                          ? "bg-blue-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      <Car size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onTransportModeChange("transit")}
+                      className={`px-2.5 flex items-center gap-1 text-xs font-medium transition-colors ${
+                        transportMode === "transit"
+                          ? "bg-green-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      <TrainFront size={13} />
+                    </button>
+                  </div>
+                )}
+                {dirSelectedCount >= 2 && transportMode === "driving" && (
+                  <select
+                    value={dirOption}
+                    onChange={(e) => onDirOptionChange?.(e.target.value as DirectionsOption)}
+                    className="h-8 px-2 rounded-lg border border-gray-200 bg-white/95 backdrop-blur-md text-xs font-medium text-gray-700 shadow-sm"
+                  >
+                    {(Object.entries(OPTION_LABELS) as [DirectionsOption, string][]).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={onRequestDirections}
+                  disabled={dirSelectedCount < 2 || isDirLoading}
+                  className={`h-8 px-3 rounded-lg text-white text-xs font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1.5 ${
+                    transportMode === "transit"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isDirLoading ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}
+                  길찾기{dirSelectedCount > 0 ? ` (${dirSelectedCount})` : ""}
+                </button>
+              </div>
+            )}
+
             {/* Floating Carousel at the bottom */}
             <div className="absolute left-0 right-0 bottom-3 sm:bottom-4 z-10 px-3 sm:px-4 group/carousel">
               {canScrollLeft && (
@@ -288,6 +485,7 @@ export function PlaceMapPanel({
                 {groupedPlaces.map((group) => (
                   group.places.map((place) => {
                     const isSelected = place.mapId === selectedMapPlaceId;
+                    const isDirChecked = dirSelectedIds?.has(place.mapId) ?? false;
                     const searchUrl = place.map_url || `https://map.naver.com/v5/search/${encodeURIComponent(place.name)}`;
                     return (
                       <div
@@ -307,9 +505,34 @@ export function PlaceMapPanel({
                         }}
                         className={`group/card snap-center flex-shrink-0 w-[min(76vw,220px)] sm:w-[160px] text-left rounded-[20px] border p-3 pt-3.5 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 relative cursor-pointer ${isSelected
                           ? "border-black bg-white/95 ring-2 ring-black/10"
-                          : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
+                          : isDirChecked
+                            ? "border-blue-400 bg-blue-50/90 ring-1 ring-blue-200"
+                            : "border-white/50 bg-white/80 hover:bg-white/95 hover:border-gray-300"
                           }`}
                       >
+                        {/* 길찾기 체크박스 */}
+                        {onToggleDirPlace && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleDirPlace(place.mapId);
+                            }}
+                            className={`absolute top-2.5 left-2.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                              isDirChecked
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "border-gray-300 bg-white/80 hover:border-blue-400"
+                            }`}
+                            title="길찾기에 포함"
+                          >
+                            {isDirChecked && (
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </button>
+                        )}
+
                         <a
                           href={searchUrl}
                           target="_blank"
@@ -321,7 +544,7 @@ export function PlaceMapPanel({
                           <ExternalLink size={14} />
                         </a>
 
-                        <div className="pr-4">
+                        <div className={onToggleDirPlace ? "pl-5 pr-4" : "pr-4"}>
                           <div className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">{place.name}</div>
                           {!!place.adress && (
                             <div className="text-[11px] font-medium text-gray-500 truncate">{place.adress}</div>
