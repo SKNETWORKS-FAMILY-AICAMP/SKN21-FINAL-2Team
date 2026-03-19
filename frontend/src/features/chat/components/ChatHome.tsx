@@ -609,7 +609,7 @@ export function ChatHome() {
                     <aside
                         style={{ width: isMapPanelOpen ? `${mapPanelWidth}%` : "0px" }}
                         className={cn(
-                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden",
+                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden isolate",
                             isMapResizing ? "transition-none" : "transition-[width] duration-200 ease-out",
                             isMapPanelOpen ? "border-l border-gray-100" : "border-l-0"
                         )}
