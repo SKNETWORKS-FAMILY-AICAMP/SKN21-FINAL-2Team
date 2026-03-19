@@ -242,7 +242,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                             {loading && (
                                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm gap-3">
                                     <Loader2 className="w-7 h-7 animate-spin text-black" />
-                                    <p className="text-xs font-medium text-gray-500">채팅방을 만드는 중...</p>
+                                    <p className="text-xs font-medium text-gray-500">{t("chat.creatingRoom")}</p>
                                 </div>
                             )}
 
@@ -258,11 +258,11 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     <CalendarDays size={14} className="text-gray-600" />
                                 </div>
                                 <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
-                                    Trip Context
+                                    {t("tripContext.label")}
                                 </span>
                             </div>
                             <h2 className="text-2xl font-medium text-gray-900 mb-6">
-                                여행 날짜와 인원을 선택해주세요
+                                {t("tripContext.heading")}
                             </h2>
                             <div className="grid grid-cols-2 gap-3 mt-4">
                                 <div>
