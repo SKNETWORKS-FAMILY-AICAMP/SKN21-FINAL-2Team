@@ -125,14 +125,14 @@ def _shorten_text(value: str, limit: int = 64) -> str:
         return value
     return value[:limit].rstrip() + "..."
 
-AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅"}
+AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅", "explore.newTripPlan"}
 
 def _make_room_title(text: str) -> str:
     """Generate a concise room title from user input."""
     clean = re.sub(r"\s+", " ", (text or "")).strip()
     if len(clean) > 30:
         clean = clean[:30].rstrip() + "..."
-    return clean or "새 채팅"
+    return clean or "explore.newTripPlan"
 
 
 def _should_update_room_title(db: Session, room_id: int) -> bool:
@@ -225,6 +225,7 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         user_input=message_in.message,
         user_id=user.id,
         room_id=room.id,
+        language=user.language,
         input_lat=message_in.latitude,
         input_lon=message_in.longitude,
         input_image=to_vision_image_input(message_in.image_path) if message_in.image_path else None,
@@ -478,7 +479,7 @@ def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Ses
         {
             "id": room.id,
             "user_id": room.user_id,
-            "title": room.title or "새 채팅",
+            "title": room.title or "explore.newTripPlan",
             "created_at": room.created_at,
             "bookmark_yn": room.bookmark_yn,
             "latest_message_preview": latest_message_preview,
@@ -514,7 +515,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "llm_text": place.llm_text,
             "messages_id": place.messages_id,
             "room_id": room_id,
-            "room_title": room_title or "새 채팅",
+            "room_title": room_title or "explore.newTripPlan",
         }
         for place, room_id, room_title in rows
     ]
