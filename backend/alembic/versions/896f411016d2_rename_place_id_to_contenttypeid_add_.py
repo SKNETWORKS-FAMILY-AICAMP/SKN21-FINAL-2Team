@@ -18,15 +18,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # chat_places: place_id → contenttypeid 리네임
-    op.execute("ALTER TABLE chat_places CHANGE COLUMN place_id contenttypeid INT NULL")
-    # chat_places: llm_text 컬럼 추가
+    # chat_places: place_id → contenttypeid 리네임 + llm_text 추가
+    op.alter_column('chat_places', 'place_id', new_column_name='contenttypeid',
+                    existing_type=sa.Integer(), existing_nullable=True)
     op.add_column('chat_places', sa.Column('llm_text', sa.Text(), nullable=True, comment='LLM 생성 텍스트'))
+
     # diary_entry_places: place_id → contenttypeid 리네임
-    op.execute("ALTER TABLE diary_entry_places CHANGE COLUMN place_id contenttypeid INT NULL")
+    op.alter_column('diary_entry_places', 'place_id', new_column_name='contenttypeid',
+                    existing_type=sa.Integer(), existing_nullable=True)
 
 
 def downgrade() -> None:
-    op.execute("ALTER TABLE diary_entry_places CHANGE COLUMN contenttypeid place_id INT NULL")
+    op.alter_column('diary_entry_places', 'contenttypeid', new_column_name='place_id',
+                    existing_type=sa.Integer(), existing_nullable=True)
     op.drop_column('chat_places', 'llm_text')
-    op.execute("ALTER TABLE chat_places CHANGE COLUMN contenttypeid place_id INT NULL")
+    op.alter_column('chat_places', 'contenttypeid', new_column_name='place_id',
+                    existing_type=sa.Integer(), existing_nullable=True)

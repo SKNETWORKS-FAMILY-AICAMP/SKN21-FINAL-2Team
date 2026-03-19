@@ -22,27 +22,37 @@ COMMON_RESPONSE_RULES = """
 """
 
 AUTO_START_TRIP_CONTEXT_RULES = """
-서울 여행 일정 및 인원(성인/어린이) 정보에 따라, 서울 내 권역 또는 테마 기반으로 일수 배분을 제안하시오.  
+서울 여행 일정 및 인원(성인/어린이) 정보에 따라, 서울 내 권역 또는 테마 기반으로 일수 배분을 제안하시오.
 
-- 여행 날짜({travel_duration}), 성인 인원({adult_count}명), 어린이 인원({child_count}명) 정보를 참조하시오.  
-- 각 제안은 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 혹은 서울 테마(예: 음식, 역사, 가족 등)를 기준으로 며칠 배분하면 좋을지 이동 동선의 피로도 관점과 함께 설명하세요.  
-- 반드시 서울 도시 내에서만 즐길 수 있는 선택지만 제시합니다(서울 이외 언급 금지).  
-- '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.  
-- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.  
-
-작성 방식:
-- 일수 배분 수준의 러프 제안만 한다.
-- 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 또는 서울 테마 기준으로 며칠 배분하면 좋은지와 이동 피로도 관점을 함께 제안한다.
-- 확정 동선이나 예약 전제 문장은 피한다.
+- 여행 날짜({travel_duration}), 성인 인원({adult_count}명), 어린이 인원({child_count}명) 정보를 참조하시오.
+- 각 제안은 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 혹은 서울 테마(예: 음식, 역사, 가족 등)를 기준으로 며칠 배분하면 좋을지 이동 동선의 피로도 관점과 함께 설명하세요.
+- 반드시 서울 도시 내에서만 즐길 수 있는 선택지만 제시합니다(서울 이외 언급 금지).
+- '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.
+- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.
 """
 
-AUTO_START_SELECTED_PLACES_RULES = """
-[모드 지침: 선택 장소(selected_places)]
+AUTO_START_SINGLE_PLACE_RULES = """
+[모드 지침: 선택 장소 1개(single_place)]
+선택 장소:
+{selected_places_block}
+
+작성 방식:
+- 선택한 장소를 중심으로 해당 장소의 특징·매력을 짧게 소개한다.
+- 선택 장소 주변에서 함께 즐길 수 있는 다양한 카테고리(맛집·카페·관광지·전시·쇼핑 등)를
+  2~3개 큐레이션해 제안한다.
+- 같은 카테고리로만 채우지 말고 반드시 2가지 이상의 카테고리를 섞어 추천한다.
+- 반일 코스 단위로 가볍게 엮어서 제안한다.
+- 마지막 문장은 '어떤 코스가 끌리세요?' 형태의 선택형 질문으로 끝낸다.
+"""
+
+AUTO_START_MULTI_PLACE_RULES = """
+[모드 지침: 선택 장소 2개 이상(multi_place)]
 선택 장소 목록:
 {selected_places_block}
 
 작성 방식:
-- 선택 장소를 서울 권역 또는 서울 테마 기준으로 묶어서 제안한다.
+- 선택 장소들을 서울 권역 또는 이동 동선 기준으로 묶어 최적 동선을 제안한다.
+- 장소 사이에 자연스럽게 들를 수 있는 중간 장소(맛집·카페·관광지 등)를 1~2개 추가로 제안한다.
 - 반일 코스/야간 코스처럼 부담 없는 묶음 단위로 안내한다.
 - 어떤 묶음을 우선할지 고를 수 있게 선택지를 만든다.
 """
@@ -117,14 +127,17 @@ def render_auto_start_prompt(prefs_info: str, travel_duration: str, adult_count:
 
 
 def render_auto_start_place_prompt(prefs_info: str, selected_places: List[AutoStarterPlaceSeed]) -> str:
+    places_block = _format_selected_places_block(selected_places)
+    if len(selected_places) == 1:
+        mode_rules = AUTO_START_SINGLE_PLACE_RULES.format(selected_places_block=places_block)
+        intro = "사용자가 원하는 장소 1개를 선택해 새 채팅을 시작했다."
+    else:
+        mode_rules = AUTO_START_MULTI_PLACE_RULES.format(selected_places_block=places_block)
+        intro = "사용자가 원하는 장소 여러 개를 선택해 새 채팅을 시작했다."
     return _render_prompt(
-        "사용자가 원하는 장소를 선택해 새 채팅을 시작했다.",
-        AUTO_START_SELECTED_PLACES_RULES.format(
-            selected_places_block=_format_selected_places_block(selected_places),
-        ),
-        COMMON_RESPONSE_RULES.format(
-            prefs_info=prefs_info
-        ),
+        intro,
+        mode_rules,
+        COMMON_RESPONSE_RULES.format(prefs_info=prefs_info),
     )
 
 

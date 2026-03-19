@@ -181,7 +181,13 @@ class PlaceRetriever(PlaceScorer):
         """
         dprint(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} categories={categories} has_image={has_image}")
         query_vec = self.text_model.encode(query).astype(np.float32)
+        return self.search_by_vector(query_vec, limit=limit, categories=categories, has_image=has_image)
 
+    def search_by_vector(self, query_vec: np.ndarray, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
+        """
+        Vector-based search for places (pre-encoded).
+        Accepts an already-encoded numpy vector to avoid redundant encoding.
+        """
         query_filter = self._build_query_filter(categories, has_image)
 
         response = self.client.query_points(
@@ -191,7 +197,7 @@ class PlaceRetriever(PlaceScorer):
             with_payload=True,
             query_filter=query_filter,
         )
-        dprint(f"[INFO] search_text hits={len(response.points)}")
+        dprint(f"[INFO] search_by_vector hits={len(response.points)}")
         return response.points
 
     def search_text_to_image(self, query: str, limit: int = 5, categories: list[CategoryType] = None):
