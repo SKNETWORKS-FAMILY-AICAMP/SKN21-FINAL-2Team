@@ -39,7 +39,9 @@ def upgrade() -> None:
     if 'ix_reservation_list_id' not in reservation_indexes:
         op.create_index(op.f('ix_reservation_list_id'), 'reservation_list', ['id'], unique=False)
 
-    op.add_column('users', sa.Column('language', sa.Enum('en', 'ko', 'ja', 'zh', name='languagetype'), nullable=False, comment='UI Language Preference'))
+    users_columns = [col['name'] for col in inspector.get_columns('users')]
+    if 'language' not in users_columns:
+        op.add_column('users', sa.Column('language', sa.Enum('en', 'ko', 'ja', 'zh', name='languagetype'), nullable=False, comment='UI Language Preference'))
     op.alter_column('users', 'profile_picture',
                existing_type=mysql.VARCHAR(length=255),
                type_=sa.String(length=1000),
