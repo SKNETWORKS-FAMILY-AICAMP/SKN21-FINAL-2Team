@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 
 from app.models.orm import BaseModel
 from app.models.enums import GenderType, LanguageType
-from app.models.country import Country
 
 class User(BaseModel):
     __tablename__ = "users"

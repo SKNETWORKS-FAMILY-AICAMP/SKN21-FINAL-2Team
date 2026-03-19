@@ -156,6 +156,7 @@ def transform(item: dict) -> dict | None:
         "tags":              item.get("tag") or [],
         "updated_at":        item.get("updt_dt_text"),
         "multi_lang_list":   item.get("multi_lang_list"),
+        "place":             (item.get("place") or "").strip() or None,
     }
 
     # food 전용

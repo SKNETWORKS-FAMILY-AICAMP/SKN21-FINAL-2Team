@@ -2,7 +2,6 @@
 
 services:
   frontend:
-    platform: linux/amd64
     build:
       context: ./frontend
       target: dev
@@ -17,7 +16,6 @@ services:
       - NEXT_PUBLIC_API_URL=/api
 
   nginx:
-    platform: linux/amd64
     build: ./nginx
     ports:
       - "80:80"

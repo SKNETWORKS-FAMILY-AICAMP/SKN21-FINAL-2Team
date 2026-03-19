@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from app.database.connection import db_manager
-from app.models.country import Country
 from app.models.hot_place import HotPlace
 
 HOT_PLACE_DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "hot_places.json"
@@ -78,55 +77,6 @@ def _iter_prefer_records() -> Iterable[dict[str, str | None]]:
             }
 
 
-def insert_country() -> dict[str, int]:
-    """
-    기본 국가 데이터를 country 테이블에 삽입한다.
-    중복 기준: code
-    """
-    countries = [
-        {"code": "ko", "name": "대한민국"},
-        {"code": "jp", "name": "일본"},
-        {"code": "it", "name": "이탈리아"},
-        {"code": "us", "name": "미국"},
-        {"code": "cn", "name": "중국"},
-        {"code": "fr", "name": "프랑스"},
-        {"code": "gb", "name": "영국"},
-        {"code": "de", "name": "독일"},
-        {"code": "es", "name": "스페인"},
-        {"code": "th", "name": "태국"},
-        {"code": "vn", "name": "베트남"},
-        {"code": "sg", "name": "싱가포르"},
-        {"code": "tw", "name": "대만"},
-        {"code": "ph", "name": "필리핀"},
-        {"code": "id", "name": "인도네시아"},
-        {"code": "my", "name": "말레이시아"},
-        {"code": "au", "name": "호주"},
-        {"code": "nz", "name": "뉴질랜드"},
-        {"code": "ca", "name": "캐나다"},
-        {"code": "mx", "name": "멕시코"},
-    ]
-
-    db = db_manager.get_session()
-    inserted = 0
-    skipped = 0
-    try:
-        existing = {row.code for row in db.query(Country.code).all()}
-        for item in countries:
-            if item["code"] in existing:
-                skipped += 1
-                continue
-            db.add(Country(code=item["code"], name=item["name"]))
-            existing.add(item["code"])
-            inserted += 1
-        db.commit()
-        return {"inserted": inserted, "skipped": skipped}
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-
-
 def insert_hot_place() -> dict[str, int]:
     """
     backend/data/hot_places.json 파일에서 핫플레이스 데이터를 읽어
@@ -171,10 +121,6 @@ def insert_hot_place() -> dict[str, int]:
 # # ec2 환경에서 docker rds 세팅
 # docker compose run --rm --no-deps backend python -m app.database.insert_db
 def insert_data():
-    # Country 데이터 삽입
-    cntry_res = insert_country()
-    print(f"[INFO] country insert done: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
-
     # HotPlace 데이터 삽입
     hot_res = insert_hot_place()
     print(f"[INFO] hot_place insert done: inserted={hot_res['inserted']}, skipped={hot_res['skipped']}")
