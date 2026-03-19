@@ -8,11 +8,21 @@ def route_by_intent(state: TravelState):
     - TRIP_PLANNING  → planner
     - GENERAL/chitchat → executor_general
     - 그 외(여행 관련) → geocoder (위치 anchor 확인 후 retriever)
+
+    복합 의도(multi-intent) 처리:
+    - intents 리스트에 TRIP_PLANNING이 포함된 경우 planner 우선
+      (예: "K-pop 댄스 클래스 찾아서 일정에 넣어줘" → [PLACE_INQUIRY, TRIP_PLANNING])
     """
-    if state["primary_intent"] == IntentType.TRIP_PLANNING:
-        return "planner"
-    elif state["primary_intent"] == IntentType.GENERAL:
+    primary_intent = state["primary_intent"]
+    intents = state.get("intents") or []
+
+    # GENERAL은 항상 우선 차단 (안전 처리)
+    if primary_intent == IntentType.GENERAL:
         return "executor_general"
+
+    # 복합 의도: intents 리스트에 TRIP_PLANNING이 있으면 planner로 라우팅
+    if IntentType.TRIP_PLANNING in intents:
+        return "planner"
 
     return "geocoder"
 

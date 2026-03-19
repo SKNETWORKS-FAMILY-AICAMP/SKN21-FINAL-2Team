@@ -14,6 +14,29 @@ from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
 
 
+_TAG_EXPANSION: dict[str, list[str]] = {
+    "한국적인":  ["한옥", "전통", "전통차", "고즈넉한"],
+    "전통적인":  ["한옥", "전통", "전통차", "고즈넉한"],
+    "한옥":      ["한옥", "전통", "고즈넉한"],
+    "힙한":      ["감성카페", "인더스트리얼", "트렌디한"],
+    "감성적인":  ["감성카페", "빈티지소품", "인스타감성"],
+    "인스타감성": ["감성카페", "포토존", "인스타"],
+    "레트로":    ["빈티지", "복고", "근대건축"],
+    "복고풍":    ["빈티지", "복고", "근대건축"],
+    "아늑한":    ["조용한", "소규모", "따뜻한"],
+    "포근한":    ["조용한", "소규모", "따뜻한"],
+}
+
+
+def _expand_input_tags(tags: list[str]) -> list[str]:
+    expanded = list(tags)
+    for tag in tags:
+        for key, additions in _TAG_EXPANSION.items():
+            if key in tag:
+                expanded.extend(additions)
+    return list(dict.fromkeys(expanded))  # 순서 유지 + 중복 제거
+
+
 _CRIME_PATTERN = re.compile(
     r"살해|살인|살육|살상|"
     r"시신|시체|"
@@ -164,6 +187,9 @@ async def intent_node(state: TravelState):
                 # 좌표가 서울 밖에 있으면 일반 검색으로 변경
                 primary_intent = IntentType.GENERAL
 
+    expanded_tags = _expand_input_tags(result.input_tags or [])
+    dprint(f"[Intent] input_tags expanded: {result.input_tags} → {expanded_tags}")
+
     new_summary_title = summary_result.summary_title
     if new_summary_title and new_summary_title.strip().lower() == "null":
         new_summary_title = None
@@ -177,7 +203,7 @@ async def intent_node(state: TravelState):
         "update_user_input": update_user_input,
         "summary_title": new_summary_title or summary_title,
         "summary_message": summary_result.summary_message,
-        "input_tags": result.input_tags,
+        "input_tags": expanded_tags,
         "prefs_info": prefs_info,
         "semantic_input_image": semantic_input_image,
         "candidates": [],
