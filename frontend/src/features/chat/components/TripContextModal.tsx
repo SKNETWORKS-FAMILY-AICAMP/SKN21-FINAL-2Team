@@ -72,7 +72,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                     />
 
                     {/* 데스크톱: 중앙 모달 */}
-                    <div className="hidden md:flex fixed inset-0 z-[9999] items-center justify-center p-4 pointer-events-none">
+                    <div className="hidden lg:flex fixed inset-0 z-[9999] items-center justify-center p-4 pointer-events-none">
                         <motion.div
                             key="modal-desktop"
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -235,7 +235,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="md:hidden fixed inset-0 z-[9999] bg-white overflow-y-auto"
+                        className="lg:hidden fixed inset-0 z-[9999] bg-white overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="min-h-full p-6 pb-8">
