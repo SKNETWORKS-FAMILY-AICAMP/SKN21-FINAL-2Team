@@ -244,6 +244,8 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         missing_slots=[],
         follow_up_questions=[],
         answer="",
+        pinned_places=[],
+        is_auto_start=False
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")
     return inputs

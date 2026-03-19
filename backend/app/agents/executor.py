@@ -397,7 +397,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     previous_recommendations = _extract_previously_recommended_place_names(messages)
 
     # ====================================
-    # 장소 정보 리스트가 없으면 Tavily 검색으로 보완
+    # 장소 정보 리스트가 없으면 Naver Search API 검색으로 보완
     if not candidate_pool:
         candidate_pool = candidates
 
