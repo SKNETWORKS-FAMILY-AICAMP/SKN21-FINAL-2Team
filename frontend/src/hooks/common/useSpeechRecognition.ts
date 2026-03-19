@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 export type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
-type AppLanguage = "en" | "ko" | "ja";
+type AppLanguage = "en" | "ko" | "ja" | "zh" | "zh-TW";
 
 const LANGUAGE_STORAGE_KEY = "triver:language:v1";
 
@@ -10,6 +10,8 @@ const STT_LANG_MAP: Record<AppLanguage, string> = {
     en: "en-US",
     ko: "ko-KR",
     ja: "ja-JP",
+    zh: "zh-CN",
+    "zh-TW": "zh-TW",
 };
 
 const STT_MESSAGES: Record<AppLanguage, { unsupported: string; denied: string }> = {
@@ -25,13 +27,21 @@ const STT_MESSAGES: Record<AppLanguage, { unsupported: string; denied: string }>
         unsupported: "このブラウザは音声認識をサポートしていません。Chromeをご使用ください。",
         denied: "マイクへのアクセスがブロックされています。\nマイクのアクセスを「許可」に変更して再試行してください。",
     },
+    zh: {
+        unsupported: "此浏览器不支持语音识别。请使用Chrome浏览器。",
+        denied: "麦克风访问被拒绝。\n请允许麦克风权限后重试。",
+    },
+    "zh-TW": {
+        unsupported: "此瀏覽器不支援語音識別。請使用Chrome瀏覽器。",
+        denied: "麥克風存取被拒絕。\n請允許麥克風權限後重試。",
+    },
 };
 
 const getAppLanguage = (): AppLanguage => {
     if (typeof window === "undefined") return "en";
     try {
         const raw = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-        if (raw === "en" || raw === "ko" || raw === "ja") return raw;
+        if (raw === "en" || raw === "ko" || raw === "ja" || raw === "zh" || raw === "zh-TW") return raw as AppLanguage;
     } catch (e) {
         console.warn("localStorage is not available:", e);
     }
