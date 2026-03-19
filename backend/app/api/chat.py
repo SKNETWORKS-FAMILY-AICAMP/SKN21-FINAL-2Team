@@ -232,10 +232,13 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
-        # 매 턴마다 stale 상태 방지를 위해 명시적으로 초기화 (CLAUDE.md)
+        # 매 턴마다 stale 상태 방지를 위해 명시적으로 초기화
         candidates=[],
         candidate_pool=[],
         retrieval_diagnostics={},
+        retriever_retry_count=0,
+        missing_slots=[],
+        follow_up_questions=[],
         answer="",
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")

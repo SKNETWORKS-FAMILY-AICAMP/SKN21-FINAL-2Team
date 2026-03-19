@@ -18,8 +18,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. 기존 언어코드(소문자) → ISO 국가코드(대문자) 매핑 보정
-    # insert_db.py가 언어코드(ko, en, ja 등)를 국가코드로 잘못 저장한 케이스 대응
+    # 1. FK 제약 조건 제거 (users.country_code → country.code) 먼저 수행
+    try:
+        op.drop_constraint('users_ibfk_1', 'users', type_='foreignkey')
+    except Exception:
+        pass
+
+    # 2. 기존 언어코드(소문자) → ISO 국가코드(대문자) 매핑 보정
     lang_to_country = {
         "ko": "KR", "en": "US", "ja": "JP", "zh": "CN",
         "th": "TH", "vi": "VN", "id": "ID", "ms": "MY",
@@ -32,12 +37,6 @@ def upgrade() -> None:
 
     # 나머지 소문자 코드는 대문자로 변환
     op.execute("UPDATE users SET country_code = UPPER(country_code) WHERE country_code IS NOT NULL AND country_code != UPPER(country_code)")
-
-    # 2. FK 제약 조건 제거 (users.country_code → country.code)
-    try:
-        op.drop_constraint('users_ibfk_1', 'users', type_='foreignkey')
-    except Exception:
-        pass
 
     # 3. country 테이블 삭제
     op.drop_table('country')
