@@ -37,11 +37,6 @@ Enum language_type {
   zh
 }
 
-Table country {
-    code varchar [primary key]
-    name varchar
-}
-
 // 2. 회원 정보
 Table users {
   id integer [primary key, increment]
@@ -162,9 +157,6 @@ Table diary_entry_places {
 }
 
 // --- 관계 설정 (Ref) ---
-
-// Users - 국적 연결 (1:N)
-Ref: users.country_code > country.code
 
 // 채팅방 및 메시지
 Ref: users.id < chat_rooms.user_id
@@ -297,7 +289,7 @@ def deploy_db_from_dbml():
                 "diary_entry_places", "diary_entries",
                 "chat_places", "chat_messages", "chat_rooms",
                 "reservation_list", "hot_places",
-                "users", "country",
+                "users",
                 "checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"
             ]
             for table in tables:
@@ -321,15 +313,6 @@ def deploy_db_from_dbml():
             connection.commit()
             print("✅ DB 테이블이 성공적으로 생성되었습니다!")
 
-            # 기본 데이터 삽입 자동 호출 (country)
-            print("🚀 기본 데이터(country) 삽입을 시작합니다...")
-            try:
-                from app.database.insert_db import insert_country
-                cntry_res = insert_country()
-                print(f"   - country: inserted={cntry_res['inserted']}, skipped={cntry_res['skipped']}")
-            except Exception as e:
-                print(f"⚠️ 데이터 삽입 중 경고 발생: {e}")
-            
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
     finally:
