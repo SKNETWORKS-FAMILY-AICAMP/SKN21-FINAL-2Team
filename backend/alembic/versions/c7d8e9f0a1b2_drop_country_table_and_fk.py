@@ -18,8 +18,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. 기존 소문자 country_code를 ISO 대문자로 보정
-    op.execute("UPDATE users SET country_code = UPPER(country_code) WHERE country_code IS NOT NULL")
+    # 1. 기존 언어코드(소문자) → ISO 국가코드(대문자) 매핑 보정
+    # insert_db.py가 언어코드(ko, en, ja 등)를 국가코드로 잘못 저장한 케이스 대응
+    lang_to_country = {
+        "ko": "KR", "en": "US", "ja": "JP", "zh": "CN",
+        "th": "TH", "vi": "VN", "id": "ID", "ms": "MY",
+        "de": "DE", "fr": "FR", "es": "ES", "it": "IT",
+        "pt": "BR",
+    }
+    for lang_code, country_code in lang_to_country.items():
+        op.execute(f"UPDATE users SET country_code = '{country_code}' WHERE country_code = '{lang_code}'")
+        op.execute(f"UPDATE users SET country_code = '{country_code}' WHERE country_code = '{lang_code.upper()}'")
+
+    # 나머지 소문자 코드는 대문자로 변환
+    op.execute("UPDATE users SET country_code = UPPER(country_code) WHERE country_code IS NOT NULL AND country_code != UPPER(country_code)")
 
     # 2. FK 제약 조건 제거 (users.country_code → country.code)
     try:
