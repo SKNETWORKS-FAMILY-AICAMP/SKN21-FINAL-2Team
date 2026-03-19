@@ -137,11 +137,14 @@ def _make_room_title(text: str) -> str:
 
 def _should_update_room_title(db: Session, room_id: int) -> bool:
     count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
-    return int(count) <= 20
+    return int(count) <= 10
 
 
-def _can_overwrite_room_title(room: ChatRoom) -> bool:
-    return (room.title or "").strip() in AUTO_ROOM_TITLES
+def _can_overwrite_room_title(db: Session, room_id: int, room: ChatRoom) -> bool:
+    if (room.title or "").strip() in AUTO_ROOM_TITLES:
+        return True
+    count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
+    return int(count) <= 10
 
 
 def _save_room_title(db: Session, room: ChatRoom, next_title: str | None) -> bool:
@@ -541,7 +544,7 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
         
-        if should_update_title and _can_overwrite_room_title(room):
+        if should_update_title and _can_overwrite_room_title(db, room_id, room):
             # 방 제목 자동 설정 (LLM이 제목을 생성했을 때만)
             title = result.get("summary_title")
             if title and str(title).strip().lower() != "null":
@@ -654,7 +657,7 @@ def _build_streaming_response(
                             final_answer = output["answer"]
 
                     if node_name == "intent":
-                        if should_update_title and output and _can_overwrite_room_title(room):
+                        if should_update_title and output and _can_overwrite_room_title(db, room_id, room):
                             summary_title = output.get("summary_title")
                             if summary_title and str(summary_title).strip().lower() != "null":
                                 if _save_room_title(db, room, summary_title):
