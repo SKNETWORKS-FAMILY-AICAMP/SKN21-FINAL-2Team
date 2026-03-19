@@ -1,6 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
-from langchain.base_language import BaseLanguageModel
+from langchain_core.language_models import BaseLanguageModel
 from app.utils.config import LLM_MODEL, LLM_TYPE, OLLAMA_BASE_URL
 
 class LLMFactory:

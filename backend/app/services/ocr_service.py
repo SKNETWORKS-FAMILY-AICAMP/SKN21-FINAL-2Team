@@ -167,14 +167,13 @@ def _normalize_llm_output(data: dict[str, Any], category: str) -> dict[str, Any]
         if isinstance(value, str):
             value = value.strip()
             
-            # 시간 필드 범위 처리 (e.g., "14:30~16:30" → "14:30")
-            if "시간" in normalized_key or normalized_key in ["출발시간", "도착시간", "예약시간", "체크인 시간", "체크아웃 시간"]:
-                # "HH:MM~HH:MM" 또는 "HH:MM-HH:MM" 형태 처리
-                if "~" in value or "~" in value or "-" in value:
-                    # 첫 번째 시간만 추출
-                    first_time = re.split(r"[~\-~]", value)[0].strip()
-                    if re.match(r"\d{2}:\d{2}", first_time):
-                        value = first_time
+            # 시간 필드 범위 처리: 활동/공연 '시간'만 범위 처리, 도착/체크아웃 시간은 제외
+            # (도착시간, 체크아웃시간은 정확한 시간 1개이므로 범위 처리 X)
+            if normalized_key == "시간" and ("~" in value or "-" in value):
+                # 공연/활동 시간처럼 범위인 경우만 첫 번째 시간 추출
+                first_time = re.split(r"[~\-~]", value)[0].strip()
+                if re.match(r"\d{2}:\d{2}", first_time):
+                    value = first_time
             
             # 값에서 불필요한 접미사 제거 (Qwen 특성)
             # e.g., "KONJIAM RESORT 레스토랑" → "KONJIAM RESORT"
@@ -188,6 +187,12 @@ def _normalize_llm_output(data: dict[str, Any], category: str) -> dict[str, Any]
         
         normalized[normalized_key] = value
     
+    # 좌석 번호 패턴 검증 (교통 티켓)
+    if category == "transportation" and "좌석 번호" in normalized:
+        seat_value = normalized["좌석 번호"]
+        # 좌석 번호는 보통 숫자+알파벳 조합 (예: 13D, 7A)
+        if not re.match(r"^\d{1,2}[A-Z]$", seat_value):
+            normalized["좌석 번호"] = ""
     return normalized
 
 
@@ -260,15 +265,25 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
             base_url=OCR_OLLAMA_BASE_URL
         )
         
-        # Category-specific prompt mapping
+        # Category-specific prompt mapping (좌석 번호 정의/예시 추가)
         category_prompts = {
-            "transportation": "교통 티켓입니다. '날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'을 추출해주세요.",
-            "hotel": "호텔 예약증입니다. '날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'을 추출해주세요.",
-            "activity": "공연/활동 티켓입니다. '날짜', '이름', '시간', '장소', '좌석'을 추출해주세요.",
+            "transportation": (
+                "교통 티켓입니다. '날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석 번호'를 추출해주세요.\n"
+                "좌석 번호는 실제로 앉는 좌석을 의미하며, 예시로 '13D', '7A' 등 숫자+알파벳 조합입니다.\n"
+                "호차 번호(예: '2호차')나 승차권 번호(예: '83125-1101-10000-00')와 구분하세요.\n"
+                "좌석 번호는 '좌석번호' 또는 '좌석'이라는 단어 근처에 위치한 값을 추출하세요."
+            ),
+            "hotel": (
+                "호텔 예약증입니다. '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'을 추출해주세요.\n"
+                "체크인 정보는 '체크인' 또는 'Check-in' 라벨 근처에 있으며, 보통 'YYYY.MM.DD HH:MM' 또는 'YYYY.MM.DD() HH:MM' 형식입니다.\n"
+                "체크아웃 정보는 '체크아웃' 또는 'Check-out' 라벨 근처에 있으며, 같은 형식입니다.\n"
+                "날짜와 시간이 함께 표시되어 있으면, 날짜 부분(' YYYY.MM.DD')과 시간 부분('HH:MM')을 분리해서 추출하세요.\n"
+                "예시: '2018.12.03() 15:00'에서 체크인 날짜='2018-12-03', 체크인 시간='15:00'"
+            ),
+            "activity": "공연/활동 티켓입니다. '날짜', '이름', '시간', '장소', '좌석 번호'를 추출해주세요.",
             "restaurant": "식당 예약증입니다. '날짜', '식당이름', '예약시간', '예약자명', '예약 인원'을 추출해주세요.",
             "etc": "기타 예약증/영수증입니다. '예약내역', '시간', '예약자명'을 추출해주세요.",
         }
-        
         prompt_instruction = category_prompts.get(category, category_prompts["etc"])
         
         system_prompt = (
@@ -277,7 +292,8 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
             f"추출 규칙 (반드시 따를 것):\n"
             f"1. 날짜 항목은 반드시 'YYYY-MM-DD' 형식만 사용하세요 (예: 2026-03-25)\n"
             f"2. 시간 항목은 반드시 '24시간 표기법 HH:MM'만 사용하세요 (예: 16:30)\n"
-            f"   - 시간 범위가 있으면 시작 시간만 추출하세요 (예: '14:30~16:30' → '14:30만')\n"
+            f"   - 출발시간, 도착시간, 체크인 시간, 체크아웃 시간, 예약시간 등은 정확한 시간 1개만 추출하세요 (범위 아님)\n"
+            f"   - 공연/활동 시간처럼 범위가 명확한 경우에만 시작 시간을 추출하세요 (예: '14:30~16:30' → '14:30')\n"
             f"3. Key 이름은 위에서 요청한 한글 명칭을 정확히 사용하세요 (오타나 변형 금지)\n"
             f"4. 결과는 JSON 형식만 반환하세요 (설명 텍스트 없음)\n"
             f"5. 찾을 수 없는 항목은 빈 문자열 \"\" 을 사용하세요 (null 금지)\n"
