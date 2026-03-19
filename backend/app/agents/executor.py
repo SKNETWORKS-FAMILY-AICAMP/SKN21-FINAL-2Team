@@ -64,7 +64,10 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
     result: list[tuple[Dict[str, Any], PlaceInfo]] = []
     for c in (candidates or []):
         payload = c.get("payload", {}) or {}
-        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        # 표시명: 팝업/축제는 title(행사명), 일반 장소는 name/title 순
+        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
+        # 지도 검색어: place(장소명) 우선, 없으면 name/title 폴백
+        map_search_name = (payload.get("place") or name).strip()
         address = (payload.get("addr") or payload.get("road_address") or "").strip()
 
         # 좌표: mapx/mapy 우선, 없으면 geo.lon/geo.lat 폴백
@@ -82,7 +85,7 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
                 name=name,
                 address=address,
                 image_path=payload.get("image") or "",
-                map_url=build_naver_map_url(name, float(latitude), float(longitude)),
+                map_url=build_naver_map_url(map_search_name, float(latitude), float(longitude)),
                 longitude=float(longitude),
                 latitude=float(latitude),
             ),
@@ -146,7 +149,7 @@ def _build_minimum_recommendation_suffix(
     intro_by_name: dict[str, str] = {}
     for candidate in candidates or []:
         payload = candidate.get("payload", {}) or {}
-        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
         if not name:
             continue
         introduction = (
@@ -284,16 +287,16 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
         lines.append(f"활동: {info['activity']}")
         for p in info["places"]:
             payload = p.get("payload", {}) if "payload" in p else p
-            name = payload.get("place") or payload.get("title") or payload.get("name") or p.get("title", "")
-            query = name or payload.get("addr") or payload.get("road_address") or p.get("address", "")
-            
+            name = payload.get("title") or payload.get("name") or payload.get("place") or p.get("title", "")
+            map_search_name = (payload.get("place") or name)
+
             try:
                 lat = float(payload.get("mapy") or p.get("lat") or 0.0)
                 lon = float(payload.get("mapx") or p.get("lon") or 0.0)
             except (TypeError, ValueError):
                 lat, lon = 0.0, 0.0
 
-            map_url = build_naver_map_url(query, lat, lon)
+            map_url = build_naver_map_url(map_search_name, lat, lon)
             lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
 
     return "\n".join(lines)

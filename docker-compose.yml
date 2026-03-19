@@ -3,7 +3,6 @@
 
 services:
   mysql:
-    platform: linux/amd64
     image: mysql:8.0
     container_name: mysql_container
     ports:
@@ -18,7 +17,6 @@ services:
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
 
   qdrant:
-    platform: linux/amd64
     image: qdrant/qdrant:latest
     ports:
       - "6333:6333"
@@ -34,7 +32,6 @@ services:
       - mysql
 
   backend:
-    platform: linux/amd64
     build: ./backend
     ports:
       - "8000:8000"
@@ -51,7 +48,6 @@ services:
       - qdrant
 
   frontend:
-    platform: linux/amd64
     build:
       context: ./frontend
       target: dev
@@ -68,7 +64,6 @@ services:
       - NEXT_PUBLIC_API_URL=/api
 
   nginx:
-    platform: linux/amd64
     build: ./nginx
     ports:
       - "80:80"
