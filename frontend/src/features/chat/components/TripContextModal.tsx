@@ -60,21 +60,21 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* 배경 딤 — lg 이상에서만 표시 (소형 화면은 전체화면이라 배경 불필요) */}
+                    {/* 배경 딤 — 항상 표시 */}
                     <motion.div
                         key="backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="hidden lg:block fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
                         onClick={handleClose}
                     />
 
                     {/*
-                     * 단일 모달 — 화면 크기에 따라 CSS만으로 레이아웃 전환
-                     *   - lg 미만 (화면 축소 시): fixed inset-0 → 전체화면으로 꽉 채움
-                     *   - lg 이상 (넓은 화면)  : inset-0 flex items-center justify-center → 중앙 팝업
+                     * 단일 모달 — 화면 크기 무관하게 항상 중앙 팝업
+                     * 화면이 좁아지면 p-4 여백 유지하며 팝업 크기가 줄어듦
+                     * 내용이 길면 max-h-[90vh] + overflow-y-auto 로 스크롤 처리
                      */}
                     <motion.div
                         key="modal"
@@ -82,16 +82,15 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="fixed inset-0 z-[9999] flex lg:items-center lg:justify-center lg:p-4"
-                        onClick={(e) => e.stopPropagation()}
+                        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                        onClick={handleClose}
                     >
-                        <div className="
-                            relative bg-white w-full overflow-y-auto
-                            lg:rounded-3xl lg:shadow-2xl lg:max-w-sm lg:h-auto
-                            p-7
-                        ">
+                        <div
+                            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-7"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             {loading && (
-                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm lg:rounded-3xl gap-3">
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-3xl gap-3">
                                     <Loader2 className="w-7 h-7 animate-spin text-black" />
                                     <p className="text-xs font-medium text-gray-500">{t("chat.creatingRoom")}</p>
                                 </div>

@@ -549,15 +549,6 @@ function SidebarContent() {
                     </div>
                 )}
             </div>
-            {/* 주의: 모달은 fixed 포지션이라 aside 안에 있어도 화면 전체를 덮습니다 */}
-            <TripContextModal
-                isOpen={showTripModal}
-                onConfirm={handleModalConfirm}
-                loading={isTripLoading}
-                onClose={() => {
-                    if (!isTripLoading) setShowTripModal(false);
-                }}
-            />
             {pendingDeleteRoom && (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
                     <button
@@ -597,7 +588,23 @@ function SidebarContent() {
                 </div>
             )}
             </aside>
-        </>
+            {/* TripContextModal — aside 바깥에 렌더링하여 Sidebar 위에 표시 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleModalConfirm}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) setShowTripModal(false);
+                }}
+            />            {/* TripContextModal — aside 바깥에 렌더링하여 Sidebar 위에 표시 */}
+            <TripContextModal
+                isOpen={showTripModal}
+                onConfirm={handleModalConfirm}
+                loading={isTripLoading}
+                onClose={() => {
+                    if (!isTripLoading) setShowTripModal(false);
+                }}
+            />        </>
     );
 }
 
