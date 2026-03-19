@@ -14,6 +14,15 @@ from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
 
 
+_CRIME_PATTERN = re.compile(
+    r"살해|살인|살육|살상|"
+    r"시신|시체|"
+    r"성폭행|강간|추행|몰카|불법촬영|"
+    r"테러|폭탄|폭발물|"
+    r"간첩|기밀유출|국가보안법"
+)
+
+
 async def _analyze_image(image_path: str) -> str | None:
     """이미지 분석 + custom event 발행 (pipeline 'image_analysis' step 표시용)"""
     try:
@@ -120,6 +129,16 @@ async def intent_node(state: TravelState):
 
     primary_intent = result.primary_intent
     update_user_input = result.update_user_input or ""
+
+    # --- 범죄 관련 입력 강제 차단 (Python-level 이중 방어) ---
+    check_input = (update_user_input or user_input or "")
+    if _CRIME_PATTERN.search(check_input):
+        dprint(f"[Intent] Crime pattern detected — forcing GENERAL intent")
+        primary_intent = IntentType.GENERAL
+        result.intents = [IntentType.GENERAL]
+        if result.slots:
+            result.slots.location = None
+            result.slots.categories = None
 
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
     # 조건 기준: canonical_matched 여부 (이름 변경 여부 X)
