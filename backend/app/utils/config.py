@@ -4,8 +4,16 @@ import torch
 # Debug
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
-# Model
-LLM_MODEL = "gpt-4o-mini"
+# Model - 챗봇/일반 LLM (기본값: OpenAI)
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_TYPE = os.getenv("LLM_TYPE", "openai").lower()  # "openai"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+# Model - OCR 전용 LLM (기본값: Ollama qwen2.5:3b)
+# 챗봇과 독립적으로 설정 가능
+OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "qwen2.5:3b")
+OCR_LLM_TYPE = os.getenv("OCR_LLM_TYPE", "ollama").lower()  # "ollama" (권장) 또는 "openai"
+OCR_OLLAMA_BASE_URL = os.getenv("OCR_OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Device
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"

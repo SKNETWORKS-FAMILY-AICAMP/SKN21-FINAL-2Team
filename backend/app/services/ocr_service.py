@@ -1,7 +1,9 @@
 """
 OCR 서비스 — Google Cloud Vision API (REST 방식, API Key 인증)
++ LLM (Qwen2.5:3b Ollama 권장 / OpenAI 선택) 기반 상세 필드 추출
 
 날짜(필수)와 시간(선택)을 이미지에서 추출합니다.
+챗봇과 독립적으로 LLM을 선택할 수 있습니다.
 """
 
 import json
@@ -10,8 +12,9 @@ import re
 import base64
 import httpx
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from app.core.llm_factory import LLMFactory
+from app.utils.config import OCR_LLM_MODEL, OCR_LLM_TYPE, OCR_OLLAMA_BASE_URL
 
 
 # 지원하는 날짜 패턴 목록 (다양한 국가/포맷 티켓 대응)
@@ -124,10 +127,78 @@ def _parse_time(text: str) -> Optional[str]:
     return None
 
 
+def _normalize_llm_output(data: dict[str, Any], category: str) -> dict[str, Any]:
+    """
+    LLM 출력 정규화 (Qwen2.5:3b 등 로컬 모델의 출력 편차 보정)
+    
+    주요 정규화:
+    - 필드명 표준화 (e.g., "차량번호" → "차량 번호")
+    - 시간 범위 처리 (e.g., "14:30~16:30" → "14:30")
+    - 공백/정리
+    - 예상치 못한 추가정보 제거
+    """
+    if not data:
+        return {}
+    
+    normalized = {}
+    
+    # 카테고리별 필드명 매핑
+    field_mappings = {
+        "transportation": {
+            "차량번호": "차량 번호",
+            "vehicle_number": "차량 번호",
+        },
+        "hotel": {},
+        "activity": {},
+        "restaurant": {},
+        "etc": {}
+    }
+    
+    mapping = field_mappings.get(category, {})
+    
+    for key, value in data.items():
+        # 필드명 정규화
+        normalized_key = mapping.get(key, key)
+        
+        if not value:
+            normalized[normalized_key] = ""
+            continue
+        
+        if isinstance(value, str):
+            value = value.strip()
+            
+            # 시간 필드 범위 처리 (e.g., "14:30~16:30" → "14:30")
+            if "시간" in normalized_key or normalized_key in ["출발시간", "도착시간", "예약시간", "체크인 시간", "체크아웃 시간"]:
+                # "HH:MM~HH:MM" 또는 "HH:MM-HH:MM" 형태 처리
+                if "~" in value or "~" in value or "-" in value:
+                    # 첫 번째 시간만 추출
+                    first_time = re.split(r"[~\-~]", value)[0].strip()
+                    if re.match(r"\d{2}:\d{2}", first_time):
+                        value = first_time
+            
+            # 값에서 불필요한 접미사 제거 (Qwen 특성)
+            # e.g., "KONJIAM RESORT 레스토랑" → "KONJIAM RESORT"
+            if "식당이름" in normalized_key or normalized_key == "식당이름":
+                value = re.sub(r"\s*(레스토랑|카페|식당|음식점)$", "", value)
+            
+            # 객실 정보에서 타입 정보 정리
+            if "방 호실" in normalized_key or normalized_key == "방 호실":
+                # e.g., "Superior Twin 싱글2" 그대로 유지하되, 중복 제거
+                value = re.sub(r"\s+", " ", value)
+        
+        normalized[normalized_key] = value
+    
+    return normalized
+
+
 async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str] = None) -> dict:
     """
     Google Cloud Vision API(REST)로 이미지 텍스트 추출 후
     날짜(필수)·시간(선택) 파싱하여 반환.
+    
+    LLM을 통한 상세 필드 추출 지원:
+    - OpenAI: gpt-4o-mini (권장, 고정확도)
+    - Ollama: qwen2.5:3b (개인정보 보호, 로컬 실행)
 
     반환 형태:
         {
@@ -181,11 +252,17 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
 
     details = None
     if category and raw_text:
-        llm = LLMFactory.get_llm(temperature=0)
+        # OCR 전용 LLM 사용 (챗봇과 독립적)
+        llm = LLMFactory.get_llm(
+            model=OCR_LLM_MODEL,
+            temperature=0,
+            llm_type=OCR_LLM_TYPE,
+            base_url=OCR_OLLAMA_BASE_URL
+        )
         
         # Category-specific prompt mapping
         category_prompts = {
-            "transportation": "교통 티켓입니다. '날짜', '목적지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'을 추출해주세요.",
+            "transportation": "교통 티켓입니다. '날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'을 추출해주세요.",
             "hotel": "호텔 예약증입니다. '날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'을 추출해주세요.",
             "activity": "공연/활동 티켓입니다. '날짜', '이름', '시간', '장소', '좌석'을 추출해주세요.",
             "restaurant": "식당 예약증입니다. '날짜', '식당이름', '예약시간', '예약자명'을 추출해주세요.",
@@ -196,13 +273,17 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
         
         system_prompt = (
             f"당신은 OCR 텍스트에서 예약 정보를 추출하는 어시스턴트입니다.\n"
-            f"다음 텍스트에서 {prompt_instruction}\n"
-            f"추출 규칙:\n"
-            f"1. 날짜와 관련된 모든 항목(날짜, 체크인 날짜 등)은 반드시 'YYYY-MM-DD' 형식(예: 2026-03-25)으로 통일해서 반환하세요.\n"
-            f"2. 시간과 관련된 모든 항목(시간, 출발시간 등)은 반드시 '24시간 표기법 HH:MM' 패턴(예: 16:30)으로 통일해서 반환하세요.\n"
-            f"3. 결괏값의 Key는 위에서 요청한 한글 명칭을 그대로 사용하세요.\n"
-            f"4. 결과는 반드시 JSON 형식으로만 반환하세요. JSON 외의 설명 텍스트는 포함하지 마세요.\n"
-            f"5. 찾을 수 없는 항목은 빈 문자열로 두세요."
+            f"다음 텍스트에서 {prompt_instruction}\n\n"
+            f"추출 규칙 (반드시 따를 것):\n"
+            f"1. 날짜 항목은 반드시 'YYYY-MM-DD' 형식만 사용하세요 (예: 2026-03-25)\n"
+            f"2. 시간 항목은 반드시 '24시간 표기법 HH:MM'만 사용하세요 (예: 16:30)\n"
+            f"   - 시간 범위가 있으면 시작 시간만 추출하세요 (예: '14:30~16:30' → '14:30만')\n"
+            f"3. Key 이름은 위에서 요청한 한글 명칭을 정확히 사용하세요 (오타나 변형 금지)\n"
+            f"4. 결과는 JSON 형식만 반환하세요 (설명 텍스트 없음)\n"
+            f"5. 찾을 수 없는 항목은 빈 문자열 \"\" 을 사용하세요 (null 금지)\n"
+            f"6. 값에는 추가정보를 붙이지 마세요. 원문 그대로만 추출하세요\n"
+            f"   (예: 식당명이 'KONJIAM RESORT'면 '레스토랑'을 붙이지 말 것)\n"
+            f"7. 예상치 못한 추가 필드는 추가하지 마세요"
         )
         
         try:
@@ -221,6 +302,10 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
                 response_content = response_content[:-3]
                 
             details = json.loads(response_content.strip())
+            
+            # 후처리: LLM 출력 정규화 (특히 Qwen 모델)
+            details = _normalize_llm_output(details, category)
+            
         except Exception as e:
             print(f"LLM details extraction failed: {e}")
             details = None

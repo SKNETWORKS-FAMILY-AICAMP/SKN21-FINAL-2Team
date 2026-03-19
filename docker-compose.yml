@@ -26,6 +26,26 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  ollama:
+    platform: linux/amd64
+    image: ollama/ollama:latest
+    container_name: ollama_container
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_NUM_THREAD: "4"
+    # Note: qwen2.5:3b will be pulled on first startup
+    entrypoint: >
+      sh -c "
+      ollama serve &
+      sleep 10 &&
+      ollama pull qwen2.5:3b &&
+      wait
+      "
+
   adminer:
     image: adminer
     ports:
@@ -49,6 +69,7 @@ services:
     depends_on:
       - mysql
       - qdrant
+      - ollama
 
   frontend:
     platform: linux/amd64
@@ -79,4 +100,5 @@ services:
 volumes:
   mysql_data:
   qdrant_data:
+  ollama_data:
   hf_model_cache:    # HuggingFace 모델 캐시 (bge-m3, clip, bge-reranker-v2-m3)
