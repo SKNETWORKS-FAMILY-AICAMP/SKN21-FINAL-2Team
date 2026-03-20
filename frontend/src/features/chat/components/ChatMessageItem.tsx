@@ -141,7 +141,7 @@ export const ChatMessageItem = memo(({
                             )}
 
                             {!!msg.message && (
-                                <div className="prose prose-sm max-w-none text-slate-700 prose-p:my-2 prose-p:leading-[1.6] prose-p:text-[14px] prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-pre:rounded-xl">
+                                <div className="prose prose-sm max-w-none text-slate-700 prose-p:my-2 prose-p:leading-[1.6] prose-p:text-[14px] prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-pre:rounded-xl overflow-x-auto">
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
                                         components={{
@@ -174,8 +174,10 @@ export const ChatMessageItem = memo(({
                                 <MapIcon size={12} />
                                 Recommended Places
                             </h5>
+                            {/* pt-5 pb-9: 카드 hover shadow(0_8px_30px_-4px)가 scroll container overflow에 잘리지 않도록
+                                 위쪽 18px + 여유 2px = pt-5(20px), 아래쪽 34px + 여유 2px = pb-9(36px) */}
                             <div className={cn(
-                                "flex overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar",
+                                "flex overflow-x-auto pt-5 pb-9 snap-x custom-scrollbar",
                                 compactPlaces
                                     ? "gap-2 px-0"
                                     : "gap-3 sm:gap-4 -mx-1 px-1 sm:-mx-2 sm:px-2"
@@ -192,14 +194,18 @@ export const ChatMessageItem = memo(({
                                             onMouseEnter={() => handleSelectMapPlace(mapId)}
                                             onClick={() => handleSelectMapPlace(mapId, msg.id)}
                                             className={cn(
-                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-[box-shadow,transform,border-color] duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1",
+                                                /* hover:-translate-y-1 제거: 카드가 위로 4px 이동하면 overflow-x-auto 컨테이너 밖으로
+                                                   나가 box-shadow가 잘림. 대신 shadow만 강화하여 hover 효과 유지. */
+                                                "snap-start flex-shrink-0 relative bg-white rounded-[20px] overflow-hidden border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] group cursor-pointer transition-[box-shadow,border-color] duration-300 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.13)]",
                                                 compactPlaces ? "w-[148px] sm:w-[158px] xl:w-[168px]" : "w-[168px] sm:w-[180px]",
                                                 isMapSelected ? "border-black ring-2 ring-black/10" : "border-slate-100 hover:border-slate-300"
                                             )}
                                             style={compactPlaces ? { width: "min(15rem, calc((100% - 1rem) / 3))", minWidth: "8.75rem" } : undefined}
                                         >
                                             <div className={cn(
-                                                "relative bg-slate-100",
+                                                /* overflow-hidden: group-hover:scale-110 시 이미지가 고정 높이(120px) 밖으로
+                                                   번져 텍스트 영역, 그라디언트와 겹치는 현상 방지 */
+                                                "relative bg-slate-100 overflow-hidden",
                                                 compactPlaces ? "h-[104px] sm:h-[112px]" : "h-[120px]"
                                             )}>
                                                 <img
