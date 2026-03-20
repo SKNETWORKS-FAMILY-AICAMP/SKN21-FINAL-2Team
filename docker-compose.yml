@@ -29,6 +29,7 @@ services:
 
 
   adminer:
+    platform: linux/amd64
     image: adminer
     ports:
       - "8080:8080"
@@ -81,4 +82,4 @@ services:
 volumes:
   mysql_data:
   qdrant_data:
-  hf_model_cache:    # HuggingFace 모델 캐시 (bge-m3, clip, bge-reranker-v2-m3)
+  hf_model_cache: # HuggingFace 모델 캐시 (bge-m3, clip, bge-reranker-v2-m3)

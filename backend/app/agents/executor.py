@@ -13,6 +13,18 @@ from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.common import build_naver_map_url, dprint, dpprint
+from app.models.enums import LanguageType
+
+_LANGUAGE_INSTRUCTION: dict[str, str] = {
+    LanguageType.en: "IMPORTANT: Respond entirely in English. However, keep all place names in their original Korean.",
+    LanguageType.ko: "",
+    LanguageType.ja: "IMPORTANT: 必ず日本語で回答してください。ただし、장소명はすべて元の韓国語表記のまま維持してください。",
+    LanguageType.zh: "IMPORTANT: 请务必用中文回答。但是，所有장소명必须保持原始韩文不变。",
+}
+
+def _get_language_suffix(language) -> str:
+    key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
+    return _LANGUAGE_INSTRUCTION.get(key, "")
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_contenttypeid
 from app.utils.geocoder import GeoCoder
@@ -52,7 +64,10 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
     result: list[tuple[Dict[str, Any], PlaceInfo]] = []
     for c in (candidates or []):
         payload = c.get("payload", {}) or {}
-        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        # 표시명: 팝업/축제는 title(행사명), 일반 장소는 name/title 순
+        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
+        # 지도 검색어: place(장소명) 우선, 없으면 name/title 폴백
+        map_search_name = (payload.get("place") or name).strip()
         address = (payload.get("addr") or payload.get("road_address") or "").strip()
 
         # 좌표: mapx/mapy 우선, 없으면 geo.lon/geo.lat 폴백
@@ -70,7 +85,7 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
                 name=name,
                 address=address,
                 image_path=payload.get("image") or "",
-                map_url=build_naver_map_url(name, float(latitude), float(longitude)),
+                map_url=build_naver_map_url(map_search_name, float(latitude), float(longitude)),
                 longitude=float(longitude),
                 latitude=float(latitude),
             ),
@@ -134,7 +149,7 @@ def _build_minimum_recommendation_suffix(
     intro_by_name: dict[str, str] = {}
     for candidate in candidates or []:
         payload = candidate.get("payload", {}) or {}
-        name = (payload.get("place") or payload.get("title") or payload.get("name") or "").strip()
+        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
         if not name:
             continue
         introduction = (
@@ -272,16 +287,16 @@ def _build_itinerary_context(candidates: List[Dict[str, Any]]) -> str:
         lines.append(f"활동: {info['activity']}")
         for p in info["places"]:
             payload = p.get("payload", {}) if "payload" in p else p
-            name = payload.get("place") or payload.get("title") or payload.get("name") or p.get("title", "")
-            query = name or payload.get("addr") or payload.get("road_address") or p.get("address", "")
-            
+            name = payload.get("title") or payload.get("name") or payload.get("place") or p.get("title", "")
+            map_search_name = (payload.get("place") or name)
+
             try:
                 lat = float(payload.get("mapy") or p.get("lat") or 0.0)
                 lon = float(payload.get("mapx") or p.get("lon") or 0.0)
             except (TypeError, ValueError):
                 lat, lon = 0.0, 0.0
 
-            map_url = build_naver_map_url(query, lat, lon)
+            map_url = build_naver_map_url(map_search_name, lat, lon)
             lines.append(f"- [{name}]({map_url})" if map_url else f"- {name}")
 
     return "\n".join(lines)
@@ -385,7 +400,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     previous_recommendations = _extract_previously_recommended_place_names(messages)
 
     # ====================================
-    # 장소 정보 리스트가 없으면 Tavily 검색으로 보완
+    # 장소 정보 리스트가 없으면 Naver Search API 검색으로 보완
     if not candidate_pool:
         candidate_pool = candidates
 
@@ -477,6 +492,10 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             previous_recommendations=", ".join(previous_recommendations) if previous_recommendations else "없음",
         )
 
+    lang_suffix = _get_language_suffix(state.get("language"))
+    if lang_suffix:
+        system_prompt += f"\n\n{lang_suffix}"
+
     # state의 messages에는 이미 현재 턴 HumanMessage가 포함되어 있음(chat API에서 invoke 시 추가).
     # 이미지 등 멀티모달을 위해 현재 턴은 content_blocks로 한 번만 보내고, 과거 대화만 history로 사용.
     history = messages[:-1] if messages else []
@@ -537,11 +556,14 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
 
     dprint(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
-    
+
     human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
 
+    lang_suffix = _get_language_suffix(state.get("language"))
+    missing_system_prompt = EXECUTOR_MISSING_INFO_PROMPT + (f"\n\n{lang_suffix}" if lang_suffix else "")
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", EXECUTOR_MISSING_INFO_PROMPT),
+        ("system", missing_system_prompt),
         MessagesPlaceholder(variable_name="messages"),
         human_message
     ])
@@ -589,8 +611,11 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
 
     location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
+    lang_suffix = _get_language_suffix(state.get("language"))
+    general_system_prompt = EXECUTOR_GENERAL_PROMPT + (f"\n\n{lang_suffix}" if lang_suffix else "")
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", EXECUTOR_GENERAL_PROMPT),
+        ("system", general_system_prompt),
     ])
 
     prompt_value = prompt.invoke({

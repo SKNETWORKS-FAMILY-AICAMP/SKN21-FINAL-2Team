@@ -57,6 +57,8 @@ class IntentSlots(BaseModel):
     party_size: Optional[int] = Field(default=None, description="인원수")
     budget_level: Optional[Literal["low", "medium", "high"]] = Field(default=None, description="예산 범위 (가성비/저렴/싸게: low, 보통/적당히: medium, 럭셔리/비싸도: high)")
     nice_to_have: Optional[str] = Field(default=None, description="있으면 좋은 조건")
+    exclude_location: Optional[str] = Field(default=None, description="사용자가 제외를 원하는 위치 (예: '서울역 말고' → 'exclude_location=서울역', location=None으로 설정)")
+    exclude_tags: Optional[List[str]] = Field(default=None, description="사용자가 싫어하거나 피하고 싶은 키워드 (예: '해산물 싫어' → ['해산물']). input_tags와 중복 금지.")
 
 
 class IntentCoreOutput(BaseModel):

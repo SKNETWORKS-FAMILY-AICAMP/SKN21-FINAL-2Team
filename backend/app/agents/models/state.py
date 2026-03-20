@@ -2,6 +2,7 @@ from typing import TypedDict, List, Dict, Any, Annotated
 from langgraph.graph.message import add_messages
 from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType
 from app.agents.models.place import PlaceInfo
+from app.models.enums import LanguageType
 from langchain_core.messages import BaseMessage
 
 class TravelState(TypedDict, total=False):
@@ -9,6 +10,7 @@ class TravelState(TypedDict, total=False):
 
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
+    language: LanguageType  # 사용자 응답 언어 (en/ko/ja/zh)
     room_id: int
     prefs_info: str
 
