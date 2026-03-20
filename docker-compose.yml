@@ -48,7 +48,7 @@ services:
     volumes:
       - ./backend:/app
       - hf_model_cache:/root/.cache/huggingface
-    command: sh app/database/entrypoint.sh
+    command: ["/bin/sh", "/app/app/database/entrypoint.sh"]
     depends_on:
       - mysql
       - qdrant
