@@ -824,10 +824,17 @@ export interface OcrResult {
  * 이미지 파일을 백엔드로 전송해 OCR로 날짜·시간을 추출합니다.
  * 주의: FormData 전송이라 fetchWithAuth 대신 직접 fetch 사용
  */
-export const ocrReservationImage = async (file: File, category?: string): Promise<OcrResult> => {
+export const ocrReservationImage = async (
+    params: { file?: File; imagePath?: string; category?: string }
+): Promise<OcrResult> => {
+    const { file, imagePath, category } = params;
     const token = safeLocalGet('access_token');
     const formData = new FormData();
-    formData.append("file", file);
+    if (file) {
+        formData.append("file", file);
+    } else if (imagePath) {
+        formData.append("image_path", imagePath);
+    }
     if (category) {
         formData.append("category", category);
     }

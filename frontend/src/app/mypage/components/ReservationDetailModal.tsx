@@ -210,18 +210,25 @@ export function ReservationDetailModal({
         setOcrMessage(null);
 
         try {
-            // [수정] base64 또는 URL 이미지를 File 객체로 변환 시 확장자 동적 적용
-            const res = await fetch(resolveImageUrl(effectivePhotoUrl));
-            const blob = await res.blob();
+            let result;
 
-            // blob.type (예: 'image/png')에서 확장자 추출. 'jpeg'는 'jpg'로 변환
-            const mimeType = blob.type || "image/jpeg";
-            let extension = mimeType.split('/')[1] || "jpg";
-            if (extension === "jpeg") extension = "jpg";
-
-            const file = new File([blob], `ticket.${extension}`, { type: mimeType });
-
-            const result = await ocrReservationImage(file, draftCategory);
+            if (effectivePhotoUrl.startsWith("data:image/")) {
+                // 새로 업로드한 이미지: data: URL → File 변환 후 multipart 전송
+                const res = await fetch(effectivePhotoUrl);
+                const blob = await res.blob();
+                const mimeType = blob.type || "image/jpeg";
+                let extension = mimeType.split('/')[1] || "jpg";
+                if (extension === "jpeg") extension = "jpg";
+                const file = new File([blob], `ticket.${extension}`, { type: mimeType });
+                result = await ocrReservationImage({ file, category: draftCategory });
+            } else {
+                // 저장된 이미지: S3면 https:// URL로 변환해 전달, 로컬이면 상대경로 그대로 전달
+                const resolvedForOcr = resolveImageUrl(effectivePhotoUrl);
+                const ocrImagePath = resolvedForOcr.startsWith("http")
+                    ? resolvedForOcr   // S3: 백엔드가 httpx로 다운로드
+                    : effectivePhotoUrl; // 로컬: 백엔드가 파일시스템에서 직접 읽음
+                result = await ocrReservationImage({ imagePath: ocrImagePath, category: draftCategory });
+            }
 
             if (result.date) {
                 // [추가] 날짜를 찾았다면 제목을 "카테고리명 YYYY-MM-DD" 형태로 자동 덮어쓰기
