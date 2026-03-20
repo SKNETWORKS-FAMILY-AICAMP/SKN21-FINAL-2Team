@@ -48,7 +48,7 @@ services:
     volumes:
       - ./backend:/app
       - hf_model_cache:/root/.cache/huggingface
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       - mysql
       - qdrant

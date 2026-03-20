@@ -12,7 +12,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # 모든 ORM 모델을 Base.metadata에 등록
-from app.models import user, chat as chat_model, country, hot_place, reservation, diary  # noqa: F401
+from app.models import user, chat as chat_model, hot_place, reservation, diary  # noqa: F401
 from app.database.connection import Base
 
 target_metadata = Base.metadata
