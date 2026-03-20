@@ -371,6 +371,16 @@ export function ReservationDetailModal({
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-2">관련 이미지 / 티켓</label>
 
+                                {isEditMode && (
+                                    <div className="mb-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-1.5">
+                                        <span className="text-amber-500 text-xs mt-0.5">⚠️</span>
+                                        <p className="text-[11px] text-amber-700 leading-snug">
+                                            이미지를 등록할 때 <span className="font-semibold">개인정보(이름·전화번호 등)는 가려주세요.</span><br />
+                                            이미지는 예약 정보 분석에만 사용됩니다.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <input
                                     ref={fileInputRef}
                                     type="file"
