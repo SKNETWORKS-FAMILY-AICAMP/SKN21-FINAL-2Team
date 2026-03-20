@@ -8,12 +8,9 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_TYPE = os.getenv("LLM_TYPE", "openai").lower()  # "openai"
 
-# Model - OCR 전용 LLM (기본값: HuggingFace Qwen2.5-3B-Instruct)
-# 챗봇과 독립적으로 설정 가능
-OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "Qwen/Qwen2.5-3B-Instruct")  # 모델명 변경 위치 (이 줄 13번)
-OCR_LLM_TYPE = os.getenv("OCR_LLM_TYPE", "huggingface").lower()  # "huggingface" 또는 "openai"
-OCR_HF_MODEL_ID = os.getenv("OCR_HF_MODEL_ID", OCR_LLM_MODEL)  # HuggingFace repo ID
-# 모델 번경 위치: .env의 OCR_HF_MODEL_ID 또는 위 OCR_LLM_MODEL 기본값 수정
+# Model - OCR 전용 LLM (OpenAI gpt-4o-mini)
+OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "gpt-4o-mini")
+OCR_LLM_TYPE = os.getenv("OCR_LLM_TYPE", "openai").lower()
 
 # Device
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
