@@ -25,10 +25,10 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 const TEMPLATE_MAP: Record<string, string[]> = {
-    transportation: ['날짜', '목적지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'],
-    hotel: ['날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
-    activity: ['날짜', '이름', '시간', '장소', '좌석'],
-    restaurant: ['날짜', '식당이름', '예약시간', '예약자명'],
+    transportation: ['날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석 번호'],
+    hotel: ['숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
+    activity: ['날짜', '이름', '시간', '장소', '좌석 번호'],
+    restaurant: ['날짜', '식당이름', '예약시간', '예약자명', '예약 인원'],
     etc: ['예약내역', '시간', '예약자명']
 };
 
@@ -210,18 +210,25 @@ export function ReservationDetailModal({
         setOcrMessage(null);
 
         try {
-            // [수정] base64 또는 URL 이미지를 File 객체로 변환 시 확장자 동적 적용
-            const res = await fetch(resolveImageUrl(effectivePhotoUrl));
-            const blob = await res.blob();
+            let result;
 
-            // blob.type (예: 'image/png')에서 확장자 추출. 'jpeg'는 'jpg'로 변환
-            const mimeType = blob.type || "image/jpeg";
-            let extension = mimeType.split('/')[1] || "jpg";
-            if (extension === "jpeg") extension = "jpg";
-
-            const file = new File([blob], `ticket.${extension}`, { type: mimeType });
-
-            const result = await ocrReservationImage(file, draftCategory);
+            if (effectivePhotoUrl.startsWith("data:image/")) {
+                // 새로 업로드한 이미지: data: URL → File 변환 후 multipart 전송
+                const res = await fetch(effectivePhotoUrl);
+                const blob = await res.blob();
+                const mimeType = blob.type || "image/jpeg";
+                let extension = mimeType.split('/')[1] || "jpg";
+                if (extension === "jpeg") extension = "jpg";
+                const file = new File([blob], `ticket.${extension}`, { type: mimeType });
+                result = await ocrReservationImage({ file, category: draftCategory });
+            } else {
+                // 저장된 이미지: S3면 https:// URL로 변환해 전달, 로컬이면 상대경로 그대로 전달
+                const resolvedForOcr = resolveImageUrl(effectivePhotoUrl);
+                const ocrImagePath = resolvedForOcr.startsWith("http")
+                    ? resolvedForOcr   // S3: 백엔드가 httpx로 다운로드
+                    : effectivePhotoUrl; // 로컬: 백엔드가 파일시스템에서 직접 읽음
+                result = await ocrReservationImage({ imagePath: ocrImagePath, category: draftCategory });
+            }
 
             if (result.date) {
                 // [추가] 날짜를 찾았다면 제목을 "카테고리명 YYYY-MM-DD" 형태로 자동 덮어쓰기
@@ -321,10 +328,10 @@ export function ReservationDetailModal({
                                 )}
                             </div>
 
-                            {/* 카테고리 선택 */}
-                            {isEditMode ? (
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
+                            {/* 카테고리 선택 / 표시 */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
+                                {isEditMode ? (
                                     <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
                                         {CATEGORY_OPTIONS.map((opt) => (
                                             <button
@@ -332,14 +339,16 @@ export function ReservationDetailModal({
                                                 type="button"
                                                 onClick={() => {
                                                     setDraftCategory(opt.value);
+                                                    // 새 카테고리의 템플릿 필드 가져오기
                                                     const newKeys = TEMPLATE_MAP[opt.value] || TEMPLATE_MAP["etc"];
                                                     const nextDetails: Record<string, string> = {};
-                                                    newKeys.forEach(k => { nextDetails[k] = draftDetails[k] || ""; });
-                                                    Object.keys(draftDetails).forEach(oldKey => {
-                                                        if (!newKeys.includes(oldKey) && draftDetails[oldKey].trim() !== "") {
-                                                            nextDetails[oldKey] = draftDetails[oldKey];
-                                                        }
+                                                    
+                                                    // 새 템플릿 키만 초기화 (같은 필드명이면 기존 값 유지, 없으면 빈 값)
+                                                    newKeys.forEach(k => { 
+                                                        nextDetails[k] = draftDetails[k] || ""; 
                                                     });
+                                                    
+                                                    // 다른 필드는 추가하지 않음 (필드 증가 방지)
                                                     setDraftDetails(nextDetails);
                                                 }}
                                                 className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${draftCategory === opt.value
@@ -351,8 +360,12 @@ export function ReservationDetailModal({
                                             </button>
                                         ))}
                                     </div>
-                                </div>
-                            ) : null}
+                                ) : (
+                                    <div className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-lg">
+                                        <p className="text-sm font-medium text-gray-700">{CATEGORY_MAP[draftCategory]}</p>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* 이미지 업로드 영역 */}
                             <div>
