@@ -14,6 +14,38 @@ from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
 
 
+_TAG_EXPANSION: dict[str, list[str]] = {
+    "한국적인":  ["한옥", "전통", "전통차", "고즈넉한"],
+    "전통적인":  ["한옥", "전통", "전통차", "고즈넉한"],
+    "한옥":      ["한옥", "전통", "고즈넉한"],
+    "힙한":      ["감성카페", "인더스트리얼", "트렌디한"],
+    "감성적인":  ["감성카페", "빈티지소품", "인스타감성"],
+    "인스타감성": ["감성카페", "포토존", "인스타"],
+    "레트로":    ["빈티지", "복고", "근대건축"],
+    "복고풍":    ["빈티지", "복고", "근대건축"],
+    "아늑한":    ["조용한", "소규모", "따뜻한"],
+    "포근한":    ["조용한", "소규모", "따뜻한"],
+}
+
+
+def _expand_input_tags(tags: list[str]) -> list[str]:
+    expanded = list(tags)
+    for tag in tags:
+        for key, additions in _TAG_EXPANSION.items():
+            if key in tag:
+                expanded.extend(additions)
+    return list(dict.fromkeys(expanded))  # 순서 유지 + 중복 제거
+
+
+_CRIME_PATTERN = re.compile(
+    r"살해|살인|살육|살상|"
+    r"시신|시체|"
+    r"성폭행|강간|추행|몰카|불법촬영|"
+    r"테러|폭탄|폭발물|"
+    r"간첩|기밀유출|국가보안법"
+)
+
+
 async def _analyze_image(image_path: str) -> str | None:
     """이미지 분석 + custom event 발행 (pipeline 'image_analysis' step 표시용)"""
     try:
@@ -121,6 +153,16 @@ async def intent_node(state: TravelState):
     primary_intent = result.primary_intent
     update_user_input = result.update_user_input or ""
 
+    # --- 범죄 관련 입력 강제 차단 (Python-level 이중 방어) ---
+    check_input = (update_user_input or user_input or "")
+    if _CRIME_PATTERN.search(check_input):
+        dprint(f"[Intent] Crime pattern detected — forcing GENERAL intent")
+        primary_intent = IntentType.GENERAL
+        result.intents = [IntentType.GENERAL]
+        if result.slots:
+            result.slots.location = None
+            result.slots.categories = None
+
     # --- 표준 장소 후처리: LLM 반환 location을 서버에서 최종 정규화 ---
     # 조건 기준: canonical_matched 여부 (이름 변경 여부 X)
     # → LLM이 canonical key와 동일한 이름을 반환해도 lat/lon이 환각일 수 있으므로
@@ -145,6 +187,13 @@ async def intent_node(state: TravelState):
                 # 좌표가 서울 밖에 있으면 일반 검색으로 변경
                 primary_intent = IntentType.GENERAL
 
+    expanded_tags = _expand_input_tags(result.input_tags or [])
+    dprint(f"[Intent] input_tags expanded: {result.input_tags} → {expanded_tags}")
+
+    new_summary_title = summary_result.summary_title
+    if new_summary_title and new_summary_title.strip().lower() == "null":
+        new_summary_title = None
+
     # State에 결과 저장
     dprint(f"[TIMING] intent_node DONE  total={time.perf_counter()-_intent_start:.3f}s  primary_intent={primary_intent}")
     return {
@@ -152,9 +201,9 @@ async def intent_node(state: TravelState):
         "primary_intent": primary_intent,
         "slots": slots,
         "update_user_input": update_user_input,
-        "summary_title": summary_result.summary_title or summary_title,
+        "summary_title": new_summary_title or summary_title,
         "summary_message": summary_result.summary_message,
-        "input_tags": result.input_tags,
+        "input_tags": expanded_tags,
         "prefs_info": prefs_info,
         "semantic_input_image": semantic_input_image,
         "candidates": [],

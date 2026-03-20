@@ -141,10 +141,11 @@ export function PlaceMapPanel({
         maxZoom: 18,
       });
       infoWindowRef.current = new naver.maps.InfoWindow({
-        backgroundColor: "#111827",
-        borderColor: "#111827",
-        anchorSize: new naver.maps.Size(10, 10),
-        pixelOffset: new naver.maps.Point(0, -8),
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        borderWidth: 0,
+        disableAnchor: true,
+        pixelOffset: new naver.maps.Point(0, -4),
       });
 
       const enforceSeoulBounds = () => {
@@ -204,7 +205,14 @@ export function PlaceMapPanel({
       const selected = sortedPlaces.find((p) => p.mapId === selectedMapPlaceId);
       const marker = markersRef.current.get(selectedMapPlaceId);
       if (selected && marker) {
-        const content = `<div style="padding:6px 8px;color:#fff;font-size:12px;font-weight:600;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(selected.name)}</div>`;
+        const content = `
+          <div style="position: relative; padding-bottom: 11px; pointer-events: none; transform: translateY(-2px); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+            <div style="background-color: #ffffff; padding: 6px 12px; border-radius: 6px; border: 1px solid #e5e7eb; color: #111827; font-size: 13px; font-weight: 600; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;">
+              ${escapeHtml(selected.name)}
+            </div>
+            <div style="position: absolute; bottom: 5px; left: 50%; margin-left: -7px; transform: rotate(45deg); width: 14px; height: 14px; background-color: #ffffff; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; clip-path: polygon(100% 0, 100% 100%, 0 100%);"></div>
+          </div>
+        `;
         infoWindowRef.current.setContent(content);
         infoWindowRef.current.open(map, marker);
       } else {

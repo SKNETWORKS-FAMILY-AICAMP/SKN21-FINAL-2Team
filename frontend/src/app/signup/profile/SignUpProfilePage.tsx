@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, ArrowRight, User, Globe, MessageSquare, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchCountries, updateCurrentUser } from "@/services/api";
+import { updateCurrentUser } from "@/services/api";
+import { COUNTRIES } from "@/config/countries";
 import { getNicknameValidationError, type GenderType } from "./utils/validation";
 import { useTranslation } from "@/i18n/useTranslation";
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
@@ -29,12 +30,7 @@ export function SignUpProfilePage() {
       picture: localStorage.getItem("profile_picture") || "",
     };
   });
-  const [countries, setCountries] = useState<{ code: string, name: string }[]>([]);
   const [countryCode, setCountryCode] = useState("");
-
-  useEffect(() => {
-    fetchCountries().then(setCountries).catch(console.error);
-  }, []);
 
   // 주의: 한글과 영문/숫자의 차지하는 너비가 다르므로 가중치(1.6배)를 주어 글자수를 계산합니다.
   const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,7 +189,7 @@ export function SignUpProfilePage() {
                     onChange={(e) => setCountryCode(e.target.value)}
                   >
                     <option value="">{t("profile.countryPlaceholder")}</option>
-                    {countries.map((c) => (
+                    {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>{c.name}</option>
                     ))}
                   </select>

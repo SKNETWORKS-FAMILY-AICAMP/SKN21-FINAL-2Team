@@ -43,7 +43,7 @@ async def test_intent_node_uses_update_user_input_from_structured_output():
                     "user_input": "추천해줘",
                     "messages": [],
                     "prefs_info": "선호 없음",
-                    "summary_title": "새 채팅",
+                    "summary_title": "explore.newTripPlan",
                     "summary_message": "",
                 }
             )

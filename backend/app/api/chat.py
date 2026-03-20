@@ -125,23 +125,26 @@ def _shorten_text(value: str, limit: int = 64) -> str:
         return value
     return value[:limit].rstrip() + "..."
 
-AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅"}
+AUTO_ROOM_TITLES = {"", "새로운 여행 계획", "새 채팅", "explore.newTripPlan"}
 
 def _make_room_title(text: str) -> str:
     """Generate a concise room title from user input."""
     clean = re.sub(r"\s+", " ", (text or "")).strip()
     if len(clean) > 30:
         clean = clean[:30].rstrip() + "..."
-    return clean or "새 채팅"
+    return clean or "explore.newTripPlan"
 
 
 def _should_update_room_title(db: Session, room_id: int) -> bool:
     count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
-    return int(count) <= 20
+    return int(count) <= 10
 
 
-def _can_overwrite_room_title(room: ChatRoom) -> bool:
-    return (room.title or "").strip() in AUTO_ROOM_TITLES
+def _can_overwrite_room_title(db: Session, room_id: int, room: ChatRoom) -> bool:
+    if (room.title or "").strip() in AUTO_ROOM_TITLES:
+        return True
+    count = db.query(func.count(ChatMessage.id)).filter(ChatMessage.room_id == room_id).scalar() or 0
+    return int(count) <= 10
 
 
 def _save_room_title(db: Session, room: ChatRoom, next_title: str | None) -> bool:
@@ -225,6 +228,7 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         user_input=message_in.message,
         user_id=user.id,
         room_id=room.id,
+        language=user.language,
         input_lat=message_in.latitude,
         input_lon=message_in.longitude,
         input_image=to_vision_image_input(message_in.image_path) if message_in.image_path else None,
@@ -232,11 +236,16 @@ def _build_graph_inputs(user: User, room: ChatRoom, message_in: ChatMessageCreat
         messages=[HumanMessage(content=message_in.message)],
         summary_title=room.title,
         summary_message=room.history,
-        # 매 턴마다 stale 상태 방지를 위해 명시적으로 초기화 (CLAUDE.md)
+        # 매 턴마다 stale 상태 방지를 위해 명시적으로 초기화
         candidates=[],
         candidate_pool=[],
         retrieval_diagnostics={},
+        retriever_retry_count=0,
+        missing_slots=[],
+        follow_up_questions=[],
         answer="",
+        pinned_places=[],
+        is_auto_start=False
     )
     print(f"[BuildInputs] Prefs info built: {inputs['prefs_info']}")
     return inputs
@@ -475,7 +484,7 @@ def get_bookmarked_rooms(current_user: User = Depends(get_current_user), db: Ses
         {
             "id": room.id,
             "user_id": room.user_id,
-            "title": room.title or "새 채팅",
+            "title": room.title or "explore.newTripPlan",
             "created_at": room.created_at,
             "bookmark_yn": room.bookmark_yn,
             "latest_message_preview": latest_message_preview,
@@ -511,7 +520,7 @@ def get_bookmarked_places(current_user: User = Depends(get_current_user), db: Se
             "llm_text": place.llm_text,
             "messages_id": place.messages_id,
             "room_id": room_id,
-            "room_title": room_title or "새 채팅",
+            "room_title": room_title or "explore.newTripPlan",
         }
         for place, room_id, room_title in rows
     ]
@@ -537,10 +546,10 @@ async def ask_chat(room_id: int, message_in: ChatMessageCreate, current_user: Us
         print(f"[ChatAPI] Graph invocation completed for room_id={room_id}")
         ai_reply_text = result.get("answer", "죄송합니다. 답변을 생성하지 못했습니다.")
         
-        if should_update_title and _can_overwrite_room_title(room):
+        if should_update_title and _can_overwrite_room_title(db, room_id, room):
             # 방 제목 자동 설정 (LLM이 제목을 생성했을 때만)
             title = result.get("summary_title")
-            if title:
+            if title and str(title).strip().lower() != "null":
                 _save_room_title(db, room, title)
     except Exception as e:
         print(f"[ChatAPI] Graph Execution Error in room_id {room_id}: {e}")
@@ -568,10 +577,16 @@ def _build_streaming_response(
     message_in: ChatMessageCreate,
     current_user: User,
     db: Session,
+    pinned_places: list | None = None,
+    is_auto_start: bool = False,
 ) -> StreamingResponse:
     _save_human_message_if_needed(db, room_id, message_in)
     should_update_title = _should_update_room_title(db, room_id)
     inputs = _build_graph_inputs(current_user, room, message_in)
+    if pinned_places:
+        inputs["pinned_places"] = pinned_places
+    if is_auto_start:
+        inputs["is_auto_start"] = True
     config = {"configurable": {"thread_id": f"room_{room_id}"}}
 
     async def event_generator():
@@ -644,9 +659,9 @@ def _build_streaming_response(
                             final_answer = output["answer"]
 
                     if node_name == "intent":
-                        if should_update_title and output and _can_overwrite_room_title(room):
+                        if should_update_title and output and _can_overwrite_room_title(db, room_id, room):
                             summary_title = output.get("summary_title")
-                            if summary_title:
+                            if summary_title and str(summary_title).strip().lower() != "null":
                                 if _save_room_title(db, room, summary_title):
                                     print(f"[ChatAPI] Room title updated to: {room.title}")
                                     yield _encode_sse({"room_title": room.title})
@@ -836,10 +851,23 @@ async def auto_start_chat_room_stream(
     else:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported auto start mode", 400)
 
+    # selected_places → pinned_places: 구조화된 데이터로 그래프 state에 주입
+    pinned_places = None
+    if auto_start_in.selected_places:
+        pinned_places = [
+            {
+                "name": p.name or "",
+                "address": p.adress or "",
+                "place_id": p.place_id,
+            }
+            for p in auto_start_in.selected_places
+            if (p.name or "").strip()
+        ] or None
+
     message_in = ChatMessageCreate(
         room_id=room_id,
         message=prompt,
         role=RoleType.human,
         save_user_message=auto_start_in.save_user_message,
     )
-    return _build_streaming_response(room_id, room, message_in, current_user, db)
+    return _build_streaming_response(room_id, room, message_in, current_user, db, pinned_places=pinned_places, is_auto_start=True)

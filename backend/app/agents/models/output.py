@@ -57,6 +57,8 @@ class IntentSlots(BaseModel):
     party_size: Optional[int] = Field(default=None, description="인원수")
     budget_level: Optional[Literal["low", "medium", "high"]] = Field(default=None, description="예산 범위 (가성비/저렴/싸게: low, 보통/적당히: medium, 럭셔리/비싸도: high)")
     nice_to_have: Optional[str] = Field(default=None, description="있으면 좋은 조건")
+    exclude_location: Optional[str] = Field(default=None, description="사용자가 제외를 원하는 위치 (예: '서울역 말고' → 'exclude_location=서울역', location=None으로 설정)")
+    exclude_tags: Optional[List[str]] = Field(default=None, description="사용자가 싫어하거나 피하고 싶은 키워드 (예: '해산물 싫어' → ['해산물']). input_tags와 중복 금지.")
 
 
 class IntentCoreOutput(BaseModel):
@@ -84,8 +86,8 @@ class PlannerNeedType(str, Enum): # 계획 필수 타입
 class PlannerItineraryItem(BaseModel):
     """여행 일정 항목"""
     day: int = Field(description="일차 (당일치기면 1)")
-    time_slot: Literal["morning", "afternoon", "evening"] = Field(description="시간대")
-    activity: str = Field(description="활동 설명")
+    time_slot: str = Field(description="시간대 (아침 | 오전 | 점심 | 오후 | 늦은 오후 | 저녁 | 밤)")
+    activity: str = Field(description="활동 설명 (시간대 맥락 포함 가능, 예: '늦은 아침 브런치 카페', '저녁 노을 야경 맛집')")
     category: CategoryType = Field(description="장소 카테고리")
     search_query: str = Field(description="Qdrant 검색에 유리한 구체적 한국어 키워드 (사용자 선호 반영)")
 

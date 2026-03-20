@@ -27,10 +27,10 @@ import {
 import type { ReservationItem, TripSummary } from "./types";
 import { useTranslation } from "@/i18n/useTranslation";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { COUNTRIES, type Country } from "@/config/countries";
 
 import {
   fetchBookmarkedRooms,
-  fetchCountries,
   fetchReservations,
   createReservation,
   deleteReservation,
@@ -43,7 +43,6 @@ import {
   resetCurrentUserProfilePictureToGoogle,
   deactivateCurrentUser,
   logoutApi,
-  type Country,
   type ReservationRecord,
   type TodayRecommendationItem,
 } from "@/services/api";
@@ -141,7 +140,7 @@ export function MyPagePage() {
   const [deactivateSubmitting, setDeactivateSubmitting] = useState<boolean>(false);
   const [deactivateError, setDeactivateError] = useState<string>("");
   const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState<boolean>(false);
-  const [countryOptions, setCountryOptions] = useState<Country[]>([]);
+  const countryOptions: Country[] = COUNTRIES;
   const [settingsDraft, setSettingsDraft] = useState({
     nickname: "",
     countryCode: "",
@@ -231,21 +230,6 @@ export function MyPagePage() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadCountries = async () => {
-      try {
-        const items = await fetchCountries();
-        if (!cancelled) setCountryOptions(Array.isArray(items) ? items : []);
-      } catch (error) {
-        console.warn("Failed to fetch countries", error);
-      }
-    };
-    void loadCountries();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
 

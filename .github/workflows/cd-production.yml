@@ -122,6 +122,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          platforms: linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-backend:${{ steps.meta.outputs.image_tag }}
@@ -132,6 +133,7 @@ jobs:
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
+          platforms: linux/arm64
           target: production
           push: true
           tags: |
@@ -148,6 +150,7 @@ jobs:
         with:
           context: ./nginx
           file: ./nginx/Dockerfile
+          platforms: linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_namespace }}/triver-nginx:${{ steps.meta.outputs.image_tag }}

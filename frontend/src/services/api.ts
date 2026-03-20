@@ -610,16 +610,6 @@ export const fetchHotPlaces = async (limit = 3): Promise<HotPlace[]> => {
     return response.json();
 };
 
-export interface Country {
-    code: string;
-    name: string;
-}
-
-export const fetchCountries = async (): Promise<Country[]> => {
-    const response = await fetchWithAuth(`${API_URL}/common/countries`);
-    return response.json();
-};
-
 export interface ReservationRecord {
     id: number;
     user_id: number;

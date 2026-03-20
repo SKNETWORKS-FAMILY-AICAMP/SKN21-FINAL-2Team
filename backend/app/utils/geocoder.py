@@ -86,6 +86,48 @@ LANDMARK_DICTIONARY: Dict[str, Dict[str, Any]] = {
         "lat": 37.5420, "lon": 126.9840, "radius_m": 700,
         "description": "남산 아래 첫 동네로 이국적인 루프탑과 카페가 많은 용산동 일대"
     },
+    "마포": {
+        "canonical_name": "마포",
+        "aliases": ["마포구", "마포역", "마포쪽"],
+        "lat": 37.5396, "lon": 126.9467, "radius_m": 1800,
+        "description": "마포역 중심의 마포 일대 대표 지점",
+    },
+    "영등포": {
+        "canonical_name": "영등포",
+        "aliases": ["영등포구", "영등포역", "영등포쪽"],
+        "lat": 37.5156, "lon": 126.9077, "radius_m": 1800,
+        "description": "영등포역 중심의 영등포 일대 대표 지점",
+    },
+    "잠실": {
+        "canonical_name": "잠실",
+        "aliases": ["잠실역", "잠실쪽", "잠실동"],
+        "lat": 37.5133, "lon": 127.1000, "radius_m": 1600,
+        "description": "잠실역 중심의 잠실 상권 및 석촌호수·롯데월드 일대",
+    },
+    "송파": {
+        "canonical_name": "송파",
+        "aliases": ["송파구", "송파역", "송파쪽"],
+        "lat": 37.4997, "lon": 127.1122, "radius_m": 2000,
+        "description": "송파역 중심의 송파 일대 대표 지점",
+    },
+    "합정": {
+        "canonical_name": "합정",
+        "aliases": ["합정역", "합정동", "합정쪽"],
+        "lat": 37.5500, "lon": 126.9138, "radius_m": 1000,
+        "description": "합정역 중심의 합정 상권 일대",
+    },
+    "용산": {
+        "canonical_name": "용산",
+        "aliases": ["용산구", "용산역", "용산쪽"],
+        "lat": 37.5298, "lon": 126.9648, "radius_m": 2000,
+        "description": "용산역 중심의 용산 일대 대표 지점",
+    },
+    "강남": {
+        "canonical_name": "강남",
+        "aliases": ["강남구", "강남역", "강남쪽"],
+        "lat": 37.4979, "lon": 127.0276, "radius_m": 1800,
+        "description": "강남역 중심의 강남 대표 상권 일대",
+    },
 }
 
 

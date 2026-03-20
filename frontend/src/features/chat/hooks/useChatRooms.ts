@@ -89,7 +89,7 @@ export function useChatRooms({
             localStorage.removeItem("planTripFlow");
             localStorage.removeItem("pendingDestination");
             
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom("explore.newTripPlan");
 
             setPendingAutoStartMeta(newRoom.id, { mode: "greeting" });
 
@@ -109,7 +109,7 @@ export function useChatRooms({
     const handleCreateRoomWithContext = useCallback(async (context: TripContext) => {
         setIsTripLoading(true);
         try {
-            const newRoom = await createRoom("새로운 여행 계획");
+            const newRoom = await createRoom("explore.newTripPlan");
             let selectedPlaces: StoredSelectedPlaceSeed[] = [];
 
             const pendingRaw = localStorage.getItem("pendingDestination");

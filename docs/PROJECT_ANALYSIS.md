@@ -33,6 +33,7 @@
 - 스트리밍 응답 및 채팅 저장 로직 보강
   - `backend/app/core/llm_streaming.py`
   - `backend/app/api/chat.py`: **SSE 스트리밍 파이프라인 복구 (custom_event 'token' 처리 추가)**
+  - `backend/app/api/chat.py`: **기본 방 제목 다국어화 (explore.newTripPlan) 지원 추가**
 - CORS 및 정적 파일 노출 경로 정리
   - `backend/app/main.py`
 
@@ -42,6 +43,7 @@
 - `/moments` 페이지 추가로 여행 기록 기능 확장
 - `/api` rewrite 기반 백엔드 연결 정책 유지
 - 로그인 이후 이동 경로와 자동시작 플로우 로직 보강
+- 채팅 생성 시 다국어화 키(`explore.newTripPlan`)를 바로 사용하도록 수정
 
 ---
 

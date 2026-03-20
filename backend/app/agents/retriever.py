@@ -190,25 +190,26 @@ def _pick_candidates(
 def _pick_candidates_for_trip_planning(
     candidate_pool: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """TRIP_PLANNING 전용: (day, time_slot)별로 최고 점수 후보 1개씩 선택.
+    """TRIP_PLANNING 전용: itinerary 항목(item_idx)별로 최고 점수 후보 1개씩 선택.
 
-    - 슬롯별로 점수 순 정렬 후 아직 선택되지 않은 장소명 중 최고점 1개 선택
-    - 다른 슬롯에서 이미 선택된 장소는 중복 배치하지 않음
+    - item_idx 별로 점수 순 정렬 후 아직 선택되지 않은 장소명 중 최고점 1개 선택
+    - 다른 항목에서 이미 선택된 장소는 중복 배치하지 않음
+    - item_idx가 없는 후보(fallback general 검색 결과 등)는 처리하지 않음
     """
-    slot_groups: dict[tuple, List[Dict[str, Any]]] = {}
+    item_groups: dict[tuple, List[Dict[str, Any]]] = {}
     for c in candidate_pool:
         day = c.get("itinerary_day") or 0
-        time_slot = c.get("itinerary_time_slot") or ""
-        if not day:
+        item_idx = c.get("itinerary_item_idx")
+        if not day or item_idx is None:
             continue
-        slot_groups.setdefault((day, time_slot), []).append(c)
+        item_groups.setdefault((day, item_idx), []).append(c)
 
     selected: List[Dict[str, Any]] = []
     used_name_signatures: set[str] = set()
 
-    for key in sorted(slot_groups.keys()):
-        slot_candidates = sorted(slot_groups[key], key=_candidate_score, reverse=True)
-        for c in slot_candidates:
+    for key in sorted(item_groups.keys()):
+        item_candidates = sorted(item_groups[key], key=_candidate_score, reverse=True)
+        for c in item_candidates:
             name_sig = _candidate_name_signature(c)
             if name_sig and name_sig not in used_name_signatures:
                 selected.append(c)
@@ -236,7 +237,8 @@ async def _search_for_trip_planning(
     # Semaphore(3) : 병렬로 최대한 몇개 장소 검색할것인지? 10개라고 하면 최대 3개씩 병렬 검색
     semaphore = asyncio.Semaphore(3)
 
-    async def search_item(item):
+    async def search_item(item_with_idx):
+        item, item_idx = item_with_idx
         async with semaphore:
             search_query = item.get("search_query", "") or item.get("activity", "")
             dprint("[Retriever - search planning] query: ", search_query)
@@ -260,20 +262,21 @@ async def _search_for_trip_planning(
                     rerank_top_k=min(rerank_max_k, max(10, candidate_k // 3)),
                     search_scope="place_only",
                 )
-                
-                # 일정 정보를 각 장소 결과 객체에 추가
+
+                # 일정 정보 및 item_idx를 각 장소 결과 객체에 추가
                 for res in results:
                     res["itinerary_day"] = item.get("day", 1)
                     res["itinerary_time_slot"] = item.get("time_slot", "")
+                    res["itinerary_item_idx"] = item_idx
                     res["itinerary_activity"] = item.get("activity", "")
-                    
+
                 return results
 
             except Exception as e:
                 dprint(f"[Retriever] Search error for '{search_query}': {e}")
                 return []
 
-    all_results_lists = await asyncio.gather(*[search_item(item) for item in itinerary])
+    all_results_lists = await asyncio.gather(*[search_item((item, idx)) for idx, item in enumerate(itinerary)])
     return [res for sublist in all_results_lists for res in sublist]
 
 
@@ -422,6 +425,7 @@ async def retriever_node(state: TravelState):
 
     # TRIP_PLANNING: itinerary 기반 검색만 실행 (일반 검색 노이즈 제외).
     # 결과가 0이면(itinerary 없거나 검색 실패) 일반 검색으로 fallback.
+    _trip_planning_fallback = False
     if primary_intent == IntentType.TRIP_PLANNING:
         candidate_pool = await _search_for_trip_planning(
             state,
@@ -432,6 +436,7 @@ async def retriever_node(state: TravelState):
         dprint(f"[Retriever] trip_candidates={len(candidate_pool)}")
         if not candidate_pool:
             dprint("[Retriever] trip search returned 0, fallback to general search")
+            _trip_planning_fallback = True
             candidate_pool = await _search_for_general(
                 state,
                 emotional_text=emotional_text,
@@ -451,6 +456,63 @@ async def retriever_node(state: TravelState):
             geo_retry_count=retry_count,
         )
         dprint(f"[Retriever] general_pool={len(candidate_pool)}")
+
+    # pinned_places(auto_start 선택 장소) 강제 inject
+    # 각 pinned place를 이름으로 직접 검색해서 candidate_pool에 추가
+    pinned_places = state.get("pinned_places") or []
+    if pinned_places and primary_intent == IntentType.TRIP_PLANNING:
+        retriever_instance = PlaceRetriever.get_instance()
+        itinerary = state.get("itinerary") or []
+        existing_ids = {get_place_id(c) for c in candidate_pool}
+
+        for pp in pinned_places:
+            pp_name = (pp.get("name") or "").strip()
+            if not pp_name:
+                continue
+            try:
+                pinned_results = await retriever_instance.search_hybrid(
+                    query=pp_name,
+                    limit=3,
+                    candidate_k=3,
+                    search_scope="place_only",
+                    enable_rerank=False,
+                )
+                if not pinned_results:
+                    dprint(f"[Retriever] pinned place not found: {pp_name!r}")
+                    continue
+
+                best = pinned_results[0]
+                best_id = get_place_id(best)
+
+                # 이미 pool에 있으면 스킵
+                if best_id and best_id in existing_ids:
+                    dprint(f"[Retriever] pinned place already in pool: {pp_name!r}")
+                    continue
+
+                # itinerary에서 해당 장소와 매칭되는 항목 찾기 (search_query에 장소명 포함)
+                matched_item = next(
+                    (item for item in itinerary if pp_name in item.get("search_query", "")),
+                    None,
+                )
+                # 매칭된 itinerary 항목이 없으면 첫 번째 항목에 배치
+                if not matched_item and itinerary:
+                    matched_item = itinerary[0]
+
+                if matched_item:
+                    item_idx = itinerary.index(matched_item) if matched_item in itinerary else 0
+                    best["itinerary_day"] = matched_item.get("day", 1)
+                    best["itinerary_time_slot"] = matched_item.get("time_slot", "")
+                    best["itinerary_item_idx"] = item_idx
+                    best["itinerary_activity"] = matched_item.get("activity", pp_name)
+                    best["pinned"] = True
+
+                candidate_pool.append(best)
+                if best_id:
+                    existing_ids.add(best_id)
+                dprint(f"[Retriever] pinned place injected: {pp_name!r} (id={best_id})")
+
+            except Exception as e:
+                dprint(f"[Retriever] pinned place inject error for {pp_name!r}: {e}")
 
     dprint(f"[Retriever] candidate_pool total={len(candidate_pool)}")
 
@@ -512,10 +574,30 @@ async def retriever_node(state: TravelState):
             f"excluded={before_exc - len(candidates)}"
         )
 
-    if primary_intent == IntentType.TRIP_PLANNING:
-        # 슬롯별 top-1 선택: global final_k 제한 없이 (day, time_slot)당 1개
+    # exclude_tags / exclude_location 후처리 패널티
+    slots = state.get("slots")
+    exclude_tags = list(getattr_safe(slots, "exclude_tags") or [])
+    exclude_location = str(getattr_safe(slots, "exclude_location") or "").strip()
+    if exclude_tags or exclude_location:
+        for c in candidates:
+            payload = c.get("payload", {}) if isinstance(c, dict) else {}
+            desc = (str(payload.get("overview", "")) + str(payload.get("title", ""))).lower()
+            addr = str(payload.get("addr", "") or payload.get("road_address", "")).lower()
+            for tag in exclude_tags:
+                if tag.lower() in desc:
+                    c["blended_score"] = c.get("blended_score", 0) * 0.1
+                    dprint(f"[Retriever] exclude_tag={tag!r} penalty applied: {payload.get('title', '')!r}")
+                    break
+            if exclude_location and exclude_location in addr:
+                c["blended_score"] = 0.0
+                dprint(f"[Retriever] exclude_location={exclude_location!r} zeroed: {payload.get('title', '')!r}")
+        # 패널티 후 재정렬 (score=0 항목은 사실상 제외)
+        candidates = [c for c in sorted(candidates, key=_candidate_score, reverse=True) if _candidate_score(c) > 0.0]
+
+    if primary_intent == IntentType.TRIP_PLANNING and not _trip_planning_fallback:
+        # 항목(item_idx)별 top-1 선택: global final_k 제한 없이 itinerary 항목당 1개
         exposed_candidates = _pick_candidates_for_trip_planning(candidate_pool)
-        dprint(f"[Retriever] trip_planning slot-based selection: {len(exposed_candidates)} candidates")
+        dprint(f"[Retriever] trip_planning item-based selection: {len(exposed_candidates)} candidates")
     else:
         exposed_candidates = _pick_candidates(
             candidates,

@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import random
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.core.retrieval.place import PlaceRetriever
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
@@ -251,24 +253,25 @@ def get_category_places(request: CategoryPlacesRequest):
     """
     사용자 취향(user_prefs)을 기반으로 카테고리별 장소 3개를 추천합니다.
     - places 컬렉션의 contenttypeid 필드로 카테고리 필터링
-    - 동기 def: FastAPI가 자동으로 스레드풀에서 실행 (search_text 동기 메서드와 호환)
+    - 인코딩 1회 + 3개 카테고리 병렬 Qdrant 검색으로 응답 시간 단축
     """
     retriever = PlaceRetriever.get_instance()
-    results: Dict[str, List[PlaceExploreItem]] = {}
 
-    for cat in SEARCH_CATEGORIES:
+    # 인코딩 1회만 수행
+    query_vec = retriever.text_model.encode(request.user_prefs).astype(np.float32)
+
+    def search_category(cat: str):
         matched_enum = next((ct for ct in CategoryType if ct.value == cat), None)
         try:
-            search_results = retriever.search_text(
-                query=request.user_prefs,
+            search_results = retriever.search_by_vector(
+                query_vec=query_vec,
                 limit=20,
                 categories=[matched_enum] if matched_enum else None,
                 has_image=True,
             )
         except Exception as e:
             print(f"[WARN] Category '{cat}' search failed: {e}")
-            results[cat] = []
-            continue
+            return cat, []
 
         items = []
         for res in search_results:
@@ -286,7 +289,15 @@ def get_category_places(request: CategoryPlacesRequest):
                     description=payload.get("description", "")[:200],
                 )
             )
-        results[cat] = random.sample(items, min(3, len(items)))
+        return cat, random.sample(items, min(3, len(items)))
+
+    # 3개 카테고리 병렬 검색
+    results: Dict[str, List[PlaceExploreItem]] = {}
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {executor.submit(search_category, cat): cat for cat in SEARCH_CATEGORIES}
+        for future in as_completed(futures):
+            cat, items = future.result()
+            results[cat] = items
 
     return results
 

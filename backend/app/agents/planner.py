@@ -17,16 +17,14 @@ def build_current_itinerary_context(itinerary: List[Dict[str, Any]] | None) -> s
         itinerary: state에 저장된 기존 여행 일정 목록.
 
     Returns:
-        일차/시간대 기준으로 정렬된 일정 요약 문자열. 일정이 없으면 "없음"을 반환한다.
+        일차 기준으로 정렬된 일정 요약 문자열. 일정이 없으면 "없음"을 반환한다.
     """
     if not itinerary:
         return "없음"
 
-    def _sort_key(item: Dict[str, Any]) -> tuple[int, int, str]:
-        slot_order = {"morning": 0, "afternoon": 1, "evening": 2}
+    def _sort_key(item: Dict[str, Any]) -> tuple[int, str]:
         return (
             int(item.get("day", 1) or 1),
-            slot_order.get(str(item.get("time_slot", "")), 99),
             str(item.get("activity", "")),
         )
 
@@ -37,8 +35,9 @@ def build_current_itinerary_context(itinerary: List[Dict[str, Any]] | None) -> s
         activity = item.get("activity", "")
         category = item.get("category", "")
         search_query = item.get("search_query", "")
+        slot_label = f" [{time_slot}]" if time_slot else ""
         lines.append(
-            f"{day}일차 {time_slot} - {activity} / 카테고리: {category} / 검색어: {search_query}"
+            f"{day}일차{slot_label} - {activity} / 카테고리: {category} / 검색어: {search_query}"
         )
 
     return "\n".join(lines)
@@ -59,6 +58,17 @@ async def planner_node(state: TravelState):
     slots_info = get_slots_info(state)
     prefs_info = state.get("prefs_info", "")
     current_itinerary = build_current_itinerary_context(state.get("itinerary"))
+    summary_message = state.get("summary_message")
+
+    pinned_places = state.get("pinned_places") or []
+    if pinned_places:
+        pinned_lines = [
+            f"- {p.get('name', '이름없음')} (주소: {p.get('address', '')})"
+            for p in pinned_places
+        ]
+        pinned_places_info = "\n".join(pinned_lines)
+    else:
+        pinned_places_info = "없음"
 
     if not user_input:
         return state
@@ -77,12 +87,14 @@ async def planner_node(state: TravelState):
         chain = prompt | structured_llm
 
         result = await chain.ainvoke({
+            "summary_message": summary_message or "없음",
             "messages": messages,
             "user_input": user_input,
             "user_geo": f"위도: {user_lat}, 경도: {user_lon}",
             "slots_info": slots_info or "없음",
             "prefs_info": prefs_info,
             "current_itinerary": current_itinerary,
+            "pinned_places_info": pinned_places_info,
         })
 
         dprint(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")
