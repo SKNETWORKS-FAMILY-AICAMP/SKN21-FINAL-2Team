@@ -45,6 +45,5 @@ echo "  Migration 완료"
 echo "=== [4/4] 초기 데이터 삽입 (hot_places, 중복 자동 skip) ==="
 python -m app.database.insert_db
 echo "  초기 데이터 삽입 완료"
-
 echo "=== 서버 시작 ==="
 exec "$@"
