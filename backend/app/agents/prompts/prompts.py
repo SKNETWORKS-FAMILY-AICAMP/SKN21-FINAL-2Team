@@ -1,3 +1,37 @@
+from app.models.enums import LanguageType
+
+
+def get_summary_language_instruction(language) -> str:
+    """
+    summary_title(및 UI 일관성을 위해 summary_message)이 사용자 언어를 따르도록 하는 시스템 문구.
+    """
+    try:
+        key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
+    except ValueError:
+        key = LanguageType.ko
+    return _SUMMARY_LANGUAGE_INSTRUCTION.get(key, _SUMMARY_LANGUAGE_INSTRUCTION[LanguageType.ko])
+
+
+_SUMMARY_LANGUAGE_INSTRUCTION: dict[LanguageType, str] = {
+    LanguageType.ko: """# 응답 언어 (반드시 준수)
+- **summary_title**: 반드시 **한국어**로만 작성하세요. (공백 포함 약 10자 이내의 짧은 제목)
+- **summary_message**: **한국어**로만 작성하세요. (채팅 UI 언어와 통일)
+- 장소명 등 고유명사는 한국어 원문 표기를 유지하세요.""",
+    LanguageType.en: """# Response language (mandatory)
+- **summary_title**: Write **only in English** — a very short phrase or headline (aim for about 10 words or fewer; be concise).
+- **summary_message**: Write **only in English** to match the UI language.
+- Keep Korean place names in original Hangul when they are the canonical name (do not romanize unnecessarily).""",
+    LanguageType.ja: """# 応答言語（必須）
+- **summary_title**: **日本語のみ**で、短い見出しにしてください（目安：全角10文字前後以内）。
+- **summary_message**: **日本語のみ**で、UI の言語と揃えてください。
+- 場所名など固有名詞は、入力・文脈の韓国語表記を維持しても構いません。""",
+    LanguageType.zh: """# 响应语言（必须遵守）
+- **summary_title**：**只用中文**撰写，简短标题（建议不超过约 10 个汉字）。
+- **summary_message**：**只用中文**，与界面语言一致。
+- 地点名等专有名词可保留韩文原文表记。""",
+}
+
+
 INTENT_PROMPT = """
 # 역할 (Role)
 당신은 한국 여행을 도와주는 친절하고 지식이 풍부한 AI 여행 가이드입니다.
@@ -106,17 +140,20 @@ SUMMARY_PROMPT = """
 당신은 한국 여행 채팅 기록을 요약하는 어시스턴트입니다.
 대화 내용을 읽고 summary_title과 summary_message를 추출하십시오.
 
+{summary_language_instruction}
+
 기존 채팅 제목: {summary_title}
 이전 요약 내용: {summary_message}
 
 ### summary_title
-- 새로운 장소, 활동, 기간 등 구체적인 여행 맥락이 포함되었을 때만 10자 이내의 제목을 추출하십시오.
+- 새로운 장소, 활동, 기간 등 구체적인 여행 맥락이 포함되었을 때만 **위 응답 언어 지침에 맞는 언어로** 짧은 제목을 추출하십시오. (한·일·중: 대략 10자/10字 수준, 영어: 매우 짧은 phrase)
 - 인사말이나 단순 답변이거나 기존 제목이 이미 현재 대화를 잘 대변하면 `null`을 반환하십시오.
-- 예: "홍대, 종로 1박2일 여행 일정", "강남역 핫플 추천"
+- 예시 (언어는 지침에 맞게 선택): 한국어 "홍대·종로 2일", English "Gangnam cafes & food", 日本語「明洞・カフェ」, 中文「弘大美食推荐」
 
 ### summary_message
 - 이전 요약을 참고하여 최근 대화 내용을 포함한 누적 요약을 작성하십시오.
 - 여행 관련 정보(장소, 날짜, 인원, 카테고리 등)를 중심으로 요약하십시오.
+- 문장은 **위 응답 언어 지침**과 동일한 언어로 작성하십시오.
 
 반드시 SummaryOutput 스키마에 맞는 값만 생성하십시오.
 """
