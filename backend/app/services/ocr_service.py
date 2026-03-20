@@ -1,6 +1,6 @@
 """
 OCR 서비스 — Google Cloud Vision API (REST 방식, API Key 인증)
-+ LLM (Qwen2.5:3b Ollama 권장 / OpenAI 선택) 기반 상세 필드 추출
++ LLM (HuggingFace Inference API: Qwen2.5-3B-Instruct / OpenAI 선택) 기반 상세 필드 추출
 
 날짜(필수)와 시간(선택)을 이미지에서 추출합니다.
 챗봇과 독립적으로 LLM을 선택할 수 있습니다.
@@ -14,7 +14,7 @@ import httpx
 from datetime import datetime
 from typing import Optional, Any
 from app.core.llm_factory import LLMFactory
-from app.utils.config import OCR_LLM_MODEL, OCR_LLM_TYPE, OCR_OLLAMA_BASE_URL
+from app.utils.config import OCR_LLM_MODEL, OCR_LLM_TYPE, OCR_HF_MODEL_ID
 
 
 # 지원하는 날짜 패턴 목록 (다양한 국가/포맷 티켓 대응)
@@ -203,7 +203,7 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
     
     LLM을 통한 상세 필드 추출 지원:
     - OpenAI: gpt-4o-mini (권장, 고정확도)
-    - Ollama: qwen2.5:3b (개인정보 보호, 로컬 실행)
+    - HuggingFace: Qwen/Qwen2.5-3B-Instruct (HF Inference API, HF_TOKEN 필요)
 
     반환 형태:
         {
@@ -262,7 +262,7 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
             model=OCR_LLM_MODEL,
             temperature=0,
             llm_type=OCR_LLM_TYPE,
-            base_url=OCR_OLLAMA_BASE_URL
+            base_url=OCR_HF_MODEL_ID  # HuggingFace 일 때는 미사용 (하위 호환)
         )
         
         # Category-specific prompt mapping (좌석 번호 정의/예시 추가)

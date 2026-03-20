@@ -33,7 +33,7 @@ langgraph
 langgraph-checkpoint-mysql[aiomysql]
 langchain
 langchain-openai
-langchain-ollama
+langchain-huggingface
 langchain-community
 tavily-python
 langchain-tavily

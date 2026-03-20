@@ -7,9 +7,9 @@ LLM 모델 빠른 비교 테스트 스크립트 (복수 카테고리 지원)
   uv run python test_llm_quick.py
 
 ✅ 테스트할 수 있는 모델:
-  - gpt-4o-mini    : 현재 사용 중인 모델 (OpenAI API Key 필수)
-  - qwen2.5:3b     : 로컬 Ollama 모델 (Ollama 설치 필요)
-  - qwen2.5:7b     : 로컬 Ollama 모델 (더 정확, 느림)
+  - gpt-4o-mini               : OpenAI API (API Key 필수)
+  - Qwen/Qwen2.5-3B-Instruct  : HuggingFace Inference API (HF_TOKEN 필수)
+  - Qwen/Qwen2.5-7B-Instruct  : HuggingFace Inference API (더 정확, 느림)
 
 ✨ 주요 기능:
   👉 여러 카테고리를 한 번에 테스트 가능
@@ -31,7 +31,7 @@ import time
 import os
 from dotenv import load_dotenv
 
-# .env 파일 로드 (OPENAI_API_KEY 등)
+# .env 파일 로드 (OPENAI_API_KEY, HF_TOKEN 등)
 load_dotenv()
 
 # =====================================================================
@@ -230,13 +230,11 @@ CATEGORIES_TO_TEST = ["transportation", "hotel", "activity", "restaurant", "etc"
 # =====================================================================
 # 👇 섹션 3. 테스트할 모델 목록 (주석 처리로 제외 가능)
 # =====================================================================
-# 주의: 모든 모델이 설치되어 있어야 합니다 (requirements.txt 참고)
+# 주의: 모델명 변경 위치 (이 MODELS 리스트) / 또는 .env의 OCR_HF_MODEL_ID
 MODELS = [
-    # ("gpt",    "gpt-4o-mini"),   # 현재 사용 중인 모델 (OpenAI API Key 필수)
-    ("ollama", "qwen2.5:3b"),    # 로컬 Ollama 모델  ← Ollama 서버 실행 필수
-    # ("ollama", "qwen2.5:7b"),  # 더 정확한 모델 (응답 느림, 비활성화됨)
-    ("ollama", "Gemma3:4b"),
-    ("ollama", "llama3.2:3b")
+    # ("gpt", "gpt-4o-mini"),                          # OpenAI (API Key 필수)
+    ("huggingface", "Qwen/Qwen2.5-3B-Instruct"),      # HuggingFace Inference API <- HF_TOKEN 필수
+    # ("huggingface", "Qwen/Qwen2.5-7B-Instruct"),    # 더 정확한 모델 (느림, 비활성화)
 ]
 
 # =====================================================================
@@ -291,17 +289,18 @@ async def test_gpt(model_name: str, system_prompt: str, user_text: str):
         return None, f"❌ 오류: {e}"
 
 
-async def test_ollama(model_name: str, system_prompt: str, user_text: str):
-    """Ollama 로컬 모델 테스트"""
+async def test_huggingface(model_name: str, system_prompt: str, user_text: str):
+    """HuggingFace Inference API 테스트 (현재 OCR에 사용 중인 방식)"""
     try:
-        from langchain_ollama import ChatOllama
-        # 주의: Ollama가 실행 중이어야 합니다 (ollama serve)
-        llm = ChatOllama(
-            model=model_name,
-            temperature=0,
-            format="json",  # JSON 형식 강제 → 파싱 성공률 향상
-            base_url="http://localhost:11434",
+        from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+        # 주의: HF_TOKEN 환경변수가 로드되어 있어야 합니다
+        endpoint = HuggingFaceEndpoint(
+            repo_id=model_name,
+            temperature=0.01,  # HuggingFace는 temperature=0 미지원
+            max_new_tokens=512,
+            task="text-generation"
         )
+        llm = ChatHuggingFace(llm=endpoint)
 
         start = time.time()
         response = await llm.ainvoke([
@@ -310,11 +309,18 @@ async def test_ollama(model_name: str, system_prompt: str, user_text: str):
         ])
         elapsed = time.time() - start
 
-        return elapsed, response.content.strip()
+        content = response.content.strip()
+        # 마크다운 코드블록 제거 (ocr_service.py와 동일한 처리)
+        if content.startswith("```json"): content = content[7:]
+        if content.startswith("```"):     content = content[3:]
+        if content.endswith("```"):       content = content[:-3]
+        content = content.strip()
+
+        return elapsed, content
     except ImportError:
-        return None, "❌ langchain-ollama 미설치. 실행: pip install langchain-ollama"
+        return None, "❌ langchain-huggingface 미설치. 실행: pip install langchain-huggingface"
     except Exception as e:
-        return None, f"❌ 오류: {e}\n   → Ollama가 실행 중인지 확인하세요: ollama serve"
+        return None, f"❌ 오류: {e}\n   → HF_TOKEN이 설정되어 있는지 확인하세요"
 
 
 def print_result(backend: str, model_name: str, elapsed, content: str):
@@ -359,8 +365,8 @@ async def main():
         for backend, model_name in MODELS:
             if backend == "gpt":
                 elapsed, content = await test_gpt(model_name, system_prompt, ocr_text)
-            elif backend == "ollama":
-                elapsed, content = await test_ollama(model_name, system_prompt, ocr_text)
+            elif backend == "huggingface":
+                elapsed, content = await test_huggingface(model_name, system_prompt, ocr_text)
             else:
                 continue
 
