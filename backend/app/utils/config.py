@@ -21,6 +21,9 @@ VISION_MODEL = "clip-ViT-L-14"
 TEXT_VECTOR_SIZE = 1024
 VISION_VECTOR_SIZE = 768
 
+RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+
+
 # Legacy (will be updated in collections)
 VECTOR_SIZE = 768 # Standardizing to vision size for now or keep for legacy reference
 

@@ -20,10 +20,8 @@ from sentence_transformers import CrossEncoder
 
 from app.agents.models.output import CategoryType
 from app.utils.config import (
-    PLACES_COLLECTION,
-    PHOTOS_COLLECTION,
     DEVICE,
-    BM25_POOL_LIMIT,
+    RERANKER_MODEL,
     SPARSE_ADDR_EXACT_WEIGHT,
     SPARSE_ADDR_STEM_WEIGHT,
     SPARSE_ADDR_MAX_BOOST,
@@ -482,15 +480,14 @@ class PlaceScorer:
         if self._reranker_load_attempted:
             return
         self._reranker_load_attempted = True
-        _RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
         try:
             self._reranker = CrossEncoder(
-                _RERANKER_MODEL,
+                RERANKER_MODEL,
                 device=DEVICE,
                 # MPS(Apple Silicon) 환경에서는 FP16 미지원 → CPU fallback 방지
                 model_kwargs={"torch_dtype": "auto"},
             )
-            dprint(f"[INFO] Reranker loaded: {_RERANKER_MODEL}")
+            dprint(f"[INFO] Reranker loaded: {RERANKER_MODEL}")
         except Exception as e:
             self._reranker = None
             dprint(f"[WARN] Reranker unavailable: {e}")
