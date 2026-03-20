@@ -293,14 +293,14 @@ function SidebarContent() {
                     <button
                         onClick={() => setIsMobileOpen(true)}
                         className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
-                        aria-label="Open sidebar"
+
                     >
                         <Menu size={18} />
                     </button>
                     {isMobileOpen && (
                         <button
                             type="button"
-                            aria-label="Close sidebar overlay"
+
                             onClick={() => setIsMobileOpen(false)}
                             className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
                         />
@@ -323,7 +323,7 @@ function SidebarContent() {
                 <button
                     onClick={() => setIsMobileOpen(false)}
                     className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-black lg:hidden"
-                    aria-label="Close sidebar"
+
                 >
                     <X size={16} />
                 </button>
@@ -442,7 +442,7 @@ function SidebarContent() {
                                                 "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
                                                 isActiveRoom && "group-focus-within/item:opacity-100"
                                             )}
-                                            aria-label={`${room.title} ${t("common.delete")}`}
+
                                             title={t("sidebar.deleteRoom")}
                                         >
                                             <Trash2 size={14} />
@@ -553,7 +553,7 @@ function SidebarContent() {
                 <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
                     <button
                         type="button"
-                        aria-label="Delete room modal overlay"
+
                         className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
                         onClick={() => {
                             if (!isDeletingRoom) setPendingDeleteRoom(null);

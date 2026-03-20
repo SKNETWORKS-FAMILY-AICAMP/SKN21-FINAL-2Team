@@ -159,7 +159,7 @@ export function ChatInputArea({
                                         setAttachedFileName("");
                                     }}
                                     className="text-white/80 hover:text-white transition-colors"
-                                    aria-label={t("chatInput.removeAttachment")}
+
                                 >
                                     ×
                                 </button>
@@ -173,7 +173,7 @@ export function ChatInputArea({
                                         type="button"
                                         onClick={clearAttachedLocation}
                                         className="text-slate-500 hover:text-slate-800 transition-colors"
-                                        aria-label={t("chatInput.removeLocation")}
+
                                     >
                                         ×
                                     </button>

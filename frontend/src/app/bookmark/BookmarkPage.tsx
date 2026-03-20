@@ -480,7 +480,7 @@ export function BookmarkPage() {
                         >
                             <button
                                 type="button"
-                                aria-label="Close"
+
                                 className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
                                 onClick={closeConfirm}
                             />

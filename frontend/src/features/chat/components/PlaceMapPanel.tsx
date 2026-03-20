@@ -282,7 +282,7 @@ export function PlaceMapPanel({
                   type="button"
                   onClick={() => scrollBy("left")}
                   className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-                  aria-label="이전 장소 보기"
+
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -351,7 +351,7 @@ export function PlaceMapPanel({
                   type="button"
                   onClick={() => scrollBy("right")}
                   className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-                  aria-label="다음 장소 보기"
+
                 >
                   <ChevronRight size={18} />
                 </button>

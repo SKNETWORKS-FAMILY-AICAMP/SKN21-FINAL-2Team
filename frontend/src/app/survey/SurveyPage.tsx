@@ -141,7 +141,7 @@ export function SurveyPage() {
                             disabled={!isClickable}
                             // 주의: 사용자가 마우스로 쉽게 클릭할 수 있도록 기존 h-1에서 클릭 영역을 높이기 위해 h-2로 변경했습니다.
                             className={`h-2 flex-1 rounded-full overflow-hidden transition-all ${isClickable ? 'cursor-pointer hover:opacity-75' : 'cursor-not-allowed opacity-50'} bg-gray-200`}
-                            aria-label={t("survey.goToQuestion", { number: idx + 1 })}
+
                         >
                             <motion.div
                                 className="h-full bg-black"
@@ -210,7 +210,7 @@ export function SurveyPage() {
                                     onClick={handlePrevious}
                                     // 주의: 텍스트 블록의 정렬을 해치지 않으면서 우측 끝에 배치하기 위해 absolute right-0를 사용했습니다.
                                     className="absolute right-0 md:right-4 flex items-center gap-2 p-3 px-4 text-gray-600 bg-white border border-gray-200 shadow-sm hover:shadow-md hover:text-black hover:bg-gray-50 rounded-full transition-all"
-                                    aria-label={t("survey.goToPrevious")}
+
                                 >
                                     <span className="text-sm font-semibold hidden sm:block">{t("common.previous")}</span>
                                     <ArrowLeft size={20} />
