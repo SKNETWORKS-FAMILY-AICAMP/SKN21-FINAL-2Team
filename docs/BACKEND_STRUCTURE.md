@@ -168,11 +168,8 @@ LangGraph 기반 대화 플로우 영역이다.
   - 초기 스키마 생성
 - `insert_db.py`
   - 초기 데이터 적재
-- `ensure_database.py`
-  - MySQL 기동 대기 후 DB 존재 보장
-  - 필요 시 애플리케이션 DB와 권한 생성
 - `entrypoint.sh`
-  - 컨테이너 시작 전 DB 보장 및 Alembic 마이그레이션 수행
+  - 컨테이너 시작 보조 스크립트
 
 ---
 
