@@ -400,6 +400,8 @@
   "explore.contentFallback": "コンテンツ",
   "explore.noAddress": "住所なし",
 
+  "login.googleStart": "Googleで始める",
+  "login.failed": "ログインに失敗しました",
   "survey.allSet": "準備完了！",
   "survey.start": "スタート",
   "survey.questionProgress": "質問 {current} / {total}"

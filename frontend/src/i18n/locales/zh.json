@@ -400,6 +400,8 @@
   "explore.contentFallback": "内容",
   "explore.noAddress": "暂无地址",
 
+  "login.googleStart": "使用谷歌开始",
+  "login.failed": "登录失败",
   "survey.allSet": "准备就绪！",
   "survey.start": "开始",
   "survey.questionProgress": "问题 {current} / {total}"

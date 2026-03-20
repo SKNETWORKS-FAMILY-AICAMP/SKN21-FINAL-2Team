@@ -27,7 +27,6 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-
   adminer:
     platform: linux/amd64
     image: adminer
@@ -48,7 +47,7 @@ services:
     volumes:
       - ./backend:/app
       - hf_model_cache:/root/.cache/huggingface
-    command: ["/bin/sh", "/app/app/database/entrypoint.sh"]
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload" ]
     depends_on:
       - mysql
       - qdrant

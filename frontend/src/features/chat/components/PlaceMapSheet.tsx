@@ -38,7 +38,7 @@ export function PlaceMapSheet({
             type="button"
             className="absolute inset-0 bg-black/35"
             onClick={onClose}
-            aria-label="Close map sheet"
+
           />
 
           <motion.div
@@ -54,7 +54,7 @@ export function PlaceMapSheet({
                 type="button"
                 onClick={onClose}
                 className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 flex items-center justify-center"
-                aria-label="Close"
+
               >
                 <X size={14} />
               </button>

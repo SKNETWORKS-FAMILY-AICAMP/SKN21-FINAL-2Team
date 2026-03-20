@@ -71,7 +71,7 @@ export function DiaryEditorModal({
             <div className="group relative flex-1 overflow-hidden bg-black">
               <button
                 onClick={onClose}
-                aria-label={t("diary.closeDiaryModal")}
+
                 className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white transition-colors hover:bg-black/70"
               >
                 <X size={18} />
@@ -160,7 +160,7 @@ export function DiaryEditorModal({
                               onClearLinkedPlace();
                             }}
                             className="rounded-full px-1 text-white/60 transition hover:text-white"
-                            aria-label="Clear linked place"
+
                           >
                             <X size={12} />
                           </button>

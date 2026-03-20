@@ -859,7 +859,7 @@ export function MyPagePage() {
           >
             <motion.button
               type="button"
-              aria-label="Close"
+
               className="absolute inset-0 bg-black/40"
               onClick={cancelDeleteReservation}
               initial={{ opacity: 0 }}

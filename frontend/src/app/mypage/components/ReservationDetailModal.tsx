@@ -268,7 +268,6 @@ export function ReservationDetailModal({
                 >
                     <motion.button
                         type="button"
-                        aria-label="닫기"
                         className="absolute inset-0 bg-black/40"
                         onClick={handleClose}
                         initial={{ opacity: 0 }}
@@ -288,7 +287,7 @@ export function ReservationDetailModal({
                         <div className="relative p-6 pb-4">
                             <button
                                 type="button"
-                                aria-label="닫기"
+
                                 onClick={handleClose}
                                 className="absolute right-4 top-4 w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors"
                             >
@@ -371,6 +370,16 @@ export function ReservationDetailModal({
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-2">관련 이미지 / 티켓</label>
 
+                                {isEditMode && (
+                                    <div className="mb-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-1.5">
+                                        <span className="text-amber-500 text-xs mt-0.5">⚠️</span>
+                                        <p className="text-[11px] text-amber-700 leading-snug">
+                                            이미지를 등록할 때 <span className="font-semibold">개인정보(이름·전화번호 등)는 가려주세요.</span><br />
+                                            이미지는 예약 정보 분석에만 사용됩니다.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -402,7 +411,7 @@ export function ReservationDetailModal({
                                         if (isEditMode) fileInputRef.current?.click();
                                     }}
                                     className={`w-full rounded-xl overflow-hidden ${isEditMode ? "border border-blue-200 bg-blue-50/30" : "border border-gray-200 bg-gray-50"}`}
-                                    aria-label="예약 이미지"
+
                                 >
                                     {previewPhotoUrl ? (
                                         <div className="h-[180px] flex items-center justify-center">
@@ -487,7 +496,7 @@ export function ReservationDetailModal({
                                                                 setDraftDetails(newDetails);
                                                             }}
                                                             className="flex-shrink-0 px-2 py-2 text-gray-400 hover:text-red-500 rounded-lg border border-transparent hover:border-red-200 transition-colors"
-                                                            aria-label={`${key} 삭제`}
+
                                                         >
                                                             <X size={16} />
                                                         </button>
@@ -612,7 +621,6 @@ export function ReservationDetailModal({
                             >
                                 <button
                                     type="button"
-                                    aria-label="미리보기 닫기"
                                     className="absolute inset-0 bg-black/75"
                                     onClick={() => setPreviewOpen(false)}
                                 />
@@ -624,7 +632,7 @@ export function ReservationDetailModal({
                                 >
                                     <button
                                         type="button"
-                                        aria-label="미리보기 닫기"
+
                                         onClick={() => setPreviewOpen(false)}
                                         className="absolute right-3 top-3 w-8 h-8 rounded-full border border-white/30 text-white bg-black/40 flex items-center justify-center"
                                     >
