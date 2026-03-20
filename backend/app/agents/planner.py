@@ -60,6 +60,8 @@ async def planner_node(state: TravelState):
     current_itinerary = build_current_itinerary_context(state.get("itinerary"))
     summary_message = state.get("summary_message")
 
+    weather_info = state.get("weather_info") or "없음"
+
     pinned_places = state.get("pinned_places") or []
     if pinned_places:
         pinned_lines = [
@@ -95,6 +97,7 @@ async def planner_node(state: TravelState):
             "prefs_info": prefs_info,
             "current_itinerary": current_itinerary,
             "pinned_places_info": pinned_places_info,
+            "weather_info": weather_info,
         })
 
         dprint(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")

@@ -461,6 +461,8 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
+    weather_info = state.get("weather_info") or "없음"
+
     if primary_intent == IntentType.TRIP_PLANNING:
         raw_itinerary = state.get("itinerary") or []
         planner_itinerary_str = _build_planner_itinerary_str(raw_itinerary)
@@ -474,6 +476,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
                 prefs_info=prefs_info,
                 location_context=location_context,
+                weather_info=weather_info,
                 candidate_names=candidate_names,
                 place_context=place_context or "없음",
                 itinerary_context=itinerary_context or "없음",
@@ -484,6 +487,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
         system_prompt = EXECUTOR_PROMPT.format(
             prefs_info=prefs_info,
             location_context=location_context,
+            weather_info=weather_info,
             candidate_names=candidate_names,
             place_context=place_context or "없음",
             itinerary_context=itinerary_context or "없음",

@@ -54,6 +54,9 @@ class TravelState(TypedDict, total=False):
     selection_mode: str                       # deterministic | explore
     retriever_retry_count: int                # 그래프 레벨 재검색 횟수 (0=초회, 1=재시도)
 
+    # weather (intent_node에서 병렬 fetch, planner/executor에서 참고)
+    weather_info: str | None                  # 현재 날씨 + 3일 예보 요약 문자열
+
     # web_search (Qdrant 결과 없을 때 fallback)
     web_search_places: List[Any]              # web_search_node가 찾은 PlaceInfo 목록
     web_search_context: str | None            # web_search_node 결과 텍스트 컨텍스트

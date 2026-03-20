@@ -10,6 +10,9 @@ EXECUTOR_PROMPT = """
 # 사용자 위치 정보
 {location_context}
 
+# 현재 날씨 정보
+{weather_info}
+
 -----
 
 # 추천 가능한 장소 목록
@@ -59,6 +62,9 @@ EXECUTOR_TRIP_PLANNING_PROMPT = """
 
 # 사용자 위치 정보
 {location_context}
+
+# 현재 날씨 정보
+{weather_info}
 
 -----
 
