@@ -3,11 +3,10 @@
 import React, { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./config";
-import { LANGUAGE_COOKIE_KEY } from "./constants";
+import { setTriverLangCookie } from "./languageCookie";
 
-// cookie 설정 헬퍼
 function setLangCookie(lang: string) {
-  document.cookie = `${LANGUAGE_COOKIE_KEY}=${lang};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+  setTriverLangCookie(lang);
 }
 
 interface LanguageProviderProps {

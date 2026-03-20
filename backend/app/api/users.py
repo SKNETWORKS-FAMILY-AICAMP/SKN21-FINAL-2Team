@@ -1,11 +1,10 @@
 import os
 
 import requests as req
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel
-from app.database.connection import db_manager
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage, ChatPlace
 from app.models.reservation import Reservation
@@ -24,17 +23,42 @@ class DeactivateResponse(BaseModel):
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# 프론트 i18n / Next layout 과 동일한 쿠키 키 (frontend/src/i18n/constants.ts LANGUAGE_COOKIE_KEY)
+TRIVER_LANG_COOKIE = "triver_lang"
+TRIVER_LANG_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
+
+
 @router.patch("/me", response_model=UserResponse)
-def update_user_me(user_update: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
+def update_user_me(
+    user_update: UserUpdate,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(db_manager.get_db),
+):
     # 업데이트할 필드만 추출 (exclude_unset=True)
     update_data = user_update.dict(exclude_unset=True)
-    
+
     for key, value in update_data.items():
         setattr(current_user, key, value)
-    
+
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
+
+    if "language" in update_data and update_data["language"] is not None:
+        lang_val = (
+            current_user.language.value
+            if hasattr(current_user.language, "value")
+            else str(current_user.language)
+        )
+        response.set_cookie(
+            key=TRIVER_LANG_COOKIE,
+            value=lang_val,
+            max_age=TRIVER_LANG_COOKIE_MAX_AGE,
+            path="/",
+            samesite="lax",
+        )
+
     return current_user
 
 

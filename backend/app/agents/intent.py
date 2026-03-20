@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.output import IntentCoreOutput, SummaryOutput, IntentType, IntentSlots, InputType
-from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE
+from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE, get_summary_language_instruction
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
@@ -143,6 +143,7 @@ async def intent_node(state: TravelState):
             "messages": messages,
             "summary_title": summary_title,
             "summary_message": summary_message,
+            "summary_language_instruction": get_summary_language_instruction(state.get("language")),
         }),
     )
     dprint(f"[TIMING] intent+summary LLM parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
