@@ -39,8 +39,12 @@ export function Features() {
 
     return (
         // justify-center 제거 → 콘텐츠 높이 변해도 위치 재배치 안 됨
-        <section id="features" className="py-16 bg-gray-50 overflow-hidden relative">
-            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8 flex flex-col items-center">
+        // Header.tsx의 scrollToSection에서 정지 위치를 제어하므로, 여기서는 디자인 여백(pt, pb)만 관리합니다.
+        <section id="features" className="pt-12 pb-20 lg:pt-16 lg:pb-24 bg-gradient-to-b from-gray-50 to-white overflow-hidden relative">
+            {/* 은은한 배경 장식 요소 추가 (밋밋함 해소) */}
+            <div className="absolute top-0 left-1/2 -ml-[20rem] w-[40rem] h-[40rem] bg-indigo-50/40 rounded-full blur-3xl pointer-events-none opacity-50"></div>
+
+            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8 flex flex-col items-center relative z-10">
 
                 {/* 1단 (상단): 헤더 영역 */}
                 <div className="text-center mb-12">
@@ -49,18 +53,18 @@ export function Features() {
                 </div>
 
                 {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) */}
-                <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-start justify-between gap-8 lg:gap-10">
+                <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 lg:gap-12">
 
-                    {/* 이미지 영역 (좌측) — aspect-ratio로 비율 고정, 너비 기반이라 절대 안 변함 */}
-                    <div className="w-full lg:w-3/5 shrink-0 relative perspective-[1000px]">
+                    {/* 이미지 영역 (좌측) — 이미지 크기를 다시 충분히 시원하게 키우되, 겹치지 않게 모션 폭을 줄임 */}
+                    <div className="w-full lg:w-[55%] shrink-0 relative perspective-[1000px] flex justify-center lg:justify-end">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={activeIndex}
-                                initial={{ opacity: 0, x: -30, rotateY: 5 }}
+                                initial={{ opacity: 0, x: -8, rotateY: 2 }}
                                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
-                                exit={{ opacity: 0, x: 30, rotateY: -5 }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
-                                className="w-full aspect-[16/10] bg-white rounded-3xl shadow-2xl shadow-black/70 overflow-hidden border-[1px] border-gray-300 relative"
+                                exit={{ opacity: 0, x: 8, rotateY: -2 }}
+                                transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                                className="w-full max-w-3xl lg:max-w-[100%] aspect-[16/10] bg-white rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden border border-gray-200/60 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] transition-shadow duration-700 relative"
                             >
                                 <img
                                     src={activeFeature.mockupImage}
@@ -72,8 +76,8 @@ export function Features() {
                         </AnimatePresence>
                     </div>
 
-                    {/* 텍스트 및 네비게이션 영역 (우측) */}
-                    <div className="w-full lg:w-2/5 flex flex-col items-start">
+                    {/* 텍스트 및 네비게이션 영역 (우측) - 이미지와의 간격(gap) 확보 */}
+                    <div className="w-full lg:w-[40%] flex flex-col items-start pt-4">
 
                         {/* 네비게이션 탭 (아이콘 + 텍스트) */}
                         <div className="flex flex-col gap-6 w-full pr-4">
@@ -85,19 +89,21 @@ export function Features() {
                                         key={feature.title}
                                         onClick={() => setActiveIndex(index)}
                                         className={cn(
-                                            "flex items-center gap-4 pb-4 border-b-2 transition-all duration-300 w-full text-left group",
+                                            "flex items-start gap-4 pb-5 border-b-2 transition-all duration-300 w-full text-left group hover:opacity-100 active:scale-[0.99]",
                                             isActive
-                                                ? "border-black text-black"
-                                                : "border-gray-200 text-gray-400 hover:text-black hover:border-gray-400"
+                                                ? "border-black text-black opacity-100"
+                                                : "border-transparent text-gray-400 opacity-60 hover:text-gray-800 hover:border-gray-300"
                                         )}
                                     >
                                         <div className={cn(
-                                            "p-3 rounded-full transition-colors",
-                                            isActive ? "bg-black text-white" : "bg-gray-100 group-hover:bg-gray-200"
+                                            "p-2.5 rounded-full transition-colors duration-300 mt-0.5",
+                                            isActive
+                                                ? "bg-gray-900 text-white"
+                                                : "bg-gray-100/50 text-gray-400 group-hover:bg-gray-100 group-hover:text-gray-600"
                                         )}>
-                                            <Icon size={24} />
+                                            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                                         </div>
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col pt-1">
                                             <span className="font-bold text-lg leading-tight uppercase tracking-wider">
                                                 {feature.shortTitle}
                                             </span>
@@ -105,10 +111,10 @@ export function Features() {
                                             <AnimatePresence>
                                                 {isActive && (
                                                     <motion.div
-                                                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                                                        animate={{ opacity: 1, height: "auto", marginTop: 12 }}
-                                                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                                        transition={{ duration: 0.3 }}
+                                                        initial={{ opacity: 0, height: 0, y: -10, marginTop: 0 }}
+                                                        animate={{ opacity: 1, height: "auto", y: 0, marginTop: 12 }}
+                                                        exit={{ opacity: 0, height: 0, y: -10, marginTop: 0 }}
+                                                        transition={{ type: "spring", stiffness: 200, damping: 25 }}
                                                         className="overflow-hidden"
                                                     >
                                                         <p className="text-gray-600 leading-relaxed font-light text-base pr-4 whitespace-pre-line">
