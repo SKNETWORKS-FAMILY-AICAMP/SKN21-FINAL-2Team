@@ -21,17 +21,22 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     language_enum = sa.Enum('en', 'ko', 'ja', 'zh', name='languagetype')
-    op.add_column(
-        'users',
-        sa.Column(
-            'language',
-            language_enum,
-            nullable=False,
-            server_default=sa.text("'en'"),
-            comment='UI Language Preference',
-        ),
-    )
-    op.alter_column('users', 'language', server_default=None, existing_type=language_enum)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    users_columns = [col['name'] for col in inspector.get_columns('users')]
+
+    if 'language' not in users_columns:
+        op.add_column(
+            'users',
+            sa.Column(
+                'language',
+                language_enum,
+                nullable=False,
+                server_default=sa.text("'en'"),
+                comment='UI Language Preference',
+            ),
+        )
+        op.alter_column('users', 'language', server_default=None, existing_type=language_enum)
 
 
 def downgrade() -> None:
