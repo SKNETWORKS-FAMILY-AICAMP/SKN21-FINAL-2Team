@@ -21,7 +21,7 @@ interface BrandMarkProps {
 export function BrandMark({ tone = "dark", size = 32 }: BrandMarkProps) {
     return (
         <img
-            src={tone === "light" ? "/brand/logo-icon-light.svg?v=20260308-2" : "/brand/logo-icon-dark.svg?v=20260308-2"}
+            src={tone === "light" ? "/brand/logo-icon-light.png?v=20260320" : "/brand/logo-icon-dark.png?v=20260320"}
             alt="Triver logo"
             className="inline-block object-contain"
             style={{ width: size, height: size }}   // 크기 지정
