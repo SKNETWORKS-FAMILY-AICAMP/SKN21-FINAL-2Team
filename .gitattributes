@@ -1,0 +1,20 @@
+# 모든 파일 기본 LF
+* text=auto eol=lf
+
+# 쉘 스크립트 강제 LF
+*.sh text eol=lf
+
+# Python 파일 LF
+*.py text eol=lf
+
+# 설정 파일 LF
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.toml text eol=lf
+*.env text eol=lf
+
+# Windows 실행 파일은 CRLF 유지
+*.bat text eol=crlf
+*.cmd text eol=crlf
