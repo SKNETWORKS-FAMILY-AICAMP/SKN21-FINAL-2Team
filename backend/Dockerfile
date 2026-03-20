@@ -22,6 +22,9 @@ RUN uv pip install -r requirements.txt
 
 COPY . .
 
+# CRLF → LF 변환 + 실행 권한 부여 (Windows에서 작업한 경우 대응)
+RUN sed -i 's/\r//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
