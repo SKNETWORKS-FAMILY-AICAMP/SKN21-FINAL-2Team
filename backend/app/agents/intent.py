@@ -5,13 +5,14 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.output import IntentCoreOutput, SummaryOutput, IntentType, IntentSlots, InputType
-from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE
+from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE, get_summary_language_instruction
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
 from app.utils.geocoder import NormalizedLocation
 from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
+from app.utils.weather import fetch_weather, fetch_weather_for_date
 
 
 _TAG_EXPANSION: dict[str, list[str]] = {
@@ -130,8 +131,8 @@ async def intent_node(state: TravelState):
     dprint(f"[Intent] Prefs info from state: {prefs_info}")
 
     _llm_start = time.perf_counter()
-    dprint(f"[TIMING] intent+summary LLM parallel START  messages={len(messages)}  has_image={'yes' if image_path else 'no'}")
-    result, summary_result = await asyncio.gather(
+    dprint(f"[TIMING] intent+summary+weather parallel START  messages={len(messages)}  has_image={'yes' if image_path else 'no'}")
+    result, summary_result, weather_info = await asyncio.gather(
         intent_chain.ainvoke({
             "messages": messages,
             "category_desc": CategoryType.description(),
@@ -143,9 +144,22 @@ async def intent_node(state: TravelState):
             "messages": messages,
             "summary_title": summary_title,
             "summary_message": summary_message,
+            "summary_language_instruction": get_summary_language_instruction(state.get("language")),
         }),
+        fetch_weather(state.get("input_lat"), state.get("input_lon")),
     )
-    dprint(f"[TIMING] intent+summary LLM parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
+    dprint(f"[TIMING] intent+summary+weather parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
+    dprint(f"[Intent] weather_info (initial): {weather_info!r}")
+
+    # slots.dates가 있으면 해당 날짜의 날씨로 덮어쓰기 (2단계 — 예보 or 월별 평균)
+    _dates_str = result.slots.dates if result.slots else None
+    if _dates_str:
+        _lat = state.get("input_lat")
+        _lon = state.get("input_lon")
+        _date_weather = await fetch_weather_for_date(_lat, _lon, _dates_str)
+        if _date_weather:
+            weather_info = _date_weather
+            dprint(f"[Intent] weather_info updated for date={_dates_str!r}: {weather_info!r}")
 
     dprint("Intent Result : ", result)
     dprint("Summary Result : ", summary_result)
@@ -206,6 +220,7 @@ async def intent_node(state: TravelState):
         "input_tags": expanded_tags,
         "prefs_info": prefs_info,
         "semantic_input_image": semantic_input_image,
+        "weather_info": weather_info,
         "candidates": [],
         "candidate_pool": [],
         "place_info_list": [],

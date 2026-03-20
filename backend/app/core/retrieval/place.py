@@ -24,7 +24,6 @@ from app.utils.config import (
     get_retrieval_params,
 )
 from app.scripts.preprocess_data import download_image, build_sparse_vector
-from app.utils.geocoder import GeoCoder
 from app.utils.common import dprint
 from app.utils.vision import describe_image
 from app.core.retrieval.place_score import PlaceScorer, _extract_place_id, _to_positive_int

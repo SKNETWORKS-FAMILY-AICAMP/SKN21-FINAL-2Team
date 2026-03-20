@@ -2,6 +2,7 @@
 
 import { decodeJwt } from 'jose';
 import { parseApiError, handleApiError, clearAuth } from './errorHandler';
+import { isSupportedUiLanguage, setTriverLangCookie } from '@/i18n/languageCookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
@@ -573,7 +574,12 @@ export const fetchPrefers = async (preferType?: string): Promise<PreferItem[]> =
 
 export const updateCurrentUser = async (payload: Partial<UserProfile>): Promise<UserProfile> => {
     const response = await fetchWithAuth(`${API_URL}/users/me`, { method: 'PATCH', body: payload });
-    return response.json();
+    const data: UserProfile = await response.json();
+    // DB 반영 후 triver_lang 을 서버 값과 맞춤 (Set-Cookie + JS 접근 일관성)
+    if (isSupportedUiLanguage(data.language)) {
+        setTriverLangCookie(data.language);
+    }
+    return data;
 };
 
 export const resetCurrentUserProfilePictureToGoogle = async (): Promise<UserProfile> => {

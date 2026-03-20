@@ -13,23 +13,23 @@ from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
 from app.utils.common import build_naver_map_url, dprint, dpprint
-from app.models.enums import LanguageType
-
-_LANGUAGE_INSTRUCTION: dict[str, str] = {
-    LanguageType.en: "IMPORTANT: Respond entirely in English. However, keep all place names in their original Korean.",
-    LanguageType.ko: "",
-    LanguageType.ja: "IMPORTANT: 必ず日本語で回答してください。ただし、장소명はすべて元の韓国語表記のまま維持してください。",
-    LanguageType.zh: "IMPORTANT: 请务必用中文回答。但是，所有장소명必须保持原始韩文不变。",
-}
-
-def _get_language_suffix(language) -> str:
-    key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
-    return _LANGUAGE_INSTRUCTION.get(key, "")
+from app.models.enums import LanguageType    
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_contenttypeid
 from app.utils.geocoder import GeoCoder
 from app.agents.models.state import IntentSlots
 from app.agents.models.place import PlaceInfo
+
+_LANGUAGE_INSTRUCTION: dict[str, str] = {
+    LanguageType.ko: "중요: 반드시 한국어로만 답변하세요. 단, 장소명은 목록·입력에 제공된 한국어 표기를 글자 하나도 바꾸지 말고 그대로 유지하세요.",
+    LanguageType.en: "IMPORTANT: Respond entirely in English. However, keep all place names exactly as given in Korean—do not translate or romanize place names.",
+    LanguageType.ja: "重要: 回答は必ず日本語のみで行ってください。ただし、場所名は入力・一覧の韓国語表記を一字一句変えずにそのまま使ってください。",
+    LanguageType.zh: "重要：请务必只用中文回答。但是，所有地点名称必须与列表/输入中的韩文完全一致，不得翻译或改写。",
+}
+
+def _get_language_suffix(language) -> str:
+    key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
+    return _LANGUAGE_INSTRUCTION.get(key, "")
 
 def _extract_place_names_from_answer(answer_text: str) -> list[str]:
     """
@@ -461,6 +461,8 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
 
+    weather_info = state.get("weather_info") or "없음"
+
     if primary_intent == IntentType.TRIP_PLANNING:
         raw_itinerary = state.get("itinerary") or []
         planner_itinerary_str = _build_planner_itinerary_str(raw_itinerary)
@@ -474,6 +476,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
                 prefs_info=prefs_info,
                 location_context=location_context,
+                weather_info=weather_info,
                 candidate_names=candidate_names,
                 place_context=place_context or "없음",
                 itinerary_context=itinerary_context or "없음",
@@ -484,6 +487,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
         system_prompt = EXECUTOR_PROMPT.format(
             prefs_info=prefs_info,
             location_context=location_context,
+            weather_info=weather_info,
             candidate_names=candidate_names,
             place_context=place_context or "없음",
             itinerary_context=itinerary_context or "없음",
@@ -559,8 +563,10 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
 
     human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
 
+    missing_system_prompt = EXECUTOR_MISSING_INFO_PROMPT
     lang_suffix = _get_language_suffix(state.get("language"))
-    missing_system_prompt = EXECUTOR_MISSING_INFO_PROMPT + (f"\n\n{lang_suffix}" if lang_suffix else "")
+    if lang_suffix:
+        missing_system_prompt += f"\n\n{lang_suffix}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", missing_system_prompt),
@@ -611,8 +617,10 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
 
     location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
+    general_system_prompt = EXECUTOR_GENERAL_PROMPT
     lang_suffix = _get_language_suffix(state.get("language"))
-    general_system_prompt = EXECUTOR_GENERAL_PROMPT + (f"\n\n{lang_suffix}" if lang_suffix else "")
+    if lang_suffix:
+        general_system_prompt += f"\n\n{lang_suffix}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", general_system_prompt),
