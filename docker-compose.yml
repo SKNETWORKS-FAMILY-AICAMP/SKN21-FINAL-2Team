@@ -1,5 +1,6 @@
 # local에서 backend까지 모두 띄움
 # docker compose -f 'docker-compose.yml' up -d --build
+# OCR LLM: HuggingFace Inference API 사용 (ollama 컨테이너 불필요)
 
 services:
   mysql:
@@ -25,6 +26,7 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
+
 
   adminer:
     platform: linux/amd64
