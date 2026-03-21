@@ -44,7 +44,7 @@ export function Features() {
             {/* 은은한 배경 장식 요소 추가 (밋밋함 해소) */}
             <div className="absolute top-0 left-1/2 -ml-[20rem] w-[40rem] h-[40rem] bg-indigo-50/40 rounded-full blur-3xl pointer-events-none opacity-50"></div>
 
-            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-6 lg:px-8 flex flex-col items-center relative z-10">
+            <div className="max-w-7xl xl:max-w-[90%] mx-auto px-10 md:px-16 lg:px-8 flex flex-col items-center relative z-10">
 
                 {/* 1단 (상단): 헤더 영역 */}
                 <div className="text-center mb-12">
@@ -55,7 +55,6 @@ export function Features() {
                 {/* 2단: 이미지(좌) + 네비게이션 & 설명(우) */}
                 <div className="w-full max-w-6xl xl:max-w-none flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 lg:gap-12">
 
-                    {/* 이미지 영역 (좌측) — 이미지 크기를 다시 충분히 시원하게 키우되, 겹치지 않게 모션 폭을 줄임 */}
                     <div className="w-full lg:w-[55%] shrink-0 relative perspective-[1000px] flex justify-center lg:justify-end">
                         <AnimatePresence mode="wait">
                             <motion.div
