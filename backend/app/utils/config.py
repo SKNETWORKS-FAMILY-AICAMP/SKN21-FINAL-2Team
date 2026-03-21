@@ -4,8 +4,13 @@ import torch
 # Debug
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
-# Model
-LLM_MODEL = "gpt-4o-mini"
+# Model - 챗봇/일반 LLM (기본값: OpenAI)
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_TYPE = os.getenv("LLM_TYPE", "openai").lower()  # "openai"
+
+# Model - OCR 전용 LLM (OpenAI gpt-4o-mini)
+OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "gpt-4o-mini")
+OCR_LLM_TYPE = os.getenv("OCR_LLM_TYPE", "openai").lower()
 
 # Device
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
@@ -15,6 +20,9 @@ TEXT_MODEL = "BAAI/bge-m3"
 VISION_MODEL = "clip-ViT-L-14"
 TEXT_VECTOR_SIZE = 1024
 VISION_VECTOR_SIZE = 768
+
+RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+
 
 # Legacy (will be updated in collections)
 VECTOR_SIZE = 768 # Standardizing to vision size for now or keep for legacy reference

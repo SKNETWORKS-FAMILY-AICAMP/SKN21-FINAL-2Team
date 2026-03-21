@@ -376,6 +376,8 @@
   "explore.contentFallback": "CONTENT",
   "explore.noAddress": "No address",
 
+  "login.googleStart": "Continue with Google",
+  "login.failed": "Login failed",
   "survey.allSet": "You're all set!",
   "survey.start": "Start",
   "survey.questionProgress": "Question {current} of {total}"

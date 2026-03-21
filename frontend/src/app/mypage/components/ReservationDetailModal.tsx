@@ -25,10 +25,10 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 const TEMPLATE_MAP: Record<string, string[]> = {
-    transportation: ['날짜', '목적지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석'],
-    hotel: ['날짜', '숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
-    activity: ['날짜', '이름', '시간', '장소', '좌석'],
-    restaurant: ['날짜', '식당이름', '예약시간', '예약자명'],
+    transportation: ['날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석 번호'],
+    hotel: ['숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
+    activity: ['날짜', '이름', '시간', '장소', '좌석 번호'],
+    restaurant: ['날짜', '식당이름', '예약시간', '예약자명', '예약 인원'],
     etc: ['예약내역', '시간', '예약자명']
 };
 
@@ -210,18 +210,25 @@ export function ReservationDetailModal({
         setOcrMessage(null);
 
         try {
-            // [수정] base64 또는 URL 이미지를 File 객체로 변환 시 확장자 동적 적용
-            const res = await fetch(resolveImageUrl(effectivePhotoUrl));
-            const blob = await res.blob();
+            let result;
 
-            // blob.type (예: 'image/png')에서 확장자 추출. 'jpeg'는 'jpg'로 변환
-            const mimeType = blob.type || "image/jpeg";
-            let extension = mimeType.split('/')[1] || "jpg";
-            if (extension === "jpeg") extension = "jpg";
-
-            const file = new File([blob], `ticket.${extension}`, { type: mimeType });
-
-            const result = await ocrReservationImage(file, draftCategory);
+            if (effectivePhotoUrl.startsWith("data:image/")) {
+                // 새로 업로드한 이미지: data: URL → File 변환 후 multipart 전송
+                const res = await fetch(effectivePhotoUrl);
+                const blob = await res.blob();
+                const mimeType = blob.type || "image/jpeg";
+                let extension = mimeType.split('/')[1] || "jpg";
+                if (extension === "jpeg") extension = "jpg";
+                const file = new File([blob], `ticket.${extension}`, { type: mimeType });
+                result = await ocrReservationImage({ file, category: draftCategory });
+            } else {
+                // 저장된 이미지: S3면 https:// URL로 변환해 전달, 로컬이면 상대경로 그대로 전달
+                const resolvedForOcr = resolveImageUrl(effectivePhotoUrl);
+                const ocrImagePath = resolvedForOcr.startsWith("http")
+                    ? resolvedForOcr   // S3: 백엔드가 httpx로 다운로드
+                    : effectivePhotoUrl; // 로컬: 백엔드가 파일시스템에서 직접 읽음
+                result = await ocrReservationImage({ imagePath: ocrImagePath, category: draftCategory });
+            }
 
             if (result.date) {
                 // [추가] 날짜를 찾았다면 제목을 "카테고리명 YYYY-MM-DD" 형태로 자동 덮어쓰기
@@ -261,7 +268,6 @@ export function ReservationDetailModal({
                 >
                     <motion.button
                         type="button"
-                        aria-label="닫기"
                         className="absolute inset-0 bg-black/40"
                         onClick={handleClose}
                         initial={{ opacity: 0 }}
@@ -281,7 +287,7 @@ export function ReservationDetailModal({
                         <div className="relative p-6 pb-4">
                             <button
                                 type="button"
-                                aria-label="닫기"
+
                                 onClick={handleClose}
                                 className="absolute right-4 top-4 w-9 h-9 rounded-lg border border-gray-200 bg-white text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors"
                             >
@@ -321,10 +327,10 @@ export function ReservationDetailModal({
                                 )}
                             </div>
 
-                            {/* 카테고리 선택 */}
-                            {isEditMode ? (
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
+                            {/* 카테고리 선택 / 표시 */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-2">카테고리</label>
+                                {isEditMode ? (
                                     <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
                                         {CATEGORY_OPTIONS.map((opt) => (
                                             <button
@@ -332,14 +338,16 @@ export function ReservationDetailModal({
                                                 type="button"
                                                 onClick={() => {
                                                     setDraftCategory(opt.value);
+                                                    // 새 카테고리의 템플릿 필드 가져오기
                                                     const newKeys = TEMPLATE_MAP[opt.value] || TEMPLATE_MAP["etc"];
                                                     const nextDetails: Record<string, string> = {};
-                                                    newKeys.forEach(k => { nextDetails[k] = draftDetails[k] || ""; });
-                                                    Object.keys(draftDetails).forEach(oldKey => {
-                                                        if (!newKeys.includes(oldKey) && draftDetails[oldKey].trim() !== "") {
-                                                            nextDetails[oldKey] = draftDetails[oldKey];
-                                                        }
+                                                    
+                                                    // 새 템플릿 키만 초기화 (같은 필드명이면 기존 값 유지, 없으면 빈 값)
+                                                    newKeys.forEach(k => { 
+                                                        nextDetails[k] = draftDetails[k] || ""; 
                                                     });
+                                                    
+                                                    // 다른 필드는 추가하지 않음 (필드 증가 방지)
                                                     setDraftDetails(nextDetails);
                                                 }}
                                                 className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-colors ${draftCategory === opt.value
@@ -351,12 +359,26 @@ export function ReservationDetailModal({
                                             </button>
                                         ))}
                                     </div>
-                                </div>
-                            ) : null}
+                                ) : (
+                                    <div className="w-full px-3 py-2 bg-gray-50 border border-transparent rounded-lg">
+                                        <p className="text-sm font-medium text-gray-700">{CATEGORY_MAP[draftCategory]}</p>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* 이미지 업로드 영역 */}
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-2">관련 이미지 / 티켓</label>
+
+                                {isEditMode && (
+                                    <div className="mb-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-1.5">
+                                        <span className="text-amber-500 text-xs mt-0.5">⚠️</span>
+                                        <p className="text-[11px] text-amber-700 leading-snug">
+                                            이미지를 등록할 때 <span className="font-semibold">개인정보(이름·전화번호 등)는 가려주세요.</span><br />
+                                            이미지는 예약 정보 분석에만 사용됩니다.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <input
                                     ref={fileInputRef}
@@ -389,7 +411,7 @@ export function ReservationDetailModal({
                                         if (isEditMode) fileInputRef.current?.click();
                                     }}
                                     className={`w-full rounded-xl overflow-hidden ${isEditMode ? "border border-blue-200 bg-blue-50/30" : "border border-gray-200 bg-gray-50"}`}
-                                    aria-label="예약 이미지"
+
                                 >
                                     {previewPhotoUrl ? (
                                         <div className="h-[180px] flex items-center justify-center">
@@ -474,7 +496,7 @@ export function ReservationDetailModal({
                                                                 setDraftDetails(newDetails);
                                                             }}
                                                             className="flex-shrink-0 px-2 py-2 text-gray-400 hover:text-red-500 rounded-lg border border-transparent hover:border-red-200 transition-colors"
-                                                            aria-label={`${key} 삭제`}
+
                                                         >
                                                             <X size={16} />
                                                         </button>
@@ -599,7 +621,6 @@ export function ReservationDetailModal({
                             >
                                 <button
                                     type="button"
-                                    aria-label="미리보기 닫기"
                                     className="absolute inset-0 bg-black/75"
                                     onClick={() => setPreviewOpen(false)}
                                 />
@@ -611,7 +632,7 @@ export function ReservationDetailModal({
                                 >
                                     <button
                                         type="button"
-                                        aria-label="미리보기 닫기"
+
                                         onClick={() => setPreviewOpen(false)}
                                         className="absolute right-3 top-3 w-8 h-8 rounded-full border border-white/30 text-white bg-black/40 flex items-center justify-center"
                                     >

@@ -2,6 +2,7 @@ from typing import TypedDict, List, Dict, Any, Annotated
 from langgraph.graph.message import add_messages
 from app.agents.models.output import IntentType, IntentSlots, PlannerNeedType
 from app.agents.models.place import PlaceInfo
+from app.models.enums import LanguageType
 from langchain_core.messages import BaseMessage
 
 class TravelState(TypedDict, total=False):
@@ -9,6 +10,7 @@ class TravelState(TypedDict, total=False):
 
     # input data
     user_id: int  # User ID만 전달 (intent에서 DB 조회)
+    language: LanguageType  # 사용자 응답 언어 (en/ko/ja/zh)
     room_id: int
     prefs_info: str
 
@@ -51,6 +53,9 @@ class TravelState(TypedDict, total=False):
     retrieval_diagnostics: Dict[str, Any]     # 채널별 hit/점수/순위 진단 정보
     selection_mode: str                       # deterministic | explore
     retriever_retry_count: int                # 그래프 레벨 재검색 횟수 (0=초회, 1=재시도)
+
+    # weather (intent_node에서 병렬 fetch, planner/executor에서 참고)
+    weather_info: str | None                  # 현재 날씨 + 3일 예보 요약 문자열
 
     # web_search (Qdrant 결과 없을 때 fallback)
     web_search_places: List[Any]              # web_search_node가 찾은 PlaceInfo 목록

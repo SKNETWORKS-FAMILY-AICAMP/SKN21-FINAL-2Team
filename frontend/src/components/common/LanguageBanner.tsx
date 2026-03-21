@@ -64,7 +64,7 @@ export function LanguageBanner() {
                 type="button"
                 onClick={handleDismiss}
                 className="rounded-lg p-1.5 text-gray-400 hover:text-white transition-colors"
-                aria-label="Dismiss"
+
               >
                 <X size={16} />
               </button>

@@ -46,6 +46,31 @@ export function ChatHome() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
+
+    /*
+     * [Plan Trip 플로우 — 즉시 모달 표시]
+     *
+     * 문제: 기존 코드는 fetchRooms() 비동기 콜백 안에서만 fromDestination=1 을 체크.
+     *       setIsInitializing(false) 가 fetchRooms() 완료 전에 먼저 실행되므로
+     *       챗봇 화면이 먼저 렌더된 뒤 모달이 뒤늦게 등장 → 화면 깨짐 및 미적용 현상.
+     *
+     * 해결: 마운트 즉시(빈 dependency []) fromDestination=1 + pendingDestination 를 확인.
+     *       fetchRooms() 나 초기화 완료를 기다리지 않고 모달을 바로 표시.
+     *       → 회원가입 후 이 페이지로 돌아왔을 때 TripContextModal 이 항상 즉시 등장.
+     *
+     * DB/데이터/API 는 건드리지 않음 — localStorage 와 state 조작만.
+     */
+    useEffect(() => {
+        if (
+            fromDestinationParam === "1" &&
+            typeof window !== "undefined" &&
+            localStorage.getItem("pendingDestination")
+        ) {
+            setShowTripModal(true);
+        }
+    // 마운트 시 1회만 실행 — fromDestinationParam 변경에 재반응하지 않음
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
     const [attachedFileName, setAttachedFileName] = useState<string>("");
     const [attachedLocation, setAttachedLocation] = useState<string | null>(null);
@@ -619,7 +644,7 @@ export function ChatHome() {
                     <aside
                         style={{ width: isMapPanelOpen ? `${mapPanelWidth}%` : "0px" }}
                         className={cn(
-                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden",
+                            "hidden lg:block max-w-[800px] bg-white z-10 overflow-hidden isolate",
                             isMapResizing ? "transition-none" : "transition-[width] duration-200 ease-out",
                             isMapPanelOpen ? "border-l border-gray-100" : "border-l-0"
                         )}

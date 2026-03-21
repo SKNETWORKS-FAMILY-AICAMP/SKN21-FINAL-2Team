@@ -1,5 +1,7 @@
-from typing import List
+import os
+from typing import List, Optional
 
+import httpx
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
@@ -11,27 +13,62 @@ from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
 from app.services.ocr_service import extract_datetime_from_image
 
+# 로컬 업로드 루트 (main.py와 동일한 경로)
+_UPLOAD_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "..", "data", "uploads"
+)
+
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
 
 
 @router.post("/ocr")
 async def ocr_reservation_image(
-    file: UploadFile = File(...),
-    category: str = Form(None),
+    file: Optional[UploadFile] = File(None),
+    image_path: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
 ):
     """
-    업로드된 이미지에서 예약 날짜·시간을 OCR로 추출합니다.
-    - date: 날짜 문자열 (YYYY-MM-DD), 못 찾으면 None
-    - time: 시간 문자열 (HH:MM), 없으면 None
-    - raw_text: OCR 전체 텍스트 (디버깅용)
-    - error: 에러 메시지, 정상이면 None
-    """
-    # 주의: 이미지 파일인지 간단히 검증
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "이미지 파일만 업로드 가능합니다.", 400)
+    이미지에서 예약 날짜·시간을 OCR로 추출합니다.
 
-    image_bytes = await file.read()
+    두 가지 방식 지원:
+    1) file 업로드: 새로 선택한 이미지를 multipart/form-data로 전송
+    2) image_path 전달: DB에 저장된 상대 경로(또는 https:// URL)를 문자열로 전송
+       → 백엔드가 직접 파일을 읽거나 S3/URL에서 다운로드해 처리
+    """
+    if file is not None:
+        # 방식 1: 직접 업로드된 파일
+        # 주의: 이미지 파일인지 간단히 검증
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "이미지 파일만 업로드 가능합니다.", 400)
+        image_bytes = await file.read()
+
+    elif image_path:
+        # 방식 2: 저장된 이미지 경로 또는 URL → 백엔드가 직접 읽음
+        if image_path.startswith("http://") or image_path.startswith("https://"):
+            # S3 또는 외부 URL: httpx로 다운로드
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.get(image_path)
+                    resp.raise_for_status()
+                    image_bytes = resp.content
+            except Exception as e:
+                raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, f"이미지 다운로드 실패: {e}", 400)
+        else:
+            # 로컬 파일: uploads 디렉토리 기준 상대 경로
+            local_path = os.path.abspath(
+                os.path.join(_UPLOAD_DIR, image_path.lstrip("/"))
+            )
+            # 주의: 경로 탈출 공격 방지 — uploads 디렉토리 외부 접근 차단
+            if not local_path.startswith(os.path.abspath(_UPLOAD_DIR)):
+                raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "유효하지 않은 이미지 경로입니다.", 400)
+            if not os.path.isfile(local_path):
+                raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "이미지 파일을 찾을 수 없습니다.", 404)
+            with open(local_path, "rb") as f:
+                image_bytes = f.read()
+    else:
+        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "file 또는 image_path 중 하나를 제공해야 합니다.", 400)
+
     result = await extract_datetime_from_image(image_bytes, category)
     return result
 

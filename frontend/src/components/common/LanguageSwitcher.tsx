@@ -49,18 +49,24 @@ export function LanguageSwitcher({
     return () => window.removeEventListener("triver:open-language-switcher", handleOpenSwitcher);
   }, [variant]);
 
-  const handleChange = (lang: SupportedLanguage) => {
-    setLanguage(lang);
-    updateCurrentUser({ language: lang }).catch(() => {});
-    onLanguageChange?.(lang);
+  const handleChange = async (lang: SupportedLanguage) => {
     setOpen(false);
+    try {
+      await updateCurrentUser({ language: lang });
+      setLanguage(lang);
+      onLanguageChange?.(lang);
+    } catch {
+      // DB 반영 실패 시 UI/i18n은 이전 언어 유지
+    }
   };
 
   if (variant === "select") {
     return (
       <select
         value={language}
-        onChange={(e) => handleChange(e.target.value as SupportedLanguage)}
+        onChange={(e) => {
+          void handleChange(e.target.value as SupportedLanguage);
+        }}
         className={`rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-gray-400 ${className}`}
       >
         {SUPPORTED_LANGUAGES.map((l) => (
@@ -79,7 +85,7 @@ export function LanguageSwitcher({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-        aria-label="Change language"
+
       >
         <Globe size={16} />
         <span>{language.toUpperCase()}</span>
@@ -91,7 +97,9 @@ export function LanguageSwitcher({
             <button
               key={l.code}
               type="button"
-              onClick={() => handleChange(l.code)}
+              onClick={() => {
+                void handleChange(l.code);
+              }}
               className="flex w-full items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <span>{l.label}</span>

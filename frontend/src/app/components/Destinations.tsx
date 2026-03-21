@@ -67,12 +67,16 @@ export function Destinations() {
             // 주의: 로그인 후 정보나 설문 기입이 덜 끝났다면 즉시 이동하지 않고 모달 표시
             if (userProfile && !userProfile.is_join) {
                 // 사용자가 챗봇 목적지로 향하려 했다는 의도를 남겨두기 위해 세팅
+                // planTripFlow=true: 프로필/설문 완료 후 챗봇으로 직행하도록 표시
+                localStorage.setItem("planTripFlow", "true");
                 localStorage.setItem("pendingDestination", JSON.stringify(place));
                 setWarningStep("profile");
                 setIsWarningModalOpen(true);
                 return;
             }
             if (userProfile && !userProfile.is_prefer) {
+                // planTripFlow=true: 설문 완료 후 챗봇으로 직행하도록 표시
+                localStorage.setItem("planTripFlow", "true");
                 localStorage.setItem("pendingDestination", JSON.stringify(place));
                 setWarningStep("survey");
                 setIsWarningModalOpen(true);
@@ -180,14 +184,15 @@ export function Destinations() {
         <>
             {/* [Fix] scroll-mt-24: 네비게이션 앵커 클릭 시 fixed Header(64px) 높이 보정 */}
             {/* [Fix] min-h-[calc(100vh-64px)] + flex justify-center: Header(64px) 제외 뷰포트 채움 + 세로 중앙 */}
-            <section id="destinations" className="py-24 bg-gray-50/30 min-h-[calc(100vh-64px)] flex flex-col justify-center">
-                <div className="w-full mx-auto px-4 sm:px-6 md:px-12 lg:px-20 xl:px-32">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-16 gap-6">
-                        <div>
+            <section id="destinations" className="pt-10 pb-24 bg-gray-50/30 min-h-[calc(100vh-64px)] flex flex-col justify-center">
+                <div className="max-w-7xl mx-auto px-10 md:px-16 lg:px-8 w-full">
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 md:mb-16 gap-8">
+                        <div className="text-center lg:text-left">
                             <h2 className="text-4xl md:text-5xl font-black tracking-tight text-gray-900 mb-4 uppercase">{t("destinations.heading")}</h2>
-                            <p className="text-gray-500 text-lg max-w-xl font-light">{t("destinations.subheading")}</p>
+                            <p className="text-gray-500 text-lg max-w-xl lg:mx-0 mx-auto font-light">{t("destinations.subheading")}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-lg overflow-hidden backdrop-blur-sm border border-gray-200">
+                        <div className="flex justify-center">
+                            <div className="flex flex-wrap justify-center gap-1.5 p-1.5 bg-gray-100/50 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-200 w-fit">
                             {categories.map((category) => (
                                 <button
                                     key={category.id}
@@ -197,6 +202,7 @@ export function Destinations() {
                                     {category.label}
                                 </button>
                             ))}
+                            </div>
                         </div>
                     </div>
 
@@ -216,11 +222,11 @@ export function Destinations() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 transition={{ duration: 0.4 }}
-                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8"
+                                className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
                             >
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col w-full sm:aspect-[11/10]">
-                                        <div className="relative w-full h-[52.5%] overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <div key={place.id} className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col w-full h-full">
+                                        <div className="relative w-full aspect-[16/10] md:aspect-[4/3] lg:aspect-[16/10] overflow-hidden bg-gray-100 flex-shrink-0">
                                             {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
                                             {place.image && place.image.trim() !== "" ? (
                                                 <img
@@ -260,17 +266,19 @@ export function Destinations() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-3 md:p-4 flex flex-col flex-1 overflow-hidden">
-                                            <h3 className="text-base md:text-lg font-bold text-gray-900 mb-2 line-clamp-2 overflow-hidden">{place.name}</h3>
-                                            <div className="flex items-center gap-2 text-gray-500 text-xs overflow-hidden mb-2">
-                                                <div className="flex items-center gap-1 min-w-0 flex-1"><MapPin size={12} className="text-gray-400 flex-shrink-0" /><span className="truncate">{place.address}</span></div>
+                                        <div className="p-5 md:p-6 flex flex-col flex-1">
+                                            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 line-clamp-1">{place.name}</h3>
+                                            <div className="flex items-start gap-2 text-gray-500 text-xs mb-4">
+                                                <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                                <span className="line-clamp-2 leading-relaxed">{place.address}</span>
                                             </div>
-                                            <div className="mt-auto flex items-center justify-end pt-2 border-t border-gray-50">
+                                            <div className="mt-auto pt-4 border-t border-gray-50 flex justify-end">
                                                 <button
                                                     onClick={(e) => handlePlanTripClick(place, e)}
-                                                    className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-semibold hover:bg-gray-800 transition-colors shadow-lg z-10 relative"
+                                                    className="inline-flex items-center justify-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-gray-800 transition-all active:scale-95 shadow-lg z-10 relative whitespace-nowrap"
                                                 >
-                                                    <CalendarPlus size={12} className="md:w-3.5 md:h-3.5" />{t("destinations.planTrip")}
+                                                    <CalendarPlus size={14} />
+                                                    {t("destinations.planTrip")}
                                                 </button>
                                             </div>
                                         </div>

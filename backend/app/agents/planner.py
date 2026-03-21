@@ -58,6 +58,9 @@ async def planner_node(state: TravelState):
     slots_info = get_slots_info(state)
     prefs_info = state.get("prefs_info", "")
     current_itinerary = build_current_itinerary_context(state.get("itinerary"))
+    summary_message = state.get("summary_message")
+
+    weather_info = state.get("weather_info") or "없음"
 
     pinned_places = state.get("pinned_places") or []
     if pinned_places:
@@ -86,6 +89,7 @@ async def planner_node(state: TravelState):
         chain = prompt | structured_llm
 
         result = await chain.ainvoke({
+            "summary_message": summary_message or "없음",
             "messages": messages,
             "user_input": user_input,
             "user_geo": f"위도: {user_lat}, 경도: {user_lon}",
@@ -93,6 +97,7 @@ async def planner_node(state: TravelState):
             "prefs_info": prefs_info,
             "current_itinerary": current_itinerary,
             "pinned_places_info": pinned_places_info,
+            "weather_info": weather_info,
         })
 
         dprint(f"[Planner] itinerary_count={len(result.itinerary)}, missing_slots={result.missing_slots}")

@@ -2,6 +2,7 @@
 
 import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
 
 type Props = {
@@ -9,8 +10,11 @@ type Props = {
 };
 const GOOGLE_POPUP_REDIRECT_URI = "postmessage";
 
-export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Props) {
+export default function GoogleLoginBtn({ label }: Props) {
     const router = useRouter();
+    const { t } = useTranslation();
+
+    const displayLabel = label || t("login.googleStart");
 
     const login = useGoogleLogin({
         flow: "auth-code",
@@ -31,7 +35,7 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 });
 
                 if (!res.ok) {
-                    throw new Error("Login failed");
+                    throw new Error(t("login.failed"));
                 }
 
                 const data = await res.json();
@@ -47,7 +51,7 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 router.push(targetPath);
             } catch (error) {
                 console.error("Login Error:", error instanceof Error ? error.message : error);
-                alert("Login Failed");
+                alert(t("login.failed"));
             }
         },
         onError: (errorResponse) => console.log("Google OAuth error:", errorResponse.error, errorResponse.error_description),
@@ -60,8 +64,8 @@ export default function GoogleLoginBtn({ label = "Google로 시작하기" }: Pro
                 onClick={() => login()}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
             >
-                <img className="w-6 h-6" src="https://www.svgrepo.com/show/475656/google-color.svg" loading="lazy" alt="google logo" />
-                <span>{label}</span>
+                <img className="w-6 h-6" src="https://www.svgrepo.com/show/475656/google-color.svg" loading="lazy" alt="Google" />
+                <span>{displayLabel}</span>
             </button>
         </div>
     );

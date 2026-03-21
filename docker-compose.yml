@@ -1,5 +1,6 @@
 # local에서 backend까지 모두 띄움
 # docker compose -f 'docker-compose.yml' up -d --build
+# OCR LLM: HuggingFace Inference API 사용 (ollama 컨테이너 불필요)
 
 services:
   mysql:
@@ -26,7 +27,9 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+
   adminer:
+    platform: linux/amd64
     image: adminer
     ports:
       - "8080:8080"
@@ -45,7 +48,7 @@ services:
     volumes:
       - ./backend:/app
       - hf_model_cache:/root/.cache/huggingface
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     depends_on:
       - mysql
       - qdrant
@@ -79,4 +82,4 @@ services:
 volumes:
   mysql_data:
   qdrant_data:
-  hf_model_cache:    # HuggingFace 모델 캐시 (bge-m3, clip, bge-reranker-v2-m3)
+  hf_model_cache: # HuggingFace 모델 캐시 (bge-m3, clip, bge-reranker-v2-m3)

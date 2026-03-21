@@ -280,7 +280,7 @@ export function DiaryLocationPickerModal({
                 type="button"
                 onClick={onClose}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:bg-white/10"
-                aria-label={t("location.closeModal")}
+
               >
                 <X size={16} />
               </button>
@@ -305,7 +305,7 @@ export function DiaryLocationPickerModal({
                         type="submit"
                         disabled={searching}
                         className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                        aria-label={t("location.search")}
+
                       >
                         {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search size={16} />}
                       </button>
@@ -333,7 +333,7 @@ export function DiaryLocationPickerModal({
                         onClick={handleConfirm}
                         disabled={resolving}
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                        aria-label={t("location.useThis")}
+
                       >
                         {resolving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
                       </button>

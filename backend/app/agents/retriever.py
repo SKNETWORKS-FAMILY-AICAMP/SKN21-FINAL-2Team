@@ -574,6 +574,26 @@ async def retriever_node(state: TravelState):
             f"excluded={before_exc - len(candidates)}"
         )
 
+    # exclude_tags / exclude_location 후처리 패널티
+    slots = state.get("slots")
+    exclude_tags = list(getattr_safe(slots, "exclude_tags") or [])
+    exclude_location = str(getattr_safe(slots, "exclude_location") or "").strip()
+    if exclude_tags or exclude_location:
+        for c in candidates:
+            payload = c.get("payload", {}) if isinstance(c, dict) else {}
+            desc = (str(payload.get("overview", "")) + str(payload.get("title", ""))).lower()
+            addr = str(payload.get("addr", "") or payload.get("road_address", "")).lower()
+            for tag in exclude_tags:
+                if tag.lower() in desc:
+                    c["blended_score"] = c.get("blended_score", 0) * 0.1
+                    dprint(f"[Retriever] exclude_tag={tag!r} penalty applied: {payload.get('title', '')!r}")
+                    break
+            if exclude_location and exclude_location in addr:
+                c["blended_score"] = 0.0
+                dprint(f"[Retriever] exclude_location={exclude_location!r} zeroed: {payload.get('title', '')!r}")
+        # 패널티 후 재정렬 (score=0 항목은 사실상 제외)
+        candidates = [c for c in sorted(candidates, key=_candidate_score, reverse=True) if _candidate_score(c) > 0.0]
+
     if primary_intent == IntentType.TRIP_PLANNING and not _trip_planning_fallback:
         # 항목(item_idx)별 top-1 선택: global final_k 제한 없이 itinerary 항목당 1개
         exposed_candidates = _pick_candidates_for_trip_planning(candidate_pool)

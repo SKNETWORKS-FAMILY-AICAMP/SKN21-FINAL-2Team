@@ -32,7 +32,7 @@ export function JourneyDetailModal({
                 >
                     <motion.button
                         type="button"
-                        aria-label="Close"
+
                         className="absolute inset-0 bg-black/40"
                         onClick={onClose}
                         initial={{ opacity: 0 }}

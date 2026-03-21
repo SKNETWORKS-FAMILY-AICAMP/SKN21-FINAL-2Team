@@ -98,7 +98,7 @@ export function ReviewSection() {
                     <button
                         onClick={goPrev}
                         className="flex-shrink-0 p-2 text-gray-300 hover:text-gray-500 transition-colors duration-200"
-                        aria-label={t("reviews.previousReview")}
+
                     >
                         <ChevronLeft size={28} strokeWidth={1.5} />
                     </button>
@@ -153,7 +153,7 @@ export function ReviewSection() {
                     <button
                         onClick={goNext}
                         className="flex-shrink-0 p-2 text-gray-300 hover:text-gray-500 transition-colors duration-200"
-                        aria-label={t("reviews.nextReview")}
+
                     >
                         <ChevronRight size={28} strokeWidth={1.5} />
                     </button>
