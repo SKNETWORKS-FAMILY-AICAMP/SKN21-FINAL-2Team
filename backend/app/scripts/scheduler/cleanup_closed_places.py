@@ -1,7 +1,7 @@
 """
 폐업 장소 VectorDB 정리 스케줄러.
 
-Qdrant scroll cursor 방식으로 매주 다른 구간(places 10건 + photos 10건)을 순환 검사하여
+Qdrant scroll cursor 방식으로 매주 다른 구간(places 30건 + photos 30건)을 순환 검사하여
 전체 장소를 시간에 걸쳐 모두 커버한다.
 
 Kakao Local 키워드 검색 API로 장소 존재 여부를 확인하고
@@ -440,18 +440,18 @@ def run(dry_run: bool = True) -> dict[str, Any]:
     places_offset = state.get("places_offset")
     photos_offset = state.get("photos_offset")
 
-    # 각 컬렉션에서 10건씩 scroll
+    # 각 컬렉션에서 30건씩 scroll (총 60건 검사)
     places_pts, next_places_offset = client.scroll(
         PLACES_COLLECTION,
         offset=places_offset,
-        limit=10,
+        limit=30,
         with_payload=True,
         with_vectors=False,
     )
     photos_pts, next_photos_offset = client.scroll(
         PHOTOS_COLLECTION,
         offset=photos_offset,
-        limit=10,
+        limit=30,
         with_payload=True,
         with_vectors=False,
     )
