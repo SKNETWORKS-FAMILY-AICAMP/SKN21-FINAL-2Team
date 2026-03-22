@@ -17,6 +17,7 @@ from app.models.enums import RoleType
 from app.schemas.chat import (
     ChatRoomCreate,
     ChatRoomResponse,
+    ChatRoomTripContextUpdate,
     ChatMessageCreate,
     ChatMessageResponse,
     ChatPlaceResponse,
@@ -433,6 +434,27 @@ def create_message(message_in: ChatMessageCreate, current_user: User = Depends(g
     db.commit()
     db.refresh(new_message)
     return new_message
+
+
+# 여행 정보 업데이트
+@router.patch("/rooms/{room_id}/trip-context", response_model=ChatRoomResponse)
+def update_room_trip_context(room_id: int, body: ChatRoomTripContextUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(db_manager.get_db)):
+    room = db.query(ChatRoom).filter(
+        ChatRoom.id == room_id,
+        ChatRoom.user_id == current_user.id,
+    ).first()
+
+    if not room:
+        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND_OR_DENIED, "Room not found or permission denied", 404)
+
+    room.adult_num = body.adult_num
+    room.child_num = body.child_num
+    room.start_date = body.start_date
+    room.end_date = body.end_date
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return room
 
 
 # 추천 장소 북마크 업데이트

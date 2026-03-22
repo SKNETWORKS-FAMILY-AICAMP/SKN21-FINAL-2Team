@@ -96,6 +96,7 @@
   "tripContext.childrenAge": "12岁以下",
   "tripContext.startChat": "开始聊天",
   "tripContext.skipAndStart": "跳过直接开始",
+  "tripContext.saveEdit": "保存修改",
 
   "common.save": "保存",
   "common.saving": "保存中...",

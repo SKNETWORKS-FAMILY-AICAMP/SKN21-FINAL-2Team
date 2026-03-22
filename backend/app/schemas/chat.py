@@ -32,6 +32,13 @@ class ChatRoomCreate(ChatRoomBase):
     pass
 
 
+class ChatRoomTripContextUpdate(BaseModel):
+    adult_num: Optional[int] = None
+    child_num: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+
+
 class ChatPlaceBase(BaseModel):
     contenttypeid: int = 0
     name: Optional[str] = None

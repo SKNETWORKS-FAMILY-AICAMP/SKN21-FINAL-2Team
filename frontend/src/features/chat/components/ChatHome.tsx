@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Pencil } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile, uploadImageDataUrl } from "@/services/api";
+import { ChatMessage, fetchCurrentUser, verifyAndRefreshToken, UserProfile, uploadImageDataUrl, updateRoomTripContext } from "@/services/api";
 import { useTranslation } from "@/i18n/useTranslation";
 import { TripContextModal } from "@/features/chat/components/TripContextModal";
 import { PlaceMapPanel } from "@/features/chat/components/PlaceMapPanel";
@@ -45,6 +45,7 @@ export function ChatHome() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [showTripModal, setShowTripModal] = useState(false);
     const [isTripLoading, setIsTripLoading] = useState(false);
+    const [showEditTripModal, setShowEditTripModal] = useState(false);
 
     /*
      * [Plan Trip 플로우 — 즉시 모달 표시]
@@ -513,8 +514,14 @@ export function ChatHome() {
 
                 {isRouteRoomSynced && roomTripContext && roomTripContext.travelDuration && (
                     <div className="flex-none px-3 pb-2 sm:px-4 lg:px-6 bg-white">
-                        <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100">
-                            {t("chat.tripContext", { duration: roomTripContext.travelDuration, adults: roomTripContext.adultCount ?? 0, children: roomTripContext.childCount ?? 0 })}
+                        <div className="rounded-2xl bg-gray-50 px-4 py-2 text-xs text-slate-600 border border-gray-100 flex items-center justify-between gap-2">
+                            <span>{t("chat.tripContext", { duration: roomTripContext.travelDuration, adults: roomTripContext.adultCount ?? 0, children: roomTripContext.childCount ?? 0 })}</span>
+                            <button
+                                onClick={() => setShowEditTripModal(true)}
+                                className="flex-none p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-gray-200 transition-colors"
+                            >
+                                <Pencil size={12} />
+                            </button>
                         </div>
                     </div>
                 )}
@@ -659,6 +666,27 @@ export function ChatHome() {
                         handleCreateNewRoom();
                     }
                 }}
+            />
+
+            <TripContextModal
+                isOpen={showEditTripModal}
+                isEdit
+                initialContext={roomTripContext ?? undefined}
+                onConfirm={async (context) => {
+                    setRoomTripContext(context);
+                    if (currentRoomId) {
+                        localStorage.setItem(`triver:trip-context:${currentRoomId}`, JSON.stringify(context));
+                        const parts = context.travelDuration?.split(" ~ ") ?? [];
+                        await updateRoomTripContext(currentRoomId, {
+                            adult_num: context.adultCount || null,
+                            child_num: context.childCount || null,
+                            start_date: parts[0] || null,
+                            end_date: parts[1] || null,
+                        }).catch((e) => console.error("Failed to update trip context", e));
+                    }
+                    setShowEditTripModal(false);
+                }}
+                onClose={() => setShowEditTripModal(false)}
             />
         </div>
     );

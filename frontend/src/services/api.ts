@@ -362,6 +362,21 @@ export const updateRoomBookmark = async (roomId: number, bookmark: boolean): Pro
     return response.json();
 };
 
+export interface RoomTripContextUpdate {
+    adult_num: number | null;
+    child_num: number | null;
+    start_date: string | null;
+    end_date: string | null;
+}
+
+export const updateRoomTripContext = async (roomId: number, body: RoomTripContextUpdate): Promise<ChatRoom> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/trip-context`, {
+        method: 'PATCH',
+        body,
+    });
+    return response.json();
+};
+
 export const fetchBookmarkedRooms = async (): Promise<BookmarkedRoomItem[]> => {
     const response = await fetchWithAuth(`${API_URL}/chat/bookmarks/rooms`);
     return response.json();
