@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, ArrowRight, CalendarDays, Loader2 } from "lucide-react";
+import { X, Users, ArrowRight, CalendarDays, Loader2, Check } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useTranslation } from "@/i18n/useTranslation";
 
 export interface TripContext {
@@ -17,20 +19,47 @@ interface TripContextModalProps {
     onClose: () => void;
     /** true이면 방 생성 API 대기 중 — 모달을 닫지 않고 스피너 표시 */
     loading?: boolean;
+    /** 수정 모드일 때 기존 값을 전달 */
+    initialContext?: TripContext;
+    /** true이면 수정 모드 — "채팅 시작" 대신 "수정 완료" 버튼, skip 숨김 */
+    isEdit?: boolean;
 }
 
-const today = (() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-})();
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
-export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }: TripContextModalProps) {
+const parseDate = (str: string): Date | null => {
+    if (!str) return null;
+    const [y, m, d] = str.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+};
+
+const formatDate = (date: Date): string =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, initialContext, isEdit = false }: TripContextModalProps) {
     const { t } = useTranslation();
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [adultCount, setAdultCount] = useState<number>(1);
     const [childCount, setChildCount] = useState<number>(0);
-    const endDateDesktopRef = useRef<HTMLInputElement>(null);
+    const endPickerRef = useRef<DatePicker>(null);
+
+    // 수정 모드: 모달이 열릴 때 기존 값으로 초기화
+    useEffect(() => {
+        if (isOpen && initialContext) {
+            const parts = initialContext.travelDuration?.split(" ~ ") ?? [];
+            setStartDate(parts[0] ?? "");
+            setEndDate(parts[1] ?? "");
+            setAdultCount(initialContext.adultCount ?? 1);
+            setChildCount(initialContext.childCount ?? 0);
+        } else if (isOpen && !initialContext) {
+            resetState();
+        }
+    // isOpen이 true로 바뀔 때만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const resetState = () => {
         setStartDate("");
@@ -54,7 +83,11 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
     };
 
     const canProceed = !!startDate;
-    const endMin = startDate || today;
+    const startDateObj = parseDate(startDate);
+    const endDateObj = parseDate(endDate);
+    const endMinDate = startDateObj ?? today;
+
+    const inputClass = "w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10 cursor-pointer";
 
     return (
         <AnimatePresence>
@@ -120,36 +153,44 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
                                         {t("tripContext.departure")}
                                     </label>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        min={today}
-                                        onChange={(e) => {
-                                            const nextStart = e.target.value;
-                                            setStartDate(nextStart);
-                                            if (endDate && nextStart && endDate < nextStart) {
-                                                setEndDate(nextStart);
-                                            }
-                                            if (nextStart) {
-                                                setTimeout(() => {
-                                                    endDateDesktopRef.current?.showPicker?.();
-                                                }, 50);
-                                            }
+                                    <DatePicker
+                                        selected={startDateObj}
+                                        onChange={(date: Date | null) => {
+                                            if (!date) return;
+                                            const next = formatDate(date);
+                                            setStartDate(next);
+                                            if (endDate && next > endDate) setEndDate(next);
+                                            setTimeout(() => endPickerRef.current?.setOpen(true), 50);
                                         }}
-                                        className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                        minDate={today}
+                                        dateFormat="yyyy-MM-dd"
+                                        className={inputClass}
+                                        placeholderText="YYYY-MM-DD"
+                                        popperPlacement="bottom-start"
+                                        showMonthDropdown
+                                        showYearDropdown
+                                        dropdownMode="select"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
                                         {t("tripContext.return")}
                                     </label>
-                                    <input
-                                        ref={endDateDesktopRef}
-                                        type="date"
-                                        value={endDate}
-                                        min={endMin}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                    <DatePicker
+                                        ref={endPickerRef}
+                                        selected={endDateObj}
+                                        onChange={(date: Date | null) => {
+                                            if (!date) return;
+                                            setEndDate(formatDate(date));
+                                        }}
+                                        minDate={endMinDate}
+                                        dateFormat="yyyy-MM-dd"
+                                        className={inputClass}
+                                        placeholderText="YYYY-MM-DD"
+                                        popperPlacement="bottom-end"
+                                        showMonthDropdown
+                                        showYearDropdown
+                                        dropdownMode="select"
                                     />
                                 </div>
                             </div>
@@ -197,20 +238,22 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                                     : "bg-gray-100 text-gray-300 cursor-not-allowed"
                                     }`}
                             >
-                                {t("tripContext.startChat")}
-                                <ArrowRight size={15} />
+                                {isEdit ? t("tripContext.saveEdit") : t("tripContext.startChat")}
+                                {isEdit ? <Check size={15} /> : <ArrowRight size={15} />}
                             </button>
 
-                            <button
-                                onClick={() => {
-                                    onConfirm({ travelDuration: "", adultCount: 0, childCount: 0 });
-                                    resetState();
-                                }}
-                                className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"
-                            >
-                                {t("tripContext.skipAndStart")}
-                                <ArrowRight size={12} />
-                            </button>
+                            {!isEdit && (
+                                <button
+                                    onClick={() => {
+                                        onConfirm({ travelDuration: "", adultCount: 0, childCount: 0 });
+                                        resetState();
+                                    }}
+                                    className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"
+                                >
+                                    {t("tripContext.skipAndStart")}
+                                    <ArrowRight size={12} />
+                                </button>
+                            )}
                         </div>
                     </motion.div>
                 </>

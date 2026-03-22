@@ -166,7 +166,7 @@ async def fetch_weather(lat: float | None = None, lon: float | None = None) -> s
         "forecast_days": 4,
     })
     if not data:
-        return None
+        return _seoul_climate_summary(date.today())
 
     try:
         current = data.get("current", {})
@@ -206,7 +206,7 @@ async def fetch_weather(lat: float | None = None, lon: float | None = None) -> s
 
     except Exception as e:
         dprint(f"[Weather] parse failed: {e}")
-        return None
+        return _seoul_climate_summary(date.today())
 
 
 async def fetch_weather_for_date(
