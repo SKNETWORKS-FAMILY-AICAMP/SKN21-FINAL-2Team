@@ -197,6 +197,63 @@ LangGraph 기반 대화 플로우 영역이다.
 - Qdrant 적재
 - 네이버 장소 검증 스크립트
 
+### `app/scripts/scheduler/` — 주간 배치 스케줄러
+
+매주 월요일 08:00 KST에 AWS EventBridge Scheduler → SSM Run Command 경로로 자동 실행되는 배치 작업.
+
+```text
+app/scripts/scheduler/
+├── __init__.py
+├── weekly_scheduler_job.py      # 오케스트레이션 엔트리포인트
+├── cleanup_closed_places.py     # 폐업 장소 정리 (Kakao Local API)
+└── sync_new_popup_data.py       # 팝업스토어 신규 데이터 동기화 (Selenium)
+```
+
+#### 실행 명령어
+
+```bash
+# 컨테이너 내부에서 직접 실행 (dry-run 기본)
+python -m app.scripts.scheduler.weekly_scheduler_job
+
+# 실제 삭제 수행
+python -m app.scripts.scheduler.weekly_scheduler_job --no-dry-run
+
+# SSM Run Command로 실행 (EC2에서)
+CONTAINER=$(docker ps -qf "label=com.docker.compose.service=backend")
+docker exec -T "$CONTAINER" python -m app.scripts.scheduler.weekly_scheduler_job
+```
+
+#### 필요한 환경변수
+
+| 변수명 | 설명 |
+|--------|------|
+| `KAKAO_REST_API_KEY` | Kakao Local 키워드 검색 API 키 (폐업 확인용) |
+| `QDRANT_HOST` | Qdrant 호스트 (기본값: `localhost`) |
+| `QDRANT_PORT` | Qdrant 포트 (기본값: `6333`) |
+
+#### 폐업 장소 정리 (`cleanup_closed_places.py`)
+
+- Qdrant scroll cursor 방식으로 매주 places 10건 + photos 10건을 순환 검사
+- cursor 상태: `backend/data/scheduler_reports/scroll_state.json`
+- Kakao 키워드 검색으로 장소 존재 확인 → 상태: `open` / `review_needed` / `closed_suspected` / `no_match`
+- `no_match` / `closed_suspected` → 삭제 대상 (places ↔ photos 양 컬렉션 동기 삭제)
+- `review_needed` → 리포트만 생성, 삭제 안 함
+- 결과 리포트: `backend/data/scheduler_reports/cleanup_YYYY-MM-DD.json`
+
+#### 운영 단계별 dry_run 전환
+
+| 단계 | `--no-dry-run` | 동작 |
+|------|----------------|------|
+| 초기 1~2주 | 미사용 (기본 dry_run) | 리포트만 생성, 삭제 없음 |
+| 검증 후 | 사용 | 실제 삭제 수행 |
+
+#### 팝업스토어 동기화 (`sync_new_popup_data.py`)
+
+- `PopplyCrawler(headless=True)` (Selenium)로 팝플리 사이트 크롤링
+- `_popup_identity_key(title, addr, start_date, end_date)` 기반 중복 필터 (안정 해시)
+- 경량 정규화: `__crawl.py`의 `_build_popup_image_add_rows()` 재사용 (Naver 검색/OpenAI 미사용)
+- 신규 팝업만 `QdrantClientDB.add_popup_places()`로 upsert
+
 ---
 
 ## 11. `evaluation/`
