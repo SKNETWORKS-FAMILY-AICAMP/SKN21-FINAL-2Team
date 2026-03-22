@@ -27,6 +27,14 @@ from app.scripts.scheduler.sync_new_popup_data import run as sync_run
 
 
 def main(dry_run: bool = True) -> int:
+    """주간 스케줄러 메인 함수.
+
+    Args:
+        dry_run (bool, optional): 실제 삭제 수행 여부. True이면 삭제하지 않음.
+
+    Returns:
+        int: 성공 시 0, 실패 시 1
+    """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
