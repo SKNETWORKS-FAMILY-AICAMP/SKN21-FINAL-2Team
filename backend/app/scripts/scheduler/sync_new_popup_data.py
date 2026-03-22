@@ -2,11 +2,18 @@
 팝업스토어 신규 데이터 크롤링 후 VectorDB 추가 스케줄러.
 
 Popply 사이트를 Selenium으로 크롤링하고, 기존 VectorDB에 없는 팝업만
-경량 정규화 경로로 처리한 후 Qdrant에 upsert한다.
+preprocess_popup.py와 동일한 전처리 파이프라인으로 처리한 후 Qdrant에 upsert한다.
+
+파이프라인:
+    1단계: 필드 정규화 + 만료 필터 + 안정 contentid 부여 (_popup_content_id 해시)
+    2단계: 텍스트 정제           (preprocess_popup.step2_clean)
+    3단계: Geocoding             (preprocess_popup.step3_geocode)
+    4단계: llm_text 생성         (preprocess_popup.step4_generate_llm_text)
+           Naver 웹문서 검색 + 본문 크롤링 + GPT-4o-mini → 기존 데이터와 동일 품질
+    5단계: JSONL 저장 후 Qdrant upsert
 
 중복 판단: _popup_identity_key(title, addr, start_date, end_date) 기반 (안정 해시)
-경량 파이프라인: __crawl.py의 _build_popup_image_add_rows 재사용
-                (Naver 웹검색 + OpenAI llm_text 생성 없음)
+           비용이 큰 geocoding / llm_text 생성 이전에 중복을 제거한다.
 
 실행:
     python -m app.scripts.scheduler.sync_new_popup_data
@@ -14,12 +21,12 @@ Popply 사이트를 Selenium으로 크롤링하고, 기존 VectorDB에 없는 �
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import sys
-import tempfile
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,19 +43,36 @@ load_dotenv(BACKEND_DIR / ".env")
 
 from app.utils.config import PLACES_COLLECTION
 from app.scripts.tour_api.__crawl import (
-    DEFAULT_POPUP_LLM_CACHE_PATH,
-    _build_popup_image_add_rows,
+    _normalize_popup_row,
     _popup_identity_key,
+    _is_active_or_upcoming,
     _text,
+)
+# preprocess_popup의 step 함수들을 직접 재사용 (동일한 전처리 품질 보장)
+from app.scripts.preprocess_popup import (
+    FINAL_FIELDS,
+    step2_clean,
+    step3_geocode,
+    step4_generate_llm_text,
 )
 
 logger = logging.getLogger(__name__)
 
+TODAY = datetime.today().date()
 REPORTS_DIR = BACKEND_DIR / "data" / "scheduler_reports"
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# VectorDB 기존 팝업 조회
+# ──────────────────────────────────────────────────────────────────────────────
+
 def _get_existing_popup_identity_keys(client: QdrantClient) -> set[str]:
-    """VectorDB places 컬렉션에서 기존 팝업 identity_key 목록을 반환한다."""
+    """VectorDB places 컬렉션에서 기존 팝업 identity_key 목록을 반환한다.
+
+    팝업은 _build_15_content()를 통해 contenttypeid="콘텐츠"로 저장되므로
+    "콘텐츠" 타입을 스캔한다. 축제도 같은 타입이지만
+    _popup_identity_key(title, addr, start_date, end_date) 충돌 확률은 무시 가능하다.
+    """
     existing_keys: set[str] = set()
     offset = None
 
@@ -56,7 +80,7 @@ def _get_existing_popup_identity_keys(client: QdrantClient) -> set[str]:
         pts, next_offset = client.scroll(
             PLACES_COLLECTION,
             scroll_filter=Filter(must=[
-                FieldCondition(key="contenttypeid", match=MatchValue(value="팝업스토어"))
+                FieldCondition(key="contenttypeid", match=MatchValue(value="콘텐츠"))
             ]),
             offset=offset,
             limit=500,
@@ -82,9 +106,42 @@ def _get_existing_popup_identity_keys(client: QdrantClient) -> set[str]:
     return existing_keys
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 1단계: 필드 정규화
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _step1_normalize(raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    필드 정규화 + 만료 팝업 필터.
+
+    _normalize_popup_row()를 재사용하여 기존 파이프라인과 동일한 규격으로 변환한다.
+      - contenttypeid  = "콘텐츠"  (기존 데이터와 동일, _build_15_content 경로)
+      - contenttypeid_code = "15"
+      - contentid      = _popup_content_id() 해시 (9xxxxxxxxx, 스케줄러 재실행에도 안정)
+    """
+    result = []
+    for index, item in enumerate(raw_rows, start=1):
+        normalized = _normalize_popup_row(item, index)
+        # 만료 팝업 제외 (_build_15_content 내 active_rows 필터와 동일)
+        if not _is_active_or_upcoming(_text(normalized.get("end_date"))):
+            logger.debug("만료 제외: %s (종료: %s)", normalized.get("title"), normalized.get("end_date"))
+            continue
+        result.append(normalized)
+
+    logger.info(
+        "1단계 정규화: %d건 → %d건 (만료 %d건 제외)",
+        len(raw_rows), len(result), len(raw_rows) - len(result),
+    )
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Selenium 크롤링
+# ──────────────────────────────────────────────────────────────────────────────
+
 def _crawl_with_selenium(headless: bool = True) -> list[dict[str, Any]]:
     """Popply 사이트를 Selenium으로 크롤링하고 raw 데이터 목록을 반환한다."""
-    from app.scripts.popply_crawler import PopplyCrawler  # Selenium 의존성을 lazy import
+    from app.scripts.popply_crawler import PopplyCrawler  # lazy import
 
     today = date.today().strftime("%Y-%m-%d")
     crawler = PopplyCrawler(headless=headless)
@@ -103,9 +160,16 @@ def _crawl_with_selenium(headless: bool = True) -> list[dict[str, Any]]:
         crawler.close()
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 메인 실행
+# ──────────────────────────────────────────────────────────────────────────────
+
 def run(headless: bool = True) -> dict[str, Any]:
     """
     팝업스토어 신규 데이터 동기화 실행.
+
+    preprocess_popup.py와 동일한 전처리 파이프라인을 적용하여
+    기존 데이터와 동일한 품질(Geocoding + llm_text)로 Qdrant에 upsert한다.
 
     Args:
         headless: Selenium headless 모드 여부.
@@ -114,29 +178,27 @@ def run(headless: bool = True) -> dict[str, Any]:
         실행 결과 요약 딕셔너리.
     """
     logger.info("팝업스토어 신규 데이터 동기화 시작")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
     host = os.getenv("QDRANT_HOST", "localhost")
     port = int(os.getenv("QDRANT_PORT", "6333"))
     client = QdrantClient(host=host, port=port, timeout=60)
 
-    # 1. 기존 팝업 identity_key 조회
+    # ── Step 0: 기존 팝업 identity_key 조회 ──────────────────────────────────
     existing_keys = _get_existing_popup_identity_keys(client)
     logger.info("기존 팝업 identity_key 수: %d", len(existing_keys))
 
-    # 2. Selenium 크롤링
+    # ── Step 1: Selenium 크롤링 ───────────────────────────────────────────────
     raw_data = _crawl_with_selenium(headless=headless)
     logger.info("크롤링 완료: %d건", len(raw_data))
 
-    # 3. 경량 정규화 + 만료 필터 + stable contentid 부여
-    #    llm_text는 기존 캐시(DEFAULT_POPUP_LLM_CACHE_PATH) 참조, 없으면 introduction 텍스트
-    llm_cache_path = Path(DEFAULT_POPUP_LLM_CACHE_PATH)
-    normalized_rows = _build_popup_image_add_rows(raw_data, llm_cache_path)
-    logger.info("정규화 후 활성 팝업 수: %d건", len(normalized_rows))
+    # ── Step 2: 필드 정규화 + 만료 필터 ──────────────────────────────────────
+    normalized = _step1_normalize(raw_data)
 
-    # 4. identity_key 중복 필터
-    new_rows = []
+    # ── Step 3: identity_key 중복 필터 (비용이 큰 단계 이전에 제거) ───────────
+    new_rows: list[dict[str, Any]] = []
     skipped = 0
-    for row in normalized_rows:
+    for row in normalized:
         key = _popup_identity_key(
             _text(row.get("title")),
             _text(row.get("addr")),
@@ -150,28 +212,57 @@ def run(headless: bool = True) -> dict[str, Any]:
 
     logger.info("신규 팝업: %d건 (중복 제외 %d건)", len(new_rows), skipped)
 
-    # 5. 임시 JSONL 저장 후 upsert
-    upserted = 0
-    if new_rows:
-        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-        tmp_path = REPORTS_DIR / f"popup_new_{date.today().isoformat()}.jsonl"
-        with tmp_path.open("w", encoding="utf-8") as f:
-            for row in new_rows:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        logger.info("임시 JSONL 저장: %s", tmp_path)
+    if not new_rows:
+        logger.info("신규 팝업 없음, 처리 생략")
+        return {
+            "crawled": len(raw_data),
+            "normalized": len(normalized),
+            "skipped_duplicates": skipped,
+            "llm_generated": 0,
+            "upserted": 0,
+        }
 
+    # ── Step 4: 텍스트 정제 (preprocess_popup.step2_clean) ───────────────────
+    cleaned = step2_clean(new_rows)
+
+    # ── Step 5: Geocoding (preprocess_popup.step3_geocode) ───────────────────
+    geocoded = asyncio.run(step3_geocode(cleaned))
+
+    # ── Step 6: llm_text 생성 (Naver 검색 + GPT-4o-mini) ─────────────────────
+    enriched = step4_generate_llm_text(geocoded)
+
+    # ── Step 7: JSONL 저장 (llm_text 없는 항목 제외) ─────────────────────────
+    today_str = date.today().isoformat()
+    out_path = REPORTS_DIR / f"popup_new_{today_str}.jsonl"
+    upsert_rows: list[dict[str, Any]] = []
+
+    for item in enriched:
+        if not item.get("llm_text"):
+            logger.warning("llm_text 없어 제외: %s", item.get("title"))
+            continue
+        record = {k: item[k] for k in FINAL_FIELDS if k in item}
+        upsert_rows.append(record)
+
+    with out_path.open("w", encoding="utf-8") as f:
+        for row in upsert_rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    logger.info("JSONL 저장: %s (%d건)", out_path, len(upsert_rows))
+
+    # ── Step 8: Qdrant upsert ─────────────────────────────────────────────────
+    upserted = 0
+    if upsert_rows:
         from app.scripts.qdrant_setup import QdrantClientDB  # ML 모델 의존성 lazy import
         db = QdrantClientDB(setup_collections=False)
-        db.add_popup_places(str(tmp_path))
-        upserted = len(new_rows)
+        db.add_popup_places(str(out_path))
+        upserted = len(upsert_rows)
         logger.info("Qdrant upsert 완료: %d건", upserted)
-    else:
-        logger.info("신규 팝업 없음, upsert 생략")
 
     stats = {
         "crawled": len(raw_data),
-        "normalized": len(normalized_rows),
+        "normalized": len(normalized),
         "skipped_duplicates": skipped,
+        "llm_generated": len(upsert_rows),
         "upserted": upserted,
     }
     logger.info("팝업 동기화 완료: %s", stats)
