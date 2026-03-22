@@ -102,7 +102,13 @@ def _get_existing_popup_identity_keys(client: QdrantClient) -> set[str]:
                 continue
             # 기존 콘텐츠 데이터는 period 필드로 저장됨 ("yyyy-mm-dd ~ yyyy-mm-dd")
             # _split_period로 start_date/end_date를 추출하여 identity key 계산
-            start_date, end_date = _split_period(_text(payload.get("period", "")))
+            # period 없으면 start_date/end_date 직접 사용 (신규 수집 데이터 호환)
+            period = _text(payload.get("period", ""))
+            if period:
+                start_date, end_date = _split_period(period)
+            else:
+                start_date = _text(payload.get("start_date", ""))
+                end_date = _text(payload.get("end_date", ""))
             key = _popup_identity_key(
                 title,
                 _text(payload.get("addr")),
@@ -143,6 +149,10 @@ def _step1_normalize(raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         intro = str(item.get("introduction", "")).strip()
         if intro:
             normalized["introduction"] = intro
+        # "Unknown"에서 변환된 빈 문자열 필드 제거 (parking, fee)
+        for field in ("parking", "fee"):
+            if normalized.get(field) == "":
+                del normalized[field]
         result.append(normalized)
 
     logger.info(
