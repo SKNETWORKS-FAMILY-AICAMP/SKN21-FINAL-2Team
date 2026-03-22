@@ -470,8 +470,14 @@ def run(dry_run: bool = True) -> dict[str, Any]:
 
     for point, source_collection in sample_points:
         payload = point.payload or {}
+
+        # 표시명: 팝업/축제는 title(행사명), 일반 장소는 name/title 순
+        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
+        # 지도 검색어: place(장소명) 우선, 없으면 name/title 폴백
+        map_search_name = (payload.get("place") or name).strip()
+
         item = {
-            "title": payload.get("title", ""),
+            "title": map_search_name,  # Kakao 키워드 검색에 사용되는 쿼리
             "addr": payload.get("addr", ""),
             "mapx": payload.get("mapx", ""),
             "mapy": payload.get("mapy", ""),
@@ -479,7 +485,7 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         }
         contentid = str(payload.get("contentid", "")) or None
 
-        if not item["title"]:
+        if not name:
             logger.debug("title 없는 point 건너뜀: %s", point.id)
             continue
 
@@ -487,12 +493,13 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         try:
             match_result = checker.check_item(item)
         except Exception as exc:
-            logger.error("Kakao 검색 실패 (point_id=%s, title=%s): %s", point.id, item["title"], exc)
+            logger.error("Kakao 검색 실패 (point_id=%s, title=%s): %s", point.id, name, exc)
             stats["error"] += 1
             results.append({
                 "point_id": str(point.id),
                 "source_collection": source_collection,
-                "title": item["title"],
+                "title": name,
+                "map_search_name": map_search_name,
                 "addr": item["addr"],
                 "contentid": contentid,
                 "status": "error",
@@ -503,14 +510,15 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         stats[match_result.status] = stats.get(match_result.status, 0) + 1
         logger.info(
             "[%s] %s → %s (score=%.2f, reason=%s)",
-            source_collection, item["title"], match_result.status,
+            source_collection, name, match_result.status,
             match_result.score, match_result.decision_reason,
         )
 
         entry: dict[str, Any] = {
             "point_id": str(point.id),
             "source_collection": source_collection,
-            "title": item["title"],
+            "title": name,
+            "map_search_name": map_search_name,  # 실제 Kakao 검색에 사용된 쿼리
             "addr": item["addr"],
             "contentid": contentid,
             "status": match_result.status,
