@@ -22,6 +22,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.scripts.scheduler.cleanup_closed_places import run as cleanup_run
+from app.scripts.scheduler.cleanup_expired_contents import run as cleanup_contents_run
 from app.scripts.scheduler.sync_new_popup_data import run as sync_run
 
 
@@ -35,8 +36,8 @@ def main(dry_run: bool = True) -> int:
 
     errors: list[Exception] = []
 
-    # 1. 폐업 장소 정리
-    logger.info("--- [1/2] 폐업 장소 정리 ---")
+    # 1. 폐업 장소 정리 (places 30건 + photos 30건 Kakao API 검증)
+    logger.info("--- [1/3] 폐업 장소 정리 ---")
     try:
         report = cleanup_run(dry_run=dry_run)
         stats = report.get("stats", {})
@@ -52,8 +53,25 @@ def main(dry_run: bool = True) -> int:
         logger.error("폐업 정리 실패: %s", exc, exc_info=True)
         errors.append(exc)
 
-    # 2. 팝업스토어 신규 데이터 동기화
-    logger.info("--- [2/2] 팝업스토어 신규 데이터 동기화 ---")
+    # 2. 만료된 콘텐츠(축제/팝업) 정리 (period 종료일 기준, 20건 순환)
+    logger.info("--- [2/3] 만료 콘텐츠 정리 ---")
+    try:
+        report = cleanup_contents_run(dry_run=dry_run)
+        stats = report.get("stats", {})
+        logger.info(
+            "만료 콘텐츠 정리 완료: total=%d, expired=%d, deleted=%d, active=%d, no_period=%d",
+            stats.get("total", 0),
+            stats.get("expired", 0),
+            stats.get("deleted", 0),
+            stats.get("active", 0),
+            stats.get("no_period", 0),
+        )
+    except Exception as exc:
+        logger.error("만료 콘텐츠 정리 실패: %s", exc, exc_info=True)
+        errors.append(exc)
+
+    # 3. 팝업스토어 신규 데이터 동기화
+    logger.info("--- [3/3] 팝업스토어 신규 데이터 동기화 ---")
     try:
         stats = sync_run(headless=True)
         logger.info(
@@ -71,7 +89,7 @@ def main(dry_run: bool = True) -> int:
         logger.error("=== 주간 스케줄러 완료 (오류 %d건) ===", len(errors))
         return 1
 
-    logger.info("=== 주간 스케줄러 완료 ===")
+    logger.info("=== 주간 스케줄러 완료 (3/3 성공) ===")
     return 0
 
 

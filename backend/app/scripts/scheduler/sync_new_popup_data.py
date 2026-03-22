@@ -46,15 +46,24 @@ from app.scripts.tour_api.__crawl import (
     _normalize_popup_row,
     _popup_identity_key,
     _is_active_or_upcoming,
+    _split_period,
     _text,
 )
 # preprocess_popup의 step 함수들을 직접 재사용 (동일한 전처리 품질 보장)
 from app.scripts.preprocess_popup import (
-    FINAL_FIELDS,
     step2_clean,
     step3_geocode,
     step4_generate_llm_text,
 )
+
+# 기존 콘텐츠 데이터와 동일한 규격:
+#   period 필드로 통합 ("yyyy-mm-dd ~ yyyy-mm-dd"), start_date/end_date 미저장
+CONTENT_FINAL_FIELDS = [
+    "contentid", "title", "contenttypeid", "image",
+    "usetime", "restdate", "period",
+    "parking", "fee", "addr",
+    "mapy", "mapx", "contenttypeid_code", "llm_text",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +101,14 @@ def _get_existing_popup_identity_keys(client: QdrantClient) -> set[str]:
             title = _text(payload.get("title"))
             if not title:
                 continue
+            # 기존 콘텐츠 데이터는 period 필드로 저장됨 ("yyyy-mm-dd ~ yyyy-mm-dd")
+            # _split_period로 start_date/end_date를 추출하여 identity key 계산
+            start_date, end_date = _split_period(_text(payload.get("period", "")))
             key = _popup_identity_key(
                 title,
                 _text(payload.get("addr")),
-                _text(payload.get("start_date")),
-                _text(payload.get("end_date")),
+                start_date,
+                end_date,
             )
             existing_keys.add(key)
         if next_offset is None:
@@ -126,6 +138,12 @@ def _step1_normalize(raw_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not _is_active_or_upcoming(_text(normalized.get("end_date"))):
             logger.debug("만료 제외: %s (종료: %s)", normalized.get("title"), normalized.get("end_date"))
             continue
+        # introduction 보존: _normalize_popup_row가 제거하지만
+        # step4_generate_llm_text의 collect_context()에서 Popply 소개 텍스트로 활용됨.
+        # FINAL_FIELDS에 포함되지 않으므로 최종 Qdrant payload에는 저장되지 않는다.
+        intro = str(item.get("introduction", "")).strip()
+        if intro:
+            normalized["introduction"] = intro
         result.append(normalized)
 
     logger.info(
@@ -240,7 +258,16 @@ def run(headless: bool = True) -> dict[str, Any]:
         if not item.get("llm_text"):
             logger.warning("llm_text 없어 제외: %s", item.get("title"))
             continue
-        record = {k: item[k] for k in FINAL_FIELDS if k in item}
+
+        # start_date / end_date → period 변환 (기존 콘텐츠 데이터와 동일 규격)
+        start_date = _text(item.get("start_date", ""))
+        end_date = _text(item.get("end_date", ""))
+        if start_date and end_date:
+            item["period"] = f"{start_date} ~ {end_date}"
+        elif start_date:
+            item["period"] = f"{start_date} ~ {start_date}"
+
+        record = {k: item[k] for k in CONTENT_FINAL_FIELDS if k in item}
         upsert_rows.append(record)
 
     with out_path.open("w", encoding="utf-8") as f:
