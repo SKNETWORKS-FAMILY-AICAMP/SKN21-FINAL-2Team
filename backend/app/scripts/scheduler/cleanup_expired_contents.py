@@ -187,7 +187,8 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         "total": 0,
         "active": 0,
         "expired": 0,
-        "no_period": 0,
+        "no_period": 0,    # period 필드 자체가 없는 경우
+        "parse_failed": 0, # period 필드는 있으나 날짜 파싱 실패
         "deleted": 0,
     }
 
@@ -217,7 +218,7 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         # 파싱 실패
         if end_date is None:
             logger.warning("period 파싱 실패, 건너뜀: %s | period=%s", title, period)
-            stats["no_period"] += 1
+            stats["parse_failed"] += 1
             results.append({
                 "point_id": str(point.id),
                 "title": title,

@@ -19,7 +19,7 @@ import logging
 import os
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -39,7 +39,6 @@ load_dotenv(BACKEND_DIR / ".env")
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
 from app.scripts.check_places_with_naver import (
     MatchResult,
-    LocalSearchCandidate,
     normalize_key,
     jaccard_similarity,
     distance_meters,
