@@ -232,7 +232,7 @@ async def step3_geocode(data: list) -> list:
                     geocoded["road_address"] = geo["road_address"]
                 if geo.get("jibun_address"):
                     geocoded["old_address"] = geo["jibun_address"]
-                print(f"  [{i+1}/{len(data)}] ✓ '{item['title']}' → ({geo['lat']}, {geo['lng']})")
+                print(f"  [{i+1}/{len(data)}] ✓ '{item['title']}' → ({geo['lat']}, {geo['lon']})")
             else:
                 failed += 1
                 print(f"  [{i+1}/{len(data)}] ✗ Geocoding 실패: '{item['title']}'")
