@@ -60,6 +60,16 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
+    const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const SILENCE_DELAY_MS = 3000;
+
+    const clearSilenceTimer = () => {
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+    };
 
     const getSpeechRecognitionAPI = () =>
         (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
@@ -123,12 +133,21 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
         let finalTranscript = "";
 
+        const resetSilenceTimer = () => {
+            clearSilenceTimer();
+            silenceTimerRef.current = setTimeout(() => {
+                recognitionRef.current?.stop();
+            }, SILENCE_DELAY_MS);
+        };
+
         recognition.onstart = () => {
             setIsListening(true);
             setSttPermission("granted");
+            resetSilenceTimer();
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
+            resetSilenceTimer();
             let interim = "";
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
@@ -147,10 +166,12 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 setSttPermission("denied");
             }
+            clearSilenceTimer();
             setIsListening(false);
         };
 
         recognition.onend = () => {
+            clearSilenceTimer();
             setIsListening(false);
             recognitionRef.current = null;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
@@ -186,6 +207,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
                 // eslint-disable-next-line react-hooks/exhaustive-deps
                 recognitionRef.current.stop();
             }
+            clearSilenceTimer();
             const cleanupStatus = micPermissionStatusRef.current;
             if (cleanupStatus) {
                 cleanupStatus.onchange = null;
