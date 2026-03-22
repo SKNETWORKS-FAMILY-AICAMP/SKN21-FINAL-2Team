@@ -59,12 +59,13 @@ def main(dry_run: bool = True) -> int:
         report = cleanup_contents_run(dry_run=dry_run)
         stats = report.get("stats", {})
         logger.info(
-            "만료 콘텐츠 정리 완료: total=%d, expired=%d, deleted=%d, active=%d, no_period=%d",
+            "만료 콘텐츠 정리 완료: total=%d, expired=%d, deleted=%d, active=%d, no_period=%d, parse_failed=%d",
             stats.get("total", 0),
             stats.get("expired", 0),
             stats.get("deleted", 0),
             stats.get("active", 0),
             stats.get("no_period", 0),
+            stats.get("parse_failed", 0),
         )
     except Exception as exc:
         logger.error("만료 콘텐츠 정리 실패: %s", exc, exc_info=True)

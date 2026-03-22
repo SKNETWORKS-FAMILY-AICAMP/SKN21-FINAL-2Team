@@ -26,7 +26,7 @@ import json
 import logging
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +67,6 @@ CONTENT_FINAL_FIELDS = [
 
 logger = logging.getLogger(__name__)
 
-TODAY = datetime.today().date()
 REPORTS_DIR = BACKEND_DIR / "data" / "scheduler_reports"
 
 
@@ -161,10 +160,15 @@ def _crawl_with_selenium(headless: bool = True) -> list[dict[str, Any]]:
     """Popply 사이트를 Selenium으로 크롤링하고 raw 데이터 목록을 반환한다."""
     from app.scripts.popply_crawler import PopplyCrawler  # lazy import
 
-    today = date.today().strftime("%Y-%m-%d")
-    crawler = PopplyCrawler(headless=headless)
+    today = date.today()
+    date_from = today.strftime("%Y-%m-%d")
+    date_to = (today + timedelta(days=365)).strftime("%Y-%m-%d")  # 1년 후 (하드코딩 방지)
+
+    # crawler가 초기화 전에 예외가 나도 finally에서 안전하게 close 처리
+    crawler = None
     try:
-        links = crawler.get_popup_links(today, "2026-12-31")
+        crawler = PopplyCrawler(headless=headless)
+        links = crawler.get_popup_links(date_from, date_to)
         logger.info("크롤링된 팝업 링크 수: %d", len(links))
         raw_data: list[dict[str, Any]] = []
         for i, link in enumerate(links, 1):
@@ -175,7 +179,8 @@ def _crawl_with_selenium(headless: bool = True) -> list[dict[str, Any]]:
                 logger.info("  파싱 진행: %d/%d", i, len(links))
         return raw_data
     finally:
-        crawler.close()
+        if crawler is not None:
+            crawler.close()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
