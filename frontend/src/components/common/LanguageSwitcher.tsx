@@ -51,12 +51,12 @@ export function LanguageSwitcher({
 
   const handleChange = async (lang: SupportedLanguage) => {
     setOpen(false);
+    setLanguage(lang);
+    onLanguageChange?.(lang);
     try {
       await updateCurrentUser({ language: lang });
-      setLanguage(lang);
-      onLanguageChange?.(lang);
     } catch {
-      // DB 반영 실패 시 UI/i18n은 이전 언어 유지
+      // 비로그인 또는 네트워크 오류 시 UI만 변경된 채로 유지
     }
   };
 
