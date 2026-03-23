@@ -73,8 +73,8 @@ class IntentCoreOutput(BaseModel):
 
 
 class SummaryOutput(BaseModel):
-    summary_title: Optional[str] = Field(default=None, description="사용자의 질문 내용을 10자 이내로 요약한 문장 (현재 채팅방 제목으로 사용)")
-    summary_message: str = Field(default="", description="대화 요약")
+    summary_title: Optional[str] = Field(default=None, description="A short title summarizing the conversation (≤10 chars for ko/ja/zh, short phrase for en). Must be written in the language specified by the system language instruction. Return null if no update needed.")
+    summary_message: str = Field(default="", description="Cumulative summary of the conversation, focusing on travel info (places, dates, party size, categories).")
 
 
 # # Planner Output

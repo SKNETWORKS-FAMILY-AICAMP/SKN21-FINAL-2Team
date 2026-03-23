@@ -143,7 +143,7 @@ async def intent_node(state: TravelState):
             "messages": messages,
             "summary_title": summary_title,
             "summary_message": summary_message,
-            "summary_language_instruction": get_language_instruction(state.get("language")),
+            "summary_language_instruction": get_language_instruction(state.get("language"), False),
         }),
         fetch_weather(state.get("input_lat"), state.get("input_lon")),
     )
