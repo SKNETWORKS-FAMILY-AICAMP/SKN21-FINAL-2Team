@@ -128,20 +128,21 @@ INTENT_PROMPT = """
 IMAGE_INTENT_TYPE = "\n- IMAGE_SIMILAR: 이미지와 유사한 장소 검색"
 
 SUMMARY_PROMPT = """
+{summary_language_instruction}
+
 당신은 한국 여행 채팅 기록을 요약하는 어시스턴트입니다.
 대화 내용을 읽고 summary_title과 summary_message를 추출하십시오.
 
 기존 채팅 제목: {summary_title}
-이전 요약 내용: {summary_message}
 
-### summary_title
-- {summary_language_instruction}
+### 새로운 채팅 제목 : summary_title
 - 새로운 장소, 활동, 기간 등 구체적인 여행 맥락이 포함되었을 때만 **위 응답 언어 지침에 맞는 언어로** 짧은 제목을 추출하십시오. (한·일·중: 대략 10자/10字 수준, 영어: 매우 짧은 phrase)
 - 인사말이나 단순 답변이거나 기존 제목이 이미 현재 대화를 잘 대변하면 `null`을 반환하십시오.
 - 예시 (언어는 지침에 맞게 선택): 한국어 "홍대·종로 2일", English "Gangnam cafes & food", 日本語「明洞・カフェ」, 中文「弘大美食推荐」
 
-### summary_message
-- 해당 문장은 한국어로 작성하십시오.
+이전 요약 내용: {summary_message}
+
+### 새로운 요약 내용 : summary_message
 - 이전 요약을 참고하여 최근 대화 내용을 포함한 누적 요약을 작성하십시오.
 - 여행 관련 정보(장소, 날짜, 인원, 카테고리 등)를 중심으로 요약하십시오.
 

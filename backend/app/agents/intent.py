@@ -172,6 +172,7 @@ async def intent_node(state: TravelState):
         dprint(f"[Intent] Crime pattern detected — forcing GENERAL intent")
         primary_intent = IntentType.GENERAL
         result.intents = [IntentType.GENERAL]
+        update_user_input += "\n범죄 관련 내용이 포함되어있으니 장소 추천을 하지 말아줘"
         if result.slots:
             result.slots.location = None
             result.slots.categories = None
