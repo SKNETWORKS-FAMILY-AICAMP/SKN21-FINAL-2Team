@@ -610,23 +610,50 @@ class GeoCoder:
         if cache_key in self._transit_cache:
             return self._transit_cache[cache_key]
 
-        # ODsay API 키에 +, / 등 특수문자가 포함될 수 있어
-        # httpx params의 자동 URL 인코딩을 우회하기 위해 직접 요청
         import httpx
-        raw_url = (
-            f"https://api.odsay.com/v1/api/searchPubTransPathT"
-            f"?SX={start[0]}&SY={start[1]}&EX={goal[0]}&EY={goal[1]}"
-            f"&apiKey={odsay_key}&output=json"
+        from urllib.parse import quote_plus
+        # ODsay 가이드: Java URLEncoder.encode() 방식 (= Python quote_plus)
+        encoded_key = quote_plus(odsay_key)
+        params_str = (
+            f"SX={start[0]}&SY={start[1]}&EX={goal[0]}&EY={goal[1]}"
+            f"&apiKey={encoded_key}&output=json"
         )
+        raw_url = f"https://api.odsay.com/v1/api/searchPubTransPathT?{params_str}"
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(raw_url)
+                response = await client.get(raw_url, follow_redirects=True)
                 data = response.json()
         except Exception as e:
             print(f"[Transit] ODsay request error: {e}")
             data = None
 
         if not data or "result" not in data:
+            # 출·도착지 700m 이내 (code: -98) → 도보 안내로 처리
+            error_info = data.get("error", {}) if data else {}
+            error_code = str(error_info.get("code", ""))
+            if error_code == "-98":
+                from math import radians, cos, sin, asin, sqrt
+                lon1, lat1 = float(start[0]), float(start[1])
+                lon2, lat2 = float(goal[0]), float(goal[1])
+                dlon = radians(lon2 - lon1)
+                dlat = radians(lat2 - lat1)
+                a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+                dist = int(2 * 6371000 * asin(sqrt(a)))
+                walk_min = max(1, dist // 67)  # 도보 약 4km/h
+                print(f"[Transit] 출·도착지 {dist}m 이내 → 도보 {walk_min}분 안내")
+                return {
+                    "duration": walk_min,
+                    "fare": 0,
+                    "transfers": 0,
+                    "distance": dist,
+                    "segments": [{
+                        "traffic_type": 3,
+                        "distance": dist,
+                        "duration": walk_min,
+                        "start_name": "",
+                        "end_name": "",
+                    }],
+                }
             error_msg = data.get("message", "Unknown error") if data else "No response"
             print(f"[Transit] ODsay API error: {error_msg} | Full response: {data}")
             return None
