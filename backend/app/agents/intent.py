@@ -151,7 +151,12 @@ async def intent_node(state: TravelState):
     dprint(f"[Intent] weather_info (initial): {weather_info!r}")
 
     # slots.dates가 있으면 해당 날짜의 날씨로 덮어쓰기 (2단계 — 예보 or 월별 평균)
-    _dates_str = result.slots.dates if result.slots else None
+    # 현재 턴 slots 우선, 없으면 이전 턴 state slots 참조
+    _dates_str = (result.slots.dates if result.slots else None)
+    if not _dates_str:
+        _prev_slots = state.get("slots")
+        if _prev_slots:
+            _dates_str = getattr(_prev_slots, "dates", None)
     if _dates_str:
         _lat = state.get("input_lat")
         _lon = state.get("input_lon")

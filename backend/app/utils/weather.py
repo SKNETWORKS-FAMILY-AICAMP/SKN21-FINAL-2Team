@@ -72,17 +72,14 @@ def _wmo_desc(code: int | None) -> str:
     return _WMO_CODE.get(int(code), f"코드 {code}")
 
 
-def parse_travel_date(dates_str: str | None) -> date | None:
+def _parse_single_date(s: str) -> "date | None":
     """
-    slots.dates 문자열을 date 객체로 파싱.
-    지원 형식: "오늘", "내일", "모레", "yyyy-mm-dd", "mm-dd", "mm월 dd일"
-    파싱 실패 시 None 반환.
+    단일 날짜 문자열을 date 객체로 파싱하는 내부 함수.
+    지원 형식: "오늘", "내일", "모레", "글피",
+               "yyyy-mm-dd", "mm-dd", "mm/dd", "mm월 dd일"
     """
-    if not dates_str:
-        return None
-
     today = date.today()
-    s = dates_str.strip()
+    s = s.strip()
 
     if s in ("오늘", "today"):
         return today
@@ -101,8 +98,8 @@ def parse_travel_date(dates_str: str | None) -> date | None:
         except ValueError:
             pass
 
-    # mm-dd (연도 없을 때 올해 or 내년)
-    m = re.fullmatch(r"(\d{1,2})-(\d{1,2})", s)
+    # mm-dd 또는 mm/dd (연도 없을 때 올해 or 내년)
+    m = re.fullmatch(r"(\d{1,2})[-/](\d{1,2})", s)
     if m:
         try:
             d = date(today.year, int(m.group(1)), int(m.group(2)))
@@ -124,6 +121,29 @@ def parse_travel_date(dates_str: str | None) -> date | None:
             pass
 
     return None
+
+
+def parse_travel_date(dates_str: str | None) -> "date | None":
+    """
+    slots.dates 문자열을 date 객체로 파싱.
+    날짜 범위("~", "–", "—", "부터") 형식이면 시작 날짜를 반환.
+    파싱 실패 시 None 반환.
+    """
+    if not dates_str:
+        return None
+
+    s = dates_str.strip()
+
+    # 날짜 범위 감지: "~", "–", "—", " - " 등으로 구분 (단, yyyy-mm-dd의 "-"는 제외)
+    # 범위 구분자: ~, –, —, 또는 공백 포함 " - ", 또는 "부터"
+    range_parts = re.split(r"\s*[~–—]\s*|\s+부터\s*", s, maxsplit=1)
+    if len(range_parts) >= 2 and range_parts[0].strip():
+        start = _parse_single_date(range_parts[0].strip())
+        if start:
+            dprint(f"[Weather] date range detected, using start date: {start} from {dates_str!r}")
+            return start
+
+    return _parse_single_date(s)
 
 
 def _seoul_climate_summary(target: date) -> str:

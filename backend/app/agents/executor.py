@@ -393,6 +393,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             # auto_start: retriever 건너뜀 → 가벼운 초안 응답 전용 프롬프트
             system_prompt = EXECUTOR_AUTO_START_PROMPT.format(
                 prefs_info=prefs_info,
+                weather_info=weather_info,
                 planner_itinerary=planner_itinerary_str,
                 user_lang=get_language_instruction(state.get("language")),
             )

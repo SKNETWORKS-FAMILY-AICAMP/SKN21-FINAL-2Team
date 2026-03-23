@@ -5,8 +5,6 @@ from app.models.enums import LanguageType
 from app.agents.prompts.prompts import get_language_instruction
 
 COMMON_RESPONSE_RULES = """
-{user_lang}
-
 [공통 응답 규약]
 - 위 응답 언어로 답변한다.
 - 답변은 간결하게 유지한다. 전체 응답은 300자(한국어 기준) 이내로 작성하며, 불필요한 부연 설명이나 반복 문장은 생략한다.
@@ -123,6 +121,7 @@ def render_auto_start_prompt(language_type: LanguageType, prefs_info: str, trave
     adult = _normalize_count(adult_count)
     child = _normalize_count(child_count)
     return _render_prompt(
+        get_language_instruction(language_type),
         "새 여행 계획 채팅을 시작한다.",
         AUTO_START_TRIP_CONTEXT_RULES.format(
             travel_duration=duration,
@@ -130,7 +129,6 @@ def render_auto_start_prompt(language_type: LanguageType, prefs_info: str, trave
             child_count=child,
         ),
         COMMON_RESPONSE_RULES.format(
-            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
@@ -149,10 +147,10 @@ def render_auto_start_place_prompt(language_type: LanguageType, prefs_info: str,
         )
         intro = "사용자가 원하는 장소 여러 개를 선택해 새 채팅을 시작했다."
     return _render_prompt(
+        get_language_instruction(language_type),
         intro,
         mode_rules,
         COMMON_RESPONSE_RULES.format(
-            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
@@ -170,6 +168,7 @@ def render_auto_start_combined_prompt(
     adult = _normalize_count(adult_count)
     child = _normalize_count(child_count)
     return _render_prompt(
+        get_language_instruction(language_type),
         "사용자가 여행 기본 정보와 원하는 장소를 함께 입력해 새 채팅을 시작했다.",
         AUTO_START_COMBINED_RULES.format(
             travel_duration=duration,
@@ -178,7 +177,6 @@ def render_auto_start_combined_prompt(
             selected_places_block=_format_selected_places_block(selected_places),
         ),
         COMMON_RESPONSE_RULES.format(
-            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
@@ -186,10 +184,10 @@ def render_auto_start_combined_prompt(
 
 def render_auto_start_greeting_prompt(language_type: LanguageType, prefs_info: str) -> str:
     return _render_prompt(
+        get_language_instruction(language_type),
         "사용자는 새 여행 채팅을 시작했다.",
         AUTO_START_GREETING_RULES,
         COMMON_RESPONSE_RULES.format(
-            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
