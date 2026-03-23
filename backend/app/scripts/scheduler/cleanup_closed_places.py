@@ -507,7 +507,8 @@ def run(dry_run: bool = True) -> dict[str, Any]:
             continue
 
         stats[match_result.status] = stats.get(match_result.status, 0) + 1
-        logger.info(
+        log_fn = logger.info if match_result.status in ("no_match", "closed_suspected") else logger.debug
+        log_fn(
             "[%s] %s → %s (score=%.2f, reason=%s)",
             source_collection, name, match_result.status,
             match_result.score, match_result.decision_reason,
