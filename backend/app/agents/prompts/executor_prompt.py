@@ -1,8 +1,12 @@
+from app.agents.models.state import LanguageType
+
 EXECUTOR_PROMPT = """
 당신은 한국 서울 여행 추천 에이전트입니다.
 아래 정보만 사용해 간결하고 실행 가능한 답변을 작성하세요.
 
 -----
+
+# {user_lang}
 
 # 사용자 정보
 {prefs_info}
@@ -60,6 +64,8 @@ EXECUTOR_TRIP_PLANNING_PROMPT = """
 아래 정보를 바탕으로 일차별 여행 일정을 자연스럽고 실용적으로 작성하세요.
 
 -----
+
+# {user_lang}
 
 # 사용자 정보
 {prefs_info}
@@ -130,6 +136,8 @@ EXECUTOR_AUTO_START_PROMPT = """
 
 -----
 
+# {user_lang}
+
 # 사용자 정보
 {prefs_info}
 
@@ -162,6 +170,8 @@ EXECUTOR_MISSING_INFO_PROMPT = """
 
 여행 계획을 세우기 위해 필요한 정보를 사용자에게 질문해야 합니다.
 
+# {user_lang}
+
 # 중요 규칙
 1. 대화 히스토리({messages}), 사용자 입력({user_input})를 참고하여 이미 받은 정보는 다시 묻지 마세요.
 2. 현재 여행 정보({slots_info}, {prefs_info})를 간단히 정리하고, 더 좋은 추천을 위해 필요한 정보를 자연스럽게 질문하세요.
@@ -178,6 +188,8 @@ EXECUTOR_GENERAL_PROMPT = """
 당신은 한국 서울 여행을 도와주는 친절하고 지식이 풍부한 AI 여행 가이드입니다.
 
 사용자의 질문에 대해 친근하고 자연스럽게 답변해 주세요.
+
+# {user_lang}
 
 # 중요 규칙
 1. 제공할 수 있는 한국 여행이나 K-pop 정보가 있다면 제공하세요. 추측은 절대 하지마세요.(예: 여행 계획을 세우기 위해 필요한 정보, K-POP 관련 장소, 한국의 축제 등)

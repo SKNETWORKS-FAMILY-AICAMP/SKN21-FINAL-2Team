@@ -4,8 +4,8 @@ import time
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.callbacks.manager import adispatch_custom_event
 
-from app.agents.models.output import IntentCoreOutput, SummaryOutput, IntentType, IntentSlots, InputType
-from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE, get_summary_language_instruction
+from app.agents.models.output import IntentCoreOutput, SummaryOutput, IntentType
+from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTENT_TYPE, get_language_instruction
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
@@ -136,7 +136,6 @@ async def intent_node(state: TravelState):
         intent_chain.ainvoke({
             "messages": messages,
             "category_desc": CategoryType.description(),
-            "summary_title": summary_title,
             "summary_message": summary_message,
             "image_intent_type": IMAGE_INTENT_TYPE if image_path else "",
         }),
@@ -144,7 +143,7 @@ async def intent_node(state: TravelState):
             "messages": messages,
             "summary_title": summary_title,
             "summary_message": summary_message,
-            "summary_language_instruction": get_summary_language_instruction(state.get("language")),
+            "summary_language_instruction": get_language_instruction(state.get("language")),
         }),
         fetch_weather(state.get("input_lat"), state.get("input_lon")),
     )
