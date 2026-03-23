@@ -5,6 +5,7 @@ import re
 import pandas as pd
 from typing import List, Dict
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,6 +18,7 @@ class PopplyCrawler:
 
 
     def _init_driver(self, headless: bool = True):
+        import shutil
         options = webdriver.ChromeOptions()
         if headless:
             options.add_argument('--headless')
@@ -24,11 +26,21 @@ class PopplyCrawler:
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        
-        # Initializing driver
-        # Removed ChromeDriverManager().install() to avoid hangs on network prompts 
-        # Assumes chromedriver is in PATH (like the user's existing crawler)
-        driver = webdriver.Chrome(options=options)
+
+        # ARM(aarch64) 등에서 Selenium Manager가 자동 드라이버 다운로드 불가 →
+        # 시스템에 설치된 chromium/chromedriver를 명시적으로 지정
+        for binary in ("/usr/bin/chromium", "/usr/bin/chromium-browser"):
+            if shutil.which(binary) or __import__("os").path.exists(binary):
+                options.binary_location = binary
+                break
+        for driver_bin in ("/usr/bin/chromedriver", "/usr/lib/chromium/chromedriver"):
+            if shutil.which(driver_bin) or __import__("os").path.exists(driver_bin):
+                service = Service(executable_path=driver_bin)
+                break
+        else:
+            service = None
+
+        driver = webdriver.Chrome(service=service, options=options) if service else webdriver.Chrome(options=options)
         driver.implicitly_wait(10)
         return driver
 
