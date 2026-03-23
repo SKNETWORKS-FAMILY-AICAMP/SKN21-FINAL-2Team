@@ -287,7 +287,7 @@ export function useChatMessages({
         payload: {
             mode: "trip_context" | "selected_places" | "combined" | "greeting";
             trip_context?: { travel_duration: string; adult_count: number; child_count: number };
-            selected_places?: { name?: string | null; adress?: string | null; contenttypeid?: number }[];
+            selected_places?: { name?: string | null; adress?: string | null; contenttypeid?: number; description?: string | null }[];
             save_user_message?: boolean;
         };
     }) => {

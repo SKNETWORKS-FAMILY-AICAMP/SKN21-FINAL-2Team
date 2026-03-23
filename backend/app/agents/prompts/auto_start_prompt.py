@@ -1,21 +1,26 @@
 from typing import List
 
 from app.schemas.chat import AutoStarterPlaceSeed
+from app.models.enums import LanguageType
+from app.agents.prompts.prompts import get_language_instruction
 
 COMMON_RESPONSE_RULES = """
+{user_lang}
+
 [공통 응답 규약]
+- 위 응답 언어로 답변한다.
 - 답변은 간결하게 유지한다. 전체 응답은 300자(한국어 기준) 이내로 작성하며, 불필요한 부연 설명이나 반복 문장은 생략한다.
 - 본 대화의 여행 범위는 서울로 고정한다.
 - 모든 제안/선택지는 반드시 서울 안에서 즐길 수 있는 내용만 제시한다.
-- 첫 응답은 '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.  
-- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.  
-- 제안은 가설적 추천 톤(강제X, 단정X, 예: 많이 찾는 편, 추천드림)으로 작성하세요.  
-- 제안의 이유(선택지 설명)는 입력된 일정/인원 정보 및 최신 서울 트렌드와 사용자 선호도를 기반해 1~2문장 서술합니다.  
+- 첫 응답은 '확정 일정'이 아니라, 일수 배분 수준의 가벼운 제안 초안입니다.
+- 상세 일정, 시간대별 플랜, 확정 동선‧예약 전제 문장은 피하세요.
+- 제안은 가설적 추천 톤(강제X, 단정X, 예: 많이 찾는 편, 추천드림)으로 작성하세요.
+- 제안의 이유(선택지 설명)는 입력된 일정/인원 정보 및 최신 서울 트렌드와 사용자 선호도를 기반해 1~2문장 서술합니다.
 - 한국 서울 여행 트렌드는 완곡하게 반영한다(예: 요즘 많이 찾는 편).
-- 모든 답변(첫 응답 포함)은 아래 순서를 반드시 지킵니다:  
+- 모든 답변(첫 응답 포함)은 아래 순서를 반드시 지킵니다:
   1) 인사
   2) 제안 요약
-  3) 선택지 최소 2개(권역 또는 테마 기준 일수 배분)  
+  3) 선택지 최소 2개(권역 또는 테마 기준 일수 배분)
   4) 선택형 질문 최소 1개(문단 마지막, 다음 선택 관련)
 
 사용자 선호도 (참고):
@@ -102,15 +107,18 @@ def _render_prompt(*sections: str) -> str:
 
 def _format_selected_places_block(selected_places: List[AutoStarterPlaceSeed]) -> str:
     lines = []
-    for idx, place in enumerate(selected_places[:5], start=1):
+    for idx, place in enumerate(selected_places, start=1):
         name = (place.name or "").strip() or "이름 없는 장소"
         address = (place.adress or "").strip() or "주소 정보 없음"
         pid = place.place_id if (place.place_id or 0) > 0 else "unknown"
-        lines.append(f"{idx}. {name} (ID: {pid}) / 주소: {address}")
+        line = f"{idx}. {name} (ID: {pid}) / 주소: {address}"
+        if place.description and place.description.strip():
+            line += f" / 설명: {place.description.strip()}"
+        lines.append(line)
     return "\n".join(lines) if lines else "1. 이름 없는 장소 (ID: unknown) / 주소: 주소 정보 없음"
 
 
-def render_auto_start_prompt(prefs_info: str, travel_duration: str, adult_count: int, child_count: int) -> str:
+def render_auto_start_prompt(language_type: LanguageType, prefs_info: str, travel_duration: str, adult_count: int, child_count: int) -> str:
     duration = (travel_duration or "").strip() or "미정"
     adult = _normalize_count(adult_count)
     child = _normalize_count(child_count)
@@ -122,27 +130,36 @@ def render_auto_start_prompt(prefs_info: str, travel_duration: str, adult_count:
             child_count=child,
         ),
         COMMON_RESPONSE_RULES.format(
+            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
 
 
-def render_auto_start_place_prompt(prefs_info: str, selected_places: List[AutoStarterPlaceSeed]) -> str:
+def render_auto_start_place_prompt(language_type: LanguageType, prefs_info: str, selected_places: List[AutoStarterPlaceSeed]) -> str:
     places_block = _format_selected_places_block(selected_places)
     if len(selected_places) == 1:
-        mode_rules = AUTO_START_SINGLE_PLACE_RULES.format(selected_places_block=places_block)
+        mode_rules = AUTO_START_SINGLE_PLACE_RULES.format(
+            selected_places_block=places_block
+        )
         intro = "사용자가 원하는 장소 1개를 선택해 새 채팅을 시작했다."
     else:
-        mode_rules = AUTO_START_MULTI_PLACE_RULES.format(selected_places_block=places_block)
+        mode_rules = AUTO_START_MULTI_PLACE_RULES.format(
+            selected_places_block=places_block
+        )
         intro = "사용자가 원하는 장소 여러 개를 선택해 새 채팅을 시작했다."
     return _render_prompt(
         intro,
         mode_rules,
-        COMMON_RESPONSE_RULES.format(prefs_info=prefs_info),
+        COMMON_RESPONSE_RULES.format(
+            user_lang=get_language_instruction(language_type),
+            prefs_info=prefs_info
+        ),
     )
 
 
 def render_auto_start_combined_prompt(
+    language_type: LanguageType,
     prefs_info: str,
     travel_duration: str,
     adult_count: int,
@@ -161,16 +178,18 @@ def render_auto_start_combined_prompt(
             selected_places_block=_format_selected_places_block(selected_places),
         ),
         COMMON_RESPONSE_RULES.format(
+            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )
 
 
-def render_auto_start_greeting_prompt(prefs_info: str) -> str:
+def render_auto_start_greeting_prompt(language_type: LanguageType, prefs_info: str) -> str:
     return _render_prompt(
         "사용자는 새 여행 채팅을 시작했다.",
         AUTO_START_GREETING_RULES,
         COMMON_RESPONSE_RULES.format(
+            user_lang=get_language_instruction(language_type),
             prefs_info=prefs_info
         ),
     )

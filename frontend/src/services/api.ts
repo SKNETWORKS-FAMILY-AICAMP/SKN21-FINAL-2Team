@@ -148,6 +148,7 @@ export interface AutoStartPlaceSeedPayload {
     name?: string | null;
     adress?: string | null;
     contenttypeid?: number;
+    description?: string | null;
 }
 
 export interface AutoStartChatRoomRequestPayload {

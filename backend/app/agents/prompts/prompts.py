@@ -1,7 +1,7 @@
 from app.models.enums import LanguageType
 
 
-def get_language_instruction(language) -> str:
+def get_language_instruction(language: LanguageType) -> str:
     """
     사용자 언어를 따르도록 하는 시스템 문구를 반환합니다.
     """

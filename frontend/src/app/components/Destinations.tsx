@@ -17,6 +17,7 @@ export interface Destination {
     name: string;
     image: string;
     address: string;
+    description?: string;
 }
 
 // fetch 시점에 각 API 응답을 이 타입으로 '변환(매핑)'하여 JSX는 이 타입만 바라봅니다.
@@ -107,6 +108,7 @@ export function Destinations() {
                 name: pendingPlace.name,
                 adress: pendingPlace.address || (pendingPlace as Destination & { adress?: string }).adress,
                 contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                description: pendingPlace.description,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
@@ -145,6 +147,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
+                    description: p.description,
                     // 주의: image_url이 있을 때만 경로를 생성, 없으면 빈 문자열(placeholder용)
                     image: p.image_url && p.image_url.trim() !== ""
                         ? (p.image_url.startsWith("http") ? p.image_url : `/api/static/${p.image_url}`)
@@ -156,6 +159,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
+                    description: p.description,
                     image: p.image_url || ""
                 }));
 
@@ -164,6 +168,7 @@ export function Destinations() {
                     id: p.contentid,
                     name: p.title,
                     address: p.address,
+                    description: p.description,
                     image: p.image_url || ""
                 }));
 

@@ -118,7 +118,7 @@ export function ExplorePage() {
 
     // [Feature] 장소 카드 클릭 → TripContextModal → 챗봇 이동 상태
     const [showTripModal, setShowTripModal] = useState(false);
-    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string } | null>(null);
+    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string; description?: string } | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
     // [Feature] Your Choices 카드 클릭 시 TripContextModal 표시
@@ -127,6 +127,7 @@ export function ExplorePage() {
             name: item.title,
             address: item.address,
             id: item.contentid,
+            description: item.description,
         });
         setShowTripModal(true);
     };
@@ -150,6 +151,7 @@ export function ExplorePage() {
                 name: pendingPlace.name,
                 adress: pendingPlace.address,
                 contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
+                description: pendingPlace.description,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
