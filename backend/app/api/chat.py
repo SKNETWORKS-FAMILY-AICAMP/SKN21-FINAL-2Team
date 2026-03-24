@@ -170,6 +170,24 @@ def _save_room_title(db: Session, room: ChatRoom, next_title: str | None) -> boo
         return False
 
 
+def _save_room_history(db: Session, room: ChatRoom, summary_message: str | None) -> bool:
+    """intent 노드가 생성한 summary_message를 room.history에 저장한다."""
+    text = (summary_message or "").strip()
+    if not text:
+        return False
+
+    room.history = text
+    db.add(room)
+    try:
+        db.commit()
+        db.refresh(room)
+        return True
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"[ChatAPI] Room history update failed(room_id={room.id}): {e}")
+        return False
+
+
 def _safe_float(value):
     try:
         f = float(value)
@@ -687,6 +705,13 @@ def _build_streaming_response(
                                 if _save_room_title(db, room, summary_title):
                                     print(f"[ChatAPI] Room title updated to: {room.title}")
                                     yield _encode_sse({"room_title": room.title})
+
+                        # summary_message → room.history 저장
+                        if output:
+                            sm = output.get("summary_message")
+                            if sm and str(sm).strip():
+                                if _save_room_history(db, room, sm):
+                                    print(f"[ChatAPI] Room history saved (room_id={room.id}, len={len(sm)})")
 
                 # 이미지 분석 진행 상태 (intent_node 내부에서 dispatch)
                 elif kind == "on_custom_event" and event_name == "image_analysis":
