@@ -62,7 +62,14 @@ def _parse_end_date(period: str) -> date | None:
         return None
     m = _PERIOD_RE.search(period)
     if not m:
-        return None
+        # "yyyy-mm-dd" 단독 형식 (END_DATE, endDate 등)
+        m2 = re.match(r"(\d{4}-\d{2}-\d{2})", period)
+        if not m2:
+            return None
+        try:
+            return date.fromisoformat(m2.group(1))
+        except ValueError:
+            return None
     try:
         return date.fromisoformat(m.group(2))
     except ValueError:
@@ -196,6 +203,9 @@ def run(dry_run: bool = True) -> dict[str, Any]:
         payload = point.payload or {}
         title = str(payload.get("title", "")).strip()
         period = str(payload.get("period", "")).strip()
+        # period가 없으면 END_DATE, endDate 순으로 fallback
+        if not period:
+            period = str(payload.get("END_DATE") or payload.get("endDate") or "").strip()
         contentid = str(payload.get("contentid", "")).strip() or None
 
         stats["total"] += 1
