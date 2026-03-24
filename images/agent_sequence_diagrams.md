@@ -189,7 +189,7 @@ sequenceDiagram
 **IntentOutput 구조:**
 - `intents`: 감지된 의도 목록 (List[IntentType])
 - `primary_intent`: 주 의도 (GENERAL / PLACE_INQUIRY / TRIP_PLANNING / IMAGE_SIMILAR 등)
-- `slots`: 추출된 정보 (location, category, dates, duration, party_size, budget_level 등)
+- `slots`: 추출된 정보 (location, category, dates, duration, party_member, budget_level 등)
 - `summary_title`: 채팅방 제목용 요약 (10자 이내)
 - `summary_message`: 대화 요약
 

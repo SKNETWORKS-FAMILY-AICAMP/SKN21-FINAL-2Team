@@ -113,9 +113,37 @@ async def geocoder_node(state: TravelState):
         except Exception as e:
             print(f"[Geocoder] reverse geocoding failed: {e}")
 
+    # pinned_places geo(lat/lon) 추출
+    pinned_places = state.get("pinned_places") or []
+    updated_pinned_places = []
+    for p in pinned_places:
+        existing_geo = p.get("geo") or {}
+        if existing_geo.get("lat") and existing_geo.get("lon"):
+            updated_pinned_places.append(p)
+            continue
+        name = (p.get("name") or "").strip()
+        address = (p.get("address") or "").strip()
+        if not name:
+            updated_pinned_places.append(p)
+            continue
+        query = f"{name} {address}".strip() if address else name
+        try:
+            results = await GeoCoder.get_instance().search_places(query, 1)
+            if results and results[0].get("lat") and results[0].get("lon"):
+                lat = results[0]["lat"]
+                lon = results[0]["lon"]
+                p = {**p, "geo": {"lat": lat, "lon": lon}}
+                print(f"[Geocoder] pinned_place '{name}' → lat={lat} lon={lon}")
+            else:
+                print(f"[Geocoder] pinned_place '{name}' geo not found")
+        except Exception as e:
+            print(f"[Geocoder] pinned_place geocoding failed for '{name}': {e}")
+        updated_pinned_places.append(p)
+
     return {
         "location_anchor_lat": anchor_lat,
         "location_anchor_lon": anchor_lon,
         "location_anchor_radius_m": anchor_radius_m,
         "input_address": input_address,
+        "pinned_places": updated_pinned_places,
     }

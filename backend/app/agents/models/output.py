@@ -48,13 +48,21 @@ class IntentLocation(BaseModel):
     lon: Optional[float] = Field(default=None, description="location 경도")
 
 
+class IntentParty(BaseModel):
+    adult_count: Optional[int] = Field(default=None, description="성인 인원수")
+    children_count: Optional[int] = Field(default=None, description="어린이 인원수")
+
+    def all_count(self) -> int:
+        return (self.adult_count or 0) + (self.children_count or 0)
+
+
 class IntentSlots(BaseModel):
     input_type: InputType = Field(default=InputType.TEXT, description="사용자 입력 데이터 타입")
     location: Optional[IntentLocation] = Field(default=None, description="도시나 지역 여행지, 주소등 장소 정보")
     categories: Optional[List[CategoryType]] = Field(default=None, description="사용자 입력에서 추출된 여러 카테고리 리스트")
     dates: Optional[str] = Field(default=None, description="여행 날짜 (내일 | yyyy-mm-dd)")
     duration: Optional[str] = Field(default=None, description="여행 기간 (1박 2일 | 3일)")
-    party_size: Optional[int] = Field(default=None, description="인원수")
+    party_member: Optional[IntentParty] = Field(default=None, description="여행 인원수")
     budget_level: Optional[Literal["low", "medium", "high"]] = Field(default=None, description="예산 범위 (가성비/저렴/싸게: low, 보통/적당히: medium, 럭셔리/비싸도: high)")
     nice_to_have: Optional[str] = Field(default=None, description="있으면 좋은 조건")
     exclude_location: Optional[str] = Field(default=None, description="사용자가 제외를 원하는 위치 (예: '서울역 말고' → 'exclude_location=서울역', location=None으로 설정)")
@@ -77,10 +85,10 @@ class SummaryOutput(BaseModel):
     summary_message: str = Field(default="", description="Cumulative summary of the conversation, focusing on travel info (places, dates, party size, categories).")
 
 
-# # Planner Output
+# Planner Output
 class PlannerNeedType(str, Enum): # 계획 필수 타입 
     DATES = "여행 날짜"
-    PARTY_SIZE = "여행 인원"
+    PARTY_COUNT = "여행 인원"
 
 
 class PlannerItineraryItem(BaseModel):

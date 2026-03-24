@@ -618,19 +618,10 @@ async def retriever_node(state: TravelState):
     diagnostics["location_canonical_matched"] = canonical_matched
     diagnostics["location_geo_filter_applied"] = canonical_matched  # anchor 전달 여부와 동치
 
-    # 이번 턴 노출 장소 ID를 누적
-    newly_shown = [get_contenttypeid(c) for c in exposed_candidates if get_contenttypeid(c)]
-    updated_shown_place_ids = shown_place_ids + [pid for pid in newly_shown if pid not in shown_place_ids]
-    dprint(
-        f"[Retriever] shown_place_ids: prev={len(shown_place_ids)} "
-        f"new={len(newly_shown)} total={len(updated_shown_place_ids)}"
-    )
-
     dprint(f"[TIMING] retriever_node DONE  total={time.perf_counter()-_node_start:.3f}s  exposed={len(exposed_candidates)}")
     return {
         "candidate_pool": candidate_pool,
         "candidates": exposed_candidates,
-        "shown_place_ids": updated_shown_place_ids,
         "retrieval_diagnostics": diagnostics,
         "selection_mode": selection_mode,
         # route_after_retriever 가 이 값을 보고 재시도 여부를 결정한다.

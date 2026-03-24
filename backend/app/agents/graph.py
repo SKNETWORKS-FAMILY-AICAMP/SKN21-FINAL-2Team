@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from app.agents.models.state import TravelState
-from app.agents.grapy_route import route_by_intent, route_by_missing, route_after_retriever
+from app.agents.grapy_route import route_by_intent, route_by_missing, route_after_geocoder, route_after_retriever
 
 # Import Agent Nodes
 from app.agents.intent import intent_node
@@ -34,7 +34,7 @@ def workflow():
     graph.set_entry_point("intent")
     graph.add_conditional_edges("intent", route_by_intent)
     graph.add_conditional_edges("planner", route_by_missing)
-    graph.add_edge("geocoder", "retriever")
+    graph.add_conditional_edges("geocoder", route_after_geocoder)
     graph.add_conditional_edges("retriever", route_after_retriever)
     graph.add_edge("web_search", "executor")
     graph.add_edge("executor", END)
