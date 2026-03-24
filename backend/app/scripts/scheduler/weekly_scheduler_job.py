@@ -23,7 +23,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.scripts.scheduler.cleanup_closed_places import run as cleanup_run
 from app.scripts.scheduler.cleanup_expired_contents import run as cleanup_contents_run
-from app.scripts.scheduler.sync_new_popup_data import run as sync_run
+from app.scripts.scheduler.sync_new_contents import run as sync_run
 
 
 def main(dry_run: bool = True) -> int:
@@ -79,17 +79,15 @@ def main(dry_run: bool = True) -> int:
         logger.error("만료 콘텐츠 정리 실패: %s", exc, exc_info=True)
         errors.append(exc)
 
-    # 3. 팝업스토어 신규 데이터 동기화
-    logger.info("--- [3/3] 팝업스토어 신규 데이터 동기화 ---")
+    # 3. 콘텐츠(팝업스토어 + 문화행사) 신규 데이터 동기화
+    logger.info("--- [3/3] 콘텐츠 신규 데이터 동기화 ---")
     try:
-        stats = sync_run(headless=True)
-        logger.info(
-            "팝업 동기화 완료: crawled=%d, normalized=%d, skipped=%d, upserted=%d",
-            stats.get("crawled", 0),
-            stats.get("normalized", 0),
-            stats.get("skipped_duplicates", 0),
-            stats.get("upserted", 0),
-        )
+        stats = sync_run(headless=True, dry_run=dry_run)
+        for r in stats.get("results", []):
+            logger.info(
+                "%s 동기화: new=%d, upserted=%d",
+                r.get("source", ""), r.get("new", 0), r.get("upserted", 0),
+            )
     except Exception as exc:
         logger.error("팝업 동기화 실패: %s", exc, exc_info=True)
         errors.append(exc)

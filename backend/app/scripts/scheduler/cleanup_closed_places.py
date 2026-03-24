@@ -37,7 +37,7 @@ if str(BACKEND_DIR) not in sys.path:
 load_dotenv(BACKEND_DIR / ".env")
 
 from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
-from app.scripts.check_places_with_naver import (
+from app.scripts.scheduler.check_places_with_naver import (
     MatchResult,
     normalize_key,
     jaccard_similarity,

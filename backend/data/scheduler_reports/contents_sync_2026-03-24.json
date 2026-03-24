@@ -1,0 +1,19 @@
+{
+  "date": "2026-03-24",
+  "dry_run": true,
+  "existing": 250,
+  "results": [
+    {
+      "source": "팝업스토어",
+      "new": 9,
+      "upserted": 9,
+      "dry_run": true
+    },
+    {
+      "source": "문화행사",
+      "new": 15,
+      "upserted": 15,
+      "dry_run": true
+    }
+  ]
+}

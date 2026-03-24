@@ -195,17 +195,45 @@ def _load_existing_urls(path) -> set[str]:
     return urls
 
 
-def collect(headless: bool = True):
-    """Popply 팝업스토어 수집."""
+def _extract_id_from_url(url: str) -> str:
+    """URL에서 contentid 추출. /popup/4650 → '4650'"""
+    m = re.search(r"/popup/(\d+)", url)
+    return m.group(1) if m else ""
+
+
+def get_links(headless: bool = True) -> list[str]:
+    """목록 페이지만 크롤링하여 링크 반환. 상세 페이지는 열지 않음."""
+    driver = _create_driver(headless)
+    try:
+        today = date.today().strftime("%Y-%m-%d")
+        return _get_popup_links(driver, today, "2026-12-31")
+    finally:
+        driver.quit()
+
+
+def collect(headless: bool = True, exclude_ids: set[str] | None = None):
+    """Popply 팝업스토어 수집. exclude_ids에 있는 contentid는 상세 크롤링 스킵."""
     output_path = RAW_DIR / "popply.jsonl"
     existing_urls = _load_existing_urls(output_path)
+    exclude_ids = exclude_ids or set()
 
     driver = _create_driver(headless)
     try:
         today = date.today().strftime("%Y-%m-%d")
         links = _get_popup_links(driver, today, "2026-12-31")
-        new_links = [l for l in links if l not in existing_urls]
-        log.info("[popply] 전체 %d건, 신규 %d건", len(links), len(new_links))
+
+        # URL 기존 + contentid 기존 모두 스킵
+        new_links = []
+        for l in links:
+            if l in existing_urls:
+                continue
+            cid = _extract_id_from_url(l)
+            if cid and cid in exclude_ids:
+                continue
+            new_links.append(l)
+
+        log.info("[popply] 전체 %d건, 신규 %d건 (DB 중복 %d건 스킵)",
+                 len(links), len(new_links), len(links) - len(new_links) - len(existing_urls))
 
         collected = 0
         for i, link in enumerate(new_links):
