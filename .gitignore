@@ -258,9 +258,7 @@ backend/tmp
 
 .claude/
 .cursor/
-skills/
 CLAUDE.md
 .gemini
 
 backend/data/uploads/
-backend/data/scheduler_reports/
