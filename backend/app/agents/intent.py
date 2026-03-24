@@ -130,9 +130,19 @@ async def intent_node(state: TravelState):
 
     dprint(f"[Intent] Prefs info from state: {prefs_info}")
 
+    # 이전 턴에 이미 dates가 있으면 날짜별 날씨를 초기 gather에 포함 (순차 대기 제거)
+    _prev_slots = state.get("slots")
+    _prev_dates_str = getattr(_prev_slots, "dates", None) if _prev_slots else None
+    _lat = state.get("input_lat")
+    _lon = state.get("input_lon")
+
     _llm_start = time.perf_counter()
-    dprint(f"[TIMING] intent+summary+weather parallel START  messages={len(messages)}  has_image={'yes' if image_path else 'no'}")
-    result, summary_result, weather_info = await asyncio.gather(
+    dprint(
+        f"[TIMING] intent+summary+weather parallel START  messages={len(messages)}  "
+        f"has_image={'yes' if image_path else 'no'}  prev_dates={_prev_dates_str!r}"
+    )
+
+    gather_coros = [
         intent_chain.ainvoke({
             "messages": messages,
             "category_desc": CategoryType.description(),
@@ -145,25 +155,33 @@ async def intent_node(state: TravelState):
             "summary_message": summary_message,
             "summary_language_instruction": get_language_instruction(state.get("language"), False),
         }),
-        fetch_weather(state.get("input_lat"), state.get("input_lon")),
-    )
+        fetch_weather(_lat, _lon),
+    ]
+    # 이전 턴 dates가 있으면 날짜별 날씨도 병렬로 미리 조회
+    if _prev_dates_str:
+        gather_coros.append(fetch_weather_for_date(_lat, _lon, _prev_dates_str))
+
+    gather_results = await asyncio.gather(*gather_coros)
+    result, summary_result, weather_info = gather_results[0], gather_results[1], gather_results[2]
+    prefetched_date_weather = gather_results[3] if _prev_dates_str else None
+
     dprint(f"[TIMING] intent+summary+weather parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
     dprint(f"[Intent] weather_info (initial): {weather_info!r}")
 
     # slots.dates가 있으면 해당 날짜의 날씨로 덮어쓰기 (2단계 — 예보 or 월별 평균)
     # 현재 턴 slots 우선, 없으면 이전 턴 state slots 참조
-    _dates_str = (result.slots.dates if result.slots else None)
-    if not _dates_str:
-        _prev_slots = state.get("slots")
-        if _prev_slots:
-            _dates_str = getattr(_prev_slots, "dates", None)
+    _dates_str = (result.slots.dates if result.slots else None) or _prev_dates_str
     if _dates_str:
-        _lat = state.get("input_lat")
-        _lon = state.get("input_lon")
-        _date_weather = await fetch_weather_for_date(_lat, _lon, _dates_str)
-        if _date_weather:
-            weather_info = _date_weather
-            dprint(f"[Intent] weather_info updated for date={_dates_str!r}: {weather_info!r}")
+        if _dates_str == _prev_dates_str and prefetched_date_weather:
+            # 이미 병렬로 조회한 결과 재사용 — 추가 API 호출 없음
+            weather_info = prefetched_date_weather
+            dprint(f"[Intent] weather_info (prefetched) for date={_dates_str!r}: {weather_info!r}")
+        else:
+            # 이번 턴에 새로운 날짜가 입력된 경우만 추가 조회
+            _date_weather = await fetch_weather_for_date(_lat, _lon, _dates_str)
+            if _date_weather:
+                weather_info = _date_weather
+                dprint(f"[Intent] weather_info updated for date={_dates_str!r}: {weather_info!r}")
 
     dprint("Intent Result : ", result)
     dprint("Summary Result : ", summary_result)
