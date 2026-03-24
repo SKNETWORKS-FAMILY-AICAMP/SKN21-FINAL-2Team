@@ -65,7 +65,7 @@ async def planner_node(state: TravelState):
     pinned_places = state.get("pinned_places") or []
     if pinned_places:
         pinned_lines = [
-            f"- {p.get('name', '이름없음')} (주소: {p.get('address', '')})"
+            f"- 장소명: {p.get('name', '없음')} / 주소: {p.get('address', '없음')} / 설명: {p.get('description', '없음')}"
             for p in pinned_places
         ]
         pinned_places_info = "\n".join(pinned_lines)

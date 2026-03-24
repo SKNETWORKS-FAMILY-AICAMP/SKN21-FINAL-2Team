@@ -104,6 +104,30 @@ def _collect_recommended_places(
 
     return recommended
 
+
+def _build_pinned_place_info_list(pinned_places: List[Dict[str, Any]]) -> List[PlaceInfo]:
+    """geo(lat/lon)가 있는 pinned_places를 PlaceInfo 리스트로 변환한다."""
+    result: list[PlaceInfo] = []
+    for p in pinned_places:
+        name = (p.get("name") or "").strip()
+        address = (p.get("address") or "").strip()
+        geo = p.get("geo") or {}
+        lat = geo.get("lat") or 0.0
+        lon = geo.get("lon") or 0.0
+        if not name or not lat or not lon:
+            continue
+        result.append(PlaceInfo(
+            contenttypeid="",
+            name=name,
+            address=address,
+            image_path=p.get("image") or "",
+            map_url=build_naver_map_url(name, float(lat), float(lon)),
+            longitude=float(lon),
+            latitude=float(lat),
+        ))
+    return result
+
+
 def _build_place_context(candidates: List[Dict[str, Any]]) -> tuple[list[PlaceInfo], str, str]:
     """candidates 리스트를 LLM에 전달할 컨텍스트 문자열로 변환.
     Returns: (place_info_list, place_context_str, candidate_names_str)
@@ -270,6 +294,24 @@ def _get_image_data_url(image_path: str) -> str:
     return image_path
 
 
+def _build_party_info(slots: Optional[IntentSlots]) -> str:
+    """slots.party_member에서 성인/어린이 수를 읽어 프롬프트용 문자열로 반환."""
+    if not slots or not slots.party_member:
+        return "없음"
+    party = slots.party_member
+    adult = party.adult_count
+    children = party.children_count
+    if adult is None and children is None:
+        return "없음"
+    parts = []
+    if adult is not None:
+        parts.append(f"성인 {adult}명")
+    if children is not None:
+        parts.append(f"어린이 {children}명")
+    total = (adult or 0) + (children or 0)
+    return f"{', '.join(parts)} (총 {total}명)"
+
+
 def _build_missing_context(missing_slots: List[str]) -> str:
     """missing_slots가 있으면, 해당 슬롯에 대한 질문을 생성"""
     if not missing_slots:
@@ -321,6 +363,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     image_path = state.get("input_image")
     follow_up_questions = state.get("follow_up_questions", [])
     previous_recommendations = _extract_previously_recommended_place_names(messages)
+    pinned_places = state.get("pinned_places") or []
 
     # ====================================
     # 장소 정보 리스트가 없으면 Naver Search API 검색으로 보완
@@ -358,6 +401,9 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     if slots and slots.categories:
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
+    # 인원 정보 ============================
+    party_info = _build_party_info(slots)
+
     # 위치 정보 ============================
     # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
     location_context = await _build_location_context(slots, input_address=state.get("input_address"))
@@ -390,15 +436,28 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
         raw_itinerary = state.get("itinerary") or []
         planner_itinerary_str = _build_planner_itinerary_str(raw_itinerary)
         if state.get("is_auto_start"):
+            if pinned_places:
+                pinned_lines = [
+                    f"- 장소명: {p.get('name', '없음')} / 주소: {p.get('address', '없음')} / 설명: {p.get('description', '없음')}"
+                    for p in pinned_places
+                ]
+                pinned_places_str = "\n".join(pinned_lines)
+            else:
+                pinned_places_str = "없음"
+
             # auto_start: retriever 건너뜀 → 가벼운 초안 응답 전용 프롬프트
             system_prompt = EXECUTOR_AUTO_START_PROMPT.format(
                 prefs_info=prefs_info,
+                party_info=party_info,
+                weather_info=weather_info,
+                pinned_places=pinned_places_str,
                 planner_itinerary=planner_itinerary_str,
                 user_lang=get_language_instruction(state.get("language")),
             )
         else:
             system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
                 prefs_info=prefs_info,
+                party_info=party_info,
                 location_context=location_context,
                 weather_info=weather_info,
                 candidate_names=candidate_names,
@@ -411,6 +470,7 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     else:
         system_prompt = EXECUTOR_PROMPT.format(
             prefs_info=prefs_info,
+            party_info=party_info,
             location_context=location_context,
             weather_info=weather_info,
             candidate_names=candidate_names,
@@ -449,12 +509,33 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             fallback_places,
         )
 
+    # pinned_places 중 답변에 언급된 장소를 place_info_list에 추가 (중복 제거)
+    if pinned_places:
+        pinned_place_infos = _build_pinned_place_info_list(pinned_places)
+        pinned_mentioned = _collect_recommended_places(cleaned_answer, pinned_place_infos)
+        existing_names = {p.name for p in place_info_list}
+        for p in pinned_mentioned:
+            if p.name not in existing_names:
+                place_info_list.append(p)
+                dprint(f"[Executor] pinned_place added to place_info_list: {p.name}")
+
     dprint(f"[Executor] place_info_list: {len(place_info_list)} items")
+
+    # 실제 답변에 노출된 장소 ID만 shown_place_ids에 누적
+    # (retriever의 exposed_candidates 전체가 아닌, LLM이 실제로 언급한 장소만 기록)
+    shown_place_ids: list[str] = list(state.get("shown_place_ids") or [])
+    shown_set = set(shown_place_ids)
+    for p in place_info_list:
+        if p.contenttypeid and p.contenttypeid not in shown_set:
+            shown_place_ids.append(p.contenttypeid)
+            shown_set.add(p.contenttypeid)
+    dprint(f"[Executor] shown_place_ids updated: total={len(shown_place_ids)}")
 
     return {
         "messages": AIMessage(content=cleaned_answer),
         "answer": cleaned_answer,
         "place_info_list": place_info_list,
+        "shown_place_ids": shown_place_ids,
     }
 
 
@@ -531,6 +612,7 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     if slots and slots.categories:
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
+    party_info = _build_party_info(slots)
     location_context = await _build_location_context(slots, input_address=state.get("input_address"))
 
     general_system_prompt = EXECUTOR_GENERAL_PROMPT
@@ -544,6 +626,7 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
         "user_input": user_input,
         "location_context": location_context,
         "prefs_info": prefs_info,
+        "party_info": party_info,
         "follow_up_questions": follow_up_questions,
         "user_lang": get_language_instruction(state.get("language")),
     })

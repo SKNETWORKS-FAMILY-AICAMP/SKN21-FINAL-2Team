@@ -1,4 +1,4 @@
-from app.scripts.check_places_with_naver import (
+from app.scripts.scheduler.check_places_with_naver import (
     LocalSearchCandidate,
     NaverPlaceChecker,
     apply_match_result,

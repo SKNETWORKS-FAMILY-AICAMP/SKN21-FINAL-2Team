@@ -1,3 +1,5 @@
+import asyncio
+
 from langchain_core.callbacks.manager import adispatch_custom_event
 
 from app.agents.models.state import TravelState
@@ -113,9 +115,41 @@ async def geocoder_node(state: TravelState):
         except Exception as e:
             print(f"[Geocoder] reverse geocoding failed: {e}")
 
+    # pinned_places geo(lat/lon) 추출 — 모든 장소를 병렬로 geocoding
+    async def _resolve_pinned_geo(p: dict) -> dict:
+        existing_geo = p.get("geo") or {}
+        if existing_geo.get("lat") and existing_geo.get("lon"):
+            return p
+        name = (p.get("name") or "").strip()
+        address = (p.get("address") or "").strip()
+        if not name:
+            return p
+        query = f"{name} {address}".strip() if address else name
+        try:
+            results = await GeoCoder.get_instance().search_places(query, 1)
+            if results and results[0].get("lat") and results[0].get("lon"):
+                lat, lon = results[0]["lat"], results[0]["lon"]
+                print(f"[Geocoder] pinned_place '{name}' → lat={lat} lon={lon}")
+                return {**p, "geo": {"lat": lat, "lon": lon}}
+            else:
+                print(f"[Geocoder] pinned_place '{name}' geo not found")
+        except Exception as e:
+            print(f"[Geocoder] pinned_place geocoding failed for '{name}': {e}")
+        return p
+
+    pinned_places = state.get("pinned_places") or []
+    if pinned_places:
+        updated_pinned_places = list(
+            await asyncio.gather(*[_resolve_pinned_geo(p) for p in pinned_places])
+        )
+        print(f"[Geocoder] pinned_places geo resolved: {len(updated_pinned_places)} items (parallel)")
+    else:
+        updated_pinned_places = []
+
     return {
         "location_anchor_lat": anchor_lat,
         "location_anchor_lon": anchor_lon,
         "location_anchor_radius_m": anchor_radius_m,
         "input_address": input_address,
+        "pinned_places": updated_pinned_places,
     }

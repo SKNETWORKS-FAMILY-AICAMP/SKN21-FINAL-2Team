@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, field_serializer
 from typing import Optional, List, Literal
 from datetime import datetime, date
 from app.models.enums import RoleType
@@ -86,6 +86,10 @@ class ChatMessageResponse(ChatMessageBase):
     created_at: datetime
     places: List[ChatPlaceResponse] = []
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
+
     class Config:
         from_attributes = True
 
@@ -102,6 +106,10 @@ class ChatRoomResponse(ChatRoomBase):
     end_date: Optional[date] = None
     messages: List[ChatMessageResponse] = []
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
+
     class Config:
         from_attributes = True
 
@@ -113,6 +121,10 @@ class BookmarkedRoomResponse(BaseModel):
     created_at: datetime
     bookmark_yn: bool = False
     latest_message_preview: Optional[str] = None
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
 
 
 class BookmarkedPlaceResponse(BaseModel):

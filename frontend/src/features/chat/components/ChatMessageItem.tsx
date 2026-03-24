@@ -251,8 +251,14 @@ export const ChatMessageItem = memo(({
                         </div>
                     )}
 
-                    {/* 타임스탬프 */}
-                    <div className="text-[10px] mt-1 mb-2 font-medium text-slate-400 ml-1 uppercase tracking-wider">
+                    {/* 타임스탬프
+                        카드 캐러셀 컨테이너에 pb-9(36px) shadow 공간이 있어
+                        카드 시각적 하단과 타임스탬프 사이에 큰 공백이 생김.
+                        카드가 있을 때만 -mt-8(-32px)로 당겨 일반 버블과 동일한 간격으로 맞춤. */}
+                    <div className={cn(
+                        "text-[10px] mb-2 font-medium text-slate-400 ml-1 uppercase tracking-wider",
+                        msg.places && msg.places.length > 0 ? "-mt-6" : "mt-1"
+                    )}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
                 </div>
