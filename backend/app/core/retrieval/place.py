@@ -54,18 +54,28 @@ class PlaceRetriever(PlaceScorer):
 
         dprint(f"[INFO] PlaceRetriever ready on {DEVICE}")
 
-    @staticmethod
-    def _resolve_category_values(categories: list[CategoryType] | None) -> list[str]:
+    # 관광지 ↔ 투어는 사용자 입장에서 겹치는 개념이므로 항상 함께 검색한다.
+    _CATEGORY_SYNONYMS: dict[str, list[str]] = {
+        CategoryType.TOURIST_ATTRACTION.value: [CategoryType.TOUR.value],
+        CategoryType.TOUR.value: [CategoryType.TOURIST_ATTRACTION.value],
+    }
+
+    def _resolve_category_values(self, categories: list[CategoryType] | None) -> list[str]:
         """LLM 추출 카테고리 → DB contenttypeid 값으로 변환.
 
         DB 실존 값: 음식점, 관광지, 숙박, 콘텐츠, 투어
+        관광지/투어는 동의어 처리: 어느 쪽이든 포함되면 양쪽 모두 MatchAny에 추가.
         """
         if not categories:
             return []
-        return list({cat.value for cat in categories})
+        values: set[str] = {cat.value for cat in categories}
+        for v in list(values):
+            for synonym in self._CATEGORY_SYNONYMS.get(v, []):
+                values.add(synonym)
+        return list(values)
 
-    @staticmethod
     def _merge_geo_bboxes(
+        self,
         gps_bbox: tuple[float, float, float, float],
         anchor_bbox: tuple[float, float, float, float],
     ) -> tuple[tuple[float, float, float, float], str]:
@@ -668,72 +678,6 @@ class PlaceRetriever(PlaceScorer):
         dprint(f"[TIMING] search_hybrid DONE  total={time.perf_counter()-_hybrid_start:.3f}s  returned={len(final)}  score_map={len(score_map)}  reranked={len(reranked)}")
         return final
 
-    def search_nearby(self, lat: float, lng: float, limit: int = 5, radius_km: float = 10.0):
-        """
-        Search for places near a specific coordinate.
-        GEO 인덱스 사용이 가능하면 반경 필터 기반으로 조회하고, 아니면 제한적 fallback scroll을 사용한다.
-        """
-        dprint(f"[INFO] search_nearby start lat={lat} lng={lng} limit={limit} radius_km={radius_km}")
-        candidate_points = []
-        radius_m = max(float(radius_km), 0.1) * 1000.0
-        scan_limit = max(int(limit or 0) * 20, 50)
-
-        if ENABLE_GEO_FILTER:
-            try:
-                geo_filter = Filter(
-                    must=[
-                        FieldCondition(
-                            key="geo",
-                            geo_radius={
-                                "center": {"lat": float(lat), "lon": float(lng)},
-                                "radius": radius_m,
-                            },
-                        )
-                    ]
-                )
-                points, _ = self.client.scroll(
-                    collection_name=PLACES_COLLECTION,
-                    scroll_filter=geo_filter,
-                    limit=scan_limit,
-                    with_payload=True,
-                    with_vectors=False,
-                )
-                candidate_points = list(points)
-                dprint(f"[DEBUG] search_nearby geo-filter candidates={len(candidate_points)}")
-            except Exception as e:
-                dprint(f"[WARN] search_nearby geo filter failed, fallback scroll: {e}")
-
-        # fallback: legacy scroll (제한된 수량만 조회)
-        if not candidate_points:
-            points, _ = self.client.scroll(
-                collection_name=PLACES_COLLECTION,
-                limit=scan_limit,
-                with_payload=True,
-                with_vectors=False,
-            )
-            candidate_points = list(points)
-            dprint(f"[DEBUG] search_nearby fallback candidates={len(candidate_points)}")
-
-        results = []
-        for p in candidate_points:
-            payload = p.payload or {}
-            p_lat, p_lng = self._payload_coordinates(payload)
-            if p_lat is None or p_lng is None:
-                continue
-
-            dist = self._haversine(float(lat), float(lng), p_lat, p_lng)
-            if dist <= radius_km:
-                results.append({
-                    "id": p.id,
-                    "payload": payload,
-                    "score": 1.0 / (dist + 0.1),
-                    "distance_km": dist,
-                })
-
-        results.sort(key=lambda x: x["distance_km"])
-        trimmed = results[:limit]
-        dprint(f"[INFO] search_nearby matched={len(results)} returned={len(trimmed)}")
-        return trimmed
 
 
 async def _fetch_photo_urls_by_contentids(
