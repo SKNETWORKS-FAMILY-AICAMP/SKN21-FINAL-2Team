@@ -46,6 +46,8 @@ INTENT_PROMPT = """
 이전 요약 내용:
 {summary_message}
 
+{gps_location_context}
+
 이 정보를 바탕으로 intent를 분석하세요.
 
 ---
@@ -110,6 +112,7 @@ INTENT_PROMPT = """
   - "홍대 카페", "성수 맛집", "이태원 바", "건대 주변" 등 서울 특정 동네
   - "K-pop 카페", "한옥 카페" 등 서울 특정 문화를 연상하는 표현 → 명시된 동네가 없으면 None
 - 장소가 완전히 불명확하거나 서울 외 지역이면 None으로 설정하십시오.
+- **사용자 GPS가 서울 내 위치로 첨부된 경우 (위 gps_location_context 참고)**: 사용자 입력에 명시적 장소가 없으면 GPS 지역명을 location.name으로 우선 사용하십시오. GPS가 서울 밖이면 location은 None으로 두고, 서울 장소 추천 intent(PLACE_INQUIRY 등)는 유지하십시오.
 
 ### exclude_location 추출 규칙
 - "서울역 말고", "홍대 빼고", "거기 말고" 등 장소를 제외하는 표현이 있으면 exclude_location에 해당 장소명을 담고, location은 None으로 두십시오.

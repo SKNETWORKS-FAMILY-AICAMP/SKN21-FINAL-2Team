@@ -9,7 +9,7 @@ from app.agents.prompts.prompts import INTENT_PROMPT, SUMMARY_PROMPT, IMAGE_INTE
 from app.agents.models.state import TravelState
 from app.core.llm_factory import LLMFactory
 from app.agents.models.output import CategoryType
-from app.utils.geocoder import NormalizedLocation
+from app.utils.geocoder import NormalizedLocation, GeoCoder
 from app.utils.common import in_seoul_bbox, dprint
 from app.utils.vision import describe_image
 from app.utils.weather import fetch_weather, fetch_weather_for_date
@@ -135,19 +135,66 @@ async def intent_node(state: TravelState):
     _prev_dates_str = getattr(_prev_slots, "dates", None) if _prev_slots else None
     _lat = state.get("input_lat")
     _lon = state.get("input_lon")
+    _gps_in_seoul = bool(_lat and _lon and in_seoul_bbox(_lat, _lon))
+    _gps_outside_seoul = bool(_lat and _lon and not _gps_in_seoul)
 
     _llm_start = time.perf_counter()
     dprint(
-        f"[TIMING] intent+summary+weather parallel START  messages={len(messages)}  "
-        f"has_image={'yes' if image_path else 'no'}  prev_dates={_prev_dates_str!r}"
+        f"[TIMING] intent START  messages={len(messages)}  "
+        f"has_image={'yes' if image_path else 'no'}  prev_dates={_prev_dates_str!r}  "
+        f"gps_in_seoul={_gps_in_seoul}  gps_outside_seoul={_gps_outside_seoul}"
     )
 
-    gather_coros = [
+    # ── 1차 gather: weather + GPS geocoding (빠른 API 호출만, ~200ms) ─────────
+    # GPS geocoding은 intent LLM에 위치 컨텍스트를 주입하기 위해 먼저 완료해야 한다.
+    # summary LLM(~2s)은 intent LLM과 함께 2차 gather에서 병렬 실행한다.
+    fast_coro_keys: list[str] = ["weather"]
+    fast_coros: list = [fetch_weather(_lat, _lon)]
+    if _lat and _lon:
+        fast_coro_keys.append("gps")
+        fast_coros.append(GeoCoder.get_address(_lat, _lon))
+    if _prev_dates_str:
+        fast_coro_keys.append("date_weather")
+        fast_coros.append(fetch_weather_for_date(_lat, _lon, _prev_dates_str))
+
+    fast_results = dict(zip(fast_coro_keys, await asyncio.gather(*fast_coros)))
+    weather_info = fast_results["weather"]
+    prefetched_date_weather = fast_results.get("date_weather")
+
+    # GPS 주소 처리 및 gps_location_context 빌드
+    input_address: str | None = state.get("input_address")  # 이전 턴 값 기본값
+    gps_outside_seoul: bool = state.get("gps_outside_seoul", False)
+    if "gps" in fast_results:
+        _gps_addr = fast_results["gps"] or None   # GeoCoder.get_address는 str 반환, 빈 문자열 → None
+        if _gps_addr:
+            input_address = _gps_addr
+        gps_outside_seoul = _gps_outside_seoul
+
+    if input_address:
+        _suffix = "(서울 내)" if _gps_in_seoul else "(서울 외 지역)"
+        _instruction = (
+            "- 사용자 입력에 명시적 장소가 없으면 이 지역을 location.name으로 우선 사용하십시오."
+            if _gps_in_seoul else
+            "- 사용자의 현재 위치가 서울 밖입니다. location은 None으로 두고, 서울 장소 추천 intent는 유지하십시오."
+        )
+        gps_location_context = (
+            f"## 사용자 첨부 위치 (GPS)\n"
+            f"- 현재 위치: {input_address} {_suffix}\n"
+            f"{_instruction}"
+        )
+    else:
+        gps_location_context = ""
+
+    dprint(f"[TIMING] fast-gather DONE  elapsed={time.perf_counter()-_llm_start:.3f}s  gps_ctx={bool(gps_location_context)}")
+
+    # ── 2차 gather: intent LLM + summary LLM 병렬 실행 (~2s) ──────────────────
+    result, summary_result = await asyncio.gather(
         intent_chain.ainvoke({
             "messages": messages,
             "category_desc": CategoryType.description(),
             "summary_message": summary_message,
             "image_intent_type": IMAGE_INTENT_TYPE if image_path else "",
+            "gps_location_context": gps_location_context,
         }),
         summary_chain.ainvoke({
             "messages": messages,
@@ -155,17 +202,9 @@ async def intent_node(state: TravelState):
             "summary_message": summary_message,
             "summary_language_instruction": get_language_instruction(state.get("language"), False),
         }),
-        fetch_weather(_lat, _lon),
-    ]
-    # 이전 턴 dates가 있으면 날짜별 날씨도 병렬로 미리 조회
-    if _prev_dates_str:
-        gather_coros.append(fetch_weather_for_date(_lat, _lon, _prev_dates_str))
+    )
 
-    gather_results = await asyncio.gather(*gather_coros)
-    result, summary_result, weather_info = gather_results[0], gather_results[1], gather_results[2]
-    prefetched_date_weather = gather_results[3] if _prev_dates_str else None
-
-    dprint(f"[TIMING] intent+summary+weather parallel DONE  elapsed={time.perf_counter()-_llm_start:.3f}s")
+    dprint(f"[TIMING] intent+summary LLM DONE  total_elapsed={time.perf_counter()-_llm_start:.3f}s")
     dprint(f"[Intent] weather_info (initial): {weather_info!r}")
 
     # slots.dates가 있으면 해당 날짜의 날씨로 덮어쓰기 (2단계 — 예보 or 월별 평균)
@@ -244,6 +283,8 @@ async def intent_node(state: TravelState):
         "prefs_info": prefs_info,
         "semantic_input_image": semantic_input_image,
         "weather_info": weather_info,
+        "input_address": input_address,
+        "gps_outside_seoul": gps_outside_seoul,
         "candidates": [],
         "candidate_pool": [],
         "place_info_list": [],

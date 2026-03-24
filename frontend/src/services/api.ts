@@ -72,6 +72,7 @@ export interface ChatMessage {
     role: RoleType;
     latitude?: number;
     longitude?: number;
+    location?: string;
     image_path?: string | null;
     created_at: string;
     places?: ChatPlaceItem[];
@@ -164,6 +165,7 @@ type StreamCallbacks = {
     onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void | Promise<void>;
     onRoomTitle?: (roomTitle: string) => void | Promise<void>;
     onBufferingChange?: (reason: string | null) => void | Promise<void>;
+    onAddress?: (address: string) => void | Promise<void>;
     onError?: (error: string) => void | Promise<void>;
 };
 
@@ -508,6 +510,8 @@ const streamSseRequest = async (
                 await yieldToUI();
             } else if ("buffering" in data) {
                 await callbacks.onBufferingChange?.(data.buffering ?? null);
+            } else if (data.address) {
+                await callbacks.onAddress?.(data.address);
             } else if (data.room_title && !data.done) {
                 await callbacks.onRoomTitle?.(data.room_title);
             } else if (data.done) {

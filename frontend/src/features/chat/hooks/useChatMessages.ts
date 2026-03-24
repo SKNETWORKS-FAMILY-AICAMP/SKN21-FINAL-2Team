@@ -155,13 +155,30 @@ export function useChatMessages({
         const abortController = new AbortController();
         streamAbortControllerRef.current = abortController;
 
+        // location 문자열("lat,lng")을 파싱해서 optimistic 메시지에 포함
+        const parseLocation = (loc?: string | null) => {
+            if (!loc) return { latitude: undefined, longitude: undefined };
+            const parts = loc.split(",");
+            if (parts.length < 2) return { latitude: undefined, longitude: undefined };
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            return {
+                latitude: Number.isFinite(lat) ? lat : undefined,
+                longitude: Number.isFinite(lng) ? lng : undefined,
+            };
+        };
+        const { latitude: optLat, longitude: optLng } = parseLocation(location);
+
+        const optimisticUserMsgId = Date.now();
         if (optimisticUserText) {
             const optimisticUserMsg: ChatMessage = {
-                id: Date.now(),
+                id: optimisticUserMsgId,
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
                 image_path: optimisticImageDataUrl ?? imageDataUrl ?? null,
+                latitude: optLat,
+                longitude: optLng,
                 created_at: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, optimisticUserMsg]);
@@ -234,6 +251,16 @@ export function useChatMessages({
                         activeStreamRef.current = null;
                     }
                     setStreamingMsgId(null);
+                },
+                onAddress: (address) => {
+                    // geocoder가 주소를 반환하면 유저 메시지 말풍선에 실제 주소 표시
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === optimisticUserMsgId && m.role === "human"
+                                ? { ...m, location: address }
+                                : m
+                        )
+                    );
                 },
                 onRoomTitle: (roomTitle) => {
                     updateRoomTitle(roomId, roomTitle);

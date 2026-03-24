@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Sparkles, Bookmark, Map as MapIcon } from "lucide-react";
+import { Sparkles, Bookmark, Map as MapIcon, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -63,6 +63,14 @@ export const ChatMessageItem = memo(({
                                 alt="Attached"
                                 className="w-full max-h-[220px] object-cover"
                             />
+                        </div>
+                    )}
+                    {!!(msg.latitude && msg.longitude) && (
+                        <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 w-fit max-w-full">
+                            <MapPin size={12} className="text-white/80 flex-shrink-0" />
+                            <span className="text-[12px] font-medium text-white/90 truncate">
+                                {msg.location ?? t("chat.currentLocation")}
+                            </span>
                         </div>
                     )}
                     {!!msg.message && (

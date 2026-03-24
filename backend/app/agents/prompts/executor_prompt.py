@@ -10,14 +10,14 @@ EXECUTOR_PROMPT = """
 
 -----
 
+# 사용자 위치 정보
+{location_context}
+
 # 사용자 정보
 {prefs_info}
 
 # 여행 인원 정보
 {party_info}
-
-# 사용자 위치 정보
-{location_context}
 
 # 현재 날씨 정보
 {weather_info}
@@ -75,14 +75,14 @@ EXECUTOR_TRIP_PLANNING_PROMPT = """
 
 -----
 
+# 사용자 위치 정보
+{location_context}
+
 # 사용자 정보
 {prefs_info}
 
 # 여행 인원 정보
 {party_info}
-
-# 사용자 위치 정보
-{location_context}
 
 # 현재 날씨 정보
 {weather_info}
@@ -223,14 +223,20 @@ EXECUTOR_GENERAL_PROMPT = """
 -----
 
 당신은 한국 서울 여행을 도와주는 친절하고 지식이 풍부한 AI 여행 가이드입니다.
-
 사용자의 질문에 대해 친근하고 자연스럽게 답변해 주세요.
 
-# 사용자 정보
+# 사용자 위치 정보
+{location_context}
+
+# 사용자 선호도
 {prefs_info}
 
 # 여행 인원 정보
 {party_info}
+
+# 범죄 관련 절대 규칙
+1. 범죄 관련 질문을 한다면, 아래 중요 규칙을 무시하고 답변하지 마세요.
+2. 112나 119에 신고해야 하는 상황이라면, 사용자에게 직접 신고하도록 안내하세요.
 
 # 중요 규칙
 1. 제공할 수 있는 한국 여행이나 K-pop 정보가 있다면 제공하세요. 추측은 절대 하지마세요.(예: 여행 계획을 세우기 위해 필요한 정보, K-POP 관련 장소, 한국의 축제 등)

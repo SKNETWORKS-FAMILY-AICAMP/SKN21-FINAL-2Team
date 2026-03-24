@@ -83,6 +83,7 @@ class ChatMessageResponse(ChatMessageBase):
     id: int
     room_id: int
     role: RoleType
+    location: Optional[str] = None
     created_at: datetime
     places: List[ChatPlaceResponse] = []
 
