@@ -458,17 +458,17 @@ async def retriever_node(state: TravelState):
         dprint(f"[Retriever] general_pool={len(candidate_pool)}")
 
     # pinned_places(auto_start 선택 장소) 강제 inject
-    # 각 pinned place를 이름으로 직접 검색해서 candidate_pool에 추가
+    # 모든 pinned place를 병렬로 검색해서 candidate_pool에 추가
     pinned_places = state.get("pinned_places") or []
     if pinned_places and primary_intent == IntentType.TRIP_PLANNING:
         retriever_instance = PlaceRetriever.get_instance()
         itinerary = state.get("itinerary") or []
         existing_ids = {get_place_id(c) for c in candidate_pool}
 
-        for pp in pinned_places:
+        async def _search_pinned(pp: dict):
             pp_name = (pp.get("name") or "").strip()
             if not pp_name:
-                continue
+                return None
             try:
                 pinned_results = await retriever_instance.search_hybrid(
                     query=pp_name,
@@ -479,40 +479,47 @@ async def retriever_node(state: TravelState):
                 )
                 if not pinned_results:
                     dprint(f"[Retriever] pinned place not found: {pp_name!r}")
-                    continue
-
-                best = pinned_results[0]
-                best_id = get_place_id(best)
-
-                # 이미 pool에 있으면 스킵
-                if best_id and best_id in existing_ids:
-                    dprint(f"[Retriever] pinned place already in pool: {pp_name!r}")
-                    continue
-
-                # itinerary에서 해당 장소와 매칭되는 항목 찾기 (search_query에 장소명 포함)
-                matched_item = next(
-                    (item for item in itinerary if pp_name in item.get("search_query", "")),
-                    None,
-                )
-                # 매칭된 itinerary 항목이 없으면 첫 번째 항목에 배치
-                if not matched_item and itinerary:
-                    matched_item = itinerary[0]
-
-                if matched_item:
-                    item_idx = itinerary.index(matched_item) if matched_item in itinerary else 0
-                    best["itinerary_day"] = matched_item.get("day", 1)
-                    best["itinerary_time_slot"] = matched_item.get("time_slot", "")
-                    best["itinerary_item_idx"] = item_idx
-                    best["itinerary_activity"] = matched_item.get("activity", pp_name)
-                    best["pinned"] = True
-
-                candidate_pool.append(best)
-                if best_id:
-                    existing_ids.add(best_id)
-                dprint(f"[Retriever] pinned place injected: {pp_name!r} (id={best_id})")
-
+                    return None
+                return pp_name, pinned_results[0]
             except Exception as e:
                 dprint(f"[Retriever] pinned place inject error for {pp_name!r}: {e}")
+                return None
+
+        pinned_search_results = await asyncio.gather(*[_search_pinned(pp) for pp in pinned_places])
+        dprint(f"[Retriever] pinned_places search done (parallel): {len(pinned_places)} items")
+
+        for item in pinned_search_results:
+            if not item:
+                continue
+            pp_name, best = item
+            best_id = get_place_id(best)
+
+            # 이미 pool에 있으면 스킵
+            if best_id and best_id in existing_ids:
+                dprint(f"[Retriever] pinned place already in pool: {pp_name!r}")
+                continue
+
+            # itinerary에서 해당 장소와 매칭되는 항목 찾기 (search_query에 장소명 포함)
+            matched_item = next(
+                (item for item in itinerary if pp_name in item.get("search_query", "")),
+                None,
+            )
+            # 매칭된 itinerary 항목이 없으면 첫 번째 항목에 배치
+            if not matched_item and itinerary:
+                matched_item = itinerary[0]
+
+            if matched_item:
+                item_idx = itinerary.index(matched_item) if matched_item in itinerary else 0
+                best["itinerary_day"] = matched_item.get("day", 1)
+                best["itinerary_time_slot"] = matched_item.get("time_slot", "")
+                best["itinerary_item_idx"] = item_idx
+                best["itinerary_activity"] = matched_item.get("activity", pp_name)
+                best["pinned"] = True
+
+            candidate_pool.append(best)
+            if best_id:
+                existing_ids.add(best_id)
+            dprint(f"[Retriever] pinned place injected: {pp_name!r} (id={best_id})")
 
     dprint(f"[Retriever] candidate_pool total={len(candidate_pool)}")
 

@@ -1,3 +1,7 @@
+"""
+auto_start_prompt는 HUMAN으로 들어가는 프롬프트로,
+사용자 요구사항만 포함되고 LLM에게 전달하는 규칙은 전달하지 않는다.
+"""
 from typing import List
 
 from app.schemas.chat import AutoStarterPlaceSeed
@@ -5,6 +9,9 @@ from app.models.enums import LanguageType
 from app.agents.prompts.prompts import get_language_instruction
 
 COMMON_RESPONSE_RULES = """
+사용자 선호도 (참고):
+{prefs_info}
+
 [공통 응답 규약]
 - 위 응답 언어로 답변한다.
 - 답변은 간결하게 유지한다. 전체 응답은 300자(한국어 기준) 이내로 작성하며, 불필요한 부연 설명이나 반복 문장은 생략한다.
@@ -15,18 +22,10 @@ COMMON_RESPONSE_RULES = """
 - 제안의 이유(선택지 설명)는 입력된 일정, 인원 정보 및 최신 서울 트렌드와 사용자 선호도를 기반해 1~2문장 서술합니다.
 - 한국 서울 여행 트렌드는 완곡하게 반영한다(예: 요즘 많이 찾는 편).
 - 반드시 서울 도시 내에서만 즐길 수 있는 선택지만 제시합니다(서울 이외 언급 금지).
-- 모든 답변(첫 응답 포함)은 아래 순서를 반드시 지킵니다:
-  1) 인사
-  2) 제안 요약
-  3) 선택지 최소 2개(권역 또는 테마 기준 일수 배분)
-  4) 선택형 질문 최소 1개(문단 마지막, 다음 선택 관련)
-
-사용자 선호도 (참고):
-{prefs_info}
 """
 
 AUTO_START_TRIP_CONTEXT_RULES = """
-서울 여행 일정 및 인원(성인/어린이) 정보에 따라, 서울 내 권역 또는 테마 기반으로 일수 배분을 제안하시오.
+인원(성인/어린이) 정보에 따라, 서울 내 권역 또는 테마 기반으로 여행 일정 초안을 제안하시오.
 
 - 여행 날짜({travel_duration}), 성인 인원({adult_count}명), 어린이 인원({child_count}명) 정보를 참조하시오.
 - 각 제안은 서울 내 권역(예: 홍대/성수/강남/잠실/종로/북촌 등) 혹은 서울 테마(예: 음식, 역사, 가족 등)를 기준으로 며칠 배분하면 좋을지 이동 동선의 피로도 관점과 함께 설명하세요.
@@ -135,12 +134,12 @@ def render_auto_start_place_prompt(language_type: LanguageType, prefs_info: str,
         mode_rules = AUTO_START_SINGLE_PLACE_RULES.format(
             selected_places_block=places_block
         )
-        intro = "사용자가 원하는 장소 1개를 선택해 새 채팅을 시작했다."
+        intro = "원하는 장소 1개를 선택해 새 채팅을 시작했다."
     else:
         mode_rules = AUTO_START_MULTI_PLACE_RULES.format(
             selected_places_block=places_block
         )
-        intro = "사용자가 원하는 장소 여러 개를 선택해 새 채팅을 시작했다."
+        intro = "원하는 장소 여러 개를 선택해 새 채팅을 시작했다."
     return _render_prompt(
         get_language_instruction(language_type),
         intro,
@@ -164,7 +163,7 @@ def render_auto_start_combined_prompt(
     child = _normalize_count(child_count)
     return _render_prompt(
         get_language_instruction(language_type),
-        "사용자가 여행 기본 정보와 원하는 장소를 함께 입력해 새 채팅을 시작했다.",
+        "여행 기본 정보와 원하는 장소를 함께 입력해 새 채팅을 시작했다.",
         AUTO_START_COMBINED_RULES.format(
             travel_duration=duration,
             adult_count=adult,
@@ -180,7 +179,7 @@ def render_auto_start_combined_prompt(
 def render_auto_start_greeting_prompt(language_type: LanguageType, prefs_info: str) -> str:
     return _render_prompt(
         get_language_instruction(language_type),
-        "사용자는 새 여행 채팅을 시작했다.",
+        "새 여행 채팅을 시작했다.",
         AUTO_START_GREETING_RULES,
         COMMON_RESPONSE_RULES.format(
             prefs_info=prefs_info
