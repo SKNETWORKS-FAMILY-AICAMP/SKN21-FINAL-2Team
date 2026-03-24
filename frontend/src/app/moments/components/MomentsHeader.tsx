@@ -52,7 +52,7 @@ export function MomentsHeader({
               disabled={deleteCount === 0}
               className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${
                 deleteCount > 0
-                  ? "bg-red-600 text-white hover:bg-red-700"
+                  ? "bg-black text-white hover:bg-gray-800"
                   : "bg-gray-100 text-gray-300 cursor-not-allowed"
               }`}
             >
