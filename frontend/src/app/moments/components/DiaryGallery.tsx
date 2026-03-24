@@ -29,7 +29,7 @@ export function DiaryGallery({
           className={`group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-2xl text-left shadow-sm transition-shadow hover:shadow-lg ${
             isDeleteMode
               ? "ring-2 ring-red-400 hover:ring-red-600"
-              : diary.id === selectedDiaryId ? "ring-2 ring-black" : ""
+              : ""
           }`}
         >
           <img
@@ -40,6 +40,10 @@ export function DiaryGallery({
           <div className={`absolute inset-0 transition-colors duration-300 ${
             isDeleteMode ? "bg-red-500/10 group-hover:bg-red-500/30" : "bg-black/0 group-hover:bg-black/20"
           }`} />
+          {/* 선택된 카드 테두리: absolute inset 방식으로 overflow-hidden/border-radius 깨짐 없이 렌더링 */}
+          {!isDeleteMode && diary.id === selectedDiaryId && (
+            <div className="pointer-events-none absolute inset-0 rounded-2xl border-[3px] border-black z-10" />
+          )}
           {/* [Feature] 삭제 모드일 때 쓰레기통 아이콘 오버레이 */}
           {isDeleteMode && (
             <div className="absolute top-3 right-3 rounded-full bg-red-500 p-2 text-white shadow-lg">
