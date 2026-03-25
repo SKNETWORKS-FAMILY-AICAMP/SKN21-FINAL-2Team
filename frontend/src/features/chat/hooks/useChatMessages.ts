@@ -45,6 +45,11 @@ export function useChatMessages({
         const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
         setPipelineSteps((prev) => {
             if (mappedStatus === "running") {
+                // image_analysis는 intent 노드 내부 서브스텝이므로
+                // 시작 시 기존 running 스텝(intent)을 done으로 전환하지 않음
+                if (step === "image_analysis") {
+                    return { ...prev, [step]: "running" };
+                }
                 const next = { ...prev };
                 for (const key of Object.keys(next)) {
                     if (next[key] === "running" && key !== step) {

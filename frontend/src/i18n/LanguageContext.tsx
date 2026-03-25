@@ -28,6 +28,7 @@ export function LanguageProvider({ children, initialLang = "en" }: LanguageProvi
     const handleLanguageChanged = (lng: string) => {
       setLangCookie(lng);
       document.documentElement.lang = lng;
+      window.dispatchEvent(new Event("triver:language"));
       // react-i18next가 클라이언트에서 즉시 언어를 변경하므로 router.refresh() 불필요
       // router.refresh()를 호출하면 서버 재렌더링 중 화면이 깨지는 문제가 있었음
     };
