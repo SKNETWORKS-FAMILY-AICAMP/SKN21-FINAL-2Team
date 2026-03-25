@@ -17,13 +17,13 @@ def get_language_instruction(language: LanguageType, name_instruction = True) ->
     return instruction
 
 _LANGUAGE_INSTRUCTION: dict[LanguageType, str] = {
-    LanguageType.ko: """# 응답 언어 (반드시 준수)
+    LanguageType.ko: """# 응답 언어 지침 (반드시 준수)
 - 반드시 **한국어**로만 작성하세요.""",
-    LanguageType.en: """# Response language (mandatory)
+    LanguageType.en: """# Response language instruction (mandatory)
 - Write **only in English**""",
-    LanguageType.ja: """# 応答言語（必須）
+    LanguageType.ja: """# 応答言語指示（必須）
 - **日本語のみ**で、短い見出しにしてください。""",
-    LanguageType.zh: """# 响应语言（必须遵守）
+    LanguageType.zh: """# 响应语言指令（必须遵守）
 - **只用中文**撰写，简短标题。""",
 }
 
