@@ -50,11 +50,11 @@ export function IncompleteSignupModal({ isOpen, missingStep, onConfirm, onClose 
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                         className="fixed inset-0 w-screen h-screen flex items-center justify-center z-[9999] p-4 pointer-events-none"
                     >
                         <div
-                            className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 relative pointer-events-auto"
+                            className="bg-white/95 backdrop-blur-3xl border border-white rounded-[28px] shadow-2xl w-full max-w-sm p-8 relative pointer-events-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
