@@ -151,6 +151,8 @@
   "mypage.noRecommendationHint": "チャット履歴の要約が保存されるとおすすめが表示されます。",
   "mypage.startPlanning": "旅行計画を始める",
   "mypage.startChat": "チャットを始める",
+  "mypage.newConversation": "おすすめの会話",
+  "mypage.noRecommendation": "まずチャットを始めてください。会話内容に基づいておすすめを提案します。",
   "mypage.reservation": "予約",
   "mypage.add": "追加",
   "mypage.noReservations": "まだ予約はありません。",

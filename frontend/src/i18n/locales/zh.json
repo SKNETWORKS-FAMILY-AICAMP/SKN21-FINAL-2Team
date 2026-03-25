@@ -151,6 +151,8 @@
   "mypage.noRecommendationHint": "聊天记录摘要保存后将显示推荐。",
   "mypage.startPlanning": "开始规划",
   "mypage.startChat": "开始聊天",
+  "mypage.newConversation": "推荐对话",
+  "mypage.noRecommendation": "请先开始聊天。我们会根据您的对话推荐话题。",
   "mypage.reservation": "预订",
   "mypage.add": "添加",
   "mypage.noReservations": "暂无预订。",

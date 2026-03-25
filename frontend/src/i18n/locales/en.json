@@ -141,6 +141,8 @@
   "mypage.noRecommendationHint": "Recommendations appear when chat history summary is stored.",
   "mypage.startPlanning": "Start Planning",
   "mypage.startChat": "Start Chat",
+  "mypage.newConversation": "Recommended Conversation",
+  "mypage.noRecommendation": "Start chatting first. We'll recommend topics based on your conversations.",
   "mypage.reservation": "Reservation",
   "mypage.add": "Add",
   "mypage.noReservations": "No reservations yet.",

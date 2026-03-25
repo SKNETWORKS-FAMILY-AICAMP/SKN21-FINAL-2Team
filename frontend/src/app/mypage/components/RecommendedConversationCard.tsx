@@ -30,7 +30,7 @@ export function RecommendedConversationCard({ todayRecommendation }: Recommended
             <Sparkles size={14} className="text-zinc-300" />
           </div>
           <h3 className="text-[11px] font-extrabold text-zinc-500 uppercase tracking-widest mt-0.5">
-            새로운 대화 추천
+            {t("mypage.newConversation")}
           </h3>
         </div>
 
@@ -46,7 +46,7 @@ export function RecommendedConversationCard({ todayRecommendation }: Recommended
         ) : (
           <div className="px-1">
             <p className="text-[13px] text-zinc-400 font-medium leading-relaxed">
-              먼저 채팅을 시작해보세요.<br />대화를 바탕으로 맞춤 추천을 드립니다.
+              {t("mypage.noRecommendation")}
             </p>
           </div>
         )}
