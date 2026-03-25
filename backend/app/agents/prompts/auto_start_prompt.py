@@ -102,6 +102,8 @@ def _format_selected_places_block(selected_places: List[AutoStarterPlaceSeed]) -
         address = (place.adress or "").strip() or "주소 정보 없음"
         pid = place.place_id if (place.place_id or 0) > 0 else "unknown"
         line = f"{idx}. {name} (ID: {pid}) / 주소: {address}"
+        if place.category and place.category.strip():
+            line += f" / 카테고리: {place.category.strip()}"
         if place.description and place.description.strip():
             line += f" / 설명: {place.description.strip()}"
         lines.append(line)

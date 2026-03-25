@@ -117,10 +117,10 @@ def _build_pinned_place_info_list(pinned_places: List[Dict[str, Any]]) -> List[P
         if not name or not lat or not lon:
             continue
         result.append(PlaceInfo(
-            contenttypeid="",
+            contenttypeid=p.get("category") or "",
             name=name,
             address=address,
-            image_path=p.get("image") or "",
+            image_path=p.get("image_path") or "",
             map_url=build_naver_map_url(name, float(lat), float(lon)),
             longitude=float(lon),
             latitude=float(lat),

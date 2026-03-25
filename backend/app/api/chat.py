@@ -900,6 +900,7 @@ async def auto_start_chat_room_stream(
                 "name": p.name or "",
                 "address": p.adress or "",
                 "place_id": p.place_id,
+                "image_path": p.image_path or "",
             }
             for p in auto_start_in.selected_places
             if (p.name or "").strip()

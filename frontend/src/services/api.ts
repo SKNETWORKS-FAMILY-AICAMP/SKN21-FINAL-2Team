@@ -150,6 +150,8 @@ export interface AutoStartPlaceSeedPayload {
     adress?: string | null;
     contenttypeid?: number;
     description?: string | null;
+    image_path?: string | null;
+    category?: string | null;
 }
 
 export interface AutoStartChatRoomRequestPayload {

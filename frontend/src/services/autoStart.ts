@@ -14,6 +14,7 @@ export interface StoredSelectedPlaceSeed {
     image_path?: string | null;
     room_id?: number;
     description?: string | null;
+    category?: string | null;
 }
 
 export interface PendingAutoStartMeta {

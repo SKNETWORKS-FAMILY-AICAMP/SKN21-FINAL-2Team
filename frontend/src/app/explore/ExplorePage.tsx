@@ -118,16 +118,23 @@ export function ExplorePage() {
 
     // [Feature] 장소 카드 클릭 → TripContextModal → 챗봇 이동 상태
     const [showTripModal, setShowTripModal] = useState(false);
-    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string; description?: string } | null>(null);
+    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string; description?: string; image_url?: string; category?: string } | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
     // [Feature] Your Choices 카드 클릭 시 TripContextModal 표시
     const handleChoiceCardClick = (item: CategoryPlaceItem) => {
+        // start_date/end_date가 있으면 description에 기간 정보 append
+        const datePart = item.start_date
+            ? `기간: ${item.start_date}${item.end_date ? ` ~ ${item.end_date}` : ""}`
+            : "";
+        const description = [item.description, datePart].filter(Boolean).join(" / ");
         setPendingPlace({
             name: item.title,
             address: item.address,
             id: item.contentid,
-            description: item.description,
+            description: description || undefined,
+            image_url: item.image_url || undefined,
+            category: item.category || undefined,
         });
         setShowTripModal(true);
     };
@@ -138,6 +145,8 @@ export function ExplorePage() {
             name: place.name,
             address: place.adress || "",
             id: place.id,
+            description: place.feature || undefined,
+            image_url: place.image_path || undefined,
         });
         setShowTripModal(true);
     };
@@ -152,6 +161,8 @@ export function ExplorePage() {
                 adress: pendingPlace.address,
                 contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
                 description: pendingPlace.description,
+                image_path: pendingPlace.image_url || undefined,
+                category: pendingPlace.category || undefined,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
