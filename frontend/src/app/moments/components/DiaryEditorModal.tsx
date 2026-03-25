@@ -57,18 +57,19 @@ export function DiaryEditorModal({
           onClick={onClose}
         >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 10 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
           onClick={(event) => event.stopPropagation()}
-          className="flex h-[78vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-black shadow-2xl md:flex-row"
+          className="flex h-[78vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/80 backdrop-blur-3xl shadow-2xl md:flex-row"
           >
             {(() => {
               const coverImagePath =
                 editor.cover_image_path || selectedDiarySummary?.cover_image_path || "";
 
               return (
-            <div className="group relative flex-1 overflow-hidden bg-black">
+            <div className="group relative flex-1 overflow-hidden bg-transparent">
               <button
                 onClick={onClose}
 
@@ -89,7 +90,7 @@ export function DiaryEditorModal({
                       className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-zinc-600">
+                    <div className="flex h-full w-full items-center justify-center bg-black/40 text-zinc-500">
                       <div className="text-center">
                         <Camera size={28} className="mx-auto mb-3" />
                         <p className="text-sm">{t("diary.addCoverPhoto")}</p>
@@ -120,7 +121,7 @@ export function DiaryEditorModal({
                       className="h-full w-full object-cover opacity-90"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-zinc-700">
+                    <div className="flex h-full w-full items-center justify-center bg-black/40 text-zinc-500">
                       <div className="text-center">
                         <Camera size={28} className="mx-auto mb-3" />
                         <p className="text-sm">{t("diary.noCoverPhoto")}</p>
@@ -205,10 +206,9 @@ export function DiaryEditorModal({
               );
             })()}
 
-            {/* [Feature] 좌우 영역 구분선 */}
-            <div className="hidden md:block h-full w-[2px] bg-zinc-700" />
-
-            <div className="flex w-full flex-col overflow-hidden bg-zinc-950 p-5 md:w-[360px]">
+            {/* [Feature] 좌우 영역 구분선 제거 및 보더 처리 대체 */}
+            
+            <div className="flex w-full flex-col overflow-hidden bg-black/40 p-6 md:w-[380px] border-t md:border-t-0 md:border-l border-white/10">
               <div className="mb-4 flex flex-none items-center justify-between">
                 <div className="text-sm font-semibold text-zinc-200">{t("diary.label")}</div>
                 {isEditMode ? (
@@ -250,7 +250,7 @@ export function DiaryEditorModal({
                     {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
                   </div>
 
-                  <div className="mt-4 flex flex-none items-center justify-between gap-3 border-t border-zinc-900 pt-4">
+                  <div className="mt-4 flex flex-none items-center justify-between gap-3 border-t border-white/10 pt-4">
                     {linkedPlace ? (
                       <div className="flex items-center gap-2 text-zinc-400">
                         <MapPin size={14} className="shrink-0" />

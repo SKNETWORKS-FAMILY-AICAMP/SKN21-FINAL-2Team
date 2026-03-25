@@ -263,15 +263,16 @@ export function DiaryLocationPickerModal({
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
           onClick={onClose}
         >
-          {/* [Feature] 모달 창 - 페이드 + 스케일 애니메이션 */}
+          {/* [Feature] 모달 창 - 스프링 스케일 애니메이션 및 블랙 글래스모피즘 적용 */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-zinc-800 bg-black shadow-2xl"
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/80 backdrop-blur-3xl shadow-2xl"
           >
-            <div className="flex flex-none items-center justify-between border-b border-zinc-800 px-6 py-4">
+            <div className="flex flex-none items-center justify-between border-b border-white/10 px-6 py-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">{t("location.label")}</p>
                 <h3 className="mt-1 text-lg font-semibold text-white">{t("location.pickOnMap")}</h3>
@@ -287,7 +288,7 @@ export function DiaryLocationPickerModal({
             </div>
 
             <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="flex flex-col overflow-y-auto border-b border-zinc-800 md:border-b-0 md:border-r">
+              <div className="flex flex-col overflow-y-auto border-b border-white/10 md:border-b-0 md:border-r">
                 <div className="flex-1 p-5">
                   <form className="space-y-3" onSubmit={handleSearch}>
                     <label className="block text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
@@ -299,7 +300,7 @@ export function DiaryLocationPickerModal({
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         placeholder={t("location.searchPlaceholder")}
-                        className="h-11 w-full rounded-full border border-zinc-800 bg-zinc-950 pl-4 pr-12 text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
+                        className="h-11 w-full rounded-full border border-white/10 bg-white/5 pl-4 pr-12 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:bg-white/10 transition-colors"
                       />
                       <button
                         type="submit"
@@ -317,7 +318,7 @@ export function DiaryLocationPickerModal({
                   </p>
 
                   {selectedPlace && (
-                    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-950/80 p-3">
+                    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 p-3">
                       <div className="rounded-full border border-zinc-800 bg-white/5 p-2 text-zinc-200 shrink-0">
                         <MapPin className="h-4 w-4" />
                       </div>
@@ -358,8 +359,8 @@ export function DiaryLocationPickerModal({
                               type="button"
                               onClick={() => handlePreviewPlace(result)}
                               className={`w-full rounded-2xl border px-3 py-3 text-left transition ${isActive
-                                  ? "border-white/30 bg-white/10"
-                                  : "border-zinc-800 bg-zinc-950/70 hover:border-zinc-700 hover:bg-zinc-900"
+                                  ? "border-white/30 bg-white/20"
+                                  : "border-white/5 bg-black/20 hover:border-white/20 hover:bg-white/10"
                                 }`}
                             >
                               <p className="text-sm font-medium text-zinc-100">{result.name?.trim() || t("location.searchResults")}</p>
@@ -389,7 +390,7 @@ export function DiaryLocationPickerModal({
                 )}
               </div>
 
-              <div className="relative min-h-[380px] bg-zinc-950">
+              <div className="relative min-h-[380px] bg-black/20">
                 {status === "loading" && (
                   <div className="absolute inset-0 flex items-center justify-center text-sm text-zinc-400">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

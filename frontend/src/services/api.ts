@@ -388,9 +388,13 @@ export const fetchBookmarkedPlaces = async (): Promise<BookmarkedPlaceItem[]> =>
     return response.json();
 };
 
-export const fetchTodayRecommendations = async (): Promise<TodayRecommendationItem[]> => {
+export const fetchTodayRecommendation = async (): Promise<TodayRecommendationItem | null> => {
     const response = await fetchWithAuth(`${API_URL}/chat/recommendations/today`);
-    return response.json();
+    if (!response.ok) return null;
+    const data = await response.json();
+    // 백엔드가 단일 객체를 반환
+    if (data && data.id) return data as TodayRecommendationItem;
+    return null;
 };
 
 export const sendChatMessage = async (
