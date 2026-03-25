@@ -569,7 +569,7 @@ export function MyPagePage() {
                               </div>
                             </div>
                             {isEditingPreferences && (
-                              <div className={`grid gap-1.5 ${SNAPSHOT_OPTIONS[item.key].length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                              <div className={`grid gap-1.5 ${SNAPSHOT_OPTIONS[item.key].length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
                                 {SNAPSHOT_OPTIONS[item.key].map((opt) => (
                                   <button
                                     key={`${item.key}-${opt}`}
@@ -582,7 +582,7 @@ export function MyPagePage() {
                                         ...(item.key === "places" ? { placesPrefer: opt } : {}),
                                       }));
                                     }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
+                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors whitespace-normal break-words text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
                                       || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                                       || (item.key === "places" && draftInsight.placesPrefer === opt)
                                       ? "bg-black text-white border-black"
