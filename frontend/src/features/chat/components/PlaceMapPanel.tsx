@@ -117,6 +117,16 @@ export function PlaceMapPanel({
     return () => window.removeEventListener("resize", checkScrollability);
   }, [checkScrollability, groupedPlacesKey]);
 
+  // 언어 변경 시 Naver SDK가 재로드되므로, 기존 map 인스턴스를 초기화하여 새 SDK로 재생성되도록 함
+  const prevLanguageRef = useRef(language);
+  useEffect(() => {
+    if (prevLanguageRef.current === language) return;
+    prevLanguageRef.current = language;
+    markersRef.current.clear();
+    infoWindowRef.current = null;
+    mapInstanceRef.current = null;
+  }, [language]);
+
   useEffect(() => {
     if (!isPanelOpen || status !== "ready" || !naver?.maps || !mapInstanceRef.current) return;
 
