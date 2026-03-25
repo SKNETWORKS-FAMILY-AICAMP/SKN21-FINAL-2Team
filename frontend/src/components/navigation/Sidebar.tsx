@@ -350,7 +350,7 @@ function SidebarContent() {
             </div>
 
             {/* Navigation */}
-            <div className={cn("mt-6 space-y-4 flex flex-col flex-1 min-h-0", actuallyCollapsed ? "px-2" : "px-3")}>
+            <div className={cn("mt-6 space-y-4 flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar", actuallyCollapsed ? "px-2" : "px-3")}>
                 {/* Main Tabs */}
                 <nav className="space-y-1">
                     {menuItems.map((item) => (
@@ -410,7 +410,7 @@ function SidebarContent() {
 
                 {/* Chats History Section */}
                 {!actuallyCollapsed ? (
-                    <div className="pt-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    <div className="pt-4">
                         <nav className="space-y-0.5">
                             {rooms.map((room) => {
                                 const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
@@ -466,7 +466,7 @@ function SidebarContent() {
             </div>
 
             {/* User Profile */}
-            <div className={cn("mt-auto border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+            <div className={cn("flex-none border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
                 {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
                 <div className="absolute bottom-20 right-3 z-50">
                     <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />

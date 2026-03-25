@@ -83,6 +83,7 @@ class ChatMessageResponse(ChatMessageBase):
     id: int
     room_id: int
     role: RoleType
+    location: Optional[str] = None
     created_at: datetime
     places: List[ChatPlaceResponse] = []
 
@@ -186,6 +187,8 @@ class AutoStarterPlaceSeed(BaseModel):
     adress: Optional[str] = None
     place_id: int = 0
     description: Optional[str] = None
+    image_path: Optional[str] = None
+    category: Optional[str] = None
 
     @field_validator("place_id", mode="before")
     @classmethod

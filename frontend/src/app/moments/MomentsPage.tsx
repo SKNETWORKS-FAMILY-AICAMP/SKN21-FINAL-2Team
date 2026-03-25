@@ -47,10 +47,10 @@ export function MomentsPage() {
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     // [Feature] 저장 확인 팝업 상태
     const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-    // [Feature] 삭제 모드 + 확인 팝업 상태
+    // [Feature] 삭제 모드 + 다중 선택 + 확인 팝업 상태
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const [deletingDiaryId, setDeletingDiaryId] = useState<number | null>(null);
+    const [selectedToDelete, setSelectedToDelete] = useState<Set<number>>(new Set());
 
     const loadDiaries = async (nextQuery = "") => {
         setLoading(true);
@@ -290,25 +290,38 @@ export function MomentsPage() {
 
     // [Feature] Delete Memory - 쓰레기통 클릭 -> 삭제 모드 토글
     const handleToggleDeleteMode = () => {
-        setIsDeleteMode((prev) => !prev);
+        setIsDeleteMode((prev) => {
+            if (prev) setSelectedToDelete(new Set()); // 취소 시 선택 초기화
+            return !prev;
+        });
     };
 
-    // [Feature] 삭제 모드에서 카드 클릭 -> 확인 팝업
+    // [Feature] 삭제 모드에서 카드 클릭 -> 다중 선택 토글
+    const handleToggleDeleteSelect = (diaryId: number) => {
+        setSelectedToDelete((prev) => {
+            const next = new Set(prev);
+            if (next.has(diaryId)) next.delete(diaryId);
+            else next.add(diaryId);
+            return next;
+        });
+    };
+
+    // [Feature] 일반 모드 카드 클릭
     const handleGallerySelect = (diaryId: number) => {
-        if (isDeleteMode) {
-            setDeletingDiaryId(diaryId);
-            setIsDeleteConfirmOpen(true);
-        } else {
-            void openDiaryModal(diaryId);
-        }
+        void openDiaryModal(diaryId);
     };
 
-    // [Feature] 삭제 확인 -> 실제 삭제 실행
+    // [Feature] 삭제 버튼 클릭 -> 선택 항목 있으면 확인 팝업
+    const handleRequestDelete = () => {
+        if (selectedToDelete.size === 0) return;
+        setIsDeleteConfirmOpen(true);
+    };
+
+    // [Feature] 삭제 확인 -> 선택된 항목 모두 삭제
     const handleConfirmDelete = async () => {
-        if (deletingDiaryId === null) return;
         try {
-            await deleteDiary(deletingDiaryId);
-            if (selectedDiaryId === deletingDiaryId) {
+            await Promise.all(Array.from(selectedToDelete).map((id) => deleteDiary(id)));
+            if (selectedDiaryId !== null && selectedToDelete.has(selectedDiaryId)) {
                 setSelectedDiaryId(null);
                 setEditor(emptyEditorState());
             }
@@ -316,7 +329,7 @@ export function MomentsPage() {
         } catch {
             setError(t("moments.failedToDelete"));
         } finally {
-            setDeletingDiaryId(null);
+            setSelectedToDelete(new Set());
             setIsDeleteConfirmOpen(false);
             setIsDeleteMode(false);
         }
@@ -341,6 +354,9 @@ export function MomentsPage() {
                     onQueryChange={setQuery}
                     onCreate={() => openCreateModal()}
                     onDeleteSelect={handleToggleDeleteMode}
+                    isDeleteMode={isDeleteMode}
+                    deleteCount={selectedToDelete.size}
+                    onConfirmDelete={handleRequestDelete}
                 />
 
 
@@ -357,6 +373,8 @@ export function MomentsPage() {
                             selectedDiaryId={selectedDiaryId}
                             onSelect={handleGallerySelect}
                             isDeleteMode={isDeleteMode}
+                            selectedToDelete={selectedToDelete}
+                            onToggleDeleteSelect={handleToggleDeleteSelect}
                         />
                     )}
                 </div>
@@ -442,7 +460,7 @@ export function MomentsPage() {
             <SimpleModal
                 open={isDeleteConfirmOpen}
                 title={t("moments.deleteMemory")}
-                onClose={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
+                onClose={() => { setIsDeleteConfirmOpen(false); }}
                 maxWidth="sm"
             >
                 <div className="space-y-4">
@@ -452,7 +470,7 @@ export function MomentsPage() {
                     <div className="flex justify-end gap-3">
                         <button
                             type="button"
-                            onClick={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
+                            onClick={() => { setIsDeleteConfirmOpen(false); }}
                             className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
                         >
                             {t("common.no")}

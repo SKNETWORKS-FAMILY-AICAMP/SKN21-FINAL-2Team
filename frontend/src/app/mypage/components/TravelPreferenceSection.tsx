@@ -76,7 +76,7 @@ export function TravelPreferenceSection({
 
       <div>
         <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.travelerSnapshot")}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
             { key: "vibe" as const, label: t("mypage.surveyVibe"), value: isEditingPreferences ? draftInsight.vibePrefer : userInsight.vibePrefer },
@@ -94,7 +94,7 @@ export function TravelPreferenceSection({
                   </div>
                 </div>
                 {isEditingPreferences && (
-                  <div className={`grid gap-1.5 ${SNAPSHOT_OPTIONS[item.key].length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                  <div className={`grid gap-1.5 ${SNAPSHOT_OPTIONS[item.key].length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
                     {SNAPSHOT_OPTIONS[item.key].map((opt) => (
                       <button
                         key={`${item.key}-${opt}`}
@@ -107,7 +107,7 @@ export function TravelPreferenceSection({
                             ...(item.key === "places" ? { placesPrefer: opt } : {}),
                           }));
                         }}
-                        className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
+                        className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors whitespace-normal break-words text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
                           || (item.key === "vibe" && draftInsight.vibePrefer === opt)
                           || (item.key === "places" && draftInsight.placesPrefer === opt)
                           ? "bg-black text-white border-black"

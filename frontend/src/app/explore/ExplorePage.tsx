@@ -118,16 +118,23 @@ export function ExplorePage() {
 
     // [Feature] 장소 카드 클릭 → TripContextModal → 챗봇 이동 상태
     const [showTripModal, setShowTripModal] = useState(false);
-    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string; description?: string } | null>(null);
+    const [pendingPlace, setPendingPlace] = useState<{ name: string; address: string; id: number | string; description?: string; image_url?: string; category?: string } | null>(null);
     const [isTripLoading, setIsTripLoading] = useState(false);
 
     // [Feature] Your Choices 카드 클릭 시 TripContextModal 표시
     const handleChoiceCardClick = (item: CategoryPlaceItem) => {
+        // start_date/end_date가 있으면 description에 기간 정보 append
+        const datePart = item.start_date
+            ? `기간: ${item.start_date}${item.end_date ? ` ~ ${item.end_date}` : ""}`
+            : "";
+        const description = [item.description, datePart].filter(Boolean).join(" / ");
         setPendingPlace({
             name: item.title,
             address: item.address,
             id: item.contentid,
-            description: item.description,
+            description: description || undefined,
+            image_url: item.image_url || undefined,
+            category: item.category || undefined,
         });
         setShowTripModal(true);
     };
@@ -138,6 +145,8 @@ export function ExplorePage() {
             name: place.name,
             address: place.adress || "",
             id: place.id,
+            description: place.feature || undefined,
+            image_url: place.image_path || undefined,
         });
         setShowTripModal(true);
     };
@@ -152,6 +161,8 @@ export function ExplorePage() {
                 adress: pendingPlace.address,
                 contenttypeid: typeof pendingPlace.id === "number" ? pendingPlace.id : 0,
                 description: pendingPlace.description,
+                image_path: pendingPlace.image_url || undefined,
+                category: pendingPlace.category || undefined,
             }] : [];
 
             if ((context.travelDuration || "").trim()) {
@@ -337,33 +348,37 @@ export function ExplorePage() {
 
                             {/* Scrollable Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                                {/* [Fix] 카드가 남은 공간을 꽉 채우도록 flex + flex-1 적용 */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2 h-full">
-                                    {hotPlaces.map((place) => (
-                                        <motion.div
-                                            key={place.id}
-                                            whileHover={{ scale: 1.02 }}
-                                            className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 min-h-[120px]"
-                                            onClick={() => handleHotPlaceCardClick(place)}
-                                        >
-                                            <img
-                                                // 핫플레이스는 상대경로일 수도 있고 절대경로(http)일 수도 있으므로 분기처리
-                                                src={place.image_path?.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
-                                                alt={place.name}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
-                                            <div className="absolute bottom-3 left-3 text-white">
-                                                <h4 className="font-bold text-sm tracking-wide">{place.name}</h4>
-                                                <div className="flex gap-1 mt-1 flex-wrap">
-                                                    {[place.tag1, place.tag2].filter(Boolean).map(tag => (
-                                                        <span key={tag} className="text-[8px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">#{tag}</span>
-                                                    ))}
+                                {isLoading ? (
+                                    <div className="h-full flex items-center justify-center py-8">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black" />
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2 h-full">
+                                        {hotPlaces.map((place) => (
+                                            <motion.div
+                                                key={place.id}
+                                                whileHover={{ scale: 1.02 }}
+                                                className="relative group cursor-pointer overflow-hidden rounded-2xl bg-gray-100 min-h-[120px]"
+                                                onClick={() => handleHotPlaceCardClick(place)}
+                                            >
+                                                <img
+                                                    src={place.image_path?.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
+                                                    alt={place.name}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
+                                                <div className="absolute bottom-3 left-3 text-white">
+                                                    <h4 className="font-bold text-sm tracking-wide">{place.name}</h4>
+                                                    <div className="flex gap-1 mt-1 flex-wrap">
+                                                        {[place.tag1, place.tag2].filter(Boolean).map(tag => (
+                                                            <span key={tag} className="text-[8px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">#{tag}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

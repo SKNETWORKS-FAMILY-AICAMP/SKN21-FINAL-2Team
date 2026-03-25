@@ -117,10 +117,10 @@ def _build_pinned_place_info_list(pinned_places: List[Dict[str, Any]]) -> List[P
         if not name or not lat or not lon:
             continue
         result.append(PlaceInfo(
-            contenttypeid="",
+            contenttypeid=p.get("category") or "",
             name=name,
             address=address,
-            image_path=p.get("image") or "",
+            image_path=p.get("image_path") or "",
             map_url=build_naver_map_url(name, float(lat), float(lon)),
             longitude=float(lon),
             latitude=float(lat),
@@ -327,18 +327,32 @@ def _build_missing_context(missing_slots: List[str]) -> str:
 async def _build_location_context(
     slots: Optional[IntentSlots],
     input_address: Optional[str] = None,
+    gps_location_override: bool = False,
+    gps_outside_seoul: bool = False,
 ) -> str:
-    # 사용자 위치 컨텍스트 구성 (geocoder_node에서 미리 reverse geocoding된 주소 사용)
+    """사용자 위치 컨텍스트 문자열 구성.
+
+    - gps_location_override=True : slots.location이 GPS 파생 위치 → '사용자 관심 장소' 생략(중복 방지)
+    - gps_outside_seoul=True     : GPS가 서울 밖 → 서울 밖 위치임을 명시하고 서울 장소 추천 안내
+    """
     user_location_context = ""
 
     if input_address:
-        user_location_context = f"- 사용자 현재 위치: {input_address}"
+        if gps_outside_seoul:
+            user_location_context = (
+                f"- 사용자 현재 위치: {input_address} (서울 외 지역)\n"
+                f"**[위치 규칙]** 사용자의 현재 위치가 서울 밖이므로, 답변 초반에 **이 사실을 언급하고 \"서울 장소만 제공된다\"는 점을 안내할 것.**"
+            )
+        else:
+            user_location_context = f"- 사용자 현재 위치: {input_address}"
 
-    if slots and slots.location and slots.location.name:
+    # GPS 우선 모드에서는 slots.location이 GPS와 동일한 위치를 가리키므로 생략
+    if not gps_location_override and slots and slots.location and slots.location.name:
         address = ""
         if slots.location.lat and slots.location.lon:
             address = await GeoCoder.get_address(slots.location.lat, slots.location.lon)
-        user_location_context += f"\n- 사용자 관심 장소: {slots.location.name} ({address})"
+        loc_line = f"- 사용자 관심 장소: {slots.location.name} ({address})"
+        user_location_context = f"{user_location_context}\n{loc_line}" if user_location_context else loc_line
 
     return user_location_context
 
@@ -406,7 +420,12 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
 
     # 위치 정보 ============================
     # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
-    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
+    location_context = await _build_location_context(
+        slots,
+        input_address=state.get("input_address"),
+        gps_location_override=state.get("gps_location_override", False),
+        gps_outside_seoul=state.get("gps_outside_seoul", False),
+    )
 
 
     # HumanMessage 구성 (멀티모달 지원)
@@ -613,7 +632,12 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
     party_info = _build_party_info(slots)
-    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
+    location_context = await _build_location_context(
+        slots,
+        input_address=state.get("input_address"),
+        gps_location_override=state.get("gps_location_override", False),
+        gps_outside_seoul=state.get("gps_outside_seoul", False),
+    )
 
     general_system_prompt = EXECUTOR_GENERAL_PROMPT
 

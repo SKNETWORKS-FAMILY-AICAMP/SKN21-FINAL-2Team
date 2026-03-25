@@ -90,7 +90,7 @@ export function MyPagePage() {
           <Sidebar />
         </div>
       </div>
-      
+
       <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
         <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">

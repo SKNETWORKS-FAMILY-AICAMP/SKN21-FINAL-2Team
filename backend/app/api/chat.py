@@ -663,6 +663,21 @@ def _build_streaming_response(
                             final_answer = output["answer"]
 
                     if node_name == "intent":
+                        # GPS reverse geocoding은 intent_node에서 수행 → input_address SSE + DB 저장
+                        # 그래프 시작 시 이미 state에 있던 값과 동일하면 재전송/재저장 생략
+                        addr = output.get("input_address")
+                        prev_addr = inputs.get("input_address") if isinstance(inputs, dict) else None
+                        if addr and addr != prev_addr:
+                            yield _encode_sse({"address": addr})
+                            # 유저 메시지에 location(주소) 저장
+                            user_msg = db.query(ChatMessage).filter(
+                                ChatMessage.room_id == room_id,
+                                ChatMessage.role == RoleType.human,
+                            ).order_by(ChatMessage.id.desc()).first()
+                            if user_msg:
+                                user_msg.location = addr
+                                db.commit()
+
                         if should_update_title and output and _can_overwrite_room_title(db, room_id, room):
                             summary_title = output.get("summary_title")
                             if summary_title and str(summary_title).strip().lower() != "null":
@@ -886,6 +901,7 @@ async def auto_start_chat_room_stream(
                 "name": p.name or "",
                 "address": p.adress or "",
                 "place_id": p.place_id,
+                "image_path": p.image_path or "",
             }
             for p in auto_start_in.selected_places
             if (p.name or "").strip()
