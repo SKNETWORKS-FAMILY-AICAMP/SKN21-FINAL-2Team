@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 export function SimpleModal({
     open,
     title,
+    icon,
     onClose,
     children,
     zIndex,
@@ -14,6 +15,7 @@ export function SimpleModal({
 }: {
     open: boolean;
     title: string;
+    icon?: React.ReactNode;
     onClose: () => void;
     children: React.ReactNode;
     zIndex?: number;
@@ -33,8 +35,8 @@ export function SimpleModal({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 bg-black/45 backdrop-blur-[2px]"
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="fixed inset-0 bg-black/30 backdrop-blur-md z-[9998]"
                         style={{ zIndex: z }}
                         onClick={onClose}
                     />
@@ -42,30 +44,35 @@ export function SimpleModal({
                     {/* Modal content — scale + slide up */}
                     <motion.div
                         key="simple-modal-content"
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
                         style={{ zIndex: z + 1 }}
                     >
                         <div
-                            className={`relative w-full ${widthClass} rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden pointer-events-auto`}
+                            className={`relative w-full ${widthClass} rounded-[2rem] bg-white/90 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] overflow-hidden pointer-events-auto p-8`}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                                <h3 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">
+                            <div className="flex items-center gap-2 mb-5">
+                                {icon && (
+                                    <div className="w-8 h-8 bg-gray-100/80 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white shadow-sm">
+                                        {icon}
+                                    </div>
+                                )}
+                                <h2 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">
                                     {title}
-                                </h3>
+                                </h2>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                                    className="absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100/70 rounded-full transition-all bg-transparent"
                                 >
-                                    <X size={14} />
+                                    <X size={16} />
                                 </button>
                             </div>
-                            <div className="p-6">{children}</div>
+                            <div className="w-full">{children}</div>
                         </div>
                     </motion.div>
                 </>

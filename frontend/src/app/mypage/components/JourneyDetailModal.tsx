@@ -42,18 +42,25 @@ export function JourneyDetailModal({
                     />
 
                     <motion.div
-                        className="relative z-10 w-full max-w-xl rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
+                        className="relative z-10 w-[95%] sm:w-full max-w-xl rounded-[28px] bg-white/95 backdrop-blur-3xl border border-white shadow-2xl overflow-hidden flex flex-col"
                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     >
-                        <div className="p-6 pb-4">
-                            <h2 className="text-3xl font-bold text-gray-900 text-center">{t("mypage.journeyDetail")}</h2>
+                        <div className="flex flex-none items-center justify-between border-b border-gray-100/50 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f3f5] text-gray-700">
+                                    <span className="text-[10px] font-black">AI</span>
+                                </div>
+                                <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-[#8b98a5]">
+                                    {t("mypage.journeyDetail")}
+                                </h2>
+                            </div>
                         </div>
 
-                        <div className="px-6 pb-4">
-                            <div className="relative rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
+                        <div className="px-6 pb-4 pt-4">
+                            <div className="relative rounded-[20px] border border-gray-100 bg-black/[0.02] p-5 max-h-[55vh] overflow-y-auto">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
