@@ -1,9 +1,11 @@
 import base64
+import io
 import os
 import re
 import time
 import urllib.parse
 from fastapi import APIRouter, Depends
+from PIL import Image
 from pydantic import BaseModel
 
 from app.models.user import User
@@ -54,6 +56,31 @@ def _upload_to_s3(raw: bytes, s3_key: str, content_type: str) -> None:
         raise AppException(ErrorCode.INTERNAL_SERVER_ERROR, f"S3 upload failed: {e}", 500)
 
 
+def _to_web_safe(raw: bytes) -> tuple[bytes, str, str]:
+    """PIL로 이미지를 브라우저 호환 포맷(JPEG/PNG)으로 변환.
+
+    투명도가 있는 포맷(RGBA, PA 등)은 PNG로, 나머지는 JPEG로 변환.
+    반환값: (변환된 bytes, 확장자, content_type)
+    """
+    try:
+        img = Image.open(io.BytesIO(raw))
+        if img.mode in ("RGBA", "P", "PA", "LA"):
+            img = img.convert("RGBA")
+            buf = io.BytesIO()
+            img.save(buf, format="PNG", optimize=True)
+            return buf.getvalue(), "png", "image/png"
+        else:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=85, optimize=True)
+            return buf.getvalue(), "jpg", "image/jpeg"
+    except AppException:
+        raise
+    except Exception as e:
+        raise AppException(ErrorCode.VALIDATION_ERROR, f"이미지를 처리할 수 없습니다: {e}", 400)
+
+
 def _upload_local(raw: bytes, folder: str, filename: str) -> None:
     upload_root = os.path.abspath(
         os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "uploads")
@@ -74,17 +101,15 @@ def upload_image(
     if not m:
         raise AppException(ErrorCode.VALIDATION_ERROR, "Invalid image data URL", 400)
 
-    mime_type, b64_data = m.group(1), m.group(2)
-    ext = mime_type.split("/")[-1].lower()
-    if ext == "jpeg":
-        ext = "jpg"
-    if ext not in {"jpg", "png", "webp", "gif"}:
-        raise AppException(ErrorCode.VALIDATION_ERROR, "Unsupported image format", 400)
+    _, b64_data = m.group(1), m.group(2)
 
     try:
         raw = base64.b64decode(b64_data, validate=True)
     except Exception as e:
         raise AppException(ErrorCode.VALIDATION_ERROR, f"Invalid base64 image data: {e}", 400)
+
+    # 어떤 이미지 포맷이든 PIL로 JPEG/PNG로 변환 (HEIC, AVIF, BMP 등 포함)
+    raw, ext, mime_type = _to_web_safe(raw)
 
     folder = re.sub(r"[^a-zA-Z0-9_-]", "", payload.folder or "misc") or "misc"
     filename = f"{current_user.id}_{int(time.time() * 1000)}.{ext}"

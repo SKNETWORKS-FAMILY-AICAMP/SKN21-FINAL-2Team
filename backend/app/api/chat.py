@@ -362,11 +362,6 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
         raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
-    for message in room.messages:
-        if message.image_path:
-            message.image_path = to_client_image_url(message.image_path)
-        for place in message.places:
-            place.image_path = to_client_image_url(place.image_path)
     return room
 
 
@@ -474,7 +469,6 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
     db.add(place)
     db.commit()
     db.refresh(place)
-    place.image_path = to_client_image_url(place.image_path)
     return place
 
 

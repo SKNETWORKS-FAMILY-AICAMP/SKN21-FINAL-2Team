@@ -176,7 +176,7 @@ export function useChatMessages({
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
-                image_path: optimisticImageDataUrl ?? imageDataUrl ?? null,
+                image_path: imageDataUrl ?? optimisticImageDataUrl ?? null,
                 latitude: optLat,
                 longitude: optLng,
                 created_at: new Date().toISOString(),
