@@ -323,8 +323,9 @@ async def get_today_recommendations(
         "extra_prefer3": current_user.extra_prefer3,
     }
 
-    # 4. LLM으로 생성 (history + 선호도 반영)
-    item = await generate_recommendation(current_user.id, histories or None, prefs)
+    # 4. LLM으로 생성 (history + 선호도 + 언어 반영)
+    user_lang = str(current_user.language.value) if current_user.language else "ko"
+    item = await generate_recommendation(current_user.id, histories or None, prefs, user_lang)
     return item
 
 # 채팅방 생성
@@ -691,7 +692,7 @@ def _build_streaming_response(
                             if sm and str(sm).strip():
                                 if _save_room_history(db, room, sm):
                                     print(f"[ChatAPI] Room history saved (room_id={room.id}, len={len(sm)})")
-                                    # 비동기로 오늘의 추천 갱신 (선호도 포함)
+                                    # 비동기로 오늘의 추천 갱신 (선호도 + 언어 포함)
                                     user_prefs = {
                                         "plan_prefer": current_user.plan_prefer,
                                         "vibe_prefer": current_user.vibe_prefer,
@@ -700,8 +701,9 @@ def _build_streaming_response(
                                         "extra_prefer2": current_user.extra_prefer2,
                                         "extra_prefer3": current_user.extra_prefer3,
                                     }
+                                    user_lang = str(current_user.language.value) if current_user.language else "ko"
                                     asyncio.create_task(
-                                        generate_recommendation_background(room.user_id, [str(sm)], user_prefs)
+                                        generate_recommendation_background(room.user_id, [str(sm)], user_prefs, user_lang)
                                     )
 
                 # 이미지 분석 진행 상태 (intent_node 내부에서 dispatch)

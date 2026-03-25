@@ -15,6 +15,8 @@ from pydantic import BaseModel
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.core.llm_factory import LLMFactory
+from app.agents.prompts.prompts import get_language_instruction
+from app.models.enums import LanguageType
 
 
 # ── 스키마 ──────────────────────────────────────────────
@@ -50,8 +52,9 @@ Rules:
   두번째 문장은 왜 지금 가봐야 하는지 이유나 매력 포인트를 설명.
   80~120자 내외의 2~3문장으로 작성.
 - prompt: 사용자가 챗봇에 보낼 자연스러운 요청 메시지
-- 반드시 한국어로 작성
 - JSON만 반환, 다른 텍스트 금지
+
+{language_instruction}
 """
 
 _USER_WITH_HISTORY = """\
@@ -105,6 +108,7 @@ async def generate_recommendation(
     user_id: int,
     histories: list[str] | None = None,
     preferences: dict | None = None,
+    language: str | None = None,
 ) -> RecommendationItem:
     """LLM으로 추천 문구 1개를 생성하고 캐시에 저장한다."""
     import json as _json
@@ -113,6 +117,8 @@ async def generate_recommendation(
     prefs_text = _build_preferences_text(preferences)
     has_history = histories and any(h.strip() for h in histories)
     has_prefs = prefs_text != "선호도 정보 없음"
+
+    lang_instruction = get_language_instruction(language or "ko", name_instruction=False)
 
     if has_history:
         combined = "\n".join(f"- {h}" for h in histories if h.strip())
@@ -125,8 +131,10 @@ async def generate_recommendation(
     else:
         user_msg = _USER_NO_HISTORY
 
+    system_prompt = _SYSTEM_PROMPT.format(language_instruction=lang_instruction)
+
     messages = [
-        SystemMessage(content=_SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt),
         HumanMessage(content=user_msg),
     ]
 
@@ -185,10 +193,11 @@ async def generate_recommendation_background(
     user_id: int,
     histories: list[str] | None = None,
     preferences: dict | None = None,
+    language: str | None = None,
 ) -> None:
     """fire-and-forget 용 래퍼. 예외가 터져도 조용히 로깅만 한다."""
     try:
-        item = await generate_recommendation(user_id, histories, preferences)
+        item = await generate_recommendation(user_id, histories, preferences, language)
         print(f"[Recommendation] Cached for user {user_id}: {item.title}")
     except Exception as e:
         print(f"[Recommendation] Background generation failed: {e}")
