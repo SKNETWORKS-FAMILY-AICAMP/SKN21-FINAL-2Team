@@ -662,60 +662,34 @@ export type ReservationPayload = {
     details?: Record<string, string> | null;
 };
 
-export interface DiaryLinkedRoom {
-    id: number;
-    title: string;
-    created_at: string;
-}
-
-export interface DiaryLinkedPlace {
-    id: number;
-    chat_place_id?: number | null;
-    contenttypeid?: number | null;
-    name?: string | null;
-    adress?: string | null;
-    image_path?: string | null;
-    longitude?: number | null;
-    latitude?: number | null;
-    created_at?: string | null;
-}
-
-export interface DiaryLinkedPlaceInput {
-    name?: string | null;
-    adress: string;
-    image_path?: string | null;
-    longitude: number;
-    latitude: number;
-    contenttypeid?: number | null;
-    chat_place_id?: number | null;
-}
-
-export interface DiaryListItem {
+export interface MomentListItem {
     id: number;
     title: string;
     content: string;
     entry_date: string;
-    cover_image_path?: string | null;
-    linked_places_count: number;
+    image_path?: string | null;
+    adress?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
     created_at?: string | null;
     updated_at?: string | null;
 }
 
-export interface DiaryDetail extends DiaryListItem {
+export interface MomentDetail extends MomentListItem {
     user_id: number;
-    linked_chat_room?: DiaryLinkedRoom | null;
-    linked_places: DiaryLinkedPlace[];
 }
 
-export type DiaryPayload = {
+export type MomentPayload = {
     title: string;
     content: string;
     entry_date: string;
-    cover_image_path?: string | null;
-    linked_places?: DiaryLinkedPlaceInput[];
+    image_path?: string | null;
+    adress?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
 };
 
-export interface DiaryPlaceSearchResult {
+export interface MomentPlaceSearchResult {
     name?: string | null;
     adress: string;
     latitude: number;
@@ -727,37 +701,37 @@ export const fetchReservations = async (): Promise<ReservationRecord[]> => {
     return response.json();
 };
 
-export const fetchDiaries = async (params?: {
+export const fetchMoments = async (params?: {
     query?: string;
     date_from?: string;
     date_to?: string;
-}): Promise<DiaryListItem[]> => {
+}): Promise<MomentListItem[]> => {
     const qs = new URLSearchParams();
     if (params?.query) qs.set("query", params.query);
     if (params?.date_from) qs.set("date_from", params.date_from);
     if (params?.date_to) qs.set("date_to", params.date_to);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    const response = await fetchWithAuth(`${API_URL}/diaries${suffix}`);
+    const response = await fetchWithAuth(`${API_URL}/moments${suffix}`);
     return response.json();
 };
 
-export const fetchDiary = async (diaryId: number): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`);
+export const fetchMoment = async (momentId: number): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`);
     return response.json();
 };
 
-export const createDiary = async (payload: DiaryPayload): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries`, { method: "POST", body: payload });
+export const createMoment = async (payload: MomentPayload): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments`, { method: "POST", body: payload });
     return response.json();
 };
 
-export const updateDiary = async (diaryId: number, payload: Partial<DiaryPayload>): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "PATCH", body: payload });
+export const updateMoment = async (momentId: number, payload: Partial<MomentPayload>): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`, { method: "PATCH", body: payload });
     return response.json();
 };
 
-export const deleteDiary = async (diaryId: number): Promise<{ ok: boolean }> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "DELETE" });
+export const deleteMoment = async (momentId: number): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`, { method: "DELETE" });
     return response.json();
 };
 

@@ -1,11 +1,11 @@
 import { Camera, Upload } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
 
-type EmptyDiaryStateProps = {
+type EmptyMomentStateProps = {
   onCreate: () => void;
 };
 
-export function EmptyDiaryState({ onCreate }: EmptyDiaryStateProps) {
+export function EmptyMomentState({ onCreate }: EmptyMomentStateProps) {
   const { t } = useTranslation();
   return (
     <div className="flex h-full min-h-[60vh] flex-col items-center justify-center p-8 text-center">

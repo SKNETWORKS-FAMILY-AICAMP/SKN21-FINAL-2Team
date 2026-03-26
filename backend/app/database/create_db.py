@@ -119,8 +119,8 @@ Table hot_places {
   image_path varchar
 }
 
-// 6. 예매내역 이미지 DB
-Table reservation_list {
+// 6. 예매내역 DB
+Table reservations {
   id integer [primary key, increment]
   user_id integer
   category varchar
@@ -130,30 +130,19 @@ Table reservation_list {
   details json
 }
 
-// 7. 개인 일기장
-Table diary_entries {
+// 7. Moments (diary_entries + diary_entry_places 통합)
+Table moments {
   id integer [primary key, increment]
   user_id integer [not null]
   title varchar [not null]
   content text [not null]
   entry_date date [not null]
-  cover_image_path varchar
-  linked_chat_room_id integer
-  created_at timestamp [default: `now()`]
-  updated_at timestamp [default: `now()`]
-}
-
-Table diary_entry_places {
-  id integer [primary key, increment]
-  entry_id integer [not null]
-  chat_place_id integer
-  contenttypeid integer
-  name varchar
-  adress varchar
   image_path varchar
+  adress varchar
   longitude float
   latitude float
   created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
 }
 
 // --- 관계 설정 (Ref) ---
@@ -164,13 +153,10 @@ Ref: chat_rooms.id < chat_messages.room_id
 Ref: chat_messages.id < chat_places.messages_id
 
 // 예약 내역
-Ref: users.id < reservation_list.user_id
+Ref: users.id < reservations.user_id
 
-// 일기장
-Ref: users.id < diary_entries.user_id
-Ref: chat_rooms.id < diary_entries.linked_chat_room_id
-Ref: diary_entries.id < diary_entry_places.entry_id
-Ref: chat_places.id < diary_entry_places.chat_place_id
+// Moments
+Ref: users.id < moments.user_id
 """
 
 def deploy_db_from_dbml():
@@ -286,9 +272,9 @@ def deploy_db_from_dbml():
             
             # 기존 테이블 삭제 (LangGraph 체크포인터 테이블 포함)
             tables = [
-                "diary_entry_places", "diary_entries",
+                "moments",
                 "chat_places", "chat_messages", "chat_rooms",
-                "reservation_list", "hot_places",
+                "reservations", "hot_places",
                 "users",
                 "checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"
             ]

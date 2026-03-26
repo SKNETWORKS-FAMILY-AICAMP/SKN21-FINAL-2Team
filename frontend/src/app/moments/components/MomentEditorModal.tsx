@@ -2,49 +2,49 @@ import { ChangeEvent, RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Loader2, MapPin, Pencil, Save, X } from "lucide-react";
 
-import { DiaryListItem } from "@/services/api";
+import { MomentListItem } from "@/services/api";
 import { useTranslation } from "@/i18n/useTranslation";
 
 import { EditorState } from "../types";
 import { todayString } from "../utils";
 
-type DiaryEditorModalProps = {
+type MomentEditorModalProps = {
   isOpen: boolean;
   isEditMode: boolean;
   detailLoading: boolean;
   saving: boolean;
   error: string | null;
   editor: EditorState;
-  selectedDiarySummary: DiaryListItem | null;
+  selectedMomentSummary: MomentListItem | null;
   modalImageInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   onEnterEditMode: () => void;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onEditorChange: (updater: (prev: EditorState) => EditorState) => void;
   onOpenLocationPicker: () => void;
-  onClearLinkedPlace: () => void;
+  onClearLocation: () => void;
   onSave: () => void;
 };
 
-export function DiaryEditorModal({
+export function MomentEditorModal({
   isOpen,
   isEditMode,
   detailLoading,
   saving,
   error,
   editor,
-  selectedDiarySummary,
+  selectedMomentSummary,
   modalImageInputRef,
   onClose,
   onEnterEditMode,
   onImageChange,
   onEditorChange,
   onOpenLocationPicker,
-  onClearLinkedPlace,
+  onClearLocation,
   onSave,
-}: DiaryEditorModalProps) {
+}: MomentEditorModalProps) {
   const { t } = useTranslation();
-  const linkedPlace = editor.linked_places[0] ?? null;
+  const hasLocation = Boolean(editor.adress);
 
   return (
     <AnimatePresence>
@@ -71,12 +71,10 @@ export function DiaryEditorModal({
               className="relative flex h-[85vh] w-full max-w-5xl flex-col md:flex-row overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Removed absolute Close Button from here */}
-
               {/* Left Side: Image Section */}
               {(() => {
-                const coverImagePath =
-                  editor.cover_image_path || selectedDiarySummary?.cover_image_path || "";
+                const imagePath =
+                  editor.image_path || selectedMomentSummary?.image_path || "";
 
                 return (
                   <div className="relative flex-1 overflow-hidden bg-gray-50 border-r border-gray-100">
@@ -84,17 +82,17 @@ export function DiaryEditorModal({
                       className="h-full w-full cursor-pointer relative group"
                       onClick={() => isEditMode && modalImageInputRef.current?.click()}
                     >
-                      {coverImagePath ? (
+                      {imagePath ? (
                         <img
-                          src={coverImagePath}
+                          src={imagePath}
                           alt={editor.title || t("diary.coverAlt")}
                           className="h-full w-full object-cover"
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 gap-3">
                           <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center mb-3">
-                          <Camera size={20} className="text-gray-400 group-hover:text-gray-900 transition-colors" />
-                        </div>
+                            <Camera size={20} className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+                          </div>
                           <p className="text-sm font-medium">{isEditMode ? t("diary.addCoverPhoto") : t("diary.noCoverPhoto")}</p>
                         </div>
                       )}
@@ -108,10 +106,10 @@ export function DiaryEditorModal({
                             className="hidden"
                             onChange={onImageChange}
                           />
-                          {coverImagePath && (
+                          {imagePath && (
                             <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <span className="bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-2">
-                                  <Camera size={14} /> {t("diary.changePhoto")}
+                                <Camera size={14} /> {t("diary.changePhoto")}
                               </span>
                             </div>
                           )}
@@ -140,22 +138,22 @@ export function DiaryEditorModal({
                          <span className="text-sm font-medium text-white/90">{editor.entry_date || todayString()}</span>
                          
                          {isEditMode && (
-                           linkedPlace ? (
+                           hasLocation ? (
                              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white">
-                                <MapPin size={12} />
-                                {linkedPlace.name || linkedPlace.adress}
-                                <button onClick={onClearLinkedPlace} className="hover:text-red-300 ml-1"><X size={12}/></button>
+                                <MapPin size={12} className="shrink-0" />
+                                <span className="truncate">{editor.adress}</span>
+                                <button type="button" onClick={onClearLocation} className="hover:text-red-300 ml-1 shrink-0"><X size={12}/></button>
                              </div>
                            ) : (
-                             <button onClick={onOpenLocationPicker} className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white hover:bg-white/30 truncate">
+                             <button type="button" onClick={onOpenLocationPicker} className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white hover:bg-white/30 truncate">
                                 + {t("diary.addLocation")}
                              </button>
                            )
                          )}
-                         {!isEditMode && linkedPlace && (
+                         {!isEditMode && hasLocation && (
                             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white">
-                                <MapPin size={12} />
-                                {linkedPlace.name || linkedPlace.adress}
+                                <MapPin size={12} className="shrink-0" />
+                                <span className="truncate">{editor.adress}</span>
                             </div>
                          )}
                       </div>
@@ -183,6 +181,7 @@ export function DiaryEditorModal({
                     )}
                   </div>
                   <button
+                    type="button"
                     onClick={onClose}
                     className="p-2 -mr-2 text-gray-400 hover:text-gray-800 hover:bg-gray-50 rounded-full transition-all"
                   >
@@ -217,6 +216,7 @@ export function DiaryEditorModal({
                     <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col gap-4">
                       {isEditMode ? (
                         <button
+                          type="button"
                           onClick={onSave}
                           disabled={saving}
                           className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
@@ -226,6 +226,7 @@ export function DiaryEditorModal({
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={onEnterEditMode}
                           className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                         >
@@ -235,7 +236,7 @@ export function DiaryEditorModal({
                       )}
                       
                       {!isEditMode && (
-                        <button onClick={onClose} className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors">
+                        <button type="button" onClick={onClose} className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors">
                            {t("common.close")}
                         </button>
                       )}
