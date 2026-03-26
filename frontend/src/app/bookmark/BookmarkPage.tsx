@@ -16,6 +16,8 @@ import {
 } from "@/services/api";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 import { useTranslation } from "@/i18n/useTranslation";
+import { SimpleModal } from "@/components/common/SimpleModal";
+import { AlertTriangle } from "lucide-react";
 
 const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
 
@@ -470,62 +472,39 @@ export function BookmarkPage() {
                     )}
                 </AnimatePresence>
 
-                <AnimatePresence>
-                    {confirmOpen && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
+                <SimpleModal
+                    open={confirmOpen}
+                    onClose={closeConfirm}
+                    title={t("bookmark.confirmTitle")}
+                    icon={<AlertTriangle size={20} className="text-white" />}
+                    maxWidth="sm"
+                >
+                    <div className="flex flex-col">
+                        <p className="text-[15px] font-bold text-gray-900 mb-8">
+                            {confirmMessage}
+                        </p>
+                        
+                        <div className="flex flex-col gap-3">
                             <button
                                 type="button"
-
-                                className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
-                                onClick={closeConfirm}
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="relative z-10 w-full max-w-xl rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden"
+                                onClick={confirmDeleteSelected}
+                                disabled={isDeletingSubmitting}
+                                className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                             >
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                                    <h3 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">{t("bookmark.confirmTitle")}</h3>
-                                    <button
-                                        type="button"
-                                        onClick={closeConfirm}
-                                        disabled={isDeletingSubmitting}
-                                        className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-60"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <p className="text-sm font-bold text-gray-900">{confirmMessage}</p>
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={closeConfirm}
-                                            disabled={isDeletingSubmitting}
-                                            className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-                                        >
-                                            {t("common.no")}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={confirmDeleteSelected}
-                                            disabled={isDeletingSubmitting}
-                                            className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
-                                        >
-                                            {isDeletingSubmitting ? t("bookmark.deleting") : t("common.yes")}
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                                {isDeletingSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                {isDeletingSubmitting ? t("bookmark.deleting") : t("common.yes")}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={closeConfirm}
+                                disabled={isDeletingSubmitting}
+                                className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            >
+                                {t("common.no")}
+                            </button>
+                        </div>
+                    </div>
+                </SimpleModal>
             </main>
         </div>
     );

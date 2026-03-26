@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
-import { SimpleModal } from "@/app/mypage/components/SimpleModal";
+import { SimpleModal } from "@/components/common/SimpleModal";
 import {
     DiaryDetail,
     DiaryListItem,
@@ -406,81 +406,81 @@ export function MomentsPage() {
             <SimpleModal
                 open={isCloseConfirmOpen}
                 title={t("moments.unsavedTitle")}
+                icon={<AlertTriangle size={20} className="text-white" />}
                 maxWidth="sm"
                 onClose={() => setIsCloseConfirmOpen(false)}
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
+                <div className="flex flex-col">
+                    <p className="text-[15px] font-bold text-gray-900 mb-8 leading-relaxed">
                         {t("moments.unsavedWarning")}
                         <br />
                         {t("moments.savePrompt", { save: t("common.save") })}
                     </p>
-                    <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setIsCloseConfirmOpen(false)}
-                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-                        >
-                            {t("common.back")}
-                        </button>
+                    <div className="flex flex-col gap-3">
                         <button
                             type="button"
                             onClick={handleConfirmClose}
-                            className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                            className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
                             {t("common.close")}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsCloseConfirmOpen(false)}
+                            className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors"
+                        >
+                            {t("common.back")}
                         </button>
                     </div>
                 </div>
             </SimpleModal>
 
-            {/* [Feature] Diary 저장 성공 확인 팝업 */}
             <SimpleModal
                 open={isSaveConfirmOpen}
                 title={t("moments.savedTitle")}
+                icon={<AlertTriangle size={20} className="text-white" />} // 실제로는 체크 아이콘이 더 어울리지만 일관성을 위해 아이콘 박스 유지
                 onClose={handleSaveConfirmClose}
                 maxWidth="sm"
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
+                <div className="flex flex-col">
+                    <p className="text-[15px] font-bold text-gray-900 mb-8">
                         {t("moments.momentSaved")}
                     </p>
-                    <div className="flex justify-end">
-                        <button
-                            type="button"
-                            onClick={handleSaveConfirmClose}
-                            className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
-                        >
-                            {t("common.confirm")}
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handleSaveConfirmClose}
+                        className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
+                    >
+                        {t("common.confirm")}
+                    </button>
                 </div>
             </SimpleModal>
             {/* [Feature] Delete Memory - 삭제 확인 팝업 */}
             <SimpleModal
                 open={isDeleteConfirmOpen}
                 title={t("moments.deleteMemory")}
+                icon={<AlertTriangle size={20} className="text-white" />}
                 onClose={() => { setIsDeleteConfirmOpen(false); }}
                 maxWidth="sm"
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
+                <div className="flex flex-col">
+                    <p className="text-[15px] font-bold text-gray-900 mb-8 leading-relaxed">
                         {t("moments.deleteConfirmation")}
                     </p>
-                    <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => { setIsDeleteConfirmOpen(false); }}
-                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-                        >
-                            {t("common.no")}
-                        </button>
+                    <div className="flex flex-col gap-3">
                         <button
                             type="button"
                             onClick={() => void handleConfirmDelete()}
-                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                            className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
                             {t("common.yes")}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setIsDeleteConfirmOpen(false); }}
+                            className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors"
+                        >
+                            {t("common.no")}
                         </button>
                     </div>
                 </div>

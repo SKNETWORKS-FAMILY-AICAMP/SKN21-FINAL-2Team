@@ -49,244 +49,199 @@ export function DiaryEditorModal({
   return (
     <AnimatePresence>
       {isOpen && (
+        <>
+          {/* Backdrop */}
           <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 p-4 backdrop-blur-md md:p-8"
-          onClick={onClose}
-        >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: 10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 10 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          onClick={(event) => event.stopPropagation()}
-          className="flex h-[78vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/80 backdrop-blur-3xl shadow-2xl md:flex-row"
-          >
-            {(() => {
-              const coverImagePath =
-                editor.cover_image_path || selectedDiarySummary?.cover_image_path || "";
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9998] bg-black/30 backdrop-blur-md"
+            onClick={onClose}
+          />
 
-              return (
-            <div className="group relative flex-1 overflow-hidden bg-transparent">
+          {/* Modal Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-8 pointer-events-none"
+          >
+            <div
+              className="relative flex h-[85vh] w-full max-w-5xl flex-col md:flex-row overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
               <button
                 onClick={onClose}
-
-                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white transition-colors hover:bg-black/70"
+                className="absolute right-6 top-6 z-20 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-black/[0.03] rounded-full transition-all bg-white shadow-sm border border-gray-100"
               >
                 <X size={18} />
               </button>
 
-              {isEditMode ? (
-                <div
-                  className="h-full w-full cursor-pointer"
-                  onClick={() => modalImageInputRef.current?.click()}
-                >
-                  {coverImagePath ? (
-                    <img
-                      src={coverImagePath}
-                      alt={editor.title || t("diary.coverAlt")}
-                      className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-black/40 text-zinc-500">
-                      <div className="text-center">
-                        <Camera size={28} className="mx-auto mb-3" />
-                        <p className="text-sm">{t("diary.addCoverPhoto")}</p>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    ref={modalImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={onImageChange}
-                  />
-                  {coverImagePath && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                      <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-                        <Camera size={14} /> {t("diary.changePhoto")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-full w-full">
-                  {coverImagePath ? (
-                    <img
-                      src={coverImagePath}
-                      alt={editor.title || t("diary.coverAlt")}
-                      className="h-full w-full object-cover opacity-90"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-black/40 text-zinc-500">
-                      <div className="text-center">
-                        <Camera size={28} className="mx-auto mb-3" />
-                        <p className="text-sm">{t("diary.noCoverPhoto")}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Left Side: Image Section */}
+              {(() => {
+                const coverImagePath =
+                  editor.cover_image_path || selectedDiarySummary?.cover_image_path || "";
 
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 to-transparent p-6">
-                {isEditMode ? (
-                  <input
-                    value={editor.title}
-                    onChange={(event) =>
-                      onEditorChange((prev) => ({ ...prev, title: event.target.value }))
-                    }
-                    placeholder={t("diary.titlePlaceholder")}
-                    className="w-full border-b border-white/25 bg-transparent pb-2 text-2xl font-bold text-white outline-none placeholder:text-white/50"
-                  />
-                ) : (
-                  <p className="w-full pb-2 text-2xl font-bold text-white">
-                    {editor.title || <span className="text-white/50">{t("diary.noTitle")}</span>}
-                  </p>
-                )}
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/70">
-                  <span>{editor.entry_date || todayString()}</span>
-                  {isEditMode ? (
-                    <>
-                      {linkedPlace ? (
-                        <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
-                          <MapPin size={13} className="shrink-0" />
-                          <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onClearLinkedPlace();
-                            }}
-                            className="rounded-full px-1 text-white/60 transition hover:text-white"
-
-                          >
-                            <X size={12} />
-                          </button>
+                return (
+                  <div className="relative flex-1 overflow-hidden bg-gray-50 border-r border-gray-100">
+                    <div
+                      className="h-full w-full cursor-pointer relative group"
+                      onClick={() => isEditMode && modalImageInputRef.current?.click()}
+                    >
+                      {coverImagePath ? (
+                        <img
+                          src={coverImagePath}
+                          alt={editor.title || t("diary.coverAlt")}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 gap-3">
+                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
+                            <Camera size={28} />
+                          </div>
+                          <p className="text-sm font-medium">{isEditMode ? t("diary.addCoverPhoto") : t("diary.noCoverPhoto")}</p>
                         </div>
+                      )}
+
+                      {isEditMode && (
+                        <>
+                          <input
+                            ref={modalImageInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={onImageChange}
+                          />
+                          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-2">
+                                <Camera size={14} /> {t("diary.changePhoto")}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Left overlay content (Title, Date) */}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-10 pt-20">
+                      {isEditMode ? (
+                        <input
+                          value={editor.title}
+                          onChange={(event) =>
+                            onEditorChange((prev) => ({ ...prev, title: event.target.value }))
+                          }
+                          placeholder={t("diary.titlePlaceholder")}
+                          className="w-full border-b border-white/40 bg-transparent pb-2 text-3xl font-bold text-white outline-none placeholder:text-white/60"
+                        />
+                      ) : (
+                        <h1 className="text-3xl font-bold text-white">
+                          {editor.title || t("diary.noTitle")}
+                        </h1>
+                      )}
+                      
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                         <span className="text-sm font-medium text-white/90">{editor.entry_date || todayString()}</span>
+                         
+                         {isEditMode && (
+                           linkedPlace ? (
+                             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white">
+                                <MapPin size={12} />
+                                {linkedPlace.name || linkedPlace.adress}
+                                <button onClick={onClearLinkedPlace} className="hover:text-red-300 ml-1"><X size={12}/></button>
+                             </div>
+                           ) : (
+                             <button onClick={onOpenLocationPicker} className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white hover:bg-white/30 truncate">
+                                + {t("diary.addLocation")}
+                             </button>
+                           )
+                         )}
+                         {!isEditMode && linkedPlace && (
+                            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs font-bold text-white">
+                                <MapPin size={12} />
+                                {linkedPlace.name || linkedPlace.adress}
+                            </div>
+                         )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Right Side: Content Section */}
+              <div className="flex w-full flex-col bg-white p-10 md:w-[420px]">
+                <div className="mb-8 flex items-center justify-between">
+                  <div className="text-[14px] font-bold text-[#8b98a5] uppercase">{t("diary.label")}</div>
+                  {isEditMode ? (
+                    <input
+                      type="date"
+                      value={editor.entry_date}
+                      onChange={(event) =>
+                        onEditorChange((prev) => ({ ...prev, entry_date: event.target.value }))
+                      }
+                      className="bg-gray-50 px-3 py-1.5 rounded-lg text-sm text-gray-600 font-bold border border-gray-100 outline-none"
+                    />
+                  ) : (
+                    <span className="text-sm font-bold text-gray-400">{editor.entry_date}</span>
+                  )}
+                </div>
+
+                {detailLoading ? (
+                  <div className="flex flex-1 items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-black" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-1 flex-col overflow-y-auto pr-2 custom-scrollbar">
+                      {isEditMode ? (
+                        <textarea
+                          value={editor.content}
+                          onChange={(event) =>
+                            onEditorChange((prev) => ({ ...prev, content: event.target.value }))
+                          }
+                          placeholder={t("diary.contentPlaceholder")}
+                          className="flex-1 resize-none bg-transparent text-base leading-relaxed text-gray-700 outline-none placeholder:text-gray-300"
+                        />
+                      ) : (
+                        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-600">
+                          {editor.content || t("diary.noContent")}
+                        </p>
+                      )}
+                      {error && <p className="mt-4 text-sm text-red-500 font-medium">{error}</p>}
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col gap-4">
+                      {isEditMode ? (
+                        <button
+                          onClick={onSave}
+                          disabled={saving}
+                          className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          {t("common.save")}
+                        </button>
                       ) : (
                         <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenLocationPicker();
-                          }}
-                          className="inline-flex items-center gap-2 rounded-full border border-dashed border-white/20 bg-black/25 px-3 py-1.5 text-xs text-white/75 transition hover:bg-black/40"
+                          onClick={onEnterEditMode}
+                          className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                         >
-                          <MapPin size={13} />
-                          {t("diary.addLocation")}
+                          <Pencil size={16} />
+                          {t("common.edit")}
                         </button>
                       )}
-                      {linkedPlace && (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onOpenLocationPicker();
-                          }}
-                          className="text-xs text-white/70 underline underline-offset-4 transition hover:text-white"
-                        >
-                          {t("diary.changeLocation")}
+                      
+                      {!isEditMode && (
+                        <button onClick={onClose} className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors">
+                           {t("common.close")}
                         </button>
                       )}
-                    </>
-                  ) : (
-                    linkedPlace && (
-                      <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
-                        <MapPin size={13} className="shrink-0" />
-                        <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-              );
-            })()}
-
-            {/* [Feature] 좌우 영역 구분선 제거 및 보더 처리 대체 */}
-            
-            <div className="flex w-full flex-col overflow-hidden bg-black/40 p-6 md:w-[380px] border-t md:border-t-0 md:border-l border-white/10">
-              <div className="mb-4 flex flex-none items-center justify-between">
-                <div className="text-sm font-semibold text-zinc-200">{t("diary.label")}</div>
-                {isEditMode ? (
-                  <input
-                    type="date"
-                    value={editor.entry_date}
-                    onChange={(event) =>
-                      onEditorChange((prev) => ({ ...prev, entry_date: event.target.value }))
-                    }
-                    className="cursor-pointer bg-transparent text-sm text-zinc-400 outline-none"
-                  />
-                ) : (
-                  <span className="text-sm text-zinc-400">{editor.entry_date}</span>
+                    </div>
+                  </>
                 )}
               </div>
-
-              {detailLoading ? (
-                <div className="flex flex-1 items-center justify-center text-zinc-400">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-1 flex-col overflow-y-auto">
-                    {isEditMode ? (
-                      <textarea
-                        value={editor.content}
-                        onChange={(event) =>
-                          onEditorChange((prev) => ({ ...prev, content: event.target.value }))
-                        }
-                        placeholder={t("diary.contentPlaceholder")}
-                        className="min-h-[160px] flex-1 resize-none bg-transparent text-base leading-relaxed text-zinc-300 outline-none placeholder:text-zinc-700"
-                      />
-                    ) : (
-                      <p className="flex-1 whitespace-pre-wrap text-base leading-relaxed text-zinc-300">
-                        {editor.content || <span className="text-zinc-700">{t("diary.noContent")}</span>}
-                      </p>
-                    )}
-
-                    {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
-                  </div>
-
-                  <div className="mt-4 flex flex-none items-center justify-between gap-3 border-t border-white/10 pt-4">
-                    {linkedPlace ? (
-                      <div className="flex items-center gap-2 text-zinc-400">
-                        <MapPin size={14} className="shrink-0" />
-                        <span className="truncate text-xs font-medium">{linkedPlace.name || linkedPlace.adress}</span>
-                      </div>
-                    ) : (
-                      <div />
-                    )}
-                    {isEditMode ? (
-                      <button
-                        onClick={onSave}
-                        disabled={saving}
-                        className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-60"
-                      >
-                        {saving ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Save size={14} />
-                        )}
-                        {t("common.save")}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={onEnterEditMode}
-                        className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-                      >
-                        <Pencil size={14} />
-                        {t("common.edit")}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
             </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
