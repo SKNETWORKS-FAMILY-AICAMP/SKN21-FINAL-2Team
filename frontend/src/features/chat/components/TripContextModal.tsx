@@ -137,17 +137,17 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                             </button>
 
                             <div className="flex items-center gap-2 mb-5">
-                                <div className="w-8 h-8 bg-gray-100/80 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white shadow-sm">
-                                    <CalendarDays size={14} className="text-gray-600" />
+                                <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center shadow-lg transition-transform hover:scale-110">
+                                    <CalendarDays size={14} className="text-white" />
                                 </div>
-                                <h2 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mt-0.5">
+                                <h2 className="text-[14px] font-bold text-[#8b98a5] uppercase mt-0.5">
                                     TRIP CONTEXT
                                 </h2>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mt-5">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase tracking-widest mb-1.5 pl-1">
+                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase mb-1.5 pl-1">
                                         {t("tripContext.departure")}
                                     </label>
                                     <DatePicker
@@ -170,7 +170,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase tracking-widest mb-1.5 pl-1">
+                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase mb-1.5 pl-1">
                                         {t("tripContext.return")}
                                     </label>
                                     <DatePicker
@@ -194,10 +194,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
 
                             <div className="mt-6 space-y-4">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-8 h-8 bg-black/[0.04] rounded-[10px] flex items-center justify-center shadow-sm">
-                                        <Users size={14} className="text-gray-600" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-[#8b98a5] uppercase tracking-widest pl-0.5">
+                                    <span className="text-[10px] font-bold text-[#8b98a5] uppercase pl-1">
                                         {t("tripContext.travelers")}
                                     </span>
                                 </div>
@@ -205,7 +202,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                                 <div className="flex items-center justify-between p-5 rounded-[1.25rem] border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)]">
                                     <div>
                                         <p className="text-sm font-semibold text-gray-900">{t("tripContext.adults")}</p>
-                                        <p className="text-[10px] font-medium uppercase tracking-widest text-[#8b98a5] mt-0.5">{t("tripContext.adultsAge")}</p>
+                                        <p className="text-[10px] font-medium uppercase text-[#8b98a5] mt-0.5">{t("tripContext.adultsAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => setAdultCount((v) => Math.max(1, v - 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">-</button>
@@ -217,7 +214,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                                 <div className="flex items-center justify-between p-5 rounded-[1.25rem] border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)]">
                                     <div>
                                         <p className="text-sm font-semibold text-gray-900">{t("tripContext.children")}</p>
-                                        <p className="text-[10px] font-medium uppercase tracking-widest text-[#8b98a5] mt-0.5">{t("tripContext.childrenAge")}</p>
+                                        <p className="text-[10px] font-medium uppercase text-[#8b98a5] mt-0.5">{t("tripContext.childrenAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={() => setChildCount((v) => Math.max(0, v - 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">-</button>

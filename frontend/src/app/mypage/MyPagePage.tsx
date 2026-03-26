@@ -20,7 +20,7 @@ import { DeleteReservationConfirmModal, PreferenceSavedPopup } from "./component
 
 import { useTranslation } from "@/i18n/useTranslation";
 import { resolveImageUrl } from "@/lib/imageUrl";
-import { updateReservation } from "@/services/api";
+import { updateReservation, uploadImageDataUrl } from "@/services/api";
 import { useMyPage, mapReservationRecordToItem } from "./components/useMyPage";
 import type { ReservationItem } from "./types";
 
@@ -122,11 +122,11 @@ export function MyPagePage() {
                       {userProfile.profile_picture ? (
                         <img
                           src={resolveImageUrl(userProfile.profile_picture)}
-                          alt="Profile"
+                          alt={t("mypage.profileAlt")}
                           className="w-full h-full object-cover grayscale-[20%]"
                         />
                       ) : (
-                        <span className="font-medium text-[10px]">No Image</span>
+                        <span className="font-medium text-[10px]">{t("mypage.noImage")}</span>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -218,7 +218,7 @@ export function MyPagePage() {
                           <button
                             type="button"
                             onClick={() => requestDeleteReservation(res)}
-                            className="text-[10px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
+                            className="text-[10px] font-semibold text-gray-700 uppercase hover:opacity-70"
                           >
                             {t("common.delete")}
                           </button>
@@ -251,10 +251,14 @@ export function MyPagePage() {
         onSavePhoto={async (url) => {
           if (!activeReservation) return;
           try {
+            // base64 data URL → 서버 업로드 후 상대경로로 변환
+            const imagePath = url && url.startsWith("data:image/")
+              ? await uploadImageDataUrl(url, "reservations")
+              : url;
             const updated = await updateReservation(activeReservation.reservationId, {
-              image_path: url,
+              image_path: imagePath,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
@@ -266,7 +270,7 @@ export function MyPagePage() {
             const updated = await updateReservation(activeReservation.reservationId, {
               name: newTitle,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
@@ -278,7 +282,7 @@ export function MyPagePage() {
             const updated = await updateReservation(activeReservation.reservationId, {
               category: newCategory,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
@@ -290,17 +294,16 @@ export function MyPagePage() {
             const updated = await updateReservation(activeReservation.reservationId, {
               details: newDetails,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
           } catch (error) { console.error("Failed to update details", error); }
         }}
         onClose={(wasSaved, isNewDraft) => {
+          setActiveReservation(null);
           if (!wasSaved && isNewDraft && activeReservation) {
             void handleDeleteReservation(activeReservation.id);
-          } else {
-            setActiveReservation(null);
           }
         }}
       />

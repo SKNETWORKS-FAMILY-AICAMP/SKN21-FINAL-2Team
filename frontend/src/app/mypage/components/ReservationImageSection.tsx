@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Loader2, ScanText, RefreshCw, StickyNote } from "lucide-react";
+import { AlertTriangle, Loader2, ScanText, RefreshCw, Ticket } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
 
 interface ReservationImageSectionProps {
@@ -57,24 +57,19 @@ export function ReservationImageSection({
   return (
     <div className="w-full md:w-5/12 space-y-4 flex flex-col">
       <div>
-        <div className="flex items-center gap-2">
-          <StickyNote className="text-gray-400" size={18} />
-          <h3 className="text-[14px] font-bold text-gray-900 uppercase tracking-wide">
-            {t("mypage.relatedImage")}
-          </h3>
-        </div>
-
         {isEditMode && (
-          <div className="mb-2.5 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-start gap-2">
-            <span className="text-amber-500 mt-0.5">
+          <div className="mb-2.5 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-start gap-3">
+            <span className="text-amber-500 mt-0.5 flex-none">
               <AlertTriangle size={14} />
             </span>
-            <p className="text-[11px] leading-relaxed">
-              {t("mypage.imagePrivacyWarning")}
-            </p>
-            <p className="text-[11px] mt-0.5 opacity-80">
-              {t("mypage.imageUsageDesc")}
-            </p>
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-medium text-amber-900 leading-relaxed">
+                {t("mypage.imagePrivacyWarning")}
+              </p>
+              <p className="text-[10px] text-amber-800/70 leading-normal">
+                {t("mypage.imageUsageDesc")}
+              </p>
+            </div>
           </div>
         )}
 
@@ -95,7 +90,7 @@ export function ReservationImageSection({
             }
             if (isEditMode) fileInputRef.current?.click();
           }}
-          className={`w-full rounded-[1.25rem] overflow-hidden transition-all duration-300 ${isEditMode
+          className={`relative w-full rounded-[1.25rem] overflow-hidden transition-all duration-300 min-h-[300px] flex items-center justify-center ${isEditMode
               ? "border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)] hover:bg-white/70 hover:scale-[1.01]"
               : "border border-white bg-white/40 shadow-sm"
             }`}
@@ -103,28 +98,31 @@ export function ReservationImageSection({
           {previewPhotoUrl ? (
             <div className="absolute inset-0 bg-white z-10 p-2">
               <img src={previewPhotoUrl} alt={t("mypage.reservationSuffix")} className="w-full h-full object-contain" />
-              {/* 이미지 변경 버튼 (우측 상단 플로팅) */}
             </div>
           ) : (
-            <div className="h-[300px] flex flex-col items-center justify-center text-gray-400">
-              {/* NO IMAGE and (Click to Upload) removed */}
+            <div className="flex flex-col items-center justify-center text-gray-400 gap-3 p-8">
+              <div className="w-16 h-16 rounded-full bg-white/50 flex items-center justify-center shadow-sm">
+                <ScanText size={24} className="opacity-40" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-500">{t("mypage.clickToAttachImage")}</p>
+                <p className="text-[11px] mt-1 opacity-60">{t("mypage.imageUsageDesc")}</p>
+              </div>
             </div>
           )}
         </button>
 
         {isEditMode && (
-          <div className="mt-2.5 flex items-center justify-between gap-3 px-1">
+          <div className="mt-4 flex items-center gap-2 px-1">
             <button
               type="button"
               onClick={() => {
                 onPreviewOpen();
                 fileInputRef.current?.click();
               }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className="text-[10px] font-bold text-gray-400 hover:text-black uppercase tracking-widest transition-colors flex items-center gap-1"
+              className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-[10px] font-bold text-gray-500 hover:text-black hover:border-black uppercase transition-all flex items-center gap-1.5 flex-none"
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={11} />
               {t("mypage.changeImage")}
             </button>
 
@@ -132,17 +130,17 @@ export function ReservationImageSection({
               <button
                 type="button"
                 disabled
-                className="w-full h-11 sm:h-12 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm cursor-not-allowed"
+                className="h-9 px-4 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center gap-2 font-semibold text-[11px] cursor-not-allowed border border-gray-100 ml-auto"
               >
-                <Loader2 size={12} className="animate-spin" /> {t("mypage.ocrLoading")}
+                <Loader2 size={11} className="animate-spin" /> {t("mypage.ocrLoading")}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleOcrProcess}
-                className="w-full h-11 sm:h-12 bg-black hover:bg-gray-800 text-white rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 font-bold text-sm transition-all transform hover:scale-[1.02] active:scale-95"
+                className="h-9 px-4 bg-zinc-900 hover:bg-black text-white rounded-lg shadow-sm flex items-center justify-center gap-2 font-bold text-[11px] transition-all active:scale-95 ml-auto"
               >
-                <ScanText size={12} /> {t("mypage.ocrRead")}
+                <ScanText size={13} /> {t("mypage.ocrRead")}
               </button>
             )}
           </div>

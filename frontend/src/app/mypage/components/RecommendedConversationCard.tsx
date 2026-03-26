@@ -29,14 +29,14 @@ export function RecommendedConversationCard({ todayRecommendation }: Recommended
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-zinc-300">
             <Sparkles size={14} className="text-zinc-300" />
           </div>
-          <h3 className="text-[11px] font-extrabold text-zinc-500 uppercase tracking-widest mt-0.5">
+          <h3 className="text-[11px] font-extrabold text-zinc-500 uppercase mt-0.5">
             {t("mypage.newConversation")}
           </h3>
         </div>
 
         {todayRecommendation ? (
           <div className="px-1">
-            <h2 className="text-xl font-semibold text-white mb-2 tracking-tight leading-snug">
+            <h2 className="text-xl font-semibold text-white mb-2 leading-snug">
               {todayRecommendation.title}
             </h2>
             <p className="text-[13px] text-zinc-400 font-medium leading-relaxed">
@@ -62,7 +62,7 @@ export function RecommendedConversationCard({ todayRecommendation }: Recommended
               router.push("/chatbot");
             }
           }}
-          className="w-full h-12 rounded-2xl bg-white text-black text-[13px] font-extrabold shadow-md hover:bg-gray-200 transition-colors flex items-center justify-center tracking-wide"
+          className="w-full h-12 rounded-2xl bg-white text-black text-[13px] font-extrabold shadow-md hover:bg-gray-200 transition-colors flex items-center justify-center"
         >
           {todayRecommendation ? t("mypage.startPlanning") : t("mypage.startChat")}
         </button>

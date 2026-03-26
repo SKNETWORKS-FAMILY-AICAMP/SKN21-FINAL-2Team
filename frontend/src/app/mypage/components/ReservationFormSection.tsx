@@ -44,20 +44,12 @@ export const FIELD_I18N_MAP: Record<string, string> = {
 };
 
 export const CATEGORY_OPTIONS = [
-  { value: "transportation", label: "교통" },
-  { value: "hotel", label: "호텔" },
-  { value: "activity", label: "공연/활동" },
-  { value: "restaurant", label: "식당" },
-  { value: "etc", label: "기타" },
+  { value: "transportation", i18nKey: "mypage.catTransport" },
+  { value: "hotel", i18nKey: "mypage.catHotel" },
+  { value: "activity", i18nKey: "mypage.catActivity" },
+  { value: "restaurant", i18nKey: "mypage.catRestaurant" },
+  { value: "etc", i18nKey: "mypage.catEtc" },
 ] as const;
-
-export const CATEGORY_MAP: Record<string, string> = {
-  transportation: "교통",
-  hotel: "호텔",
-  restaurant: "식당",
-  activity: "공연/활동",
-  etc: "기타",
-};
 
 export const TEMPLATE_MAP: Record<string, string[]> = {
   transportation: ['날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석 번호'],
@@ -110,8 +102,8 @@ export function ReservationFormSection({
   return (
     <div className="w-full md:w-7/12 space-y-5 flex flex-col">
       {/* 예약 제목 편집 */}
-      <div>
-        <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">
+      <div className="flex flex-col">
+        <label className="block text-[11px] font-bold text-gray-400 mb-1.5 pl-1">
           {t("mypage.reservationName")}
         </label>
         {isEditMode ? (
@@ -125,33 +117,33 @@ export function ReservationFormSection({
                 if (e.key === "Enter") setEditingTitle(false);
               }}
               autoFocus
-              className="w-full h-12 rounded-2xl border-none bg-black/[0.03] px-4 text-sm font-semibold text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              className="w-full h-11 rounded-2xl border-none bg-black/[0.03] px-4 text-[13px] font-semibold text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
               placeholder={t("mypage.reservationTitlePlaceholder")}
             />
           ) : (
             <div
               onClick={() => setEditingTitle(true)}
-              className="w-full min-h-[48px] px-4 py-3 flex items-center bg-black/[0.02] border border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] rounded-2xl cursor-pointer hover:bg-black/[0.04] transition-colors"
+              className="w-full h-11 px-4 flex items-center bg-black/[0.02] border border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] rounded-2xl cursor-pointer hover:bg-black/[0.04] transition-colors"
             >
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-[13px] font-semibold text-gray-900 truncate">
                 {draftTitle || t("mypage.clickToInputTitle")}
               </p>
             </div>
           )
         ) : (
-          <div className="w-full min-h-[48px] px-4 py-3 flex items-center border border-transparent rounded-2xl bg-black/[0.01]">
-            <p className="text-sm font-extrabold text-gray-900">{draftTitle}</p>
+          <div className="w-full h-11 px-1 flex items-center border border-transparent rounded-2xl">
+            <p className="text-[18px] font-bold text-gray-900 truncate">{draftTitle}</p>
           </div>
         )}
       </div>
 
       {/* 카테고리 선택 / 표시 */}
-      <div>
-        <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">
+      <div className="flex flex-col">
+        <label className="block text-[11px] font-bold text-gray-400 mb-1.5 pl-1">
           {t("mypage.category")}
         </label>
         {isEditMode ? (
-          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2">
             {CATEGORY_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -165,25 +157,25 @@ export function ReservationFormSection({
                   });
                   setDraftDetails(nextDetails);
                 }}
-                className={`whitespace-nowrap h-9 px-4 rounded-xl text-xs font-semibold transition-colors duration-300 ${draftCategory === opt.value
+                className={`whitespace-nowrap h-9 px-4 rounded-xl text-[11px] font-semibold transition-all duration-300 ${draftCategory === opt.value
                     ? "bg-black text-white shadow-md border-transparent"
-                    : "bg-white/80 text-gray-600 border border-white hover:bg-white shadow-sm"
+                    : "bg-white text-gray-500 border border-black/[0.05] hover:bg-gray-50 shadow-sm"
                   }`}
               >
-                {CATEGORY_I18N_MAP[opt.value] ? t(CATEGORY_I18N_MAP[opt.value]) : opt.label}
+                {t(opt.i18nKey)}
               </button>
             ))}
           </div>
         ) : (
-          <div className="w-full h-11 px-4 flex items-center bg-black/[0.01] border border-transparent rounded-2xl">
-            <p className="text-[13px] font-semibold text-gray-700">
-              {CATEGORY_I18N_MAP[draftCategory] ? t(CATEGORY_I18N_MAP[draftCategory]) : CATEGORY_MAP[draftCategory]}
+          <div className="w-full h-10 px-1 flex items-center border border-transparent rounded-2xl">
+            <p className="text-[14px] font-bold text-black uppercase">
+              {CATEGORY_I18N_MAP[draftCategory] ? t(CATEGORY_I18N_MAP[draftCategory]) : draftCategory}
             </p>
           </div>
         )}
       </div>
 
-      {/* 다이나믹 JSON 상세 정보 폼 (쌍 배열 렌더링 적용) */}
+      {/* 다이나믹 JSON 상세 정보 폼 (2열 페어 레이아웃 복구) */}
       {Object.keys(draftDetails).length > 0 && (
         <div className="mt-2">
           <div className="flex flex-col gap-y-6">
@@ -194,7 +186,7 @@ export function ReservationFormSection({
 
               const renderInputGroup = (key: string, value: string) => (
                 <div key={key} className="relative group w-full">
-                  <label className="block text-[10px] font-bold text-[#8b98a5] uppercase tracking-widest px-1 mb-1.5">
+                  <label className="block text-[11px] font-bold text-gray-400 px-1 mb-1.5">
                     {FIELD_I18N_MAP[key] ? t(FIELD_I18N_MAP[key]) : key}
                   </label>
                   {isEditMode ? (
@@ -205,7 +197,7 @@ export function ReservationFormSection({
                         onChange={(e) =>
                           setDraftDetails((prev) => ({ ...prev, [key]: e.target.value }))
                         }
-                        className="w-full h-11 rounded-2xl border-none bg-black/[0.03] pl-4 pr-10 text-[13px] font-medium transition-colors duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                        className="w-full h-11 rounded-2xl border-none bg-black/[0.03] pl-4 pr-10 text-[13px] font-medium transition-all focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
                         placeholder={t("mypage.inputContent")}
                       />
                       <button
@@ -269,9 +261,9 @@ export function ReservationFormSection({
                     setPromptValue("");
                     setPromptOpen(true);
                   }}
-                  className="w-full h-12 border border-dashed border-gray-300 rounded-2xl text-xs font-bold text-gray-500 hover:bg-gray-50 hover:border-gray-400 hover:text-black transition-all mt-2 flex items-center justify-center gap-1.5"
+                  className="w-full h-12 border border-dashed border-gray-300 rounded-2xl text-[11px] font-bold text-gray-400 hover:bg-gray-50 hover:border-gray-400 hover:text-black transition-all flex items-center justify-center gap-1.5"
                 >
-                  <span className="text-lg leading-none mb-0.5">+</span> {t("mypage.addNewItem")}
+                  <span className="text-base leading-none mb-0.5">+</span> {t("mypage.addNewItem")}
                 </button>
               </div>
             )}

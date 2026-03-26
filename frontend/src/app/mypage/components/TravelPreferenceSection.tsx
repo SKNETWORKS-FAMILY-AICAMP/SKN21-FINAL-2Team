@@ -47,7 +47,7 @@ export function TravelPreferenceSection({
     <div className="space-y-8">
       <div>
         <div className="flex items-center justify-between gap-3 mb-1">
-          <h3 className="text-xl font-semibold text-gray-900 tracking-tight font-pretendard">{t("mypage.travelPreferences")}</h3>
+          <h3 className="text-xl font-semibold text-gray-900 font-pretendard">{t("mypage.travelPreferences")}</h3>
           <div className="flex items-center gap-2">
             {isEditingPreferences && (
               <button
@@ -75,7 +75,7 @@ export function TravelPreferenceSection({
       </div>
 
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.travelerSnapshot")}</h4>
+        <h4 className="text-xs font-semibold text-gray-500 mb-4 font-pretendard">{t("mypage.travelerSnapshot")}</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {[
             { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
@@ -89,7 +89,7 @@ export function TravelPreferenceSection({
                   <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-4">
-                    <p className="text-[10px] text-white/80 font-semibold uppercase tracking-[0.12em]">{item.label}</p>
+                    <p className="text-[10px] text-white/80 font-semibold uppercase">{item.label}</p>
                     <p className="text-sm text-white font-semibold mt-1">{item.value ? (SURVEY_LABEL_KEY_MAP[item.value] ? t(SURVEY_LABEL_KEY_MAP[item.value]) : item.value) : "-"}</p>
                   </div>
                 </div>
@@ -126,7 +126,7 @@ export function TravelPreferenceSection({
       </div>
 
       <div className="mt-6">
-        <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.additionalPreference")}</h4>
+        <h4 className="text-xs font-semibold text-gray-500 mb-4 font-pretendard">{t("mypage.additionalPreference")}</h4>
         <div className="flex flex-wrap gap-2.5">
           {(isEditingPreferences
             ? EXTRA_PREFER_OPTIONS
