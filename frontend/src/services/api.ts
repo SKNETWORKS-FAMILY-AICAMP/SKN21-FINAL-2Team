@@ -884,3 +884,22 @@ export const ocrReservationImage = async (
     }
     return response.json();
 };
+
+export async function correctSttText(text: string, language: string): Promise<string> {
+    try {
+        const token = safeLocalGet("access_token");
+        const response = await fetch(`${API_URL}/stt/correct`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ text, language }),
+        });
+        if (!response.ok) return text;
+        const data = await response.json();
+        return data.corrected ?? text;
+    } catch {
+        return text;
+    }
+}

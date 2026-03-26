@@ -41,7 +41,7 @@ def _expand_input_tags(tags: list[str]) -> list[str]:
 _CRIME_PATTERN = re.compile(
     r"살해|살인|살육|살상|"
     r"시신|시체|"
-    r"성폭행|강간|추행|몰카|불법촬영|"
+    r"성폭행|강간|추행|몰카|불법촬영|유기|"
     r"테러|폭탄|폭발물|"
     r"간첩|기밀유출|국가보안법"
 )
@@ -110,9 +110,11 @@ async def intent_node(state: TravelState):
     intent_llm = llm.with_structured_output(IntentCoreOutput)
     summary_llm = llm.with_structured_output(SummaryOutput)
 
-    human_input = user_input
+    human_input = user_input or ""
     if semantic_input_image:
         human_input += f"\n입력 이미지에 대한 설명 : {semantic_input_image}"
+    elif image_path:
+        human_input += "\n(사용자가 이미지를 첨부했습니다. 이미지와 유사한 장소 검색 요청으로 처리하세요.)"
 
     intent_prompt = ChatPromptTemplate.from_messages([
         ("system", INTENT_PROMPT),

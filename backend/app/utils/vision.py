@@ -47,7 +47,8 @@ async def describe_image(image_data: str) -> Optional[str]:
         ])
 
         llm = LLMFactory.get_llm()
-        response = await llm.ainvoke(prompt)
+        chain = prompt | llm
+        response = await chain.ainvoke({})
         description = response.content.strip()
         print(f"[INFO] describe_image output: {description}")
         return description

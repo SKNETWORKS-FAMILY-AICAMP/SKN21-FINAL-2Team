@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { correctSttText } from "@/services/api";
 
 export type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
@@ -132,6 +133,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         recognitionRef.current = recognition;
 
         let finalTranscript = "";
+        let lastInterim = "";
 
         const resetSilenceTimer = () => {
             clearSilenceTimer();
@@ -153,10 +155,12 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalTranscript += transcript;
+                    lastInterim = "";
                 } else {
                     interim += transcript;
                 }
             }
+            if (interim) lastInterim = interim;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
             setInputText(baseText + separator + finalTranscript + interim);
         };
@@ -175,7 +179,17 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             setIsListening(false);
             recognitionRef.current = null;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
-            setInputText((baseText + separator + finalTranscript).trim());
+            // finalTranscript이 비어있으면 마지막 interim 결과를 fallback으로 사용
+            const transcript = finalTranscript || lastInterim;
+            const raw = (baseText + separator + transcript).trim();
+
+            if (appLanguage == "ja" && raw) {
+                correctSttText(raw, appLanguage).then((corrected) => {
+                    setInputText(corrected);
+                });
+            } else {
+                setInputText(raw);
+            }
         };
 
         try {

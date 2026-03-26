@@ -1,6 +1,6 @@
 # Frontend 디렉토리 구조 분석
 
-> Next.js App Router 기반 프론트엔드 구조와 현재 실행 상태를 정리한 문서
+> Next.js App Router 기반 프론트엔드 구조를 현재 코드 기준으로 정리한 문서
 
 ---
 
@@ -18,8 +18,11 @@ frontend/
 ├── src/
 │   ├── app/
 │   ├── components/
+│   ├── config/
+│   ├── constants/
 │   ├── features/
 │   ├── hooks/
+│   ├── i18n/
 │   ├── lib/
 │   ├── services/
 │   └── types/
@@ -41,8 +44,14 @@ frontend/
 ### `package.json`
 
 - 프레임워크: `next@16.1.6`, `react@19.2.3`
-- UI/유틸: `framer-motion`, `lucide-react`, `react-markdown`, `remark-gfm`, `jose`
-- 테스트: `jest`, `@testing-library/*`, `jest-environment-jsdom`
+- 주요 의존성
+  - `@react-oauth/google`
+  - `framer-motion`
+  - `i18next`, `react-i18next`
+  - `lucide-react`
+  - `react-markdown`, `remark-gfm`
+  - `react-datepicker`
+  - `recharts`
 - 주요 스크립트
   - `npm run dev`
   - `npm run build`
@@ -55,6 +64,7 @@ frontend/
 - `@` alias를 `frontend/src`로 연결
 - `/api/:path*` 요청을 백엔드로 rewrite
 - `NEXT_PUBLIC_API_URL`이 절대 URL이 아니면 기본 목적지는 `http://backend:8000/api`
+- Next route handler가 있으면 해당 handler가 우선 처리되고, 나머지만 fallback rewrite가 적용된다
 
 ### `Dockerfile`
 
@@ -82,9 +92,25 @@ frontend/
 
 공통 파일:
 
-- `src/app/layout.tsx`: 전역 폰트, `GoogleOAuthProvider`, 메타데이터
-- `src/app/globals.css`: 전역 스타일
-- `src/app/api/chat/route.ts`: Next 서버 측 채팅 프록시 엔드포인트
+- `src/app/layout.tsx`
+  - Google OAuth Provider
+  - `LanguageProvider`
+  - 다국어 폰트 세팅
+- `src/app/globals.css`
+  - 전역 스타일
+- `src/app/HomePage.tsx`
+  - 랜딩 페이지 조립
+
+### `src/app/api/`
+
+Next 서버 측 프록시/스트리밍 route handler가 위치한다.
+
+- `src/app/api/chat/route.ts`
+  - 일반 채팅 프록시
+- `src/app/api/chat/rooms/[roomId]/ask/stream/route.ts`
+  - 스트리밍 채팅 프록시
+- `src/app/api/chat/rooms/[roomId]/autostart/stream/route.ts`
+  - 자동시작 스트리밍 프록시
 
 ---
 
@@ -92,7 +118,7 @@ frontend/
 
 ### `src/app/components/`
 
-랜딩 및 공통 화면 조각이 위치한다.
+랜딩과 온보딩 중심의 화면 조각이 위치한다.
 
 - `Hero.tsx`, `Features.tsx`, `Destinations.tsx`, `ReviewSection.tsx`, `CTA.tsx`
 - `Header.tsx`, `Footer.tsx`
@@ -104,6 +130,8 @@ frontend/
 
 - `GoogleLoginBtn.tsx`
 - `common/Logo.tsx`
+- `common/LanguageBanner.tsx`
+- `common/LanguageSwitcher.tsx`
 - `navigation/Sidebar.tsx`
 
 ### `src/features/chat/`
@@ -125,51 +153,91 @@ frontend/
   - `useChatMap.ts`
   - `useNaverMap.ts`
 
+### 페이지별 하위 컴포넌트
+
+- `src/app/moments/components/*`
+  - 다이어리 편집, 위치 선택, 갤러리
+- `src/app/mypage/components/*`
+  - 예약/여정 상세 모달
+- `src/app/signup/components/*`
+  - 가입 버튼 등 회원가입 보조 UI
+
 ---
 
-## 6. 서비스 및 유틸리티
+## 6. 서비스, i18n, 유틸리티
 
 ### `src/services/`
 
 - `api.ts`
   - 인증/사용자/채팅/북마크/자동시작 API 래퍼
-  - 스트리밍 요청은 브라우저에서 `/api` rewrite를 우선 사용
+  - 브라우저에서는 `/api` rewrite를 우선 사용해 CORS preflight를 줄임
   - 토큰 검증 및 refresh 처리 포함
-- `autoStart.ts`: 자동시작 관련 보조 로직
-- `authError.ts`, `errorHandler.ts`: 인증 및 공통 에러 처리
+- `autoStart.ts`
+  - 자동시작용 payload 보조 로직
+- `authError.ts`, `errorHandler.ts`
+  - 인증 및 공통 에러 처리
+
+### `src/i18n/`
+
+- `LanguageContext.tsx`
+  - 앱 전역 언어 상태 공급
+- `config.ts`, `index.ts`
+  - i18next 초기화
+- `useTranslation.ts`
+  - 번역 훅 래퍼
+- `languageCookie.ts`, `constants.ts`
+  - 언어 쿠키 관리
+- `locales/*.json`
+  - `ko`, `en`, `ja`, `zh` 번역 리소스
 
 ### `src/hooks/`
 
-- `common/useSpeechRecognition.ts`: 음성 인식 훅
+- `common/useSpeechRecognition.ts`
+  - 브라우저 음성 인식 훅
 
 ### `src/lib/`
 
-- `utils.ts`: 공통 유틸리티
+- `utils.ts`
+  - 공통 유틸
+- `imageUrl.ts`
+  - 이미지 URL 처리 보조
 
-### `src/types/`
+### `src/config/` / `src/constants/`
 
-- 브라우저 음성 인식 타입 정의 등 전역 타입 보완
+- 국가, 내비게이션, 상수 정의
 
 ---
 
 ## 7. 정적 자산
 
-`public/` 아래에 랜딩/설문/브랜드 이미지가 배치되어 있다.
+`public/` 아래에 브랜드/랜딩/설문 이미지가 배치되어 있다.
 
+- `public/brand/*`
 - `public/image/*`
 - 기본 SVG 자산
 
 ---
 
-## 8. 문서 역할 및 연계
+## 8. 테스트
 
-- 이 문서는 프론트엔드 구조와 파일 배치를 설명하는 문서다.
-- 실행 가능 여부, 테스트 통과 여부, 현재 이슈 목록은 [PROJECT_ANALYSIS.md](/Users/kim/SKN21-FINAL-2Team/docs/PROJECT_ANALYSIS.md)에서만 관리한다.
+`frontend/tests/` 아래에 Jest 테스트가 위치한다.
+
+- API/에러 처리 테스트
+- 챗봇 페이지/메시지 렌더링 테스트
+- 파이프라인 진행 UI 테스트
+- Google 로그인 버튼 테스트
 
 ---
 
-## 9. 문서 관리 메모
+## 9. 문서 역할 및 연계
 
-- 라우트 추가/삭제 시 이 문서를 먼저 갱신
-- `src/features/chat`가 현재 챗봇 핵심 로직의 중심
-- 빌드 상태는 코드 변경 여부와 별개로 로컬 의존성 상태 영향을 크게 받으므로 테스트 결과와 빌드 결과를 분리해 기록
+- 이 문서는 프론트엔드 구조와 파일 배치를 설명하는 문서다.
+- 챗봇 파이프라인과 백엔드 연계 흐름은 [agent_sequence_diagrams.md](/Users/kim/SKN21-FINAL-2Team/docs/agent_sequence_diagrams.md)에서 관리한다.
+
+---
+
+## 10. 문서 관리 메모
+
+- 라우트 추가/삭제 시 이 문서를 우선 갱신
+- `src/features/chat`와 `src/app/api/chat/*`는 함께 보는 것이 맞다
+- 다국어 리소스 구조 변경 시 이 문서와 사용자 플로우 문서를 함께 수정
