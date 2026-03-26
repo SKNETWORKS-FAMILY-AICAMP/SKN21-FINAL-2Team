@@ -9,6 +9,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from app.models.user import User
+from app.utils.common import to_client_image_url
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
 
@@ -122,5 +123,5 @@ def upload_image(
     else:
         _upload_local(raw, folder, filename)
 
-    # DB에는 상대 path만 저장 (folder/filename)
-    return ImageUploadResponse(image_path=f"{folder}/{filename}")
+    relative_path = f"{folder}/{filename}"
+    return ImageUploadResponse(image_path=to_client_image_url(relative_path) or relative_path)
