@@ -40,7 +40,7 @@ class User(BaseModel):
     # Relations
     rooms = relationship("ChatRoom", back_populates="user")
     reservations = relationship("Reservation", back_populates="user")
-    diary_entries = relationship("DiaryEntry", back_populates="user")
+    moments = relationship("Moment", back_populates="user")
 
     def build_preferences(self) -> str:
         """

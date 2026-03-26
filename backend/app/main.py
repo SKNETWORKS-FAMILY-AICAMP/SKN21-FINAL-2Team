@@ -11,9 +11,9 @@ from fastapi.staticfiles import StaticFiles             # 추가
 import time
 import logging
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
-from app.api import auth, users, chat, prefer, common, explore, reservations, diaries, stt
+from app.api import auth, users, chat, prefer, common, explore, reservations, moments, stt
 # 모델 등록 (Base.metadata에 포함되도록 import)
-from app.models import user, chat as chat_model, hot_place, reservation, diary
+from app.models import user, chat as chat_model, hot_place, reservation, moment
 from app.core.retrieval.place import PlaceRetriever
 from app.core.llm_factory import LLMFactory
 from app.utils.error_handler import (
@@ -99,7 +99,7 @@ app.mount("/api/static", StaticFiles(directory=UPLOAD_DIR), name="api_static")
 
 from app.api import (
     auth, users, chat, prefer, common, explore,
-    reservations, diaries, stt
+    reservations, moments, stt
 )
 
 # Register Routers
@@ -110,7 +110,7 @@ app.include_router(prefer.router)
 app.include_router(common.router)
 app.include_router(explore.router)
 app.include_router(reservations.router)
-app.include_router(diaries.router)
+app.include_router(moments.router)
 app.include_router(stt.router)
 
 logger = logging.getLogger("api_logger")

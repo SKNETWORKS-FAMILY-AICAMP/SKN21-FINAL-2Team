@@ -7,8 +7,10 @@ export const emptyEditorState = (): EditorState => ({
   title: "",
   content: "",
   entry_date: todayString(),
-  cover_image_path: null,
-  linked_places: [],
+  image_path: null,
+  adress: null,
+  longitude: null,
+  latitude: null,
 });
 
 export const readFileAsDataUrl = (file: File) =>

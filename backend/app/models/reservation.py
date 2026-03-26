@@ -4,7 +4,7 @@ from app.models.orm import BaseModel
 
 
 class Reservation(BaseModel):
-    __tablename__ = "reservation_list"
+    __tablename__ = "reservations"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))

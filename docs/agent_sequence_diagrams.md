@@ -51,6 +51,37 @@ graph LR
 - `route_after_geocoder`
 - `route_after_retriever`
 
+### LangGraph State Diagram
+
+```mermaid
+graph TD
+    __start__((START)) --> intent
+
+    intent -- "GENERAL" --> executor_general
+    intent -- "TRIP_PLANNING 포함" --> planner
+    intent -- "기타 (여행/장소)" --> geocoder
+
+    planner -- "missing_slots 있음" --> executor_missing
+    planner -- "missing_slots 없음" --> geocoder
+
+    geocoder -- "is_auto_start=True" --> executor
+    geocoder -- "기본" --> retriever
+
+    retriever -- "후보 있음" --> executor
+    retriever -- "1차 결과 없음\n(반경 확장 재시도)" --> retriever
+    retriever -- "재시도 후 결과 없음" --> web_search
+
+    web_search --> executor
+
+    executor --> __end__((END))
+    executor_missing --> __end__((END))
+    executor_general --> __end__((END))
+
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef startend fill:#ffcccb,stroke:#ff0000,stroke-width:2px,color:#000;
+    class __start__,__end__ startend;
+```
+
 ---
 
 ## 3. 전체 흐름

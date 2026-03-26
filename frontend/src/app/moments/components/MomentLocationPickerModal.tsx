@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, MapPin, Search, X } from "lucide-react";
 
-import { DiaryPlaceSearchResult } from "@/services/api";
+import { MomentPlaceSearchResult as DiaryPlaceSearchResult } from "@/services/api";
 import {
   NaverLatLng,
   NaverMapInstance,
@@ -14,7 +14,7 @@ import {
 } from "@/features/chat/hooks/useNaverMap";
 import { useTranslation } from "@/i18n/useTranslation";
 
-type DiaryLocationPickerModalProps = {
+type MomentLocationPickerModalProps = {
   isOpen: boolean;
   initialPlace: DiaryPlaceSearchResult | null;
   onClose: () => void;
@@ -24,12 +24,12 @@ type DiaryLocationPickerModalProps = {
 const SEOUL_CITY_HALL = { latitude: 37.5665, longitude: 126.978 };
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY ?? "";
 
-export function DiaryLocationPickerModal({
+export function MomentLocationPickerModal({
   isOpen,
   initialPlace,
   onClose,
   onConfirm,
-}: DiaryLocationPickerModalProps) {
+}: MomentLocationPickerModalProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const { t, language } = useTranslation();
   const { status, error: mapError, naver, retry } = useNaverMap(clientId, { language });

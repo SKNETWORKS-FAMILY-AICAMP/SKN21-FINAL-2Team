@@ -2,49 +2,49 @@ import { ChangeEvent, RefObject } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Loader2, MapPin, Pencil, Save, X } from "lucide-react";
 
-import { DiaryListItem } from "@/services/api";
+import { MomentListItem } from "@/services/api";
 import { useTranslation } from "@/i18n/useTranslation";
 
 import { EditorState } from "../types";
 import { todayString } from "../utils";
 
-type DiaryEditorModalProps = {
+type MomentEditorModalProps = {
   isOpen: boolean;
   isEditMode: boolean;
   detailLoading: boolean;
   saving: boolean;
   error: string | null;
   editor: EditorState;
-  selectedDiarySummary: DiaryListItem | null;
+  selectedMomentSummary: MomentListItem | null;
   modalImageInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   onEnterEditMode: () => void;
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onEditorChange: (updater: (prev: EditorState) => EditorState) => void;
   onOpenLocationPicker: () => void;
-  onClearLinkedPlace: () => void;
+  onClearLocation: () => void;
   onSave: () => void;
 };
 
-export function DiaryEditorModal({
+export function MomentEditorModal({
   isOpen,
   isEditMode,
   detailLoading,
   saving,
   error,
   editor,
-  selectedDiarySummary,
+  selectedMomentSummary,
   modalImageInputRef,
   onClose,
   onEnterEditMode,
   onImageChange,
   onEditorChange,
   onOpenLocationPicker,
-  onClearLinkedPlace,
+  onClearLocation,
   onSave,
-}: DiaryEditorModalProps) {
+}: MomentEditorModalProps) {
   const { t } = useTranslation();
-  const linkedPlace = editor.linked_places[0] ?? null;
+  const hasLocation = Boolean(editor.adress);
 
   return (
     <AnimatePresence>
@@ -64,8 +64,8 @@ export function DiaryEditorModal({
           className="flex h-[78vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-zinc-800 bg-black shadow-2xl md:flex-row"
           >
             {(() => {
-              const coverImagePath =
-                editor.cover_image_path || selectedDiarySummary?.cover_image_path || "";
+              const imagePath =
+                editor.image_path || selectedMomentSummary?.image_path || "";
 
               return (
             <div className="group relative flex-1 overflow-hidden bg-black">
@@ -82,9 +82,9 @@ export function DiaryEditorModal({
                   className="h-full w-full cursor-pointer"
                   onClick={() => modalImageInputRef.current?.click()}
                 >
-                  {coverImagePath ? (
+                  {imagePath ? (
                     <img
-                      src={coverImagePath}
+                      src={imagePath}
                       alt={editor.title || t("diary.coverAlt")}
                       className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
                     />
@@ -103,7 +103,7 @@ export function DiaryEditorModal({
                     className="hidden"
                     onChange={onImageChange}
                   />
-                  {coverImagePath && (
+                  {imagePath && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                       <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
                         <Camera size={14} /> {t("diary.changePhoto")}
@@ -113,9 +113,9 @@ export function DiaryEditorModal({
                 </div>
               ) : (
                 <div className="h-full w-full">
-                  {coverImagePath ? (
+                  {imagePath ? (
                     <img
-                      src={coverImagePath}
+                      src={imagePath}
                       alt={editor.title || t("diary.coverAlt")}
                       className="h-full w-full object-cover opacity-90"
                     />
@@ -149,15 +149,15 @@ export function DiaryEditorModal({
                   <span>{editor.entry_date || todayString()}</span>
                   {isEditMode ? (
                     <>
-                      {linkedPlace ? (
+                      {hasLocation ? (
                         <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                           <MapPin size={13} className="shrink-0" />
-                          <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
+                          <span className="truncate">{editor.adress}</span>
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              onClearLinkedPlace();
+                              onClearLocation();
                             }}
                             className="rounded-full px-1 text-white/60 transition hover:text-white"
 
@@ -178,7 +178,7 @@ export function DiaryEditorModal({
                           {t("diary.addLocation")}
                         </button>
                       )}
-                      {linkedPlace && (
+                      {hasLocation && (
                         <button
                           type="button"
                           onClick={(event) => {
@@ -192,10 +192,10 @@ export function DiaryEditorModal({
                       )}
                     </>
                   ) : (
-                    linkedPlace && (
+                    hasLocation && (
                       <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-xs text-white/85">
                         <MapPin size={13} className="shrink-0" />
-                        <span className="truncate">{linkedPlace.name || linkedPlace.adress}</span>
+                        <span className="truncate">{editor.adress}</span>
                       </div>
                     )
                   )}
@@ -251,10 +251,10 @@ export function DiaryEditorModal({
                   </div>
 
                   <div className="mt-4 flex flex-none items-center justify-between gap-3 border-t border-zinc-900 pt-4">
-                    {linkedPlace ? (
+                    {hasLocation ? (
                       <div className="flex items-center gap-2 text-zinc-400">
                         <MapPin size={14} className="shrink-0" />
-                        <span className="truncate text-xs font-medium">{linkedPlace.name || linkedPlace.adress}</span>
+                        <span className="truncate text-xs font-medium">{editor.adress}</span>
                       </div>
                     ) : (
                       <div />
