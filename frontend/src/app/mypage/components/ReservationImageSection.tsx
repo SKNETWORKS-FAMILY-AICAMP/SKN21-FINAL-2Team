@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Loader2, ScanText, RefreshCw, Ticket } from "lucide-react";
+import { AlertTriangle, Loader2, ScanText, RefreshCw, Ticket, ImageOff } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
 
 interface ReservationImageSectionProps {
@@ -90,16 +90,18 @@ export function ReservationImageSection({
             }
             if (isEditMode) fileInputRef.current?.click();
           }}
-          className={`relative w-full rounded-[1.25rem] overflow-hidden transition-all duration-300 min-h-[300px] flex items-center justify-center ${isEditMode
+          disabled={!isEditMode && !previewPhotoUrl}
+          className={`relative w-full flex-1 rounded-[1.25rem] overflow-hidden transition-all duration-300 min-h-[400px] md:min-h-[500px] flex items-center justify-center ${
+            isEditMode
               ? "border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)] hover:bg-white/70 hover:scale-[1.01]"
-              : "border border-white bg-white/40 shadow-sm"
-            }`}
+              : previewPhotoUrl ? "border border-white bg-white/40 shadow-sm cursor-pointer" : "border border-gray-100 bg-gray-50/50 shadow-none cursor-default"
+          }`}
         >
           {previewPhotoUrl ? (
             <div className="absolute inset-0 bg-white z-10 p-2">
               <img src={previewPhotoUrl} alt={t("mypage.reservationSuffix")} className="w-full h-full object-contain" />
             </div>
-          ) : (
+          ) : isEditMode ? (
             <div className="flex flex-col items-center justify-center text-gray-400 gap-3 p-8">
               <div className="w-16 h-16 rounded-full bg-white/50 flex items-center justify-center shadow-sm">
                 <ScanText size={24} className="opacity-40" />
@@ -107,6 +109,15 @@ export function ReservationImageSection({
               <div className="text-center">
                 <p className="text-sm font-bold text-gray-500">{t("mypage.clickToAttachImage")}</p>
                 <p className="text-[11px] mt-1 opacity-60">{t("mypage.imageUsageDesc")}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-gray-400 gap-3 p-8">
+              <div className="w-16 h-16 rounded-full bg-white/50 flex items-center justify-center shadow-sm">
+                <ImageOff size={24} className="opacity-30" />
+              </div>
+              <div className="text-center">
+                <p className="text-[13px] font-bold text-gray-400">{t("mypage.noImageAttached")}</p>
               </div>
             </div>
           )}

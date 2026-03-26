@@ -137,8 +137,8 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                             </button>
 
                             <div className="flex items-center gap-2 mb-5">
-                                <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center shadow-lg transition-transform hover:scale-110">
-                                    <CalendarDays size={14} className="text-white" />
+                                <div className="w-10 h-10 bg-gray-50 border border-gray-100 text-gray-900 rounded-xl flex items-center justify-center shadow-sm">
+                                    <CalendarDays size={16} />
                                 </div>
                                 <h2 className="text-[14px] font-bold text-[#8b98a5] uppercase mt-0.5">
                                     TRIP CONTEXT

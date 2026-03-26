@@ -354,19 +354,12 @@ export function UserSettingsModal({
 
             {!!deactivateError && <div className="text-xs font-semibold text-red-600">{deactivateError}</div>}
 
-            <div className="pt-1 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleCancelDeactivateAccount}
-                className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                {t("common.cancel")}
-              </button>
+            <div className="pt-2 mt-4 flex flex-col gap-2">
               <button
                 type="button"
                 onClick={handleRequestDeactivateAccount}
                 disabled={deactivateSubmitting}
-                className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
+                className="w-full h-12 rounded-2xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
                 {t("mypage.deactivateButton")}
               </button>
@@ -383,26 +376,18 @@ export function UserSettingsModal({
         maxWidth="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-900">{t("mypage.deactivateConfirmMessage")}</p>
+          <p className="text-[14px] font-medium text-gray-800">{t("mypage.deactivateConfirmMessage")}</p>
           <div className="text-xs text-gray-500 leading-relaxed space-y-1">
             <p>• {t("mypage.deactivateWarning1")}</p>
             <p>• {t("mypage.deactivateWarning2")}</p>
             <p>• {t("mypage.deactivateWarning3")}</p>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleCancelDeactivateConfirm}
-              disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-            >
-              {t("common.no")}
-            </button>
+          <div className="flex flex-col gap-2 pt-2 mt-2">
             <button
               type="button"
               onClick={handleConfirmDeactivateAccount}
               disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-red-600 bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60 transition-all"
+              className="w-full h-12 rounded-2xl bg-red-50 text-red-600 font-bold text-sm hover:bg-red-100 transition-colors disabled:opacity-50"
             >
               {deactivateSubmitting ? t("mypage.deactivating") : t("mypage.deactivateButton")}
             </button>
@@ -422,14 +407,14 @@ export function UserSettingsModal({
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-700">{t("mypage.settingsSavedMessage")}</p>
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 mt-2">
             <button
               type="button"
               onClick={() => {
                 setShowSettingsSavedPopup(false);
                 onClose();
               }}
-              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
+              className="w-full h-12 rounded-2xl bg-black text-white text-sm font-bold hover:bg-gray-800 transition-colors"
             >
               {t("common.confirm")}
             </button>

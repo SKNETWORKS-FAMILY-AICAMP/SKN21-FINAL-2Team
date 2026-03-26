@@ -36,7 +36,7 @@ export function IncompleteSignupModal({ isOpen, missingStep, onConfirm, onClose 
             open={!!(isOpen && missingStep)}
             onClose={onClose}
             title={title}
-            icon={<AlertCircle size={20} className="text-white" />}
+            icon={<AlertCircle size={20} />}
             maxWidth="sm"
         >
             <div className="flex flex-col">

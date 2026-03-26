@@ -30,9 +30,11 @@ export const FIELD_I18N_MAP: Record<string, string> = {
   "체크아웃 시간": "mypage.tplCheckOutTime",
   "방 호실": "mypage.tplRoomNum",
   "이름": "mypage.tplName",
+  "공연/활동명": "mypage.tplActivityName",
   "시간": "mypage.tplTime",
   "장소": "mypage.tplPlace",
   "식당이름": "mypage.tplRestaurantName",
+  "매장명": "mypage.tplShopName",
   "예약시간": "mypage.tplResTime",
   "예약 시간": "mypage.tplResTimeSpace",
   "예약 날짜": "mypage.tplResDateSpace",
@@ -54,8 +56,8 @@ export const CATEGORY_OPTIONS = [
 export const TEMPLATE_MAP: Record<string, string[]> = {
   transportation: ['날짜', '출발지', '출발시간', '도착지', '도착시간', '승차홈', '차량 번호', '좌석 번호'],
   hotel: ['숙소 이름', '체크인 날짜', '체크인 시간', '체크아웃 날짜', '체크아웃 시간', '방 호실'],
-  activity: ['날짜', '이름', '시간', '장소', '좌석 번호'],
-  restaurant: ['날짜', '식당이름', '예약시간', '예약자명', '예약 인원'],
+  activity: ['공연/활동명', '날짜', '시간', '장소', '좌석 번호'],
+  restaurant: ['매장명', '날짜', '예약시간', '예약자명', '예약 인원'],
   etc: ['예약내역', '시간', '예약자명']
 };
 
@@ -66,7 +68,11 @@ export const PAIRED_FIELDS = [
   ["출발 날짜", "도착 날짜"],
   ["체크인 날짜", "체크아웃 날짜"],
   ["체크인 시간", "체크아웃 시간"],
+  ["날짜", "시간"],
+  ["날짜", "예약시간"],
   ["예약 날짜", "예약 시간"],
+  ["예약자명", "예약 인원"],
+  ["장소", "좌석 번호"],
   ["결제 금액", "결제 수단"]
 ];
 
@@ -101,42 +107,6 @@ export function ReservationFormSection({
 
   return (
     <div className="w-full md:w-7/12 space-y-5 flex flex-col">
-      {/* 예약 제목 편집 */}
-      <div className="flex flex-col">
-        <label className="block text-[11px] font-bold text-gray-400 mb-1.5 pl-1">
-          {t("mypage.reservationName")}
-        </label>
-        {isEditMode ? (
-          editingTitle ? (
-            <input
-              type="text"
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              onBlur={() => setEditingTitle(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setEditingTitle(false);
-              }}
-              autoFocus
-              className="w-full h-11 rounded-2xl border-none bg-black/[0.03] px-4 text-[13px] font-semibold text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
-              placeholder={t("mypage.reservationTitlePlaceholder")}
-            />
-          ) : (
-            <div
-              onClick={() => setEditingTitle(true)}
-              className="w-full h-11 px-4 flex items-center bg-black/[0.02] border border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] rounded-2xl cursor-pointer hover:bg-black/[0.04] transition-colors"
-            >
-              <p className="text-[13px] font-semibold text-gray-900 truncate">
-                {draftTitle || t("mypage.clickToInputTitle")}
-              </p>
-            </div>
-          )
-        ) : (
-          <div className="w-full h-11 px-1 flex items-center border border-transparent rounded-2xl">
-            <p className="text-[18px] font-bold text-gray-900 truncate">{draftTitle}</p>
-          </div>
-        )}
-      </div>
-
       {/* 카테고리 선택 / 표시 */}
       <div className="flex flex-col">
         <label className="block text-[11px] font-bold text-gray-400 mb-1.5 pl-1">
@@ -175,6 +145,42 @@ export function ReservationFormSection({
         )}
       </div>
 
+      {/* 예약 제목 편집 */}
+      <div className="flex flex-col">
+        <label className="block text-[11px] font-bold text-gray-400 mb-1.5 pl-1">
+          {t("mypage.reservationName")}
+        </label>
+        {isEditMode ? (
+          editingTitle ? (
+              <input
+                type="text"
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onBlur={() => setEditingTitle(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setEditingTitle(false);
+                }}
+                autoFocus
+                className="w-full h-11 rounded-2xl border border-gray-100 bg-gray-50 px-4 text-[13px] font-semibold text-gray-900 transition-all focus:outline-none focus:border-gray-300 focus:bg-white shadow-sm"
+                placeholder={t("mypage.reservationTitlePlaceholder")}
+              />
+          ) : (
+            <div
+              onClick={() => setEditingTitle(true)}
+              className="w-full h-11 px-4 flex items-center bg-black/[0.02] border border-transparent shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] rounded-2xl cursor-pointer hover:bg-black/[0.04] transition-colors"
+            >
+              <p className="text-[13px] font-semibold text-gray-900 truncate">
+                {draftTitle || t("mypage.clickToInputTitle")}
+              </p>
+            </div>
+          )
+        ) : (
+          <div className="w-full h-11 px-4 flex items-center bg-gray-50 border border-gray-100 rounded-2xl shadow-sm">
+            <p className="text-[14px] font-bold text-gray-900 truncate">{draftTitle}</p>
+          </div>
+        )}
+      </div>
+
       {/* 다이나믹 JSON 상세 정보 폼 (2열 페어 레이아웃 복구) */}
       {Object.keys(draftDetails).length > 0 && (
         <div className="mt-2">
@@ -197,7 +203,7 @@ export function ReservationFormSection({
                         onChange={(e) =>
                           setDraftDetails((prev) => ({ ...prev, [key]: e.target.value }))
                         }
-                        className="w-full h-11 rounded-2xl border-none bg-black/[0.03] pl-4 pr-10 text-[13px] font-medium transition-all focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                        className="w-full h-11 rounded-2xl border border-gray-100 bg-gray-50 pl-4 pr-10 text-[13px] font-medium text-gray-900 transition-all focus:outline-none focus:border-gray-300 focus:bg-white shadow-sm"
                         placeholder={t("mypage.inputContent")}
                       />
                       <button
@@ -214,8 +220,8 @@ export function ReservationFormSection({
                       </button>
                     </div>
                   ) : (
-                    <div className="w-full px-1 min-h-[32px] flex items-center text-[13px] font-semibold text-gray-800">
-                      {value || <span className="text-gray-300 font-normal">{t("mypage.noInput")}</span>}
+                    <div className="w-full px-4 h-11 flex items-center bg-gray-50 border border-gray-100 rounded-2xl shadow-sm text-[13px] font-semibold text-gray-800">
+                      {value || <span className="text-gray-400 font-normal">{t("mypage.noInput")}</span>}
                     </div>
                   )}
                 </div>

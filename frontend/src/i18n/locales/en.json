@@ -142,12 +142,12 @@
   "mypage.startPlanning": "Start Planning",
   "mypage.startChat": "Start Chat",
   "mypage.newConversation": "Recommended Conversation",
-  "mypage.noRecommendation": "Start chatting first. We'll recommend topics based on your conversations.",
   "mypage.reservation": "Reservation",
   "mypage.add": "Add",
   "mypage.noReservations": "No reservations yet.",
-  "mypage.deleteReservationConfirm": "Are you sure you wanna delete this reservation?",
+  "mypage.deleteReservationConfirm": "Delete Confirmation",
   "mypage.addReservation": "Add Reservation",
+  "mypage.noImageAttached": "No image attached",
   "mypage.clickToAttachImage": "Click to attach image",
   "mypage.reservationName": "Reservation Name",
   "mypage.reservationNamePlaceholder": "e.g. Seoul > Busan train ticket",
@@ -240,7 +240,6 @@
   "common.loading": "Loading...",
   "common.edit": "Edit",
   "common.previous": "Previous",
-
   "moments.failedToLoadList": "Failed to load diary list.",
   "moments.failedToLoadDiaries": "Failed to load diaries.",
   "moments.failedToLoadDetail": "Failed to load diary details.",
@@ -262,9 +261,9 @@
   "moments.create": "Create",
   "moments.places": "Places",
   "moments.unsavedTitle": "Unsaved Diary",
-  "moments.savedTitle": "Moment Saved",
-
-  "diary.addCoverPhoto": "Add a cover photo",
+  "moments.savedTitle": "Moments Saved",
+  "moments.closeWithoutSaving": "Close without saving",
+  "diary.addCoverPhoto": "Add Cover Photo",
   "diary.changePhoto": "Change Photo",
   "diary.noCoverPhoto": "No cover photo",
   "diary.titlePlaceholder": "Title your diary",
@@ -276,7 +275,6 @@
   "diary.closeDiaryModal": "Close diary modal",
   "diary.coverAlt": "Diary cover",
   "diary.noTitle": "Untitled",
-
   "location.label": "Location",
   "location.pickOnMap": "Pick a place on the map",
   "location.closeModal": "Close location picker",
@@ -295,7 +293,6 @@
   "location.searchFailed": "Place search failed.",
   "location.selectFirst": "Please select a location first.",
   "location.mapInitError": "Failed to load the map. Please check the Naver Maps domain settings and Dynamic Map configuration.",
-
   "bookmark.pageTitle": "Bookmarks",
   "bookmark.pageSubtitle": "Saved Chats & Places",
   "bookmark.tabSessions": "Sessions",
@@ -322,7 +319,6 @@
   "bookmark.travelPlan": "Travel Plan",
   "bookmark.selectedPlacesPlan": "Plan with selected places",
   "bookmark.deleting": "Deleting...",
-
   "survey.loginRequired": "Login is required or your session has expired. Please log in again.",
   "survey.failedToSave": "Failed to save preferences.",
   "survey.goToQuestion": "Go to question {number}",
@@ -330,7 +326,6 @@
   "survey.startPersonalizedTrips": "Start getting personalized travel recommendations now.",
   "survey.goToPrevious": "Go to previous question",
   "survey.questionOf": "Question {current} of {total}",
-
   "chat.imageAttached": "[Image attached] {fileName}",
   "chat.imageAttachedOnly": "[Image attached]",
   "chat.locationAttached": "[Location attached] {label}",
@@ -338,17 +333,14 @@
   "chat.analyzeAttachments": "{attachments} Please analyze.",
   "chat.analyzeFallback": "Please analyze the message.",
   "chat.preparingResponse": "Preparing response...",
-
   "explore.newTripPlan": "New trip plan",
   "explore.categoryPerformance": "PERFORMANCE",
   "explore.categoryExhibition": "EXHIBITION",
   "explore.categoryFestival": "FESTIVAL",
   "explore.categoryPopup": "POPUP STORE",
-
   "banner.switchPrompt": "Switch to another language?",
   "banner.switch": "Settings",
   "languageSwitcher.label": "Language",
-
   "pipeline.imageAnalysis": "Image analysis",
   "pipeline.intent": "Intent analysis",
   "pipeline.planner": "Trip planning",
@@ -361,11 +353,9 @@
   "pipeline.executorGeneral": "General response",
   "pipeline.running": "{label} in progress...",
   "pipeline.done": "{label} complete",
-
   "signup.quote": "To travel is to live.",
   "signup.journeyStart": "Start your journey with Triver today.\nCurated experiences awaiting.",
   "signup.copyright": "© 2026 Triver Inc.",
-
   "explore.newTripPlan": "New Travel Plan",
   "explore.newTripPlanDescription": "Start planning a new trip!",
   "explore.yourChoices": "Your Choices",
@@ -378,7 +368,6 @@
   "explore.noContents": "No content information available",
   "explore.contentFallback": "CONTENT",
   "explore.noAddress": "No address",
-
   "login.googleStart": "Continue with Google",
   "login.failed": "Login failed",
   "survey.allSet": "You're all set!",

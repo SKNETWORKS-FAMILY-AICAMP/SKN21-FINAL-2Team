@@ -392,7 +392,10 @@ export function MomentsPage() {
                 onClose={handleRequestClose}
                 onEnterEditMode={() => setIsEditMode(true)}
                 onImageChange={(event) => void handleSelectImage(event, "replace")}
-                onEditorChange={(updater) => setEditor(updater)}
+                onEditorChange={(updater) => {
+                    setEditor(updater);
+                    setError(null);
+                }}
                 onOpenLocationPicker={() => setIsLocationPickerOpen(true)}
                 onClearLinkedPlace={() => setEditor((prev) => ({ ...prev, linked_places: [] }))}
                 onSave={() => void handleSave()}
@@ -406,15 +409,14 @@ export function MomentsPage() {
             <SimpleModal
                 open={isCloseConfirmOpen}
                 title={t("moments.unsavedTitle")}
-                icon={<AlertTriangle size={20} className="text-white" />}
+                icon={<AlertTriangle size={20} />}
                 maxWidth="sm"
+                zIndex={10000}
                 onClose={() => setIsCloseConfirmOpen(false)}
             >
                 <div className="flex flex-col">
-                    <p className="text-[15px] font-bold text-gray-900 mb-8 leading-relaxed">
-                        {t("moments.unsavedWarning")}
-                        <br />
-                        {t("moments.savePrompt", { save: t("common.save") })}
+                    <p className="text-[14px] font-medium text-gray-800 mb-6 leading-relaxed">
+                        {t("moments.unsavedWarning")} {t("moments.savePrompt", { save: t("common.save") })}
                     </p>
                     <div className="flex flex-col gap-3">
                         <button
@@ -422,14 +424,7 @@ export function MomentsPage() {
                             onClick={handleConfirmClose}
                             className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
-                            {t("common.close")}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setIsCloseConfirmOpen(false)}
-                            className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors"
-                        >
-                            {t("common.back")}
+                            {t("moments.closeWithoutSaving")}
                         </button>
                     </div>
                 </div>
@@ -438,12 +433,13 @@ export function MomentsPage() {
             <SimpleModal
                 open={isSaveConfirmOpen}
                 title={t("moments.savedTitle")}
-                icon={<AlertTriangle size={20} className="text-white" />} // 실제로는 체크 아이콘이 더 어울리지만 일관성을 위해 아이콘 박스 유지
+                icon={<AlertTriangle size={20} />} // 실제로는 체크 아이콘이 더 어울리지만 일관성을 위해 아이콘 박스 유지
                 onClose={handleSaveConfirmClose}
                 maxWidth="sm"
+                zIndex={10000}
             >
                 <div className="flex flex-col">
-                    <p className="text-[15px] font-bold text-gray-900 mb-8">
+                    <p className="text-[14px] font-medium text-gray-800 mb-6">
                         {t("moments.momentSaved")}
                     </p>
                     <button
@@ -459,12 +455,13 @@ export function MomentsPage() {
             <SimpleModal
                 open={isDeleteConfirmOpen}
                 title={t("moments.deleteMemory")}
-                icon={<AlertTriangle size={20} className="text-white" />}
+                icon={<AlertTriangle size={20} />}
                 onClose={() => { setIsDeleteConfirmOpen(false); }}
                 maxWidth="sm"
+                zIndex={10000}
             >
                 <div className="flex flex-col">
-                    <p className="text-[15px] font-bold text-gray-900 mb-8 leading-relaxed">
+                    <p className="text-[14px] font-medium text-gray-800 mb-6 leading-relaxed">
                         {t("moments.deleteConfirmation")}
                     </p>
                     <div className="flex flex-col gap-3">
@@ -474,13 +471,6 @@ export function MomentsPage() {
                             className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
                             {t("common.yes")}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setIsDeleteConfirmOpen(false); }}
-                            className="w-full py-4 rounded-2xl bg-gray-50 text-gray-500 text-sm font-medium hover:bg-gray-100 transition-colors"
-                        >
-                            {t("common.no")}
                         </button>
                     </div>
                 </div>

@@ -71,13 +71,7 @@ export function DiaryEditorModal({
               className="relative flex h-[85vh] w-full max-w-5xl flex-col md:flex-row overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close Button */}
-              <button
-                onClick={onClose}
-                className="absolute right-6 top-6 z-20 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-black/[0.03] rounded-full transition-all bg-white shadow-sm border border-gray-100"
-              >
-                <X size={18} />
-              </button>
+              {/* Removed absolute Close Button from here */}
 
               {/* Left Side: Image Section */}
               {(() => {
@@ -98,9 +92,9 @@ export function DiaryEditorModal({
                         />
                       ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 gap-3">
-                          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
-                            <Camera size={28} />
-                          </div>
+                          <div className="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center mb-3">
+                          <Camera size={20} className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+                        </div>
                           <p className="text-sm font-medium">{isEditMode ? t("diary.addCoverPhoto") : t("diary.noCoverPhoto")}</p>
                         </div>
                       )}
@@ -114,11 +108,13 @@ export function DiaryEditorModal({
                             className="hidden"
                             onChange={onImageChange}
                           />
-                          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-2">
-                                <Camera size={14} /> {t("diary.changePhoto")}
-                            </span>
-                          </div>
+                          {coverImagePath && (
+                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="bg-black text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-2">
+                                  <Camera size={14} /> {t("diary.changePhoto")}
+                              </span>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -169,21 +165,29 @@ export function DiaryEditorModal({
               })()}
 
               {/* Right Side: Content Section */}
-              <div className="flex w-full flex-col bg-white p-10 md:w-[420px]">
-                <div className="mb-8 flex items-center justify-between">
-                  <div className="text-[14px] font-bold text-[#8b98a5] uppercase">{t("diary.label")}</div>
-                  {isEditMode ? (
-                    <input
-                      type="date"
-                      value={editor.entry_date}
-                      onChange={(event) =>
-                        onEditorChange((prev) => ({ ...prev, entry_date: event.target.value }))
-                      }
-                      className="bg-gray-50 px-3 py-1.5 rounded-lg text-sm text-gray-600 font-bold border border-gray-100 outline-none"
-                    />
-                  ) : (
-                    <span className="text-sm font-bold text-gray-400">{editor.entry_date}</span>
-                  )}
+              <div className="flex w-full flex-col bg-white p-8 md:p-10 md:w-[420px]">
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-[14px] font-bold text-[#8b98a5] uppercase">{t("diary.label")}</div>
+                    {isEditMode ? (
+                      <input
+                        type="date"
+                        value={editor.entry_date}
+                        onChange={(event) =>
+                          onEditorChange((prev) => ({ ...prev, entry_date: event.target.value }))
+                        }
+                        className="bg-gray-50 px-3 py-1.5 rounded-lg text-sm text-gray-600 font-bold border border-gray-100 outline-none"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-gray-400">{editor.entry_date}</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className="p-2 -mr-2 text-gray-400 hover:text-gray-800 hover:bg-gray-50 rounded-full transition-all"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
 
                 {detailLoading ? (
@@ -200,7 +204,7 @@ export function DiaryEditorModal({
                             onEditorChange((prev) => ({ ...prev, content: event.target.value }))
                           }
                           placeholder={t("diary.contentPlaceholder")}
-                          className="flex-1 resize-none bg-transparent text-base leading-relaxed text-gray-700 outline-none placeholder:text-gray-300"
+                          className="flex-1 resize-none bg-gray-50 border border-gray-100 rounded-2xl p-5 text-[14px] leading-relaxed text-gray-700 outline-none placeholder:text-gray-400 focus:bg-white focus:border-gray-200 transition-colors shadow-sm"
                         />
                       ) : (
                         <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-600">

@@ -1,7 +1,7 @@
 "use client";
-
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Ticket, AlertTriangle, RefreshCw, Trash2, Check, ExternalLink, CheckCircle2 } from "lucide-react";
+import { X, Ticket, AlertTriangle, RefreshCw, Trash2, Check, ExternalLink, AlertCircle } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
 import { SimpleModal, MODAL_STYLES } from "@/components/common/SimpleModal";
 import { useReservationForm, isNewDraftTitle } from "./useReservationForm";
@@ -86,7 +86,7 @@ export function ReservationDetailModal({
                         transition={{ duration: 0.2 }}
                     >
                         {/* 헤더 */}
-                        <div className="relative p-7 px-8 flex items-center justify-between border-b border-black/[0.03]">
+                        <div className="relative pt-8 pb-5 px-8 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className={MODAL_STYLES.headerIconBox}>
                                     <Ticket size={18} />
@@ -95,9 +95,6 @@ export function ReservationDetailModal({
                                     <h2 className={MODAL_STYLES.headerLabel}>
                                       {t("mypage.reservationDetailLabel")}
                                     </h2>
-                                    <p className={MODAL_STYLES.headerTitle}>
-                                      {isEditMode ? t("mypage.editMode") : t("mypage.viewMode")}
-                                    </p>
                                 </div>
                             </div>
 
@@ -111,7 +108,7 @@ export function ReservationDetailModal({
                         </div>
 
                         {/* 본문 콘텐츠 (2단 분리된 컴포넌트 렌더링) */}
-                        <div className="px-8 py-7 overflow-y-auto flex flex-col md:flex-row gap-10 min-h-0">
+                        <div className="px-8 pt-4 pb-7 overflow-y-auto flex flex-col md:flex-row gap-8 min-h-0">
                             <ReservationImageSection
                                 isEditMode={isEditMode}
                                 effectivePhotoUrl={effectivePhotoUrl}
@@ -148,7 +145,7 @@ export function ReservationDetailModal({
                                     disabled={!isEditMode}
                                     className="w-full h-12 rounded-2xl bg-black text-white text-sm font-bold shadow-xl shadow-black/10 hover:bg-zinc-800 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-20 flex items-center justify-center gap-2 group"
                                 >
-                                    <CheckCircle2 size={16} className="group-hover:scale-110 transition-transform" />
+                                    <Check size={16} className="group-hover:scale-110 transition-transform" />
                                     {t("common.save")}
                                 </button>
                             ) : (
@@ -171,18 +168,18 @@ export function ReservationDetailModal({
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white/90 backdrop-blur-md px-10 py-8 rounded-[2.5rem] flex flex-col items-center shadow-2xl border border-white"
+                        className="bg-white px-10 py-10 rounded-[2rem] flex flex-col items-center shadow-2xl border border-black/[0.05]"
                     >
                         <motion.div
                             initial={{ scale: 0, rotate: -45 }}
                             animate={{ scale: 1, rotate: 0 }}
                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            className="w-20 h-20 bg-black rounded-full flex items-center justify-center mb-6 shadow-xl"
+                            className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm"
                         >
-                            <CheckCircle2 className="text-white" size={40} />
+                            <AlertCircle className="text-gray-900" size={24} strokeWidth={2.5} />
                         </motion.div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-3">{t("mypage.reservationSavedTitle")}</h3>
-                        <p className="text-sm font-medium text-gray-500 opacity-80">{t("mypage.reservationSavedMessage")}</p>
+                        <h3 className="text-base font-semibold text-gray-900 mb-2">{t("mypage.reservationSavedTitle")}</h3>
+                        <p className="text-[13px] font-normal text-gray-500 opacity-80">{t("mypage.reservationSavedMessage")}</p>
                     </motion.div>
                 </motion.div>
             )}
@@ -288,25 +285,29 @@ export function ReservationDetailModal({
                         initial={{ scale: 0.9, y: 20 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative w-full max-w-[360px] bg-white/95 backdrop-blur-3xl rounded-[2.5rem] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.3)] border border-white"
+                        className="relative w-full max-w-[360px] bg-white rounded-[2rem] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.2)] border border-black/[0.05]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="text-center mb-8">
-                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
-                                <AlertTriangle size={32} />
+                            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 border border-gray-100 text-gray-900 shadow-sm">
+                                <Check size={28} strokeWidth={3} />
                             </div>
-                            <h3 className="text-2xl font-extrabold text-gray-900 mb-3">
-                                {t("mypage.closeWarningTitle")}
+                            <h3 className="text-base font-semibold text-gray-900 mb-2 leading-tight">
+                                {t("mypage.closeWarningTitle").split('\n').map((line, i) => (
+                                  <React.Fragment key={i}>
+                                    {line}<br/>
+                                  </React.Fragment>
+                                ))}
                             </h3>
-                            <p className="text-[14px] font-medium text-gray-500 leading-relaxed px-2">
+                            <p className="text-[13px] font-medium text-gray-500 leading-relaxed px-4">
                                 {t("mypage.closeWarningDesc")}
                             </p>
                         </div>
 
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2.5">
                             <button
                                 onClick={() => setShowCloseWarning(false)}
-                                className="w-full h-13 bg-black text-white rounded-2xl font-bold text-sm shadow-lg shadow-black/10 hover:bg-zinc-800 hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center"
+                                className="w-full h-12 bg-black text-white rounded-2xl font-bold text-sm hover:bg-zinc-800 transition-all flex items-center justify-center"
                             >
                                 {t("mypage.continueEditing")}
                             </button>
@@ -315,7 +316,7 @@ export function ReservationDetailModal({
                                     setShowCloseWarning(false);
                                     onClose(false, isNewDraftTitle(reservation?.title, t), true);
                                 }}
-                                className="w-full h-13 bg-transparent text-gray-400 hover:text-gray-900 hover:bg-black/[0.03] rounded-2xl font-bold text-sm transition-all flex items-center justify-center border border-transparent"
+                                className="w-full h-12 bg-gray-50 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-2xl font-bold text-sm transition-all flex items-center justify-center"
                             >
                                 {t("mypage.yesClose")}
                             </button>

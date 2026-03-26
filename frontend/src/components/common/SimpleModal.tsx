@@ -11,9 +11,9 @@ import { X } from "lucide-react";
 export const MODAL_STYLES = {
     overlay: "fixed inset-0 bg-black/30 backdrop-blur-md z-[9998]",
     container: "relative w-full rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] overflow-hidden pointer-events-auto",
-    headerIconBox: "w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center shadow-sm",
+    headerIconBox: "w-8 h-8 bg-gray-50 text-gray-900 border border-gray-100 rounded-lg flex items-center justify-center shadow-sm",
     headerLabel: "text-[14px] font-bold text-[#8b98a5] uppercase leading-none mb-0.5 px-0.5",
-    headerTitle: "text-[15px] font-bold text-gray-900 leading-none",
+    headerTitle: "text-[16px] font-bold text-gray-900 leading-none",
     closeButton: "absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-black/[0.03] rounded-full transition-all bg-transparent",
 };
 
