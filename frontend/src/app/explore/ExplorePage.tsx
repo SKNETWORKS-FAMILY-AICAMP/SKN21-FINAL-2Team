@@ -6,6 +6,7 @@ import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-reac
 // Contents 섹션은 API에서 데이터를 가져옵니다.
 
 import { Sidebar } from "@/components/navigation/Sidebar";
+import { PLACE_PLACEHOLDER } from "@/lib/imageUrl";
 import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
 /** 백엔드 카테고리 값(한국어) → 번역 키 매핑 */
@@ -273,7 +274,7 @@ export function ExplorePage() {
                                                 {yourChoices.restaurants.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -293,7 +294,7 @@ export function ExplorePage() {
                                                 {yourChoices.tourist.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -313,7 +314,7 @@ export function ExplorePage() {
                                                 {yourChoices.tours.map((item) => (
                                                     <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
                                                         <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                                         </div>
                                                         <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
                                                         <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
@@ -362,8 +363,9 @@ export function ExplorePage() {
                                                 onClick={() => handleHotPlaceCardClick(place)}
                                             >
                                                 <img
-                                                    src={place.image_path?.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`}
+                                                    src={place.image_path ? (place.image_path.startsWith("http") ? place.image_path : `/api/static/${place.image_path}`) : PLACE_PLACEHOLDER}
                                                     alt={place.name}
+                                                    onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }}
                                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 grayscale-[30%] group-hover:grayscale-0"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
@@ -411,11 +413,7 @@ export function ExplorePage() {
                                                 onClick={() => handleChoiceCardClick(item)}
                                             >
                                                 <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                                                    {item.image_url ? (
-                                                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">{t("explore.noImg")}</div>
-                                                    )}
+                                                    <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex flex-col justify-center flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
