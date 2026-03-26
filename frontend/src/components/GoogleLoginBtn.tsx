@@ -3,7 +3,8 @@
 import { useGoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { fetchCurrentUser, getPostLoginPath } from "@/services/api";
+import i18n from "@/i18n/config";
+import { fetchCurrentUser, getPostLoginPath, updateCurrentUser } from "@/services/api";
 
 type Props = {
     label?: string;
@@ -45,6 +46,13 @@ export default function GoogleLoginBtn({ label }: Props) {
                 }
 
                 const user = await fetchCurrentUser();
+
+                // 클라이언트에서 선택한 언어를 DB에 동기화
+                const clientLang = i18n.language;
+                if (clientLang && ["en", "ko", "ja", "zh"].includes(clientLang) && clientLang !== user.language) {
+                    updateCurrentUser({ language: clientLang }).catch(() => {});
+                }
+
                 const targetPath = getPostLoginPath(user);
                 console.log("Login Success: User", user, "Redirecting to", targetPath);
 
