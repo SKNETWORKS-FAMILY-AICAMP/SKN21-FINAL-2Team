@@ -36,22 +36,29 @@ def get_cached(user_id: int) -> Optional[RecommendationItem]:
     return _cache.get(user_id)
 
 
+def invalidate_cache(user_id: int) -> None:
+    """특정 유저의 추천 캐시를 삭제한다."""
+    _cache.pop(user_id, None)
+
+
 # ── LLM 프롬프트 ───────────────────────────────────────
 _SYSTEM_PROMPT = """\
-You are a Seoul travel recommendation assistant.
-Your job is to suggest a COMPLETELY NEW travel topic that the user hasn't explored yet.
-You must AVOID recommending anything similar to what the user already discussed.
+You are a conversation topic suggester for a Seoul travel chatbot.
+Your goal is to propose ONE interesting conversation topic that makes the user think:
+"Oh, I want to chat about this!"
+
+You are NOT recommending an action or a to-do.
+You are suggesting a conversation topic — something the user would enjoy discussing with the chatbot.
 
 Return EXACTLY this JSON format (no markdown, no extra text):
-{{"title": "추천 제목 (15자 이내)", "description": "추천 설명 (2~3문장, 80~120자)", "prompt": "챗봇에 전달할 대화 시작 메시지"}}
+{{"title": "대화 주제 제목 (15자 이내)", "description": "이 주제로 대화하면 어떤 이야기를 나눌 수 있는지 설명 (2~3문장, 80~120자)", "prompt": "이 주제로 대화를 시작하는 자연스러운 첫 메시지"}}
 
 Rules:
-- title: 호기심을 자극하는 짧고 임팩트 있는 제목
-- description: 사용자가 읽고 "이거 해보고 싶다!" 라고 느낄 수 있도록 작성.
-  첫 문장은 구체적인 장소명, 음식, 활동을 넣어 생동감 있게.
-  두번째 문장은 왜 지금 가봐야 하는지 이유나 매력 포인트를 설명.
-  80~120자 내외의 2~3문장으로 작성.
-- prompt: 사용자가 챗봇에 보낼 자연스러운 요청 메시지
+- title: 대화 주제처럼 느껴지는 짧고 호기심을 끄는 제목 (예: "성수동 카페 투어", "서울 야경 명소")
+- description: "이 주제로 대화하면 ~에 대해 알아볼 수 있어요" 느낌으로 작성.
+  구체적인 장소명이나 키워드를 포함해서 생동감 있게.
+  80~120자 내외, 2~3문장.
+- prompt: 사용자가 이 주제로 채팅을 시작할 때 보낼 자연스러운 첫 마디
 - JSON만 반환, 다른 텍스트 금지
 
 {language_instruction}
@@ -61,20 +68,19 @@ _USER_WITH_HISTORY = """\
 [사용자 선호도]
 {preferences}
 
-[이미 대화한 주제 — 이 주제들은 절대 추천하지 마세요]
+[이미 대화한 주제 — 이 주제들과 겹치지 않는 새 주제를 제안하세요]
 {histories}
 
-위 대화 이력은 사용자가 이미 탐색한 주제입니다.
-이 주제들과 겹치지 않는, 완전히 새로운 서울 여행 주제를 1개 추천해줘.
-사용자의 선호도를 참고하되, 이전 대화와 다른 지역/카테고리/활동을 제안해야 합니다.
-예: 맛집 대화를 했다면 → 문화/체험/쇼핑/야경 등 다른 카테고리로 추천."""
+위는 사용자가 이미 챗봇과 나눈 대화 주제입니다.
+이 주제들과 겹치지 않으면서, 사용자가 "이것도 물어보고 싶다!"라고 느낄 만한 새로운 대화 주제 1개를 제안해줘.
+사용자의 선호도를 참고하되, 이전 대화와 다른 분야의 주제여야 합니다."""
 
 _USER_WITH_PREFS_ONLY = """\
 [사용자 선호도]
 {preferences}
 
-대화 이력은 없지만 위 선호도를 바탕으로 사용자가 관심을 가질 만한 서울 여행 추천을 1개 만들어줘.
-사용자의 취향에 딱 맞는 구체적인 코스나 장소를 제안해줘."""
+대화 이력은 없지만 위 선호도를 바탕으로, 사용자가 챗봇과 이야기해보고 싶어할 만한 서울 여행 대화 주제를 1개 제안해줘.
+사용자의 취향에 맞는 구체적인 주제를 제안해줘."""
 
 _USER_NO_HISTORY = """\
 대화 이력도 선호도 정보도 없는 새로운 사용자입니다.

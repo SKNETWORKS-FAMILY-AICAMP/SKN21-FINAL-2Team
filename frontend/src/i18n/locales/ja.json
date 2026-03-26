@@ -466,5 +466,17 @@
   "mypage.tplResCount": "予約人数",
   "mypage.tplResDetails": "予約詳細",
   "mypage.tplPayMethod": "支払い方法",
-  "mypage.tplPayAmount": "支払い金額"
+  "mypage.tplPayAmount": "支払い金額",
+  "mypage.editMode": "編集モード",
+  "mypage.viewMode": "閲覧モード",
+  "mypage.deleteReservationConfirmDesc": "この予約を削除しますか？削除されたデータは復元できません。",
+  "mypage.reservationSavedTitle": "予約保存完了",
+  "mypage.reservationSavedMessage": "予約が正常に保存されました。",
+  "mypage.savedReservation": "保存済み予約",
+  "mypage.reservationId": "予約ID",
+  "mypage.settingsTitle": "設定",
+  "mypage.deactivateAccountTitle": "退会",
+  "mypage.reservationDetailLabel": "予約詳細",
+  "mypage.noImage": "画像なし",
+  "mypage.profileAlt": "プロフィール"
 }

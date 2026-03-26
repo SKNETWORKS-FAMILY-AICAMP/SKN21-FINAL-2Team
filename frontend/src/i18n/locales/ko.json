@@ -430,5 +430,17 @@
   "mypage.tplResCount": "예약 인원",
   "mypage.tplResDetails": "예약내역",
   "mypage.tplPayMethod": "결제 수단",
-  "mypage.tplPayAmount": "결제 금액"
+  "mypage.tplPayAmount": "결제 금액",
+  "mypage.editMode": "편집 모드",
+  "mypage.viewMode": "보기 모드",
+  "mypage.deleteReservationConfirmDesc": "이 예약을 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.",
+  "mypage.reservationSavedTitle": "예약 저장 완료",
+  "mypage.reservationSavedMessage": "예약이 성공적으로 저장되었습니다.",
+  "mypage.savedReservation": "저장된 예약",
+  "mypage.reservationId": "예약 ID",
+  "mypage.settingsTitle": "설정",
+  "mypage.deactivateAccountTitle": "회원 탈퇴",
+  "mypage.reservationDetailLabel": "예약 상세",
+  "mypage.noImage": "이미지 없음",
+  "mypage.profileAlt": "프로필"
 }

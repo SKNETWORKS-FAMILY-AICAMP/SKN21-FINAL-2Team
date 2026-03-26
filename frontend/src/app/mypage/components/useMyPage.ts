@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ReservationItem, TripSummary } from "../types";
 import {
   fetchBookmarkedRooms,
@@ -12,12 +12,22 @@ import {
   type TodayRecommendationItem,
   type ReservationRecord,
 } from "@/services/api";
+import i18n from "i18next";
+import { useTranslation } from "@/i18n/useTranslation";
+
+const LOCALE_MAP: Record<string, string> = {
+  ko: "ko-KR",
+  en: "en-US",
+  ja: "ja-JP",
+  zh: "zh-CN",
+};
 
 function formatKstDate(dateLike?: string | null) {
   if (!dateLike) return "-";
   const parsed = new Date(dateLike);
   if (Number.isNaN(parsed.getTime())) return "-";
-  return parsed.toLocaleString("ko-KR", {
+  const locale = LOCALE_MAP[i18n.language] || "ko-KR";
+  return parsed.toLocaleString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -26,26 +36,29 @@ function formatKstDate(dateLike?: string | null) {
   });
 }
 
-export function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
+export function mapReservationRecordToItem(item: ReservationRecord, t?: (key: string) => string): ReservationItem {
   const dynamicDetails = item.details
     ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
     : [];
+
+  const translate = t || ((key: string) => key);
 
   return {
     id: `reservation-${item.id}`,
     reservationId: item.id,
     category: (item.category as ReservationItem["category"]) || "etc",
-    title: item.name?.trim() || "Reservation",
-    subtitle: "Saved Reservation",
+    title: item.name?.trim() || translate("mypage.newReservation"),
+    subtitle: translate("mypage.savedReservation"),
     dateLabel: formatKstDate(item.date || item.created_at),
     reservationImageUrl: item.image_path ?? undefined,
-    identifierLabel: "Reservation ID",
+    identifierLabel: translate("mypage.reservationId"),
     identifierValue: String(item.id),
     details: dynamicDetails,
   };
 }
 
 export function useMyPage() {
+  const { t } = useTranslation();
   const [userProfile, setUserProfile] = useState({
     nickname: "",
     bio: "",
@@ -78,6 +91,7 @@ export function useMyPage() {
   const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
   const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
   const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -133,7 +147,7 @@ export function useMyPage() {
 
         setTrips(roomSummaries);
         setBookmarkedRoomCount(Array.isArray(bookmarkedRooms) ? bookmarkedRooms.length : 0);
-        setReservations((Array.isArray(reservationsData) ? reservationsData : []).map(mapReservationRecordToItem));
+        setReservations((Array.isArray(reservationsData) ? reservationsData : []).map((r) => mapReservationRecordToItem(r, t)));
         setTodayRecommendation(todayRec ?? null);
       } catch (error) {
         console.warn("Failed to fetch mypage dashboard data", error);
@@ -142,23 +156,34 @@ export function useMyPage() {
 
     fetchDashboardData();
     const onProfileSettings = () => fetchDashboardData();
+    // 언어 변경 시 추천 재조회 (백엔드에서 캐시 무효화 후 새 언어로 재생성)
+    const onLanguageChanged = async () => {
+      // updateCurrentUser가 완료될 시간 확보
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        const rec = await fetchTodayRecommendation();
+        setTodayRecommendation(rec ?? null);
+      } catch { /* silent */ }
+    };
     window.addEventListener("triver:profile-settings", onProfileSettings);
+    i18n.on("languageChanged", onLanguageChanged);
 
     return () => {
       cancelled = true;
       window.removeEventListener("triver:profile-settings", onProfileSettings);
+      i18n.off("languageChanged", onLanguageChanged);
     };
   }, []);
 
   const handleAddReservation = async () => {
     try {
       const created = await createReservation({
-        category: "etc",
-        name: "새 예약",
+        category: "transportation",
+        name: t("mypage.newReservation"),
         date: new Date().toISOString().slice(0, 10),
         image_path: "",
       });
-      const mapped = mapReservationRecordToItem(created);
+      const mapped = mapReservationRecordToItem(created, t);
       setReservations((prev) => [mapped, ...prev]);
       setActiveReservation(mapped);
     } catch (error) {
@@ -169,12 +194,23 @@ export function useMyPage() {
   const handleDeleteReservation = async (id: string) => {
     const target = reservations.find((r) => r.id === id);
     if (!target) return;
+    
+    // 중복 삭제 방지 가드
+    if (isDeleting.has(target.reservationId)) return;
+    
+    setIsDeleting((prev) => new Set(prev).add(target.reservationId));
     try {
       await deleteReservation(target.reservationId);
       setReservations((prev) => prev.filter((r) => r.id !== id));
       if (activeReservation?.id === id) setActiveReservation(null);
     } catch (error) {
       console.error("Failed to delete reservation", error);
+    } finally {
+      setIsDeleting((prev) => {
+        const next = new Set(prev);
+        next.delete(target.reservationId);
+        return next;
+      });
     }
   };
 
@@ -194,6 +230,15 @@ export function useMyPage() {
 
   const handleOpenSettings = () => {
     setSettingsOpen(true);
+  };
+
+  const refreshRecommendation = async () => {
+    try {
+      const rec = await fetchTodayRecommendation();
+      setTodayRecommendation(rec ?? null);
+    } catch {
+      // silent
+    }
   };
 
   const toggleDraftExtraPreference = (value: string) => {
@@ -275,6 +320,7 @@ export function useMyPage() {
       toggleDraftExtraPreference,
       handleTogglePreferenceEdit,
       handleCancelPreferenceEdit,
+      refreshRecommendation,
     }
   };
 }

@@ -3,7 +3,7 @@ import type { ReservationItem } from "../types";
 import { useTranslation } from "@/i18n/useTranslation";
 import { ocrReservationImage } from "@/services/api";
 import { resolveImageUrl } from "@/lib/imageUrl";
-import { TEMPLATE_MAP, CATEGORY_MAP } from "./ReservationFormSection";
+import { TEMPLATE_MAP } from "./ReservationFormSection";
 
 export interface OcrMessage {
   type: "success" | "error";
@@ -21,6 +21,12 @@ interface UseReservationFormProps {
   onClose: (wasSaved: boolean, isNewDraft: boolean, shouldDeleteDraft?: boolean) => void;
 }
 
+/** Check if a title represents a new draft reservation (any language) */
+export function isNewDraftTitle(title: string | undefined | null, t: (key: string) => string): boolean {
+  if (!title) return true;
+  return title === t("mypage.newReservation") || title === "Reservation" || title === "새 예약" || title === "New Reservation" || title === "新しい予約" || title === "新预订";
+}
+
 export function useReservationForm({
   open,
   reservation,
@@ -35,7 +41,7 @@ export function useReservationForm({
   
   const [draftPhotoUrl, setDraftPhotoUrl] = useState<string | null | undefined>(undefined);
   const [draftDate, setDraftDate] = useState<string>("");
-  const [draftCategory, setDraftCategory] = useState<string>(reservation?.category || "etc");
+  const [draftCategory, setDraftCategory] = useState<string>(reservation?.category || "transportation");
   const [draftDetails, setDraftDetails] = useState<Record<string, string>>({});
   
   const [editingTitle, setEditingTitle] = useState(false);
@@ -62,7 +68,7 @@ export function useReservationForm({
       const pTitle = reservation?.title || t("mypage.newReservation");
       setDraftTitle(pTitle);
 
-      const pCategory = reservation?.category || "etc";
+      const pCategory = reservation?.category || "transportation";
       setDraftCategory(pCategory);
       setDraftPhotoUrl(undefined);
       setDraftDate("");
@@ -78,8 +84,8 @@ export function useReservationForm({
         });
       }
 
-      const isNewDraft = reservation?.title === t("mypage.newReservation") || reservation?.title === "Reservation" || reservation?.title === "새 예약";
-    
+      const isNewDraft = isNewDraftTitle(reservation?.title, t);
+
     // 신규 작성 상태에서 아무것도 변경 안하고 닫을 때만 삭제 경고 무시
     if (Object.keys(pDetails).length === 0 && (!reservation?.title || isNewDraft)) {
         const newKeys = TEMPLATE_MAP[pCategory] || TEMPLATE_MAP["etc"];
@@ -108,7 +114,7 @@ export function useReservationForm({
       });
     }
 
-    if (Object.keys(originalDetails).length === 0 && (!reservation?.title || reservation?.title === "Reservation" || reservation?.title === "새 예약")) {
+    if (Object.keys(originalDetails).length === 0 && isNewDraftTitle(reservation?.title, t)) {
       const newKeys = TEMPLATE_MAP[initialCategory] || TEMPLATE_MAP["etc"];
       newKeys.forEach(k => { originalDetails[k] = ""; });
     }
@@ -131,7 +137,7 @@ export function useReservationForm({
   };
 
   const handleClose = () => {
-    const isNewDraft = reservation?.title === t("mypage.newReservation") || reservation?.title === "Reservation" || reservation?.title === "새 예약";
+    const isNewDraft = isNewDraftTitle(reservation?.title, t);
     if (!isEditMode) {
       onClose(false, isNewDraft);
       return;
@@ -159,7 +165,7 @@ export function useReservationForm({
     setShowSuccessMessage(true);
     setTimeout(() => {
       setShowSuccessMessage(false);
-      const isNewDraft = reservation?.title === t("mypage.newReservation") || reservation?.title === "Reservation" || reservation?.title === "새 예약";
+      const isNewDraft = isNewDraftTitle(reservation?.title, t);
       onClose(true, isNewDraft);
     }, 1500);
   };
@@ -197,7 +203,7 @@ export function useReservationForm({
         };
 
         const autoTitle = `${CATEGORY_MAP_TRANSLATED[draftCategory] || t("mypage.reservationSuffix")} ${result.date}`;
-        if (!draftTitle || draftTitle === "새 예약" || draftTitle === "Reservation" || draftTitle === t("mypage.newReservation")) {
+        if (!draftTitle || isNewDraftTitle(draftTitle, t)) {
           setDraftTitle(autoTitle);
         }
 

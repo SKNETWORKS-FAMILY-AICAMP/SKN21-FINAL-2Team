@@ -466,5 +466,17 @@
   "mypage.tplResCount": "预订人数",
   "mypage.tplResDetails": "预订详情",
   "mypage.tplPayMethod": "付款方式",
-  "mypage.tplPayAmount": "付款金额"
+  "mypage.tplPayAmount": "付款金额",
+  "mypage.editMode": "编辑模式",
+  "mypage.viewMode": "查看模式",
+  "mypage.deleteReservationConfirmDesc": "确定要删除此预订吗？删除的数据无法恢复。",
+  "mypage.reservationSavedTitle": "预订保存成功",
+  "mypage.reservationSavedMessage": "您的预订已成功保存。",
+  "mypage.savedReservation": "已保存的预订",
+  "mypage.reservationId": "预订ID",
+  "mypage.settingsTitle": "设置",
+  "mypage.deactivateAccountTitle": "注销账号",
+  "mypage.reservationDetailLabel": "预订详情",
+  "mypage.noImage": "无图片",
+  "mypage.profileAlt": "个人资料"
 }
