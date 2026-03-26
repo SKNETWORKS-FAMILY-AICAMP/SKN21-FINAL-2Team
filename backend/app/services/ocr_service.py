@@ -148,8 +148,13 @@ def _normalize_llm_output(data: dict[str, Any], category: str) -> dict[str, Any]
             "vehicle_number": "차량 번호",
         },
         "hotel": {},
-        "activity": {},
-        "restaurant": {},
+        "activity": {
+            "이름": "공연/활동명",
+        },
+        "restaurant": {
+            "식당이름": "매장명",
+            "식당 이름": "매장명",
+        },
         "etc": {}
     }
     
@@ -176,7 +181,7 @@ def _normalize_llm_output(data: dict[str, Any], category: str) -> dict[str, Any]
             
             # 값에서 불필요한 접미사 제거 (Qwen 특성)
             # e.g., "KONJIAM RESORT 레스토랑" → "KONJIAM RESORT"
-            if "식당이름" in normalized_key or normalized_key == "식당이름":
+            if "매장명" in normalized_key or normalized_key == "매장명" or "식당이름" in normalized_key:
                 value = re.sub(r"\s*(레스토랑|카페|식당|음식점)$", "", value)
             
             # 객실 정보에서 타입 정보 정리
@@ -274,8 +279,8 @@ async def extract_datetime_from_image(image_bytes: bytes, category: Optional[str
                 "날짜와 시간이 함께 표시되어 있으면, 날짜 부분(' YYYY.MM.DD')과 시간 부분('HH:MM')을 분리해서 추출하세요.\n"
                 "예시: '2018.12.03() 15:00'에서 체크인 날짜='2018-12-03', 체크인 시간='15:00'"
             ),
-            "activity": "공연/활동 티켓입니다. '날짜', '이름', '시간', '장소', '좌석 번호'를 추출해주세요.",
-            "restaurant": "식당 예약증입니다. '날짜', '식당이름', '예약시간', '예약자명', '예약 인원'을 추출해주세요.",
+            "activity": "공연/활동 티켓입니다. '날짜', '공연/활동명', '시간', '장소', '좌석 번호'를 추출해주세요.",
+            "restaurant": "식당 예약증입니다. '날짜', '매장명', '예약시간', '예약자명', '예약 인원'을 추출해주세요.",
             "etc": "기타 예약증/영수증입니다. '예약내역', '시간', '예약자명'을 추출해주세요.",
         }
         prompt_instruction = category_prompts.get(category, category_prompts["etc"])
