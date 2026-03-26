@@ -1,7 +1,7 @@
 import React from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { X, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
-import { SimpleModal } from "./SimpleModal";
+import { SimpleModal } from "@/components/common/SimpleModal";
 
 interface DeleteReservationConfirmModalProps {
   open: boolean;
@@ -17,57 +17,36 @@ export function DeleteReservationConfirmModal({
   const { t } = useTranslation();
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <motion.button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={onCancel}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          />
+    <SimpleModal
+      open={open}
+      onClose={onCancel}
+      title={t("mypage.deleteReservationConfirm")}
+      icon={<AlertTriangle size={20} className="text-white" />}
+      maxWidth="sm"
+    >
+      <div className="flex flex-col">
+        <p className="text-[15px] font-bold text-gray-900 mb-8 leading-relaxed">
+          {t("mypage.deleteReservationConfirmDesc")}
+        </p>
 
-          <motion.div
-            className="relative z-10 w-full max-w-[420px] rounded-xl bg-white shadow-lg overflow-hidden"
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="w-full py-4 bg-black text-white rounded-2xl text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
           >
-            <div className="p-6">
-              <div className="text-lg font-semibold text-gray-900">
-                {t("mypage.deleteReservationConfirm")}
-              </div>
-              <div className="mt-5 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onCancel}
-                  className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
-                >
-                  {t("common.no")}
-                </button>
-                <button
-                  type="button"
-                  onClick={onConfirm}
-                  className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                >
-                  {t("common.yes")}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            {t("common.yes")}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full py-4 text-gray-500 rounded-2xl text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            {t("common.no")}
+          </button>
+        </div>
+      </div>
+    </SimpleModal>
   );
 }
 
@@ -82,21 +61,22 @@ export function PreferenceSavedPopup({ open, onClose }: PreferenceSavedPopupProp
   return (
     <SimpleModal
       open={open}
-      title={t("mypage.preferenceSavedTitle")}
       onClose={onClose}
-      zIndex={60}
+      title={t("mypage.preferenceSavedTitle")}
+      icon={<X size={20} className="text-white bg-black rounded-lg p-0.5" />}
+      maxWidth="sm"
     >
-      <div className="space-y-4">
-        <p className="text-sm text-gray-700">{t("mypage.preferenceSavedMessage")}</p>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
-          >
-            {t("common.confirm")}
-          </button>
-        </div>
+      <div className="flex flex-col">
+        <p className="text-[15px] font-bold text-gray-900 mb-8">
+          {t("mypage.preferenceSavedMessage")}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
+        >
+          {t("common.confirm")}
+        </button>
       </div>
     </SimpleModal>
   );

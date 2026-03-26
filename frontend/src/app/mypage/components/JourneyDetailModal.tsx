@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, MessageSquareText } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
+import { MODAL_STYLES } from "@/components/common/SimpleModal";
 import type { TripSummary, ChatTranscriptMessage } from "../types";
 
 export function JourneyDetailModal({
@@ -42,25 +44,36 @@ export function JourneyDetailModal({
                     />
 
                     <motion.div
-                        className="relative z-10 w-[95%] sm:w-full max-w-xl rounded-[28px] bg-white/95 backdrop-blur-3xl border border-white shadow-2xl overflow-hidden flex flex-col"
+                        className={`${MODAL_STYLES.container} w-[95%] sm:w-full max-w-xl flex flex-col`}
                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        transition={{ duration: 0.2 }}
                     >
-                        <div className="flex flex-none items-center justify-between border-b border-gray-100/50 px-6 py-4">
+                        <div className="flex flex-none items-center justify-between border-b border-black/[0.03] px-7 py-5">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f3f5] text-gray-700">
-                                    <span className="text-[10px] font-black">AI</span>
+                                <div className={MODAL_STYLES.headerIconBox}>
+                                    <MessageSquareText size={18} />
                                 </div>
-                                <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-[#8b98a5]">
-                                    {t("mypage.journeyDetail")}
-                                </h2>
+                                <div className="flex flex-col">
+                                    <h2 className={MODAL_STYLES.headerLabel}>
+                                        AI ASSISTANT
+                                    </h2>
+                                    <p className={MODAL_STYLES.headerTitle}>
+                                        {t("mypage.journeyDetail")}
+                                    </p>
+                                </div>
                             </div>
+                            <button
+                                onClick={onClose}
+                                className={MODAL_STYLES.closeButton}
+                            >
+                                <X size={18} />
+                            </button>
                         </div>
 
-                        <div className="px-6 pb-4 pt-4">
-                            <div className="relative rounded-[20px] border border-gray-100 bg-black/[0.02] p-5 max-h-[55vh] overflow-y-auto">
+                        <div className="px-7 pb-6 pt-6">
+                            <div className="relative rounded-[2rem] border border-gray-100 bg-black/[0.02] p-6 max-h-[55vh] overflow-y-auto">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}

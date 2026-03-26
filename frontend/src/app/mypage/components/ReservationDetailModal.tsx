@@ -1,15 +1,13 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { X, Ticket, CheckCircle2 } from "lucide-react";
-import type { ReservationItem } from "../types";
-
-// 새롭게 분리한 커스텀 훅 및 프레젠터 컴포넌트 임포트
-import { useReservationForm } from "./useReservationForm";
-import { SimpleModal } from "./SimpleModal";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Ticket, AlertTriangle, RefreshCw, Trash2, Check, ExternalLink, CheckCircle2 } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
+import { SimpleModal, MODAL_STYLES } from "@/components/common/SimpleModal";
+import { useReservationForm, isNewDraftTitle } from "./useReservationForm";
 import { ReservationImageSection } from "./ReservationImageSection";
 import { ReservationFormSection } from "./ReservationFormSection";
-import { useTranslation } from "@/i18n/useTranslation";
+import type { ReservationItem } from "../types";
 
 export function ReservationDetailModal({
     open,
@@ -61,6 +59,7 @@ export function ReservationDetailModal({
         <AnimatePresence>
             {open && reservation && (
                 <motion.div
+                    key="main-modal"
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -80,34 +79,39 @@ export function ReservationDetailModal({
 
                     {/* 메인 모달 */}
                     <motion.div
-                        className="relative z-10 w-full max-w-[96vw] sm:max-w-[700px] md:max-w-[850px] rounded-[2rem] bg-white/95 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col"
-                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                        className={`${MODAL_STYLES.container} w-full max-w-[96vw] sm:max-w-[800px] lg:max-w-[1000px] flex flex-col max-h-[90vh]`}
+                        initial={{ opacity: 0, scale: 0.96, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                        transition={{ duration: 0.2 }}
                     >
                         {/* 헤더 */}
-                        <div className="relative p-7 pb-4">
+                        <div className="relative p-7 px-8 flex items-center justify-between border-b border-black/[0.03]">
+                            <div className="flex items-center gap-3">
+                                <div className={MODAL_STYLES.headerIconBox}>
+                                    <Ticket size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className={MODAL_STYLES.headerLabel}>
+                                      {t("mypage.reservationDetailLabel")}
+                                    </h2>
+                                    <p className={MODAL_STYLES.headerTitle}>
+                                      {isEditMode ? t("mypage.editMode") : t("mypage.viewMode")}
+                                    </p>
+                                </div>
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={handleClose}
-                                className="absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100/70 rounded-full transition-all bg-transparent z-20"
+                                className={MODAL_STYLES.closeButton}
                             >
-                                <X size={16} />
+                                <X size={20} />
                             </button>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f3f5] text-gray-700">
-                                    <Ticket size={14} className="text-gray-600" />
-                                </div>
-                                <h2 className="text-[11px] font-extrabold text-[#8b98a5] uppercase tracking-widest mt-0.5">
-                                    RESERVATION DETAIL
-                                </h2>
-                            </div>
                         </div>
 
                         {/* 본문 콘텐츠 (2단 분리된 컴포넌트 렌더링) */}
-                        <div className="px-6 pb-4 max-h-[75vh] overflow-y-auto flex flex-col md:flex-row gap-8">
+                        <div className="px-8 py-7 overflow-y-auto flex flex-col md:flex-row gap-10 min-h-0">
                             <ReservationImageSection
                                 isEditMode={isEditMode}
                                 effectivePhotoUrl={effectivePhotoUrl}
@@ -136,25 +140,17 @@ export function ReservationDetailModal({
                         </div>
 
                         {/* 하단 저장 버튼 */}
-                        <div className="px-6 pb-6 pt-2">
+                        <div className="px-8 pb-8 pt-3">
                             {isEditMode ? (
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleClose}
-                                        className="flex-1 h-10 sm:h-12 px-6 sm:px-8 rounded-full border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50 transition-all active:translate-y-0"
-                                    >
-                                        <span className="text-gray-400 group-hover:text-black transition-colors">{t("common.cancel")}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSave}
-                                        disabled={!isEditMode}
-                                        className="flex-1 h-10 sm:h-12 px-6 sm:px-8 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-50 disabled:hover:shadow-none disabled:hover:translate-y-0"
-                                    >
-                                        {t("common.save")}
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleSave}
+                                    disabled={!isEditMode}
+                                    className="w-full h-12 rounded-2xl bg-black text-white text-sm font-bold shadow-xl shadow-black/10 hover:bg-zinc-800 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-20 flex items-center justify-center gap-2 group"
+                                >
+                                    <CheckCircle2 size={16} className="group-hover:scale-110 transition-transform" />
+                                    {t("common.save")}
+                                </button>
                             ) : (
                                 <div className="h-[48px]" />
                             )}
@@ -166,6 +162,7 @@ export function ReservationDetailModal({
             {/* 성공 알림 오버레이 */}
             {showSuccessMessage && (
                 <motion.div
+                    key="success-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -174,18 +171,18 @@ export function ReservationDetailModal({
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white/90 backdrop-blur-md px-8 py-6 rounded-[2rem] flex flex-col items-center shadow-2xl"
+                        className="bg-white/90 backdrop-blur-md px-10 py-8 rounded-[2.5rem] flex flex-col items-center shadow-2xl border border-white"
                     >
                         <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
+                            initial={{ scale: 0, rotate: -45 }}
+                            animate={{ scale: 1, rotate: 0 }}
                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            className="w-16 h-16 bg-black rounded-full flex items-center justify-center mb-6"
+                            className="w-20 h-20 bg-black rounded-full flex items-center justify-center mb-6 shadow-xl"
                         >
-                            <CheckCircle2 className="text-white" size={32} />
+                            <CheckCircle2 className="text-white" size={40} />
                         </motion.div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{t("mypage.preferenceSavedTitle")}</h3>
-                        <p className="text-sm font-medium text-gray-500">{t("mypage.preferenceSavedMessage")}</p>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">{t("mypage.reservationSavedTitle")}</h3>
+                        <p className="text-sm font-medium text-gray-500 opacity-80">{t("mypage.reservationSavedMessage")}</p>
                     </motion.div>
                 </motion.div>
             )}
@@ -193,6 +190,7 @@ export function ReservationDetailModal({
             {/* 이미지 원본 프리뷰 서브 모달 */}
             {previewOpen && previewPhotoUrl && (
                 <motion.div
+                    key="preview-modal"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -202,15 +200,17 @@ export function ReservationDetailModal({
                         <button
                             type="button"
                             onClick={() => setPreviewOpen(false)}
-                            className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+                            className="absolute -top-14 right-2 p-3 text-white/50 hover:text-white transition-all bg-white/10 hover:bg-white/20 rounded-full"
                         >
                             <X size={24} />
                         </button>
-                        <img
-                            src={effectivePhotoUrl || undefined}
-                            alt={t("mypage.reservationSuffix")}
-                            className="w-full h-auto object-contain"
-                        />
+                        <div className="overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+                          <img
+                              src={effectivePhotoUrl || undefined}
+                              alt={t("mypage.reservationSuffix")}
+                              className="w-full h-auto object-contain"
+                          />
+                        </div>
                     </div>
                 </motion.div>
             )}
@@ -218,6 +218,7 @@ export function ReservationDetailModal({
             {/* 새로운 항목 추가 프롬프트 */}
             {promptOpen && (
                 <motion.div
+                    key="prompt-modal"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -228,36 +229,36 @@ export function ReservationDetailModal({
                         initial={{ scale: 0.95, y: 10 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0 }}
-                        className="relative w-full max-w-[360px] bg-white/95 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl border border-white"
+                        className="relative w-full max-w-[380px] bg-white/95 backdrop-blur-3xl rounded-[2.5rem] p-8 shadow-2xl border border-white"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">{t("mypage.itemName")}</h3>
-                            <p className="text-xs font-medium text-gray-500 mb-5">
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">{t("mypage.itemName")}</h3>
+                            <p className="text-[13px] font-medium text-gray-400">
                                 {t("mypage.addItemDesc")}
                             </p>
-                            <input
-                                type="text"
-                                value={promptValue}
-                                onChange={(e) => setPromptValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && promptValue.trim()) {
-                                        handleAddPromptConfirm();
-                                    }
-                                }}
-                                autoFocus
-                                placeholder={t("mypage.itemName")}
-                                className="w-full h-12 px-4 rounded-xl bg-gray-100/50 border-none font-medium focus:outline-none focus:ring-[1px] focus:ring-black/[0.08]"
-                            />
                         </div>
-                        <div className="flex gap-2 mt-5">
+                        <input
+                            type="text"
+                            value={promptValue}
+                            onChange={(e) => setPromptValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && promptValue.trim()) {
+                                    handleAddPromptConfirm();
+                                }
+                            }}
+                            autoFocus
+                            placeholder={t("mypage.itemName")}
+                            className="w-full h-13 px-5 rounded-2xl bg-gray-100/60 border-none font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-black/5"
+                        />
+                        <div className="flex gap-3 mt-6">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setPromptOpen(false);
                                     setPromptValue("");
                                 }}
-                                className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200 transition-colors tracking-wide"
+                                className="flex-1 h-12 rounded-2xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200 transition-colors"
                             >
                                 {t("common.cancel")}
                             </button>
@@ -265,7 +266,7 @@ export function ReservationDetailModal({
                                 type="button"
                                 onClick={handleAddPromptConfirm}
                                 disabled={!promptValue.trim()}
-                                className="flex-1 h-11 rounded-xl bg-black text-white font-bold text-sm hover:bg-gray-800 transition-colors tracking-wide disabled:opacity-30 disabled:hover:bg-black"
+                                className="flex-1 h-12 rounded-2xl bg-black text-white font-bold text-sm hover:bg-gray-800 transition-colors disabled:opacity-20"
                             >
                                 {t("mypage.add")}
                             </button>
@@ -274,45 +275,47 @@ export function ReservationDetailModal({
                 </motion.div>
             )}
 
-            {/* 변경사항 취소 경고창 */}
+            {/* 변경사항 취소 경고창 (Close Warning Modal) - 디자인 개선 버전 */}
             {showCloseWarning && (
                 <motion.div
+                    key="close-warning"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md"
                 >
                     <motion.div
-                        initial={{ scale: 0.95, y: 10 }}
+                        initial={{ scale: 0.9, y: 20 }}
                         animate={{ scale: 1, y: 0 }}
-                        className="relative w-full max-w-[340px] bg-white rounded-3xl shadow-xl overflow-hidden"
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="relative w-full max-w-[360px] bg-white/95 backdrop-blur-3xl rounded-[2.5rem] p-8 shadow-[0_32px_80px_rgba(0,0,0,0.3)] border border-white"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-6 pt-8 pb-7 text-center">
-                            <div className="mb-4 inline-flex items-center justify-center w-14 h-14 bg-red-50 text-red-500 rounded-full">
-                                <X size={28} />
+                        <div className="text-center mb-8">
+                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500 shadow-inner">
+                                <AlertTriangle size={32} />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-3 whitespace-pre-line">
+                            <h3 className="text-2xl font-extrabold text-gray-900 mb-3">
                                 {t("mypage.closeWarningTitle")}
                             </h3>
-                            <p className="text-[13px] text-gray-500 leading-relaxed whitespace-pre-line">
+                            <p className="text-[14px] font-medium text-gray-500 leading-relaxed px-2">
                                 {t("mypage.closeWarningDesc")}
                             </p>
                         </div>
 
-                        <div className="p-2 flex flex-col gap-2 bg-gray-50/50">
+                        <div className="flex flex-col gap-3">
                             <button
                                 onClick={() => setShowCloseWarning(false)}
-                                className="w-full h-12 bg-black text-white rounded-2xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center"
+                                className="w-full h-13 bg-black text-white rounded-2xl font-bold text-sm shadow-lg shadow-black/10 hover:bg-zinc-800 hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center"
                             >
                                 {t("mypage.continueEditing")}
                             </button>
-                            <button
+                             <button
                                 onClick={() => {
                                     setShowCloseWarning(false);
-                                    onClose(false, reservation?.title === t("mypage.newReservation") || reservation?.title === "Reservation" || reservation?.title === "새 예약", true);
+                                    onClose(false, isNewDraftTitle(reservation?.title, t), true);
                                 }}
-                                className="w-full h-12 bg-white text-gray-500 border border-gray-200 rounded-2xl font-bold text-sm hover:bg-gray-100 hover:text-gray-900 transition-colors flex items-center justify-center"
+                                className="w-full h-13 bg-transparent text-gray-400 hover:text-gray-900 hover:bg-black/[0.03] rounded-2xl font-bold text-sm transition-all flex items-center justify-center border border-transparent"
                             >
                                 {t("mypage.yesClose")}
                             </button>

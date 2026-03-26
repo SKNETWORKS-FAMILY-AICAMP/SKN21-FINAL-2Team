@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Settings, UserX } from "lucide-react";
-import { SimpleModal } from "./SimpleModal";
+import { SimpleModal, MODAL_STYLES } from "@/components/common/SimpleModal";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 import { COUNTRIES, type Country } from "@/config/countries";
 import {
@@ -186,8 +186,16 @@ export function UserSettingsModal({
     <>
       <SimpleModal
         open={open}
-        title={settingsModalView === "settings" ? "SETTINGS" : "DEACTIVATE ACCOUNT"}
-        icon={settingsModalView === "settings" ? <Settings size={14} className="text-gray-600" strokeWidth={2.5} /> : <UserX size={14} className="text-gray-600" strokeWidth={2.5} />}
+        title={settingsModalView === "settings" ? t("mypage.settingsTitle") : t("mypage.deactivateAccountTitle")}
+        icon={
+          <div className={MODAL_STYLES.headerIconBox}>
+            {settingsModalView === "settings" ? (
+              <Settings size={18} strokeWidth={2.5} />
+            ) : (
+              <UserX size={18} strokeWidth={2.5} />
+            )}
+          </div>
+        }
         onClose={onClose}
       >
         <div className="hidden">
@@ -195,54 +203,56 @@ export function UserSettingsModal({
         </div>
         
         {settingsModalView === "settings" ? (
-          <div className="space-y-5 mt-2">
-            <div className="p-5 rounded-3xl border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)] flex flex-col sm:flex-row items-center gap-5">
-              <div className="flex border-none items-center gap-5">
+          <div className="space-y-6">
+            <div className="p-7 rounded-[2rem] border border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center gap-7">
+              <div className="flex border-none items-center gap-6">
                 <div className="w-16 h-16 rounded-[1.25rem] overflow-hidden border border-white shadow-sm bg-white flex items-center justify-center text-gray-400">
                   {settingsDraft.profilePicture ? (
-                    <img src={settingsDraft.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={settingsDraft.profilePicture} alt={t("mypage.profileAlt")} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[10px] font-semibold">No Image</span>
+                    <span className="text-[10px] font-semibold">{t("mypage.noImage")}</span>
                   )}
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-2.5">{t("mypage.profilePhoto")}</p>
-                  <button
-                    type="button"
-                    onClick={() => settingsPhotoInputRef.current?.click()}
-                    className="h-9 px-5 rounded-xl border border-gray-200/50 bg-white/80 shadow-sm text-xs font-semibold text-gray-700 hover:bg-white transition-all hover:scale-[1.02]"
-                  >
-                    {t("mypage.changePhoto")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetProfilePhotoToGoogle}
-                    disabled={settingsResettingPhoto}
-                    className="h-9 ml-2 px-5 rounded-xl border border-gray-200/50 bg-white/80 shadow-sm text-xs font-semibold text-gray-700 hover:bg-white transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
-                  >
-                    {settingsResettingPhoto ? t("mypage.restoringPhoto") : t("mypage.useGooglePhoto")}
-                  </button>
+                  <p className="text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-3 pl-1">{t("mypage.profilePhoto")}</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => settingsPhotoInputRef.current?.click()}
+                      className="h-10 px-5 rounded-xl border border-gray-200/50 bg-white shadow-sm text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all hover:scale-[1.02]"
+                    >
+                      {t("mypage.changePhoto")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetProfilePhotoToGoogle}
+                      disabled={settingsResettingPhoto}
+                      className="h-10 px-5 rounded-xl border border-gray-200/50 bg-white shadow-sm text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+                    >
+                      {settingsResettingPhoto ? t("mypage.restoringPhoto") : t("mypage.useGooglePhoto")}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">{t("mypage.nickname")}</label>
+                <label className="block text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-2.5 pl-1">{t("mypage.nickname")}</label>
                 <input
                   value={settingsDraft.nickname}
                   onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
-                  className="w-full h-12 rounded-2xl border-none bg-black/[0.03] px-4 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  className="w-full h-12 rounded-2xl border-none bg-gray-50 px-4 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-gray-100 focus:ring-[1.5px] focus:ring-black/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)]"
                   placeholder={t("mypage.nickname")}
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">{t("mypage.country")}</label>
+                <label className="block text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-2.5 pl-1">{t("mypage.country")}</label>
                 <select
                   value={settingsDraft.countryCode}
                   onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
-                  className="w-full h-12 rounded-2xl border-none bg-black/[0.03] pl-4 pr-12 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23374151%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[position:right_1.25rem_center] bg-no-repeat"
+                  className="w-full h-12 rounded-2xl border-none bg-gray-50 pl-4 pr-12 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-gray-100 focus:ring-[1.5px] focus:ring-black/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23374151%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[position:right_1.25rem_center] bg-no-repeat"
                 >
                   <option value="">{t("mypage.selectCountry")}</option>
                   {countryOptions.map((country) => (
@@ -254,20 +264,20 @@ export function UserSettingsModal({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">{t("profile.birthday")}</label>
+                <label className="block text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-2.5 pl-1">{t("profile.birthday")}</label>
                 <input
                   type="date"
                   value={settingsDraft.birthday}
                   onChange={(e) => setSettingsDraft((prev) => ({ ...prev, birthday: e.target.value }))}
-                  className="w-full h-12 rounded-2xl border-none bg-black/[0.03] px-4 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] cursor-pointer"
+                  className="w-full h-12 rounded-2xl border-none bg-gray-50 px-4 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-gray-100 focus:ring-[1.5px] focus:ring-black/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] cursor-pointer"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8b98a5] mb-1.5 pl-1">{t("profile.language")}</label>
+                <label className="block text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-2.5 pl-1">{t("profile.language")}</label>
                 <LanguageSwitcher
                   variant="select"
-                  className="w-full h-12 !rounded-2xl !border-none !bg-black/[0.03] pl-4 !pr-12 !text-sm !font-medium !text-gray-800 transition-all duration-300 focus:outline-none focus:!bg-black/[0.05] focus:!ring-[1px] focus:!ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] cursor-pointer !appearance-none !bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23374151%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] !bg-[length:12px_12px] !bg-[position:right_1.25rem_center] !bg-no-repeat"
+                  className="w-full h-12 !rounded-2xl !border-none !bg-gray-50 pl-4 !pr-12 !text-sm !font-medium !text-gray-800 transition-all duration-300 focus:outline-none focus:!bg-gray-100 focus:!ring-[1.5px] focus:!ring-black/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] cursor-pointer !appearance-none !bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23374151%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] !bg-[length:12px_12px] !bg-[position:right_1.25rem_center] !bg-no-repeat"
                 />
               </div>
             </div>
@@ -276,7 +286,7 @@ export function UserSettingsModal({
               <button
                 type="button"
                 onClick={handleOpenDeactivateAccount}
-                className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-widest flex items-center gap-1 order-2 sm:order-1"
+                className="text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors uppercase flex items-center gap-1 order-2 sm:order-1"
               >
                 {t("mypage.deactivateAccount")}
               </button>
@@ -304,7 +314,7 @@ export function UserSettingsModal({
           <div className="space-y-5">
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.googleAccountConfirm")}</p>
+                <p className="text-[11px] font-bold uppercase text-gray-500">{t("mypage.googleAccountConfirm")}</p>
                 <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
                   {userProfile.bio || t("mypage.unknownAccount")}
                 </p>
@@ -325,7 +335,7 @@ export function UserSettingsModal({
 
             <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.deactivateAgreement")}</p>
+                <p className="text-[11px] font-bold uppercase text-gray-500">{t("mypage.deactivateAgreement")}</p>
                 <p className="text-xs text-gray-500 mt-1">{t("mypage.deactivateAgreementDesc")}</p>
               </div>
               <label className="flex items-start gap-2 text-sm text-gray-800">

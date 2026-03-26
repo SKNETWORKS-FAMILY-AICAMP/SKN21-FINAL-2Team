@@ -1,8 +1,21 @@
-// [Feature] 팝업 애니메이션 통일 — TripContextModal과 동일한 framer-motion 적용
+// [Feature] 모달 디자인 시스템 통일 — TripContextModal 기반 테마 상수 추출
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+
+/**
+ * 모달 전체에서 공통으로 사용할 디자인 테마 상수입니다.
+ * 다른 모달들은 이 스타일을 참조하여 일관성을 유지합니다.
+ */
+export const MODAL_STYLES = {
+    overlay: "fixed inset-0 bg-black/30 backdrop-blur-md z-[9998]",
+    container: "relative w-full rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] overflow-hidden pointer-events-auto",
+    headerIconBox: "w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center shadow-sm",
+    headerLabel: "text-[14px] font-bold text-[#8b98a5] uppercase leading-none mb-0.5 px-0.5",
+    headerTitle: "text-[15px] font-bold text-gray-900 leading-none",
+    closeButton: "absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-black/[0.03] rounded-full transition-all bg-transparent",
+};
 
 export function SimpleModal({
     open,
@@ -19,7 +32,6 @@ export function SimpleModal({
     onClose: () => void;
     children: React.ReactNode;
     zIndex?: number;
-    // [Feature] maxWidth 옵션 — "sm"(400px) | 기본 "xl"(576px) 으로 팝업 크기 조절
     maxWidth?: "sm" | "xl";
 }) {
     const z = zIndex ?? 50;
@@ -29,47 +41,49 @@ export function SimpleModal({
         <AnimatePresence>
             {open && (
                 <>
-                    {/* Backdrop — fade in/out */}
+                    {/* Backdrop */}
                     <motion.div
                         key="simple-modal-backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="fixed inset-0 bg-black/30 backdrop-blur-md z-[9998]"
+                        className={MODAL_STYLES.overlay}
                         style={{ zIndex: z }}
                         onClick={onClose}
                     />
 
-                    {/* Modal content — scale + slide up */}
+                    {/* Modal content */}
                     <motion.div
                         key="simple-modal-content"
                         initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        transition={{ duration: 0.2 }}
                         className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
                         style={{ zIndex: z + 1 }}
                     >
                         <div
-                            className={`relative w-full ${widthClass} rounded-[2rem] bg-white/90 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] overflow-hidden pointer-events-auto p-8`}
+                            className={`${MODAL_STYLES.container} ${widthClass} p-8`}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex items-center gap-2 mb-5">
+                            <div className="flex items-center gap-3 mb-6">
                                 {icon && (
-                                    <div className="w-8 h-8 bg-gray-100/80 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white shadow-sm">
+                                    <div className={MODAL_STYLES.headerIconBox}>
                                         {icon}
                                     </div>
                                 )}
-                                <h2 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">
-                                    {title}
-                                </h2>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <h2 className={MODAL_STYLES.headerLabel}>
+                                        {title}
+                                    </h2>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100/70 rounded-full transition-all bg-transparent"
+                                    className={MODAL_STYLES.closeButton}
                                 >
-                                    <X size={16} />
+                                    <X size={18} />
                                 </button>
                             </div>
                             <div className="w-full">{children}</div>
