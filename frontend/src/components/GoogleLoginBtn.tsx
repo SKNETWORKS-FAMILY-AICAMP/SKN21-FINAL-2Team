@@ -50,7 +50,7 @@ export default function GoogleLoginBtn({ label }: Props) {
                 // 클라이언트에서 선택한 언어를 DB에 동기화
                 const clientLang = i18n.language;
                 if (clientLang && ["en", "ko", "ja", "zh"].includes(clientLang) && clientLang !== user.language) {
-                    updateCurrentUser({ language: clientLang }).catch(() => {});
+                    updateCurrentUser({ language: clientLang as "en" | "ko" | "ja" | "zh" }).catch(() => {});
                 }
 
                 const targetPath = getPostLoginPath(user);
