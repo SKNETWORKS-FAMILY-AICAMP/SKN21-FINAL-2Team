@@ -102,7 +102,7 @@ export function ChatHome() {
     const initializingIdRef = useRef<string | number | null>(null);
 
 
-    const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
+    const { isListening, sttPermission, handleToggleListening, abortListening } = useSpeechRecognition({
         inputText,
         setInputText
     });
@@ -463,6 +463,7 @@ export function ChatHome() {
         const currentDataUrl = attachedImageDataUrl;   // 미리보기용 dataUrl
         const currentLocation = attachedLocation;
 
+        abortListening(); // STT가 실행 중이라면 즉시 중단 및 결과 무시
         setInputText("");
         setAttachedImageDataUrl(null);
         setAttachedFileName("");

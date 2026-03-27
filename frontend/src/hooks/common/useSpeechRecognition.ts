@@ -62,6 +62,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isAbortedRef = useRef(false);
 
     const SILENCE_DELAY_MS = 3000;
 
@@ -131,6 +132,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         recognition.continuous = true;
         recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
+        isAbortedRef.current = false;
 
         let finalTranscript = "";
         let lastInterim = "";
@@ -178,6 +180,12 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             clearSilenceTimer();
             setIsListening(false);
             recognitionRef.current = null;
+            
+            if (isAbortedRef.current) {
+                isAbortedRef.current = false;
+                return;
+            }
+
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
             // finalTranscript이 비어있으면 마지막 interim 결과를 fallback으로 사용
             const transcript = finalTranscript || lastInterim;
@@ -232,9 +240,19 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         };
     }, [syncMicPermission]);
 
+    const abortListening = useCallback(() => {
+        if (recognitionRef.current) {
+            isAbortedRef.current = true;
+            recognitionRef.current.abort();
+            setIsListening(false);
+            clearSilenceTimer();
+        }
+    }, []);
+
     return {
         isListening,
         sttPermission,
         handleToggleListening,
+        abortListening,
     };
 };
