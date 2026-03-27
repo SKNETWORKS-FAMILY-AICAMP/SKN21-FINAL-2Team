@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { correctSttText } from "@/services/api";
 
 export type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
@@ -60,6 +61,16 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
+    const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const SILENCE_DELAY_MS = 3000;
+
+    const clearSilenceTimer = () => {
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+    };
 
     const getSpeechRecognitionAPI = () =>
         (window.SpeechRecognition || window.webkitSpeechRecognition) as SpeechRecognitionConstructor | undefined;
@@ -122,22 +133,34 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         recognitionRef.current = recognition;
 
         let finalTranscript = "";
+        let lastInterim = "";
+
+        const resetSilenceTimer = () => {
+            clearSilenceTimer();
+            silenceTimerRef.current = setTimeout(() => {
+                recognitionRef.current?.stop();
+            }, SILENCE_DELAY_MS);
+        };
 
         recognition.onstart = () => {
             setIsListening(true);
             setSttPermission("granted");
+            resetSilenceTimer();
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
+            resetSilenceTimer();
             let interim = "";
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalTranscript += transcript;
+                    lastInterim = "";
                 } else {
                     interim += transcript;
                 }
             }
+            if (interim) lastInterim = interim;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
             setInputText(baseText + separator + finalTranscript + interim);
         };
@@ -147,14 +170,26 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 setSttPermission("denied");
             }
+            clearSilenceTimer();
             setIsListening(false);
         };
 
         recognition.onend = () => {
+            clearSilenceTimer();
             setIsListening(false);
             recognitionRef.current = null;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
-            setInputText((baseText + separator + finalTranscript).trim());
+            // finalTranscript이 비어있으면 마지막 interim 결과를 fallback으로 사용
+            const transcript = finalTranscript || lastInterim;
+            const raw = (baseText + separator + transcript).trim();
+
+            if (appLanguage == "ja" && raw) {
+                correctSttText(raw, appLanguage).then((corrected) => {
+                    setInputText(corrected);
+                });
+            } else {
+                setInputText(raw);
+            }
         };
 
         try {
@@ -186,6 +221,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
                 // eslint-disable-next-line react-hooks/exhaustive-deps
                 recognitionRef.current.stop();
             }
+            clearSilenceTimer();
             const cleanupStatus = micPermissionStatusRef.current;
             if (cleanupStatus) {
                 cleanupStatus.onchange = null;

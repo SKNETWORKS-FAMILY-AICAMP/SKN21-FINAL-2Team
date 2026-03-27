@@ -72,6 +72,7 @@ export interface ChatMessage {
     role: RoleType;
     latitude?: number;
     longitude?: number;
+    location?: string;
     image_path?: string | null;
     created_at: string;
     places?: ChatPlaceItem[];
@@ -148,6 +149,9 @@ export interface AutoStartPlaceSeedPayload {
     name?: string | null;
     adress?: string | null;
     contenttypeid?: number;
+    description?: string | null;
+    image_path?: string | null;
+    category?: string | null;
 }
 
 export interface AutoStartChatRoomRequestPayload {
@@ -163,6 +167,7 @@ type StreamCallbacks = {
     onDone: (fullMessage: string, messageId: number, createdAt: string, roomTitle?: string, places?: ChatPlaceItem[]) => void | Promise<void>;
     onRoomTitle?: (roomTitle: string) => void | Promise<void>;
     onBufferingChange?: (reason: string | null) => void | Promise<void>;
+    onAddress?: (address: string) => void | Promise<void>;
     onError?: (error: string) => void | Promise<void>;
 };
 
@@ -362,6 +367,21 @@ export const updateRoomBookmark = async (roomId: number, bookmark: boolean): Pro
     return response.json();
 };
 
+export interface RoomTripContextUpdate {
+    adult_num: number | null;
+    child_num: number | null;
+    start_date: string | null;
+    end_date: string | null;
+}
+
+export const updateRoomTripContext = async (roomId: number, body: RoomTripContextUpdate): Promise<ChatRoom> => {
+    const response = await fetchWithAuth(`${API_URL}/chat/rooms/${roomId}/trip-context`, {
+        method: 'PATCH',
+        body,
+    });
+    return response.json();
+};
+
 export const fetchBookmarkedRooms = async (): Promise<BookmarkedRoomItem[]> => {
     const response = await fetchWithAuth(`${API_URL}/chat/bookmarks/rooms`);
     return response.json();
@@ -372,9 +392,13 @@ export const fetchBookmarkedPlaces = async (): Promise<BookmarkedPlaceItem[]> =>
     return response.json();
 };
 
-export const fetchTodayRecommendations = async (): Promise<TodayRecommendationItem[]> => {
+export const fetchTodayRecommendation = async (): Promise<TodayRecommendationItem | null> => {
     const response = await fetchWithAuth(`${API_URL}/chat/recommendations/today`);
-    return response.json();
+    if (!response.ok) return null;
+    const data = await response.json();
+    // 백엔드가 단일 객체를 반환
+    if (data && data.id) return data as TodayRecommendationItem;
+    return null;
 };
 
 export const sendChatMessage = async (
@@ -492,6 +516,8 @@ const streamSseRequest = async (
                 await yieldToUI();
             } else if ("buffering" in data) {
                 await callbacks.onBufferingChange?.(data.buffering ?? null);
+            } else if (data.address) {
+                await callbacks.onAddress?.(data.address);
             } else if (data.room_title && !data.done) {
                 await callbacks.onRoomTitle?.(data.room_title);
             } else if (data.done) {
@@ -636,60 +662,34 @@ export type ReservationPayload = {
     details?: Record<string, string> | null;
 };
 
-export interface DiaryLinkedRoom {
-    id: number;
-    title: string;
-    created_at: string;
-}
-
-export interface DiaryLinkedPlace {
-    id: number;
-    chat_place_id?: number | null;
-    contenttypeid?: number | null;
-    name?: string | null;
-    adress?: string | null;
-    image_path?: string | null;
-    longitude?: number | null;
-    latitude?: number | null;
-    created_at?: string | null;
-}
-
-export interface DiaryLinkedPlaceInput {
-    name?: string | null;
-    adress: string;
-    image_path?: string | null;
-    longitude: number;
-    latitude: number;
-    contenttypeid?: number | null;
-    chat_place_id?: number | null;
-}
-
-export interface DiaryListItem {
+export interface MomentListItem {
     id: number;
     title: string;
     content: string;
     entry_date: string;
-    cover_image_path?: string | null;
-    linked_places_count: number;
+    image_path?: string | null;
+    adress?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
     created_at?: string | null;
     updated_at?: string | null;
 }
 
-export interface DiaryDetail extends DiaryListItem {
+export interface MomentDetail extends MomentListItem {
     user_id: number;
-    linked_chat_room?: DiaryLinkedRoom | null;
-    linked_places: DiaryLinkedPlace[];
 }
 
-export type DiaryPayload = {
+export type MomentPayload = {
     title: string;
     content: string;
     entry_date: string;
-    cover_image_path?: string | null;
-    linked_places?: DiaryLinkedPlaceInput[];
+    image_path?: string | null;
+    adress?: string | null;
+    longitude?: number | null;
+    latitude?: number | null;
 };
 
-export interface DiaryPlaceSearchResult {
+export interface MomentPlaceSearchResult {
     name?: string | null;
     adress: string;
     latitude: number;
@@ -701,37 +701,37 @@ export const fetchReservations = async (): Promise<ReservationRecord[]> => {
     return response.json();
 };
 
-export const fetchDiaries = async (params?: {
+export const fetchMoments = async (params?: {
     query?: string;
     date_from?: string;
     date_to?: string;
-}): Promise<DiaryListItem[]> => {
+}): Promise<MomentListItem[]> => {
     const qs = new URLSearchParams();
     if (params?.query) qs.set("query", params.query);
     if (params?.date_from) qs.set("date_from", params.date_from);
     if (params?.date_to) qs.set("date_to", params.date_to);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    const response = await fetchWithAuth(`${API_URL}/diaries${suffix}`);
+    const response = await fetchWithAuth(`${API_URL}/moments${suffix}`);
     return response.json();
 };
 
-export const fetchDiary = async (diaryId: number): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`);
+export const fetchMoment = async (momentId: number): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`);
     return response.json();
 };
 
-export const createDiary = async (payload: DiaryPayload): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries`, { method: "POST", body: payload });
+export const createMoment = async (payload: MomentPayload): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments`, { method: "POST", body: payload });
     return response.json();
 };
 
-export const updateDiary = async (diaryId: number, payload: Partial<DiaryPayload>): Promise<DiaryDetail> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "PATCH", body: payload });
+export const updateMoment = async (momentId: number, payload: Partial<MomentPayload>): Promise<MomentDetail> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`, { method: "PATCH", body: payload });
     return response.json();
 };
 
-export const deleteDiary = async (diaryId: number): Promise<{ ok: boolean }> => {
-    const response = await fetchWithAuth(`${API_URL}/diaries/${diaryId}`, { method: "DELETE" });
+export const deleteMoment = async (momentId: number): Promise<{ ok: boolean }> => {
+    const response = await fetchWithAuth(`${API_URL}/moments/${momentId}`, { method: "DELETE" });
     return response.json();
 };
 
@@ -858,3 +858,22 @@ export const ocrReservationImage = async (
     }
     return response.json();
 };
+
+export async function correctSttText(text: string, language: string): Promise<string> {
+    try {
+        const token = safeLocalGet("access_token");
+        const response = await fetch(`${API_URL}/stt/correct`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ text, language }),
+        });
+        if (!response.ok) return text;
+        const data = await response.json();
+        return data.corrected ?? text;
+    } catch {
+        return text;
+    }
+}

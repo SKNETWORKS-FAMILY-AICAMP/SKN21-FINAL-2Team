@@ -10,8 +10,9 @@ import { IncompleteSignupModal } from "@/app/components/IncompleteSignupModal";
 import { useTranslation } from "@/i18n/useTranslation";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 
-// [Fix] Header h-16 = 64px, 섹션 상단이 Header 바로 아래에 딱 맞도록 오프셋
-const HEADER_HEIGHT = 64;
+// [Fix] Header는 64px이지만, 반투명(backdrop-blur) 처리로 인해 이전 섹션이 비쳐 보일 수 있음
+// 이를 방지하기 위해 섹션이 헤더 아래로 4px 정도 파고들게(60) 설정하여 흰색 배경만 비치도록 유도함
+const HEADER_HEIGHT = 60;
 
 export function Header() {
     const { t } = useTranslation();

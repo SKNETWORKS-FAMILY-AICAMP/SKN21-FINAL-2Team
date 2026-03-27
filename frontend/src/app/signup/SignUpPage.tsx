@@ -8,6 +8,7 @@ import { Logo } from "@/components/common/Logo";
 import { Button } from "./components/SignUpButton";
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/i18n/useTranslation";
+import i18n from "@/i18n/config";
 import type { SupportedLanguage } from "@/i18n";
 
 const BACKGROUND_IMAGES = [
@@ -20,7 +21,7 @@ const GOOGLE_POPUP_REDIRECT_URI = "postmessage";
 
 export function SignUpPage() {
   const router = useRouter();
-  const { t, setLanguage } = useTranslation();
+  const { t } = useTranslation();
 
   const [bgImage, setBgImage] = useState("");
 
@@ -40,9 +41,11 @@ export function SignUpPage() {
       try {
         const user = await fetchCurrentUser();
         if (user) {
-          // 서버에 저장된 언어 설정 복원
-          if (user.language && ["en", "ko", "ja", "zh"].includes(user.language)) {
-            setLanguage(user.language as SupportedLanguage);
+          // 클라이언트(쿠키/localStorage)에서 선택한 언어를 DB에 동기화
+          const clientLang = i18n.language as SupportedLanguage;
+          if (clientLang && ["en", "ko", "ja", "zh"].includes(clientLang) && clientLang !== user.language) {
+            const { updateCurrentUser } = await import("@/services/api");
+            updateCurrentUser({ language: clientLang }).catch(() => {});
           }
           const targetPath = getPostLoginPath(user);
           router.replace(targetPath);
@@ -54,7 +57,7 @@ export function SignUpPage() {
     };
 
     checkSession();
-  }, [router, setLanguage]);
+  }, [router]);
 
   const handleSignUp = useGoogleLogin({
     ux_mode: "popup",
@@ -103,9 +106,11 @@ export function SignUpPage() {
           return;
         }
 
-        // 서버에 저장된 언어 설정 복원
-        if (user.language && ["en", "ko", "ja", "zh"].includes(user.language)) {
-          setLanguage(user.language as SupportedLanguage);
+        // 클라이언트(쿠키/localStorage)에서 선택한 언어를 DB에 동기화
+        const clientLang = i18n.language as SupportedLanguage;
+        if (clientLang && ["en", "ko", "ja", "zh"].includes(clientLang) && clientLang !== user.language) {
+          const { updateCurrentUser } = await import("@/services/api");
+          updateCurrentUser({ language: clientLang }).catch(() => {});
         }
 
         const targetPath = getPostLoginPath(user);

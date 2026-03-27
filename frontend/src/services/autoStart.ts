@@ -13,6 +13,8 @@ export interface StoredSelectedPlaceSeed {
     adress?: string | null;
     image_path?: string | null;
     room_id?: number;
+    description?: string | null;
+    category?: string | null;
 }
 
 export interface PendingAutoStartMeta {

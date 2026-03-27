@@ -1,15 +1,13 @@
 import { memo } from "react";
-import { Sparkles, Bookmark, Map as MapIcon } from "lucide-react";
+import { Sparkles, Bookmark, Map as MapIcon, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPlaceItem } from "@/services/api";
 import { PipelineSteps, PipelineProgress } from "./PipelineProgress";
 import { cn } from "@/lib/utils";
-import { resolveImageUrl } from "@/lib/imageUrl";
+import { resolveImageUrl, PLACE_PLACEHOLDER } from "@/lib/imageUrl";
 import { useTranslation } from "@/i18n/useTranslation";
-
-const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=400&q=60";
 const hasVisiblePipelineSteps = (steps?: PipelineSteps) => {
     if (!steps) return false;
     return Object.values(steps).some((status) => status === "running" || status === "done");
@@ -63,6 +61,14 @@ export const ChatMessageItem = memo(({
                                 alt="Attached"
                                 className="w-full max-h-[220px] object-cover"
                             />
+                        </div>
+                    )}
+                    {!!(msg.latitude && msg.longitude) && (
+                        <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1.5 w-fit max-w-full">
+                            <MapPin size={12} className="text-white/80 flex-shrink-0" />
+                            <span className="text-[12px] font-medium text-white/90 truncate">
+                                {msg.location ?? t("chat.currentLocation")}
+                            </span>
                         </div>
                     )}
                     {!!msg.message && (
@@ -209,14 +215,14 @@ export const ChatMessageItem = memo(({
                                                 compactPlaces ? "h-[104px] sm:h-[112px]" : "h-[120px]"
                                             )}>
                                                 <img
-                                                    src={resolveImageUrl(place.image_path) || DEFAULT_PLACEHOLDER}
+                                                    src={resolveImageUrl(place.image_path) || PLACE_PLACEHOLDER}
                                                     alt={place.name || "Place image"}
                                                     loading="lazy"
                                                     decoding="async"
                                                     style={{ opacity: 0, transition: 'opacity 0.2s ease' }}
                                                     onLoad={(e) => { e.currentTarget.style.opacity = '1'; }}
                                                     onError={(e) => {
-                                                        e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                                                        e.currentTarget.src = PLACE_PLACEHOLDER;
                                                         e.currentTarget.style.opacity = '1';
                                                     }}
                                                     className="absolute inset-0 m-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-110"
@@ -251,8 +257,14 @@ export const ChatMessageItem = memo(({
                         </div>
                     )}
 
-                    {/* 타임스탬프 */}
-                    <div className="text-[10px] mt-1 mb-2 font-medium text-slate-400 ml-1 uppercase tracking-wider">
+                    {/* 타임스탬프
+                        카드 캐러셀 컨테이너에 pb-9(36px) shadow 공간이 있어
+                        카드 시각적 하단과 타임스탬프 사이에 큰 공백이 생김.
+                        카드가 있을 때만 -mt-8(-32px)로 당겨 일반 버블과 동일한 간격으로 맞춤. */}
+                    <div className={cn(
+                        "text-[10px] mb-2 font-medium text-slate-400 ml-1 uppercase tracking-wider",
+                        msg.places && msg.places.length > 0 ? "-mt-6" : "mt-1"
+                    )}>
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 # 프로젝트 분석 및 실행 점검
 
-> 2026-03-17 기준 전체 프로젝트 구조, 실행 검증 결과, 개선 포인트를 정리한 문서
+> 2026-03-17 기준 실행 점검 스냅샷 문서. 현재 구조의 source of truth는 `BACKEND_STRUCTURE.md`, `FRONTEND_STRUCTURE.md`, `agent_sequence_diagrams.md`를 따른다.
 
 ---
 
@@ -27,9 +27,9 @@
 ### 백엔드
 
 - 챗봇 상태 모델 정리
-  - `PlaceInfo`와 Tavily 관련 모델이 `backend/app/agents/models/`로 분리됨
-- 검색 확장
-  - `backend/app/core/retrieval/tavily_search.py` 추가
+  - `PlaceInfo`가 `backend/app/agents/models/`로 분리됨
+- 검색 fallback 경로 정리
+  - 현재 기본 LangGraph fallback은 `backend/app/agents/web_search_node.py` 기준으로 이해해야 함
 - 스트리밍 응답 및 채팅 저장 로직 보강
   - `backend/app/core/llm_streaming.py`
   - `backend/app/api/chat.py`: **SSE 스트리밍 파이프라인 복구 (custom_event 'token' 처리 추가)**
@@ -111,7 +111,7 @@
 
 - 백엔드 실패 테스트 4건 복구
 - `tmp/` 테스트 수집 제외 처리
-- Tavily 검색 경로의 async/import 문제 정리
+- fallback 검색 경로와 실제 호출 흐름 재검토
 
 ### 2순위
 
@@ -142,4 +142,4 @@
 1. 백엔드 실패 테스트 4건을 우선 복구
 2. `backend/tmp/`를 pytest 수집 대상에서 제외
 3. 프론트 `node_modules` 재설치 또는 도커 빌드 기준 재검증
-4. Tavily 검색 경로를 실제 호출 시나리오 기준으로 통합 테스트 추가
+4. fallback 검색 경로를 실제 호출 시나리오 기준으로 통합 테스트 추가

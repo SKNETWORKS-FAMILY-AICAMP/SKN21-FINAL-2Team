@@ -15,7 +15,7 @@ class ChatRoom(BaseModel):
     history = Column(Text, nullable=True)
     user = relationship("User", back_populates="rooms")
     messages = relationship("ChatMessage", back_populates="room")
-    diary_entries = relationship("DiaryEntry", back_populates="linked_chat_room")
+
     adult_num = Column(Integer, nullable=True)
     child_num = Column(Integer, nullable=True)
     start_date = Column(Date, nullable=True)
@@ -35,6 +35,7 @@ class ChatMessage(BaseModel):
     created_at = Column(DateTime, server_default=func.now())
     longitude = Column(Float, nullable=True)
     latitude = Column(Float, nullable=True)
+    location = Column(String(255), nullable=True)
     room = relationship("ChatRoom", back_populates="messages")
     places = relationship("ChatPlace", back_populates="message")
 

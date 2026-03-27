@@ -293,14 +293,14 @@ function SidebarContent() {
                     <button
                         onClick={() => setIsMobileOpen(true)}
                         className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
-                        aria-label="Open sidebar"
+
                     >
                         <Menu size={18} />
                     </button>
                     {isMobileOpen && (
                         <button
                             type="button"
-                            aria-label="Close sidebar overlay"
+
                             onClick={() => setIsMobileOpen(false)}
                             className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] lg:hidden"
                         />
@@ -323,7 +323,7 @@ function SidebarContent() {
                 <button
                     onClick={() => setIsMobileOpen(false)}
                     className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-black lg:hidden"
-                    aria-label="Close sidebar"
+
                 >
                     <X size={16} />
                 </button>
@@ -350,7 +350,7 @@ function SidebarContent() {
             </div>
 
             {/* Navigation */}
-            <div className={cn("mt-6 space-y-4 flex flex-col flex-1 min-h-0", actuallyCollapsed ? "px-2" : "px-3")}>
+            <div className={cn("mt-6 space-y-4 flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar", actuallyCollapsed ? "px-2" : "px-3")}>
                 {/* Main Tabs */}
                 <nav className="space-y-1">
                     {menuItems.map((item) => (
@@ -410,7 +410,7 @@ function SidebarContent() {
 
                 {/* Chats History Section */}
                 {!actuallyCollapsed ? (
-                    <div className="pt-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    <div className="pt-4">
                         <nav className="space-y-0.5">
                             {rooms.map((room) => {
                                 const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
@@ -442,7 +442,7 @@ function SidebarContent() {
                                                 "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
                                                 isActiveRoom && "group-focus-within/item:opacity-100"
                                             )}
-                                            aria-label={`${room.title} ${t("common.delete")}`}
+
                                             title={t("sidebar.deleteRoom")}
                                         >
                                             <Trash2 size={14} />
@@ -466,7 +466,7 @@ function SidebarContent() {
             </div>
 
             {/* User Profile */}
-            <div className={cn("mt-auto border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+            <div className={cn("flex-none border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
                 {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
                 <div className="absolute bottom-20 right-3 z-50">
                     <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />
@@ -553,7 +553,7 @@ function SidebarContent() {
                 <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
                     <button
                         type="button"
-                        aria-label="Delete room modal overlay"
+
                         className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
                         onClick={() => {
                             if (!isDeletingRoom) setPendingDeleteRoom(null);

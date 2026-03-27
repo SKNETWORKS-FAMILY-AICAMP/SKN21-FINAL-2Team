@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
     curl \
+    chromium \
+    chromium-driver \
     && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/chromium /usr/bin/google-chrome \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv
 
@@ -21,6 +24,9 @@ COPY requirements.txt .
 RUN uv pip install -r requirements.txt
 
 COPY . .
+
+# CRLF → LF 변환 + 실행 권한 부여 (Windows에서 작업한 경우 대응)
+RUN sed -i 's/\r//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 

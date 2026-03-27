@@ -159,7 +159,7 @@ export function ChatInputArea({
                                         setAttachedFileName("");
                                     }}
                                     className="text-white/80 hover:text-white transition-colors"
-                                    aria-label={t("chatInput.removeAttachment")}
+
                                 >
                                     ×
                                 </button>
@@ -173,7 +173,7 @@ export function ChatInputArea({
                                         type="button"
                                         onClick={clearAttachedLocation}
                                         className="text-slate-500 hover:text-slate-800 transition-colors"
-                                        aria-label={t("chatInput.removeLocation")}
+
                                     >
                                         ×
                                     </button>
@@ -183,7 +183,7 @@ export function ChatInputArea({
                     )}
 
                     <div className="flex items-end gap-1.5 sm:gap-2 mb-0.5">
-                        <div className="relative ml-0.5">
+                        <div className="relative ml-0.5 flex-none">
                             <button
                                 type="button"
                                 onClick={() => setIsAttachMenuOpen((prev) => !prev)}
@@ -205,7 +205,7 @@ export function ChatInputArea({
                             style={{ minHeight: "40px", maxHeight: "130px" }}
                         />
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 pr-0.5 sm:pr-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 pr-0.5 sm:pr-1 flex-none">
                             <button
                                 type="button"
                                 onClick={() => setIsMapSheetOpen(true)}

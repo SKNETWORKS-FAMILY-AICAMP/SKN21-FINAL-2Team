@@ -1,7 +1,8 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, field_serializer
 from typing import Optional, List, Literal
 from datetime import datetime, date
 from app.models.enums import RoleType
+from app.utils.common import to_client_image_url
 
 class ChatMessageBase(BaseModel):
     message: str
@@ -30,6 +31,13 @@ class ChatRoomBase(BaseModel):
 
 class ChatRoomCreate(ChatRoomBase):
     pass
+
+
+class ChatRoomTripContextUpdate(BaseModel):
+    adult_num: Optional[int] = None
+    child_num: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
 
 
 class ChatPlaceBase(BaseModel):
@@ -68,6 +76,12 @@ class ChatPlaceResponse(ChatPlaceBase):
     id: int
     messages_id: int
 
+    @field_serializer("image_path")
+    def serialize_image_path(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        return to_client_image_url(value) or None
+
     class Config:
         from_attributes = True
 
@@ -76,8 +90,19 @@ class ChatMessageResponse(ChatMessageBase):
     id: int
     room_id: int
     role: RoleType
+    location: Optional[str] = None
     created_at: datetime
     places: List[ChatPlaceResponse] = []
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
+
+    @field_serializer("image_path")
+    def serialize_image_path(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        return to_client_image_url(value) or None
 
     class Config:
         from_attributes = True
@@ -95,6 +120,10 @@ class ChatRoomResponse(ChatRoomBase):
     end_date: Optional[date] = None
     messages: List[ChatMessageResponse] = []
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
+
     class Config:
         from_attributes = True
 
@@ -106,6 +135,10 @@ class BookmarkedRoomResponse(BaseModel):
     created_at: datetime
     bookmark_yn: bool = False
     latest_message_preview: Optional[str] = None
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat() + "Z"
 
 
 class BookmarkedPlaceResponse(BaseModel):
@@ -166,6 +199,9 @@ class AutoStarterPlaceSeed(BaseModel):
     name: Optional[str] = None
     adress: Optional[str] = None
     place_id: int = 0
+    description: Optional[str] = None
+    image_path: Optional[str] = None
+    category: Optional[str] = None
 
     @field_validator("place_id", mode="before")
     @classmethod

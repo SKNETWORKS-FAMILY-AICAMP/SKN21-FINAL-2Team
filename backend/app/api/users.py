@@ -12,6 +12,7 @@ from app.schemas.user import UserResponse, UserUpdate
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
 from app.database.connection import db_manager
+from app.services.recommendation import invalidate_cache
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -58,6 +59,8 @@ def update_user_me(
             path="/",
             samesite="lax",
         )
+        # 언어 변경 시 추천 캐시 무효화 (다음 조회 시 새 언어로 재생성)
+        invalidate_cache(current_user.id)
 
     return current_user
 
