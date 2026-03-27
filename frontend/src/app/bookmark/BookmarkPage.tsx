@@ -308,7 +308,7 @@ export function BookmarkPage() {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-6 pb-24">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
                     {loading ? (
                         <div className="h-full flex items-center justify-center text-gray-400">
                             <Loader2 className="w-6 h-6 animate-spin" />

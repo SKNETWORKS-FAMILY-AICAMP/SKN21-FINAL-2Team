@@ -50,8 +50,10 @@ body {
 .font-brand {
   font-family: Georgia, var(--font-noto-serif-kr), "Noto Serif KR", "Nanum Myeongjo", "Batang", ui-serif, Cambria, "Times New Roman", Times, serif;
   font-style: italic;
-  font-weight: 600; /* font-semibold */
-  letter-spacing: -0.025em; /* tracking-tight */
+  font-weight: 600;
+  /* font-semibold */
+  letter-spacing: -0.025em;
+  /* tracking-tight */
 }
 
 /* 언어 설정에 영향받지 않는 고정 영문 폰트 — 로고 등 영어 고정 텍스트용 */
@@ -229,3 +231,40 @@ html .font-fixed-sans {
     transform: translate(0, 0) skewX(0deg);
   }
 }
+
+/* --- Custom Scrollbar Styles --- */
+/* 프론트엔드 전역에서 스크롤바 디자인을 통일하기 위한 설정 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track:hover {
+  background: #f1f1f1;
+}
+
+/* 스크롤바 썸에 직접 마우스를 올렸을 때 조금 더 진하게 */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #e5e7eb;
+  /* Tailwind gray-300 */
+}
+
+/* Firefox 등 웹킷 미지원 브라우저용 (현재 Chrome 최신버전과 충돌 방지를 위해 주석 처리)
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.custom-scrollbar:hover {
+  scrollbar-color: #e5e7eb transparent;
+}
+*/

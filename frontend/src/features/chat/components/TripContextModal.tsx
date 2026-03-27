@@ -119,7 +119,7 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, 
                         onClick={handleClose}
                     >
                         <div
-                            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto p-8 rounded-[2rem] bg-white/95 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)]"
+                            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto custom-scrollbar p-8 rounded-[2rem] bg-white/95 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)]"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {loading && (

@@ -396,7 +396,7 @@ export function ExplorePage() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
                                 <div className="flex flex-col gap-3 pb-2">
                                     {isLoading ? (
                                         <div className="h-full flex items-center justify-center py-8">

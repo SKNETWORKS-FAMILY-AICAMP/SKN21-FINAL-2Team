@@ -377,7 +377,7 @@ export function MomentsPage() {
                 />
 
 
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {loading ? (
                         <div className="flex h-full items-center justify-center text-gray-400">
                             <Loader2 className="h-6 w-6 animate-spin" />

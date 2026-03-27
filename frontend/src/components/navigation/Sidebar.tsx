@@ -416,7 +416,7 @@ function SidebarContent() {
                     Tailwind를 활용하여 호버 시에만 웹킷 스크롤바 thumb에 색상을 적용하는 패턴을 사용하는 것이 안정적입니다.
                     - 체크리스트: 스크롤이 작동안하면 부모 컨테이너가 flex-1 및 min-h-0를 가졌는지 확인하세요.
                 */}
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full transition-colors duration-200 pt-2 border-t border-gray-100/50">
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar pt-2 border-t border-gray-100/50">
                 {!actuallyCollapsed ? (
                     <div className="pt-2 pb-4">
                         <nav className="space-y-0.5">

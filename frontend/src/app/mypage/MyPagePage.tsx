@@ -91,7 +91,7 @@ export function MyPagePage() {
         </div>
       </div>
 
-      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto custom-scrollbar text-gray-900 flex flex-col">
         <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">
             <h1 className="page-title text-gray-900 mb-2">{t("mypage.title")}</h1>
@@ -187,7 +187,7 @@ export function MyPagePage() {
                   </button>
                 </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
                   {reservations.length ? (
                     reservations.map((res) => (
                       <div

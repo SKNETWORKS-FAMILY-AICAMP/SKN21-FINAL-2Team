@@ -108,7 +108,7 @@ export function ReservationDetailModal({
                         </div>
 
                         {/* 본문 콘텐츠 (2단 분리된 컴포넌트 렌더링) */}
-                        <div className="px-8 pt-4 pb-7 overflow-y-auto flex flex-col md:flex-row gap-8 min-h-0">
+                        <div className="px-8 pt-4 pb-7 overflow-y-auto custom-scrollbar flex flex-col md:flex-row gap-8 min-h-0">
                             <ReservationImageSection
                                 isEditMode={isEditMode}
                                 effectivePhotoUrl={effectivePhotoUrl}

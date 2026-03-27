@@ -73,7 +73,7 @@ export function JourneyDetailModal({
                         </div>
 
                         <div className="px-7 pb-6 pt-6">
-                            <div className="relative rounded-[2rem] border border-gray-100 bg-black/[0.02] p-6 max-h-[55vh] overflow-y-auto">
+                            <div className="relative rounded-[2rem] border border-gray-100 bg-black/[0.02] p-6 max-h-[55vh] overflow-y-auto custom-scrollbar">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
