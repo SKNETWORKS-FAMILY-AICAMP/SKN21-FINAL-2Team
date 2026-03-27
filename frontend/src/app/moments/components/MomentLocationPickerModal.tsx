@@ -261,7 +261,7 @@ export function MomentLocationPickerModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-md"
+            className="fixed inset-0 z-[10000] bg-black/30 backdrop-blur-md"
             onClick={onClose}
           />
 
@@ -271,7 +271,7 @@ export function MomentLocationPickerModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed inset-0 z-[71] flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-[10001] flex items-center justify-center p-4 pointer-events-none"
           >
             <div
               className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
