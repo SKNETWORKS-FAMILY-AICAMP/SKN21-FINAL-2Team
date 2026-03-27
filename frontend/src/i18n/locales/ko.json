@@ -13,7 +13,7 @@
   "signup.signupFailed": "Google 회원가입에 실패했습니다",
   "signup.switchAccount": "다른 Google 계정으로 로그인하기",
   "profile.title": "{name}님, 마지막 단계입니다.",
-  "profile.subtitle": "{name}님에게 딱 맞는 여행지를 추천하기 위해 필요한 정보를 입력해 주세요.",
+  "profile.subtitle": "당신에게 딱 맞는 여행지를 추천하기 위해 필요한 정보를 입력해 주세요.",
   "profile.fullName": "이름",
   "profile.email": "이메일",
   "profile.nickname": "닉네임",
