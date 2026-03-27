@@ -211,26 +211,15 @@ export function Destinations() {
                         </div>
                     </div>
 
-                    <div className="min-h-[300px] sm:min-h-[400px] relative">
-                        {isLoading && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t("destinations.refreshing")}</span>
-                                </div>
-                            </div>
-                        )}
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeTab + (isLoading ? "-loading" : "-ready")}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.4 }}
-                                className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
-                            >
+                    {/* 주의: relative + 고정 min-h로 로딩 overlay와 카드 그리드 높이를 동일하게 유지 */}
+                    <div className="relative min-h-[300px] sm:min-h-[400px]">
+                    <div className="relative min-h-[300px] sm:min-h-[400px]">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                                 {displayItems.map((place) => (
-                                    <div key={place.id} className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col w-full h-full">
+                                    <div 
+                                        key={place.id}
+                                        className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col w-full h-full"
+                                    >
                                         <div className="relative w-full aspect-[16/10] md:aspect-[4/3] lg:aspect-[16/10] overflow-hidden bg-gray-100 flex-shrink-0">
                                             {/* 주의: image가 존재하고 비어있지 않을 때만 img 렌더링 → object-cover로 크롭 강제 */}
                                             {place.image && place.image.trim() !== "" ? (
@@ -289,8 +278,8 @@ export function Destinations() {
                                         </div>
                                     </div>
                                 ))}
-                            </motion.div>
-                        </AnimatePresence>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
