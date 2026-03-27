@@ -32,6 +32,7 @@ export function MomentsPage() {
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
     // [Feature] 모달 열 때 에디터 스냅샷 (수정 여부 판단용)
     const initialEditorRef = useRef<string>("");
+    const isFirstRun = useRef(true);
 
     const [moments, setMoments] = useState<MomentListItem[]>([]);
     const [selectedMomentId, setSelectedMomentId] = useState<number | null>(null);
@@ -52,8 +53,8 @@ export function MomentsPage() {
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [selectedToDelete, setSelectedToDelete] = useState<Set<number>>(new Set());
 
-    const loadMoments = async (nextQuery = "") => {
-        setLoading(true);
+    const loadMoments = async (nextQuery = "", showLoader = true) => {
+        if (showLoader) setLoading(true);
         setError(null);
         try {
             const items = await fetchMoments(nextQuery.trim() ? { query: nextQuery.trim() } : undefined);
@@ -61,7 +62,7 @@ export function MomentsPage() {
         } catch {
             setError(t("moments.failedToLoadList"));
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
@@ -89,9 +90,13 @@ export function MomentsPage() {
     }, []);
 
     useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+            return;
+        }
         const timer = window.setTimeout(() => {
-            void loadMoments(query);
-        }, 250);
+            void loadMoments(query, false);
+        }, 500);
         return () => window.clearTimeout(timer);
     }, [query]);
 
@@ -244,7 +249,8 @@ export function MomentsPage() {
                 ? await createMoment(payload)
                 : await updateMoment(editor.id!, payload);
 
-            await loadMoments(query);
+            // 주의: 저장 후 백그라운드로 목록을 갱신하여 화면 깜빡임 방지
+            await loadMoments(query, false);
             if (isNew) {
                 setIsModalOpen(false);
                 setEditor(emptyEditorState());
@@ -329,7 +335,8 @@ export function MomentsPage() {
                 setSelectedMomentId(null);
                 setEditor(emptyEditorState());
             }
-            await loadMoments(query);
+            // 주의: 삭제 후 백그라운드로 목록을 갱신하여 화면 깜빡임 방지
+            await loadMoments(query, false);
         } catch {
             setError(t("moments.failedToDelete"));
         } finally {
