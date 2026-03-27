@@ -274,7 +274,7 @@ export function MomentLocationPickerModal({
             className="fixed inset-0 z-[10001] flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
+              className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.08)] pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -305,8 +305,8 @@ export function MomentLocationPickerModal({
               {/* Body */}
               <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[340px_minmax(0,1fr)]">
                 {/* Search Sidebar */}
-                <div className="flex flex-col overflow-y-auto border-b border-gray-100 md:border-b-0 md:border-r bg-gray-50/30">
-                  <div className="flex-1 p-6">
+                <div className="flex flex-col border-b border-gray-100 md:border-b-0 md:border-r bg-gray-50/30 max-h-[50vh] md:max-h-none">
+                  <div className="p-6 pb-2">
                     <form className="space-y-4" onSubmit={handleSearch}>
                       <label className="block text-[11px] font-bold text-[#8b98a5] uppercase px-1">
                         {t("location.searchLabel")}
@@ -331,39 +331,15 @@ export function MomentLocationPickerModal({
                     <p className="mt-4 px-1 text-xs leading-relaxed text-gray-400">
                       {t("location.helperText")}
                     </p>
+                  </div>
 
-                    {selectedPlace && (
-                      <div className="mt-8 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
-                            <MapPin size={14} />
-                          </div>
-                          <p className="text-[11px] font-bold text-[#8b98a5] uppercase">{t("location.selected")}</p>
-                        </div>
-                        <div className="mb-5">
-                          <p className="text-[15px] font-bold text-gray-900 truncate">
-                            {selectedPlace.name?.trim() || t("location.fixedPlace")}
-                          </p>
-                          <p className="mt-1 text-xs leading-relaxed text-gray-500 line-clamp-2">{selectedPlace.adress}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleConfirm}
-                          disabled={resolving}
-                          className="w-full py-3.5 rounded-xl bg-black text-white text-sm font-bold shadow-md hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                        >
-                          {resolving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                           {t("common.confirm") || "Confirm"}
-                        </button>
-                      </div>
-                    )}
-
+                  <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar relative min-h-0">
                     {searchResults.length > 0 && (
-                      <div className="mt-8">
+                      <div className="mt-2">
                         <p className="mb-3 px-1 text-[11px] font-bold text-[#8b98a5] uppercase">
                           {t("location.searchResults")}
                         </p>
-                        <div className="max-h-64 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-2">
                           {searchResults.map((result, index) => {
                             const isActive =
                               selectedPlace?.adress === result.adress &&
@@ -375,15 +351,29 @@ export function MomentLocationPickerModal({
                                 key={`${result.adress}-${result.latitude}-${result.longitude}-${index}`}
                                 type="button"
                                 onClick={() => handlePreviewPlace(result)}
-                                className={`w-full rounded-2xl border p-4 text-left transition-all ${isActive
-                                    ? "border-black/10 bg-white shadow-sm ring-1 ring-black/5"
+                                className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition-all ${
+                                  isActive
+                                    ? "border-transparent bg-gray-100/80 shadow-sm"
                                     : "border-gray-50 bg-white/50 hover:bg-white hover:border-gray-100"
-                                  }`}
+                                }`}
                               >
-                                <p className={`text-sm font-bold ${isActive ? "text-black" : "text-gray-700"}`}>
+                                <div className="min-w-0 pr-3">
+                                  <p className={`truncate text-sm font-bold ${isActive ? "text-black" : "text-gray-700"}`}>
                                     {result.name?.trim() || t("location.searchResults")}
-                                </p>
-                                <p className="mt-1 text-xs leading-relaxed text-gray-400">{result.adress}</p>
+                                  </p>
+                                  <p className={`mt-1 truncate text-xs ${isActive ? "font-medium text-gray-700" : "text-gray-400 leading-relaxed"}`}>
+                                    {result.adress}
+                                  </p>
+                                </div>
+                                <div
+                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 shadow-sm transition-all duration-200 ${
+                                    isActive
+                                      ? "border-black bg-black text-white"
+                                      : "border-gray-200 bg-white text-transparent hover:border-gray-300"
+                                  }`}
+                                >
+                                  <Check size={13} strokeWidth={3} />
+                                </div>
                               </button>
                             );
                           })}
@@ -392,8 +382,21 @@ export function MomentLocationPickerModal({
                     )}
 
                     {(error || mapError || mapInitError) && (
-                      <p className="mt-6 px-1 text-sm text-red-500 font-medium">{error || mapError || mapInitError}</p>
+                      <p className="mt-6 px-1 text-sm font-medium text-red-500">{error || mapError || mapInitError}</p>
                     )}
+                  </div>
+
+                  {/* 하단 확인 버튼 고정 영역 */}
+                  <div className="relative z-10 mt-auto w-full border-t border-gray-100 bg-white p-6 pt-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.02)]">
+                    <button
+                      type="button"
+                      onClick={handleConfirm}
+                      disabled={!selectedPlace || resolving}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {resolving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                      {t("common.confirm") || "Confirm"}
+                    </button>
                   </div>
                 </div>
 
