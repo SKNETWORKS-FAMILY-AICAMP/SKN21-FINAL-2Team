@@ -182,6 +182,9 @@ export function Header() {
                                 alt={t("header.profileAlt")}
                                 className="w-full h-full object-cover"
                                 onError={() => setImgError(true)}
+                                width={36}
+                                height={36}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                         </button>
                     ) : profilePicture && imgError && userProfile?.is_join && userProfile?.is_prefer ? (
@@ -247,6 +250,9 @@ export function Header() {
                                     alt={t("header.profileAlt")}
                                     className="w-9 h-9 rounded-full object-cover border-2 border-gray-200"
                                     onError={() => setImgError(true)}
+                                    width={36}
+                                    height={36}
+                                    style={{ width: '36px', height: '36px', objectFit: 'cover' }}
                                 />
                                 <span className="text-base font-medium text-gray-700">{t("header.goToProfile")}</span>
                             </button>
