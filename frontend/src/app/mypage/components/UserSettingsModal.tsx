@@ -12,6 +12,7 @@ import {
   logoutApi,
 } from "@/services/api";
 import { clearAuth } from "@/services/errorHandler";
+import { getNicknameValidationError } from "@/app/signup/profile/utils/validation";
 
 export interface UserProfileSubset {
   nickname: string;
@@ -48,6 +49,7 @@ export function UserSettingsModal({
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsResettingPhoto, setSettingsResettingPhoto] = useState(false);
   const [showSettingsSavedPopup, setShowSettingsSavedPopup] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
 
   const [deactivateGoogleConfirmed, setDeactivateGoogleConfirmed] = useState(false);
   const [deactivateAgreementConfirmed, setDeactivateAgreementConfirmed] = useState(false);
@@ -72,6 +74,7 @@ export function UserSettingsModal({
       setDeactivateSubmitAttempted(false);
       setDeactivateSubmitting(false);
       setDeactivateError("");
+      setNicknameError("");
       setDeactivateConfirmOpen(false);
       setShowSettingsSavedPopup(false);
     }
@@ -127,6 +130,9 @@ export function UserSettingsModal({
   };
 
   const handleSaveSettingsPopup = async () => {
+    // 주의: 닉네임 에러가 있을 때는 저장을 막습니다. (안전 장치)
+    if (nicknameError) return;
+
     setSettingsSaving(true);
     try {
       const resolvedProfilePicture = settingsDraft.profilePicture?.startsWith("data:image/")
@@ -153,6 +159,12 @@ export function UserSettingsModal({
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  const handleNicknameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSettingsDraft((prev) => ({ ...prev, nickname: val }));
+    setNicknameError(getNicknameValidationError(val));
   };
 
   const handleResetProfilePhotoToGoogle = async () => {
@@ -241,10 +253,17 @@ export function UserSettingsModal({
                 <label className="block text-[10px] font-bold uppercase text-[#8b98a5] tracking-widest mb-2.5 pl-1">{t("mypage.nickname")}</label>
                 <input
                   value={settingsDraft.nickname}
-                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
-                  className="w-full h-12 rounded-2xl border-none bg-gray-50 px-4 text-sm font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-gray-100 focus:ring-[1.5px] focus:ring-black/[0.06] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)]"
+                  onChange={handleNicknameChange}
+                  className={`w-full h-12 rounded-2xl border-none bg-gray-50 px-4 text-sm font-medium transition-all duration-300 focus:outline-none focus:bg-gray-100 focus:ring-[1.5px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)] ${
+                    nicknameError
+                      ? "text-red-900 ring-1 ring-red-500 focus:ring-red-500/20"
+                      : "text-gray-800 focus:ring-black/[0.06]"
+                  }`}
                   placeholder={t("mypage.nickname")}
                 />
+                {nicknameError && (
+                  <p className="text-xs text-red-500 mt-1 pl-1">{t(nicknameError)}</p>
+                )}
               </div>
 
               <div>
@@ -302,7 +321,7 @@ export function UserSettingsModal({
                 <button
                   type="button"
                   onClick={handleSaveSettingsPopup}
-                  disabled={settingsSaving}
+                  disabled={settingsSaving || !!nicknameError}
                   className="h-12 w-full sm:w-auto min-w-[110px] rounded-2xl bg-gradient-to-r from-gray-900 to-black text-white text-sm font-bold shadow-[0_8px_16px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_12px_24px_-6px_rgba(0,0,0,0.4)] hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   {settingsSaving ? t("common.saving") : t("common.save")}
