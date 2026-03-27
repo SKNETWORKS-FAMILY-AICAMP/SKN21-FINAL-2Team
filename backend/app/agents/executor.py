@@ -12,7 +12,7 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
-from app.agents.prompts.prompts import get_language_instruction
+from app.agents.prompts.prompts import get_language_instruction, get_language_reminder
 from app.utils.common import build_naver_map_url, dprint, dpprint
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_contenttypeid
@@ -430,12 +430,14 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
-    
+    lang_reminder = get_language_reminder(state.get("language"))
+
     if image_path:
         # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
         if len(user_input) == 0:
             user_input = "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."
-        content_blocks.append({"type": "text", "text": user_input})
+        text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+        content_blocks.append({"type": "text", "text": text})
 
         image_url = _get_image_data_url(image_path)
         content_blocks.append({
@@ -443,8 +445,9 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             "image_url": {"url": image_url}
         })
     else:
-        content_blocks.append({"type": "text", "text": f"{user_input}"})
-    
+        text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+        content_blocks.append({"type": "text", "text": text})
+
     # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
@@ -579,7 +582,11 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     dprint(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
 
-    human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
+    lang_reminder = get_language_reminder(state.get("language"))
+    human_content = "여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요."
+    if lang_reminder:
+        human_content = f"{lang_reminder}\n\n{human_content}"
+    human_message = HumanMessage(content=human_content)
 
     missing_system_prompt = EXECUTOR_MISSING_INFO_PROMPT
 
@@ -639,25 +646,23 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
         gps_outside_seoul=state.get("gps_outside_seoul", False),
     )
 
-    general_system_prompt = EXECUTOR_GENERAL_PROMPT
+    system_content = EXECUTOR_GENERAL_PROMPT.format(
+        messages=messages,
+        user_input=user_input,
+        location_context=location_context,
+        prefs_info=prefs_info,
+        party_info=party_info,
+        follow_up_questions=follow_up_questions,
+        user_lang=get_language_instruction(state.get("language")),
+    )
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", general_system_prompt),
-    ])
-
-    prompt_value = prompt.invoke({
-        "messages": messages,
-        "user_input": user_input,
-        "location_context": location_context,
-        "prefs_info": prefs_info,
-        "party_info": party_info,
-        "follow_up_questions": follow_up_questions,
-        "user_lang": get_language_instruction(state.get("language")),
-    })
+    lang_reminder = get_language_reminder(state.get("language"))
+    user_text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+    prompt_messages = [SystemMessage(content=system_content), HumanMessage(content=user_text)]
 
     full_content = await collect_streamed_text(
         temperature=0.7,
-        prompt_value=prompt_value,
+        prompt_value=prompt_messages,
         config=config,
     )
 
