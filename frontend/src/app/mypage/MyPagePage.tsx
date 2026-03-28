@@ -323,7 +323,6 @@ export function MyPagePage() {
               });
               const mapped = mapReservationRecordToItem(created, t);
               setReservations((prev) => [mapped, ...prev]);
-              setActiveReservation(mapped);
               draftFieldsRef.current = {};
             } catch (error) { console.error("Failed to create reservation", error); }
             return;

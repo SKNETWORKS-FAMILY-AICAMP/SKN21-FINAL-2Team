@@ -65,7 +65,8 @@ export function useReservationForm({
 
   useEffect(() => {
     if (open) {
-      const pTitle = reservation?.title || t("mypage.newReservation");
+      const isNewDraft = !reservation?.reservationId || reservation.reservationId === -1;
+      const pTitle = isNewDraft ? "" : (reservation?.title || "");
       setDraftTitle(pTitle);
 
       const pCategory = reservation?.category || "transportation";
@@ -84,10 +85,10 @@ export function useReservationForm({
         });
       }
 
-      const isNewDraft = isNewDraftTitle(reservation?.title, t);
+      const isDraftByTitle = isNewDraftTitle(reservation?.title, t);
 
-    // 신규 작성 상태에서 아무것도 변경 안하고 닫을 때만 삭제 경고 무시
-    if (Object.keys(pDetails).length === 0 && (!reservation?.title || isNewDraft)) {
+    // 신규 작성 상���에서 아무것도 변경 안하고 닫을 때만 삭제 경고 무시
+    if (Object.keys(pDetails).length === 0 && (!reservation?.title || isNewDraft || isDraftByTitle)) {
         const newKeys = TEMPLATE_MAP[pCategory] || TEMPLATE_MAP["etc"];
         newKeys.forEach(k => { pDetails[k] = ""; });
         setIsEditMode(true);
