@@ -168,9 +168,14 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            console.error("Speech recognition error:", event.error);
+            // abort()에 의한 의도적 중단은 무시
+            if (event.error === "aborted") return;
+
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 setSttPermission("denied");
+                console.warn("Speech recognition permission denied:", event.error);
+            } else {
+                console.warn("Speech recognition error:", event.error);
             }
             clearSilenceTimer();
             setIsListening(false);
