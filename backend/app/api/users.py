@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.models.user import User
 from app.models.chat import ChatRoom, ChatMessage, ChatPlace
 from app.models.reservation import Reservation
+from app.models.moment import Moment
 from app.schemas.user import UserResponse, UserUpdate
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
@@ -138,10 +139,11 @@ def deactivate_current_user(
             db.query(ChatRoom).filter(ChatRoom.id.in_(room_ids)).delete(synchronize_session=False)
 
         db.query(Reservation).filter(Reservation.user_id == user_id).delete(synchronize_session=False)
+        db.query(Moment).filter(Moment.user_id == user_id).delete(synchronize_session=False)
 
         db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
         db.commit()
         return {"ok": True}
     except SQLAlchemyError as e:
         db.rollback()
-        raise AppException(ErrorCode.INTERNAL_SERVER_ERROR, f"Deactivate failed: {e}", 500)
+        raise AppException(ErrorCode.INTERNAL_ERROR, f"Deactivate failed: {e}", 500)
