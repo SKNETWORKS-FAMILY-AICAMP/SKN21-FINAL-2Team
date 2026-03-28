@@ -275,6 +275,7 @@
   "bookmark.createRoomFailed": "创建新聊天室失败。",
   "bookmark.travelPlan": "旅行计划",
   "bookmark.selectedPlacesPlan": "用选中地点规划旅行",
+  "bookmark.deleteConfirmDesc": "确定要删除所选项目吗？此操作无法撤销。",
   "bookmark.deleting": "删除中...",
   "sidebar.language": "切换语言",
   "profile.birthday": "出生日期",

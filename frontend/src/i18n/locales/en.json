@@ -275,6 +275,7 @@
   "bookmark.createRoomFailed": "Failed to create a new chat room.",
   "bookmark.travelPlan": "Travel Plan",
   "bookmark.selectedPlacesPlan": "Plan with selected places",
+  "bookmark.deleteConfirmDesc": "Are you sure you want to delete the selected items? This action cannot be undone.",
   "bookmark.deleting": "Deleting...",
   "sidebar.language": "Language",
   "profile.birthday": "Birthday",

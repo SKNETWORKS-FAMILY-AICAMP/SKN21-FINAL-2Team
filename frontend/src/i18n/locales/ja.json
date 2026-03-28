@@ -275,6 +275,7 @@
   "bookmark.createRoomFailed": "新しいチャットルームの作成に失敗しました。",
   "bookmark.travelPlan": "旅行計画",
   "bookmark.selectedPlacesPlan": "選択スポットで旅行計画",
+  "bookmark.deleteConfirmDesc": "選択した項目を削除しますか？この操作は元に戻せません。",
   "bookmark.deleting": "削除中...",
   "sidebar.language": "言語切替",
   "profile.birthday": "生年月日",
