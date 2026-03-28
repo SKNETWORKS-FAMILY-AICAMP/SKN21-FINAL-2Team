@@ -66,9 +66,6 @@ export function ReservationImageSection({
               <p className="text-[11px] font-medium text-amber-900 leading-relaxed">
                 {t("mypage.imagePrivacyWarning")}
               </p>
-              <p className="text-[10px] text-amber-800/70 leading-normal">
-                {t("mypage.imageUsageDesc")}
-              </p>
             </div>
           </div>
         )}
@@ -108,7 +105,6 @@ export function ReservationImageSection({
               </div>
               <div className="text-center">
                 <p className="text-sm font-bold text-gray-500">{t("mypage.clickToAttachImage")}</p>
-                <p className="text-[11px] mt-1 opacity-60">{t("mypage.imageUsageDesc")}</p>
               </div>
             </div>
           ) : (
