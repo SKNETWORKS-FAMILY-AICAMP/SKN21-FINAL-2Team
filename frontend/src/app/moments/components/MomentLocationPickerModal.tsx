@@ -305,7 +305,7 @@ export function MomentLocationPickerModal({
               {/* Body */}
               <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[340px_minmax(0,1fr)]">
                 {/* Search Sidebar */}
-                <div className="flex flex-col border-b border-gray-100 md:border-b-0 md:border-r bg-gray-50/30 max-h-[50vh] md:max-h-none">
+                <div className="flex flex-col border-b border-gray-100 md:border-b-0 md:border-r bg-gray-50/30 max-h-[55vh] md:max-h-none overflow-hidden">
                   <div className="p-6 pb-2">
                     <form className="space-y-4" onSubmit={handleSearch}>
                       <label className="block text-[11px] font-bold text-[#8b98a5] uppercase px-1">
@@ -387,7 +387,7 @@ export function MomentLocationPickerModal({
                   </div>
 
                   {/* 하단 확인 버튼 고정 영역 */}
-                  <div className="relative z-10 mt-auto w-full border-t border-gray-100 bg-white p-6 pt-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.02)]">
+                  <div className="relative z-10 flex-none w-full border-t border-gray-100 bg-white p-6 pt-4 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.02)]">
                     <button
                       type="button"
                       onClick={handleConfirm}
