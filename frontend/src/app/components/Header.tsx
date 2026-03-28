@@ -146,6 +146,7 @@ export function Header() {
     };
 
     return (
+        <>
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
             {/* [Fix] Removed max-w-7xl mx-auto so Logo stays fixed at px-6 matching Sidebar */}
             <div className="w-full px-6 h-16 relative flex items-center justify-between">
@@ -278,12 +279,14 @@ export function Header() {
                 </motion.div>
             )}
 
+        </header>
+
             <IncompleteSignupModal
                 isOpen={isWarningModalOpen}
                 missingStep={warningStep}
                 onClose={() => setIsWarningModalOpen(false)}
                 onConfirm={confirmWarning}
             />
-        </header>
+        </>
     );
 }
