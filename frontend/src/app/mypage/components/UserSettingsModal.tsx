@@ -153,7 +153,7 @@ export function UserSettingsModal({
         birthday: settingsDraft.birthday,
       });
 
-      setShowSettingsSavedPopup(true);
+      onClose();
     } catch (error) {
       console.error("Failed to update user settings", error);
     } finally {
@@ -310,14 +310,7 @@ export function UserSettingsModal({
                 {t("mypage.deactivateAccount")}
               </button>
 
-              <div className="flex justify-end gap-3 w-full sm:w-auto order-1 sm:order-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="h-12 w-full sm:w-auto px-7 rounded-2xl bg-black/5 text-sm font-bold text-gray-700 hover:bg-black/10 transition-all flex items-center justify-center"
-                >
-                  {t("common.cancel")}
-                </button>
+              <div className="flex justify-end w-full sm:w-auto order-1 sm:order-2">
                 <button
                   type="button"
                   onClick={handleSaveSettingsPopup}
