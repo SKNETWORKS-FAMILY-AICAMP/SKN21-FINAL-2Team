@@ -65,14 +65,11 @@ export function Destinations() {
             localStorage.setItem("pendingDestination", JSON.stringify(place));
             router.push("/signup");
         } else {
-            // 주의: 로그인 후 정보나 설문 기입이 덜 끝났다면 즉시 이동하지 않고 모달 표시
+            // 가입 미완료(is_join=false): 구글 계정 선택부터 다시 시작
             if (userProfile && !userProfile.is_join) {
-                // 사용자가 챗봇 목적지로 향하려 했다는 의도를 남겨두기 위해 세팅
-                // planTripFlow=true: 프로필/설문 완료 후 챗봇으로 직행하도록 표시
                 localStorage.setItem("planTripFlow", "true");
                 localStorage.setItem("pendingDestination", JSON.stringify(place));
-                setWarningStep("profile");
-                setIsWarningModalOpen(true);
+                router.push("/signup");
                 return;
             }
             if (userProfile && !userProfile.is_prefer) {

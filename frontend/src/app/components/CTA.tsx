@@ -30,11 +30,10 @@ export function CTA() {
         try {
             await verifyAndRefreshToken();
 
-            // [Feature] 토큰 유효 → 가입/설문 완료 여부 확인 후 미완료 시 팝업 표시
             const user = await fetchCurrentUser();
+            // 가입 미완료(is_join=false): 구글 계정 선택부터 다시 시작
             if (!user.is_join) {
-                setWarningStep("profile");
-                setIsWarningModalOpen(true);
+                router.push("/signup");
                 return;
             }
             if (!user.is_prefer) {

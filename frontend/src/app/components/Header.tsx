@@ -119,10 +119,9 @@ export function Header() {
         
         const token = localStorage.getItem("access_token");
         if (token && userProfile) {
-            // 주의: 가입 기입 내용이나 설문을 다 마치지 않았다면, explore 대신 경고 모달 표시
+            // 가입 미완료(is_join=false): 구글 계정 선택부터 다시 시작
             if (!userProfile.is_join) {
-                setWarningStep("profile");
-                setIsWarningModalOpen(true);
+                router.push("/signup");
                 return;
             }
             if (!userProfile.is_prefer) {
