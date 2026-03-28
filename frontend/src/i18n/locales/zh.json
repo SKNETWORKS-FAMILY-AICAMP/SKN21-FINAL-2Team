@@ -386,6 +386,7 @@
   "mypage.tplPayMethod": "付款方式",
   "mypage.tplPayAmount": "付款金额",
   "mypage.deleteReservationConfirmDesc": "确定要删除此预订吗？删除的数据无法恢复。",
+  "mypage.reservationNameRequired": "请输入预订名称后才能保存",
   "mypage.reservationSavedTitle": "预订保存成功",
   "mypage.reservationSavedMessage": "您的预订已成功保存。",
   "mypage.savedReservation": "已保存的预订",

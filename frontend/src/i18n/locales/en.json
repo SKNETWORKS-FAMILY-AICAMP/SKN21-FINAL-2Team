@@ -386,6 +386,7 @@
   "mypage.tplPayMethod": "Payment",
   "mypage.tplPayAmount": "Amount",
   "mypage.deleteReservationConfirmDesc": "Are you sure you want to delete this reservation? Deleted data cannot be recovered.",
+  "mypage.reservationNameRequired": "Please enter a reservation name to save",
   "mypage.reservationSavedTitle": "Reservation Saved",
   "mypage.reservationSavedMessage": "Your reservation has been saved successfully.",
   "mypage.savedReservation": "Saved Reservation",

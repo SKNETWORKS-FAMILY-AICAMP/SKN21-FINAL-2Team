@@ -386,6 +386,7 @@
   "mypage.tplPayMethod": "支払い方法",
   "mypage.tplPayAmount": "支払い金額",
   "mypage.deleteReservationConfirmDesc": "この予約を削除しますか？削除されたデータは復元できません。",
+  "mypage.reservationNameRequired": "予約名を入力してください",
   "mypage.reservationSavedTitle": "予約保存完了",
   "mypage.reservationSavedMessage": "予約が正常に保存されました。",
   "mypage.savedReservation": "保存済み予約",

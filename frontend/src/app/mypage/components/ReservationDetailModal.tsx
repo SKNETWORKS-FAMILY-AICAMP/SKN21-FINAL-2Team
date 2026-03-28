@@ -138,6 +138,11 @@ export function ReservationDetailModal({
 
                         {/* 하단 저장 버튼 */}
                         <div className="px-8 pb-8 pt-3">
+                            {isEditMode && !canSave && (
+                                <p className="text-xs text-red-400 text-center mb-2">
+                                    {t("mypage.reservationNameRequired")}
+                                </p>
+                            )}
                             {isEditMode ? (
                                 <button
                                     type="button"
