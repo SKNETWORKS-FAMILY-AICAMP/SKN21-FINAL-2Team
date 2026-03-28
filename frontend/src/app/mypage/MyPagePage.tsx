@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -20,7 +21,7 @@ import { DeleteReservationConfirmModal, PreferenceSavedPopup } from "./component
 
 import { useTranslation } from "@/i18n/useTranslation";
 import { resolveImageUrl } from "@/lib/imageUrl";
-import { updateReservation, uploadImageDataUrl } from "@/services/api";
+import { createReservation, updateReservation, uploadImageDataUrl } from "@/services/api";
 import { useMyPage, mapReservationRecordToItem } from "./components/useMyPage";
 import type { ReservationItem } from "./types";
 
@@ -43,6 +44,9 @@ function ReservationLogo({ category }: { category: ReservationItem["category"] }
 export function MyPagePage() {
   const router = useRouter();
   const { t } = useTranslation();
+
+  // 드래프트 저장용 임시 ref (create 시 title/category/photo를 모아두기 위함)
+  const draftFieldsRef = useRef<{ title?: string; category?: string; photo?: string | null }>({});
 
   // 1. 상태 및 데이터 페칭 전면 캡슐화 훅
   const { state, actions } = useMyPage();
@@ -250,8 +254,11 @@ export function MyPagePage() {
         photoUrl={activeReservation?.reservationImageUrl}
         onSavePhoto={async (url) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.photo = url;
+            return;
+          }
           try {
-            // base64 data URL → 서버 업로드 후 상대경로로 변환
             const imagePath = url && url.startsWith("data:image/")
               ? await uploadImageDataUrl(url, "reservations")
               : url;
@@ -266,6 +273,10 @@ export function MyPagePage() {
         }}
         onSaveTitle={async (newTitle) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.title = newTitle;
+            return;
+          }
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
               name: newTitle,
@@ -278,6 +289,10 @@ export function MyPagePage() {
         }}
         onSaveCategory={async (newCategory) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.category = newCategory;
+            return;
+          }
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
               category: newCategory,
@@ -290,6 +305,30 @@ export function MyPagePage() {
         }}
         onSaveDetails={async (newDetails) => {
           if (!activeReservation) return;
+
+          // 드래프트: ref에 모아둔 title/category/photo와 함께 한 번에 create
+          if (activeReservation.reservationId === -1) {
+            try {
+              const draft = draftFieldsRef.current;
+              let imagePath = draft.photo || "";
+              if (imagePath && imagePath.startsWith("data:image/")) {
+                imagePath = await uploadImageDataUrl(imagePath, "reservations") || "";
+              }
+              const created = await createReservation({
+                category: draft.category || "transportation",
+                name: draft.title || t("mypage.newReservation"),
+                date: new Date().toISOString().slice(0, 10),
+                image_path: imagePath,
+                details: newDetails,
+              });
+              const mapped = mapReservationRecordToItem(created, t);
+              setReservations((prev) => [mapped, ...prev]);
+              setActiveReservation(mapped);
+              draftFieldsRef.current = {};
+            } catch (error) { console.error("Failed to create reservation", error); }
+            return;
+          }
+
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
               details: newDetails,
@@ -300,11 +339,9 @@ export function MyPagePage() {
             )));
           } catch (error) { console.error("Failed to update details", error); }
         }}
-        onClose={(wasSaved, isNewDraft) => {
+        onClose={() => {
           setActiveReservation(null);
-          if (!wasSaved && isNewDraft && activeReservation) {
-            void handleDeleteReservation(activeReservation.id);
-          }
+          draftFieldsRef.current = {};
         }}
       />
 

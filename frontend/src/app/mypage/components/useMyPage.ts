@@ -175,20 +175,20 @@ export function useMyPage() {
     };
   }, []);
 
-  const handleAddReservation = async () => {
-    try {
-      const created = await createReservation({
-        category: "transportation",
-        name: t("mypage.newReservation"),
-        date: new Date().toISOString().slice(0, 10),
-        image_path: "",
-      });
-      const mapped = mapReservationRecordToItem(created, t);
-      setReservations((prev) => [mapped, ...prev]);
-      setActiveReservation(mapped);
-    } catch (error) {
-      console.error("Failed to create new reservation draft", error);
-    }
+  const handleAddReservation = () => {
+    // DB 저장 없이 임시 객체로 모달만 열기 (저장 시점에 create)
+    const draft: ReservationItem = {
+      id: `reservation-draft-${Date.now()}`,
+      reservationId: -1,
+      category: "transportation",
+      title: t("mypage.newReservation"),
+      subtitle: t("mypage.savedReservation"),
+      dateLabel: "-",
+      identifierLabel: t("mypage.reservationId"),
+      identifierValue: "-",
+      details: [],
+    };
+    setActiveReservation(draft);
   };
 
   const handleDeleteReservation = async (id: string) => {

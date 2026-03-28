@@ -36,7 +36,7 @@ export function ReservationDetailModal({
     const {
         draftDetails, editingTitle, draftTitle, isOcrLoading, ocrMessage,
         showCloseWarning, showSuccessMessage, isEditMode, promptOpen, promptValue,
-        effectivePhotoUrl, previewPhotoUrl, draftCategory, previewOpen
+        effectivePhotoUrl, previewPhotoUrl, draftCategory, previewOpen, canSave
     } = state;
 
     const {
@@ -142,7 +142,7 @@ export function ReservationDetailModal({
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={!isEditMode}
+                                    disabled={!canSave}
                                     className="w-full h-12 rounded-2xl bg-black text-white text-sm font-bold shadow-xl shadow-black/10 hover:bg-zinc-800 hover:-translate-y-0.5 transition-all active:translate-y-0 disabled:opacity-20 flex items-center justify-center gap-2 group"
                                 >
                                     <Check size={16} className="group-hover:scale-110 transition-transform" />

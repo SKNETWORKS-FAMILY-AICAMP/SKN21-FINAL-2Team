@@ -246,7 +246,8 @@ export function useReservationForm({
       promptValue,
       photoUrl,
       effectivePhotoUrl,
-      previewPhotoUrl
+      previewPhotoUrl,
+      canSave: isEditMode && draftTitle.trim().length > 0 && !isNewDraftTitle(draftTitle, t),
     },
     actions: {
       setDraftPhotoUrl,
