@@ -1,6 +1,26 @@
 from app.models.enums import LanguageType
 
 
+_LANGUAGE_REMINDER: dict[LanguageType, str] = {
+    LanguageType.en: "[IMPORTANT] Your response MUST be written entirely in English.",
+    LanguageType.ja: "[重要] 必ず全て日本語で回答してください。",
+    LanguageType.zh: "[重要] 请务必全部使用中文回答。",
+}
+
+
+def get_language_reminder(language) -> str | None:
+    """
+    HumanMessage 앞에 삽입할 짧은 언어 강제 지시문. 한국어는 None 반환.
+    """
+    try:
+        key = language if isinstance(language, LanguageType) else LanguageType(language) if language else None
+    except ValueError:
+        key = None
+    if key is None or key == LanguageType.ko:
+        return None
+    return _LANGUAGE_REMINDER.get(key)
+
+
 def get_language_instruction(language: LanguageType, name_instruction = True) -> str:
     """
     사용자 언어를 따르도록 하는 시스템 문구를 반환합니다.
