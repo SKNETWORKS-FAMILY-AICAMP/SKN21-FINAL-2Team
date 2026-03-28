@@ -151,6 +151,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
+            if (isAbortedRef.current) return;
             resetSilenceTimer();
             let interim = "";
             for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -169,7 +170,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             // abort()에 의한 의도적 중단은 무시
-            if (event.error === "aborted") return;
+            if (event.error === "aborted" || isAbortedRef.current) return;
 
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 setSttPermission("denied");
@@ -198,6 +199,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
 
             if (appLanguage == "ja" && raw) {
                 correctSttText(raw, appLanguage).then((corrected) => {
+                    if (isAbortedRef.current) return;
                     setInputText(corrected);
                 });
             } else {
@@ -246,8 +248,8 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
     }, [syncMicPermission]);
 
     const abortListening = useCallback(() => {
+        isAbortedRef.current = true;
         if (recognitionRef.current) {
-            isAbortedRef.current = true;
             recognitionRef.current.abort();
             setIsListening(false);
             clearSilenceTimer();
