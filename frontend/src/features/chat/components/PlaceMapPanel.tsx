@@ -304,7 +304,7 @@ export function PlaceMapPanel({
             <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
             {/* Floating Carousel at the bottom */}
-            <div className="absolute left-0 right-0 bottom-3 sm:bottom-4 z-10 px-3 sm:px-4 group/carousel">
+            <div className="absolute left-0 right-0 bottom-4 sm:bottom-5 z-10 px-3 sm:px-4 group/carousel">
               {canScrollLeft && (
                 <button
                   type="button"
