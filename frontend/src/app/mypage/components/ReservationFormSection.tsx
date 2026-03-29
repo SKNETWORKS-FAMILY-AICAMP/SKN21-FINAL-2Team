@@ -161,7 +161,6 @@ export function ReservationFormSection({
                   if (e.key === "Enter") setEditingTitle(false);
                 }}
                 autoFocus
-                placeholder={t("mypage.clickToInputTitle")}
                 className="w-full h-11 rounded-2xl border border-gray-100 bg-gray-50 px-4 text-[13px] font-semibold text-gray-900 transition-all focus:outline-none focus:border-gray-300 focus:bg-white shadow-sm"
                 placeholder={t("mypage.reservationTitlePlaceholder")}
               />
