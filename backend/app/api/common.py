@@ -5,7 +5,7 @@ import re
 import time
 import urllib.parse
 from fastapi import APIRouter, Depends
-from PIL import Image
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 
 from app.models.user import User
@@ -65,6 +65,7 @@ def _to_web_safe(raw: bytes) -> tuple[bytes, str, str]:
     """
     try:
         img = Image.open(io.BytesIO(raw))
+        img = ImageOps.exif_transpose(img)  # EXIF 회전 정보를 픽셀에 반영
         if img.mode in ("RGBA", "P", "PA", "LA"):
             img = img.convert("RGBA")
             buf = io.BytesIO()
