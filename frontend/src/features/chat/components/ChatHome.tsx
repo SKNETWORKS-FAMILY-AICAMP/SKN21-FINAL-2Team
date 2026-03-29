@@ -536,8 +536,8 @@ export function ChatHome() {
 
     return (
         <div className={cn(
-            "flex h-full min-h-0 bg-white relative rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100",
-            isMapPanelOpen ? "lg:rounded-l-[32px] lg:rounded-r-none" : "lg:rounded-[32px]"
+            "flex h-full min-h-0 bg-white relative overflow-hidden",
+            ""
         )}>
             <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-slate-50/30">
                 <ChatHeader
