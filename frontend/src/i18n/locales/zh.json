@@ -11,7 +11,7 @@
   "signup.profileSaveFailed": "保存个人资料失败。",
   "signup.signupFailed": "Google注册失败",
   "signup.switchAccount": "使用其他Google账号登录",
-  "profile.title": "最后一步，{name}",
+  "profile.title": "你好，{name}！",
   "profile.subtitle": "请输入信息以定制您的旅行体验。",
   "profile.fullName": "姓名",
   "profile.email": "电子邮箱",

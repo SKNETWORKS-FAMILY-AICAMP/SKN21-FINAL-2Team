@@ -32,6 +32,7 @@ type PlaceMapPanelProps = {
   isPanelOpen?: boolean;
   panelWidth?: number;
   isResizing?: boolean;
+  isSheet?: boolean;
 };
 
 const SEOUL_BOUNDS = {
@@ -62,6 +63,7 @@ export function PlaceMapPanel({
   isPanelOpen = true,
   panelWidth,
   isResizing = false,
+  isSheet = false,
 }: PlaceMapPanelProps) {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const { language } = useTranslation();
@@ -304,13 +306,16 @@ export function PlaceMapPanel({
             <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
             {/* Floating Carousel at the bottom */}
-            <div className="absolute left-0 right-0 bottom-4 sm:bottom-5 z-10 px-3 sm:px-4 group/carousel">
+            <div 
+              className={`absolute left-0 right-0 z-10 group/carousel ${
+                isSheet ? "bottom-20 sm:bottom-24" : "bottom-6 sm:bottom-8"
+              } pb-[env(safe-area-inset-bottom)]`}
+            >
               {canScrollLeft && (
                 <button
                   type="button"
                   onClick={() => scrollBy("left")}
-                  className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-
+                  className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 flex w-8 h-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100"
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -319,7 +324,7 @@ export function PlaceMapPanel({
               <div
                 ref={scrollContainerRef}
                 onScroll={checkScrollability}
-                className="flex overflow-x-auto gap-2.5 sm:gap-3 pt-2 pb-2 pr-2 snap-x custom-scrollbar relative scroll-smooth"
+                className="flex overflow-x-auto gap-2.5 sm:gap-3 px-4 sm:px-6 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
               >
                 {groupedPlaces.map((group) => (
                   group.places.map((place) => {
@@ -378,8 +383,7 @@ export function PlaceMapPanel({
                 <button
                   type="button"
                   onClick={() => scrollBy("right")}
-                  className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-
+                  className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 flex w-8 h-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100"
                 >
                   <ChevronRight size={18} />
                 </button>

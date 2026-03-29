@@ -69,6 +69,7 @@ export function PlaceMapSheet({
               onSelectPlace={onSelectPlace}
               onMarkerClick={onMarkerClick}
               showHeader={false}
+              isSheet={true}
             />
           </motion.div>
         </motion.div>

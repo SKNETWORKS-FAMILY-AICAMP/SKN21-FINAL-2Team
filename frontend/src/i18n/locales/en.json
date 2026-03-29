@@ -11,7 +11,7 @@
   "signup.profileSaveFailed": "Failed to save profile.",
   "signup.signupFailed": "Google Sign up Failed",
   "signup.switchAccount": "Sign in with a different Google account",
-  "profile.title": "One last step, {name}",
+  "profile.title": "Hello, {name}!",
   "profile.subtitle": "Help us personalize your travel experience.",
   "profile.fullName": "Full Name",
   "profile.email": "Email Address",
