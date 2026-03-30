@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, MapPin, ArrowRight, Star, Calendar, Clock } from "lucide-react";
+import { Sparkles, MapPin, ArrowRight, Calendar } from "lucide-react";
 
 // Contents 섹션은 API에서 데이터를 가져옵니다.
 
 import { Sidebar } from "@/components/navigation/Sidebar";
-import { PLACE_PLACEHOLDER } from "@/lib/imageUrl";
+import { PlaceCard } from "@/components/common/PlaceCard";
 import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
 /** 백엔드 카테고리 값(한국어) → 번역 키 매핑 */
@@ -272,13 +272,7 @@ export function ExplorePage() {
                                             {/* [Fix] 이미지를 aspect-ratio 기반으로 변경하여 화면 크기에 맞게 유동 확장 */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.restaurants.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        </div>
-                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
-                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
-                                                    </motion.div>
+                                                    <PlaceCard key={item.contentid} item={item} onClick={() => handleChoiceCardClick(item)} />
                                                 ))}
                                             </div>
                                         </div>
@@ -292,13 +286,7 @@ export function ExplorePage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tourist.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        </div>
-                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
-                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
-                                                    </motion.div>
+                                                    <PlaceCard key={item.contentid} item={item} onClick={() => handleChoiceCardClick(item)} />
                                                 ))}
                                             </div>
                                         </div>
@@ -312,13 +300,7 @@ export function ExplorePage() {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 {yourChoices.tours.map((item) => (
-                                                    <motion.div key={item.contentid} whileHover={{ y: -3 }} className="group cursor-pointer" onClick={() => handleChoiceCardClick(item)}>
-                                                        <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden bg-gray-100 mb-2">
-                                                            <img src={item.image_url || PLACE_PLACEHOLDER} alt={item.title} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                                        </div>
-                                                        <h5 className="text-sm font-medium text-gray-900 leading-tight truncate">{item.title}</h5>
-                                                        <p className="text-[11px] text-gray-400 truncate">{item.address}</p>
-                                                    </motion.div>
+                                                    <PlaceCard key={item.contentid} item={item} onClick={() => handleChoiceCardClick(item)} />
                                                 ))}
                                             </div>
                                         </div>

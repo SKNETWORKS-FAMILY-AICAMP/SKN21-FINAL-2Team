@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, MapPin, ArrowRight, Check, Bookmark as BookmarkIcon, Loader2, Trash2, X } from "lucide-react";
 import { Sidebar } from "@/components/navigation/Sidebar";
@@ -27,8 +28,18 @@ export function BookmarkPage() {
     const [selectedPlacesForPlan, setSelectedPlacesForPlan] = useState<number[]>([]);
     const [isDeletingSessions, setIsDeletingSessions] = useState<boolean>(false);
     const [isDeletingPlaces, setIsDeletingPlaces] = useState<boolean>(false);
-    const [selectedSessionIdsForDelete, setSelectedSessionIdsForDelete] = useState<number[]>([]);
-    const [selectedPlaceIdsForDelete, setSelectedPlaceIdsForDelete] = useState<number[]>([]);
+    const {
+        selected: selectedSessionIdsForDelete,
+        toggle: toggleSessionSelectionForDelete,
+        clear: clearSelectedSessions,
+        setSelected: setSelectedSessionIdsForDelete,
+    } = useMultiSelect<number>();
+    const {
+        selected: selectedPlaceIdsForDelete,
+        toggle: togglePlaceSelectionForDelete,
+        clear: clearSelectedPlaces,
+        setSelected: setSelectedPlaceIdsForDelete,
+    } = useMultiSelect<number>();
     const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
     const [confirmKind, setConfirmKind] = useState<"sessions" | "places">("sessions");
     const [sessions, setSessions] = useState<BookmarkedRoomItem[]>([]);
@@ -78,37 +89,29 @@ export function BookmarkPage() {
         }
     };
 
-    const toggleSessionSelectionForDelete = (id: number) => {
-        setSelectedSessionIdsForDelete((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
-    const togglePlaceSelectionForDelete = (id: number) => {
-        setSelectedPlaceIdsForDelete((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
     const handleEnterDeleteSessions = () => {
         setIsDeletingSessions(true);
-        setSelectedSessionIdsForDelete([]);
+        clearSelectedSessions();
         setError(null);
     };
 
     const handleCancelDeleteSessions = () => {
         setIsDeletingSessions(false);
-        setSelectedSessionIdsForDelete([]);
+        clearSelectedSessions();
         setConfirmOpen(false);
         setError(null);
     };
 
     const handleEnterDeletePlaces = () => {
         setIsDeletingPlaces(true);
-        setSelectedPlaceIdsForDelete([]);
+        clearSelectedPlaces();
         setSelectedPlacesForPlan([]);
         setError(null);
     };
 
     const handleCancelDeletePlaces = () => {
         setIsDeletingPlaces(false);
-        setSelectedPlaceIdsForDelete([]);
+        clearSelectedPlaces();
         setConfirmOpen(false);
         setError(null);
     };
@@ -140,13 +143,13 @@ export function BookmarkPage() {
                 const ids = [...selectedSessionIdsForDelete];
                 await Promise.all(ids.map((roomId) => updateRoomBookmark(roomId, false)));
                 setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
-                setSelectedSessionIdsForDelete([]);
+                clearSelectedSessions();
                 setIsDeletingSessions(false);
             } else {
                 const ids = [...selectedPlaceIdsForDelete];
                 await Promise.all(ids.map((placeId) => updatePlaceBookmark(placeId, false)));
                 setPlaces((prev) => prev.filter((p) => !ids.includes(p.id)));
-                setSelectedPlaceIdsForDelete([]);
+                clearSelectedPlaces();
                 setIsDeletingPlaces(false);
             }
             setConfirmOpen(false);
@@ -225,7 +228,7 @@ export function BookmarkPage() {
                                 onClick={() => {
                                     setActiveTab("sessions");
                                     setIsDeletingPlaces(false);
-                                    setSelectedPlaceIdsForDelete([]);
+                                    clearSelectedPlaces();
                                     setSelectedPlacesForPlan([]);
                                     setConfirmOpen(false);
                                 }}
@@ -237,7 +240,7 @@ export function BookmarkPage() {
                                 onClick={() => {
                                     setActiveTab("places");
                                     setIsDeletingSessions(false);
-                                    setSelectedSessionIdsForDelete([]);
+                                    clearSelectedSessions();
                                     setConfirmOpen(false);
                                 }}
                                 className={`px-5 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all ${activeTab === "places" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}

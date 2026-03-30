@@ -28,6 +28,7 @@ from app.schemas.chat import (
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.common import to_client_image_url, to_vision_image_input
+from app.utils.db_utils import get_owned_resource_or_404
 from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
@@ -220,10 +221,9 @@ def _input_coordinate_or_none(value):
 
 
 def _get_owned_room_or_404(db: Session, room_id: int, user_id: int) -> ChatRoom:
-    room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == user_id).first()
-    if not room:
-        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
-    return room
+    return get_owned_resource_or_404(
+        db, ChatRoom, room_id, user_id, ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found"
+    )
 
 
 def _save_human_message_if_needed(db: Session, room_id: int, message_in: ChatMessageCreate):
