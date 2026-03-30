@@ -20,7 +20,7 @@
 12. [성과 및 차별점](#성과-및-차별점)
 13. [사이트맵 및 화면구성](#사이트맵-및-화면구성)
 14. [설치 및 실행](#설치-및-실행)
-15. [트러블슈팅](#트러블슈팅)
+15. [문제 해결](#문제-해결)
 16. [향후계획](#향후계획)
 17. [회고](#회고)
 ---
@@ -31,10 +31,10 @@
 
 | 이름 | 역할 | Github |
 |:---:|:---:|:---:|
-|👑 </br> **전우영** | **PM / Service Planner** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
+|👑 </br> **전우영** | **PM/Backend DeveLoper** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
 | **김가람** | **Multimodal AI Engineer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) |
-| **박민정** | **Frontend Developer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) |
-| **손현우** | **UI/UX Designer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
+| **박민정** | **Frontend Developer/data** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) |
+| **손현우** | **UI/UX Designer/docs** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
 
 </div>
 
@@ -217,11 +217,11 @@ SKN21-FINAL-2Team/
 
 | 카테고리 | 데이터 출처 | 수집 방식 | 목적 | 데이터 건수 |
 |:---:|:---|:---:|:---|:---:|
-| **관광지** | 한국관광공사 (Visit Korea) | API | 메인 관광 스팟 추천 | 1,632 |
-| **음식점** | 한국관광공사 (Visit Korea) | API | 식사/맛집 장소 추천 | 2,259 |
-| **숙박** | 한국관광공사 (Visit Korea) | API | 숙박 장소 추천 | 345 |
+| **관광지** | 한국관광공사, Visit Seoul | API | 메인 관광 스팟 추천 | 1,632 |
+| **음식점** | 한국관광공사, Visit Seoul | API | 식사/맛집 장소 추천 | 2,259 |
+| **숙박** | 한국관광공사, Visit Seoul | API | 숙박 장소 추천 | 345 |
 | **쇼핑 (상설)** | 올리브영, 무신사, 다이소 등 공식 홈페이지 | 웹 크롤링 | K-브랜드 쇼핑 장소 추천 | 82 |
-| **투어** | Visit Korea | 웹 크롤링 | 투어 패키지 보조 추천 | 386 |
+| **투어** | Visit Seoul | 웹 크롤링 | 투어 패키지 보조 추천 | 386 |
 | **컨텐츠** | 서울문화포털, Poply | 크롤링/API | 공연 및 전시 타임라인 추천 | 250 |
 | **팝업스토어** | Poply 등 | 웹 크롤링 | 단기 트렌드(팝업) 장소 추천 | 9 |
 | **이미지** | 한국관광공사, Poply 등 통합 | 크롤링/API | 멀티모달(사진) 기반 감성 검색 | 4,864 |
@@ -316,7 +316,9 @@ SKN21-FINAL-2Team/
 
 ![evaluation](images/evaluation_table.png)
 
-> *LLM 모델(`gpt-4o`)을 판관(Judge)으로 사용하여 RAGAS를 측정한 결과, Faithfulness(답변의 근거 신뢰성) 및 Answer Relevancy(질문 연관성) 지표가 3차에서 `0.9` 이상으로 완벽에 가깝게 개선되었습니다.*
+> **💡 Triver만의 평가 철학 (답변의 자유도와 신뢰성 확보)**
+> Triver는 정해진 단일 정답을 찾는 딱딱한 Q&A 봇이 아니라, 사용자 취향에 맞춰 **다양하고 매력적인 장소를 추천하는 대화형 에이전트**입니다.
+> 따라서 완벽하게 동일한 텍스트(Exact Match)를 요구하는 전통적인 성능 평가를 탈피하여, 에이전트가 높은 **'답변의 자유도'**를 가지도록 설계했습니다. 그 대신, LLM 모델(`gpt-4o`)을 판관(Judge)으로 삼아 **"현재 구축된 DB 내용에 충실하게 근거하여 답변하는가(Faithfulness)"**와 **"사용자 질문 맥락을 정확히 짚어냈는가(Answer Relevancy)"**만을 중점적으로 검증했습니다. 그 결과, 3차 테스트에서 해당 지표들이 `0.9` 이상으로 완벽에 가깝게 개선되며 '환각(Hallucination) 없는 창의적인 추천'을 기술적으로 증명했습니다.
 
 ---
 
@@ -335,7 +337,7 @@ SKN21-FINAL-2Team/
 
 ---
 
-## 🛠 트러블슈팅
+## 🛠 문제 해결
 
 | 문제 | 해결 과정 | 해결 결과 |
 |:---|:---|:---|
