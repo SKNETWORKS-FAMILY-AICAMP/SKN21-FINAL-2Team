@@ -11,7 +11,7 @@
   "signup.profileSaveFailed": "プロフィールの保存に失敗しました。",
   "signup.signupFailed": "Googleサインアップに失敗しました",
   "signup.switchAccount": "別のGoogleアカウントでログイン",
-  "profile.title": "あと少しです、{name}",
+  "profile.title": "こんにちは、{name}さん！",
   "profile.subtitle": "旅行体験をカスタマイズするための情報を入力してください。",
   "profile.fullName": "氏名",
   "profile.email": "メールアドレス",
