@@ -308,7 +308,7 @@ function SidebarContent() {
                 </>
             )}
             <aside className={cn(
-                "bg-white flex flex-col border-r border-gray-200 relative",
+                "bg-white flex flex-col border border-gray-200 relative shadow-sm",
                 isDesktop
                     ? cn(
                         "h-full rounded-lg transition-[width] duration-200 ease-out will-change-[width]",

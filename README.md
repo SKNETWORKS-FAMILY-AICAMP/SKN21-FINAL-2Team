@@ -10,27 +10,33 @@
 2. [프로젝트 개요](#프로젝트-개요)  
 3. [프로젝트 배경](#프로젝트-배경)  
 4. [프로젝트 목표](#프로젝트-목표)  
-5. [주요 기능](#주요-기능)  
+5. [상품추천 타게팅 및 주요 기능](#상품추천-타게팅-및-주요-기능)  
 6. [기술 스택](#기술-스택)  
 7. [프로젝트 구조](#프로젝트-구조)    
 8. [WBS](#WBS)
-9. [수집 데이터 및 활용목적](#수집-데이터-및-활용목적)
-10. [ERD](#ERD)
-11. [시스템 아키텍쳐](#시스템-아키텍쳐)
-12. [성과 및 검증](#성과-및-검증)
-13. [트러블슈팅](#트러블슈팅)
-14. [향후계획](#향후계획)
+9. [데이터](#데이터)
+10. [시스템 아키텍쳐](#시스템-아키텍쳐)
+11. [핵심 기술 (LLM 에이전트)](#핵심-기술-llm-에이전트)
+12. [성과 및 차별점](#성과-및-차별점)
+13. [사이트맵 및 화면구성](#사이트맵-및-화면구성)
+14. [설치 및 실행](#설치-및-실행)
+15. [문제 해결](#문제-해결)
+16. [향후계획](#향후계획)
+17. [회고](#회고)
 ---
 
 ## 👥 Team TRIVERS
 
-| 이름 | 역할 |
-|:---|:---|
-| 전우영 | Service Planner |
-| 김가람 | Multimodal AI Engineer |
-| 박민정 | Frontend Developer |
-| 손현우 | UI/UX Designer |
-| 장이선 | Data Engineer |
+<div align="center">
+
+| 이름 | 역할 | Github |
+|:---:|:---:|:---:|
+|👑 </br> **전우영** | **PM/Backend DeveLoper** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
+| **김가람** | **Multimodal AI Engineer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) |
+| **박민정** | **Frontend Developer/data** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) |
+| **손현우** | **UI/UX Designer/docs** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
+
+</div>
 
 ---
 
@@ -48,14 +54,17 @@ LLM 기반 대화형 여행 추천 서비스입니다.
 ## 🧭 프로젝트 배경
 
 ### 1. k-컬쳐에 대한 관심도와 한국 관광에 대한 관심 증가
-![ERD](doc/article.png)
+![aritcle](images/article.png)
 <br>
 <sup>*출처: [뉴데일리경제 기사]*</sup>
-![ERD](doc/graph1.png)
+
+![graph](images/graph1.png)
 <br>
 <sup>*출처: [한국관광데이터랩]*</sup>
 
-K-컬쳐 인기와 함께 방한 관광객은 증가하고 있는 추세.
+![article2](images/article2.png)
+
+> K-컬쳐 인기와 함께 방한 관광객은 증가하고 있는 추세.
 
 
 ### 2. 기존 시장 구조의 한계
@@ -74,10 +83,6 @@ K-컬쳐 인기와 함께 방한 관광객은 증가하고 있는 추세.
 ## 🎯 프로젝트 목표
 
 AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 바탕으로 한 여행 장소 추천부터 일정 관리까지 원스톱 서비스를 제공하는 초개인화 K - Culture 여행 에이전트 개발.
-
----
-
-## 🚀 주요 기능
 
 ### 1️⃣ 파편화된 여정의 통합
 - RAG 기반, 한국관광공사 등에서 가져온 검증된 정보 추천
@@ -99,28 +104,54 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 
 ---
 
+## 🚀 상품추천 타게팅 및 주요 기능
+
+### 타겟 사용자 & 사용 시나리오
+- **내국인:** "이번 주말 혼자 서울에서 감성 카페 투어 하고 싶어"
+- **외국인:** "I'm visiting Seoul next week with my family, recommend kid-friendly spots"
+- **이미지 기반:** 인스타에서 본 사진과 비슷한 장소 찾기
+
+### 주요 기능 맵
+| 기능 | 설명 |
+|:------|:------|
+| 대화형 여행 플래닝 | 멀티턴 대화로 일정 자동 생성 |
+| 장소 추천 (RAG) | 하이브리드 검색으로 맞춤 장소 추천 |
+| 이미지 유사 장소 검색 | CLIP 기반 사진 → 유사 장소 매칭 |
+| 경로 최적화 | VRP 기반 이동 동선 최적화 |
+| 트렌드 통합 | 팝업스토어, 축제 등 실시간 반영 |
+| 날씨 연동 | 날씨 기반 실내/실외 추천 전환 |
+| 다국어 지원 | 4개 언어 네이티브 응답 |
+| 일일 추천 | 사용자별 매일 새로운 추천 생성 |
+| 북마크 & 다이어리 | 장소 저장 + 여행 기록 |
+
+### 2-3. 사용자 흐름 (User Flow)
+
+![userflow](images/userflow.png)
+
+---
 ## 🛠 기술 스택
 
 ### 💻 Frontend
 | Category | Tech |
 |----------|------|
-| Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) |
 | Language | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) |
-| Styling | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) ![Framer](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white) |
+| Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) |
+| Styling | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
 
 ### ⚙ Backend
 | Category | Tech |
 |----------|------|
-| Framework | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white) ![Uvicorn](https://img.shields.io/badge/Uvicorn-499848?style=flat-square&logo=python&logoColor=white) |
 | Language | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) |
+| Framework | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white) |
 | Database | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=flat-square) |
-| AI / LLM | ![LangChain](https://img.shields.io/badge/LangChain-121212?style=flat-square&logo=chainlink&logoColor=white) ![LangGraph](https://img.shields.io/badge/LangGraph-4B0082?style=flat-square&logo=chainlink&logoColor=white) ![CLIP](https://img.shields.io/badge/CLIP-FF6F00?style=flat-square&logo=openai&logoColor=white) ![BGE-M3](https://img.shields.io/badge/BGE--M3-FF6F00?style=flat-square&logo=huggingface&logoColor=white) ![GPT-4o-mini](https://img.shields.io/badge/GPT--4o--mini-412991?style=flat-square&logo=openai&logoColor=white) |
+| ORM / Migration | ![Alembic](https://img.shields.io/badge/Alembic-5B8A44?style=flat-square) |
+| Infrastructure | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white) |
 
-### 🚀 Infrastructure
+### 🧠 LLM
 | Category | Tech |
 |----------|------|
-| Web Server | ![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white) |
-| Container | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![Docker_Compose](https://img.shields.io/badge/Docker_Compose-1D63ED?style=flat-square&logo=docker&logoColor=white) |
+| Framework | ![LangChain](https://img.shields.io/badge/LangChain-515151?style=flat-square) ![LangGraph](https://img.shields.io/badge/LangGraph-515151?style=flat-square) |
+| Model | ![CLIP](https://img.shields.io/badge/CLIP-5A48CE?style=flat-square) ![BGE-M3](https://img.shields.io/badge/BGE--M3-0052CC?style=flat-square) ![GPT-4o-mini](https://img.shields.io/badge/GPT--5.4--mini-515151?style=flat-square&logo=openai&logoColor=white) |
 
 ---
 
@@ -129,65 +160,189 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 ```text
 SKN21-FINAL-2Team/
 ├── backend/                  # FastAPI 기반 백엔드 애플리케이션
+│   ├── alembic/              # DB 마이그레이션 관리
 │   ├── app/                  # 비즈니스 로직, API 라우터, DB 모델
-│   ├── data/                 # 데이터 수집 및 전처리
-│   ├── tests/                # 백엔드 테스트 코드
-│   └── uploads/              # 사용자 업로드 파일 저장소
-├── frontend/                 # Next.js 기반 프론트엔드
-│   ├── public/               # 정적 에셋
-│   ├── src/                  # 리액트 컴포넌트 및 로직
-│   └── tests/                # 프론트엔드 테스트 코드
-├── nginx/                    # 웹 서버 및 리버스 프록시 설정
-├── docker-compose-local.yml  # 로컬 실행 설정
-└── README.md
+│   │   ├── api/              # 엔드포인트 라우팅 모듈
+│   │   ├── agents/           # LangGraph 기반 LLM 의도 분석 및 검색 에이전트
+│   │   ├── core/             # 데이터베이스 연결 및 전역 설정
+│   │   └── utils/            # DB(Qdrant/MySQL) 접근 로직 추출 및 공통 모듈 (Refactored)
+│   ├── data/                 # 데이터 수집 및 전처리 스크립트
+│   ├── evaluation/           # RAG 및 LLM 성능 평가(Ragas) 스크립트
+│   └── tests/                # 백엔드 유틸리티 및 모듈 단위 테스트(pytest)
+├── docs/                     # 시스템, 아키텍처 및 기획 산출물 문서
+├── frontend/                 # Next.js 15 기반 프론트엔드
+│   ├── public/               # 이미지, 로고 등 정적 에셋
+│   ├── src/
+│   │   ├── app/              # Next.js App Router 기반 경로 및 UI 조립
+│   │   ├── components/       # 재사용 가능한 UI 컴포넌트 (PlaceCard 모듈 등)
+│   │   ├── features/         # 채팅방, 프로필 등 고유 도메인 로직 컴포넌트
+│   │   ├── hooks/            # 상태 및 비동기 데이터를 다루는 Custom Hooks (useAsyncData 유틸)
+│   │   └── services/         # 백엔드 API 통신 규격 관리
+│   └── tests/                # 프론트엔드 컴포넌트 및 Hook 단위 테스트
+├── nginx/                    # Nginx 웹 서버 및 리버스 프록시 설정
+├── deploy/                   # 운영 환경(EC2 배포) 인프라 구성 스크립트
+├── docker-compose-local.yml  # 도커 컨테이너 로컬 통합 실행 환경 
+└── README.md                 # 리드미 (현재 문서)
 ```
 ---
 
-## 📊 WBS
+## 📊 WBS (일정 요약)
 
-![WBS](doc/wbs.jpg)
+8주간의 프로젝트 진행 단계를 아래와 같이 압축하여 수행했습니다.
+
+| 단계 | 주차 | 주요 업무 | 세부 활동 |
+|:---:|:---:|:---|:---|
+| **기획** | 1~2주차 | 산출물 정의 및 설계 | 주제 선정, 요구사항 명세, WBS/메뉴트리 작성, UX/UI 와이어프레임 |
+| **데이터** | 2~3주차 | 수집 및 전처리 | 한국관광공사 등 외부 API 크롤링, 데이터 정제 로직 스키마 통일 |
+| **AI/모델링** | 3~4주차 | LangGraph / RAG 구축 | 멀티모달(텍스트+이미지) 하이브리드 Retriever 파이프라인 개발 |
+| **서비스 개발** | 5~6주차 | BE / FE 구현 | Next.js 프론트엔드 채팅룸, FastAPI 백엔드 연동, DB 세팅 |
+| **고도화** | 7주차 | 최적화 및 평가 | RAGAS 성능 지표 검증, 응답 레이턴시 병목 개선, 네이버 지도 연동 |
+| **배포** | 8주차 | CI/CD 배포 및 마무리 | GitHub Actions 기반 AWS 무중단 배포 적용, 최종 발표 자료 준비 |
+
+
+<details>
+<summary><b>(클릭하여 WBS 이미지 보기)</b></summary>
+<br/>
+
+**상세 일정표 (Gantt Chart)**  
+![WBS 본문 이미지](images/wbs.jpg)
+
+</details>
 
 ---
-## 📋 수집 데이터 및 활용목적
+## 📋 데이터 아키텍처
 
-| 데이터 | 출처 | 활용 목적 |
-|:---|:---|:---|
-| Tour API | 한국관광공사 | 관광지/문화재/랜드 마크 등의 자주 변하지 않는 관광정보 수집 |
-| 트렌드 정보 | Poply 등 웹사이트 | 팝업스토어 등 실시간으로 자주 변하는 트렌디한 정보 수집 |
-| 
+### 1️⃣ 수집 데이터 현황
+다양한 외부 출처로부터 신뢰할 수 있는 장소/관광/이미지 데이터를 총 **9,827건** 수집하여 Vector DB에 적재했습니다.
 
-### 데이터 파이프라인
-![DATAPIPE](doc/pipeline.png)
-
+| 카테고리 | 데이터 출처 | 수집 방식 | 목적 | 데이터 건수 |
+|:---:|:---|:---:|:---|:---:|
+| **관광지** | 한국관광공사, Visit Seoul | API | 메인 관광 스팟 추천 | 1,632 |
+| **음식점** | 한국관광공사, Visit Seoul | API | 식사/맛집 장소 추천 | 2,259 |
+| **숙박** | 한국관광공사, Visit Seoul | API | 숙박 장소 추천 | 345 |
+| **쇼핑 (상설)** | 올리브영, 무신사, 다이소 등 공식 홈페이지 | 웹 크롤링 | K-브랜드 쇼핑 장소 추천 | 82 |
+| **투어** | Visit Seoul | 웹 크롤링 | 투어 패키지 보조 추천 | 386 |
+| **컨텐츠** | 서울문화포털, Poply | 크롤링/API | 공연 및 전시 타임라인 추천 | 250 |
+| **팝업스토어** | Poply 등 | 웹 크롤링 | 단기 트렌드(팝업) 장소 추천 | 9 |
+| **이미지** | 한국관광공사, Poply 등 통합 | 크롤링/API | 멀티모달(사진) 기반 감성 검색 | 4,864 |
 
 ---
-## ERD
 
-![ERD](doc/ERD.png)
+### 2️⃣ 데이터 전처리 및 보강 파이프라인
+원시(Raw) 데이터를 고품질 추천 데이터로 만들기 위해 아래의 3단계 가공을 거칩니다.
+
+1. **호출 및 통합:** Python(`requests`, `BeautifulSoup`) 스크래핑 및 OPEN API 호출.
+2. **클렌징 및 정규화:** 미사용 필드 제거, 중복 데이터 병합, 스키마 통일 및 텍스트 자연어 전처리.
+3. **LLM 지능 보강:** 누락성이 높은 데이터에 대해 `gpt-4o-mini`를 사용하여 장소의 설명, 매력 포인트(태그) 등을 동적 자동 생성.
+
+> 💡 **특화 전략 포인트**
+> - **멀티모달 이원화:** 텍스트 의미 검색을 위한 `places` 컬렉션과 이미지 감성 검색을 위한 `photos` 컬렉션을 분리 운용.
+> - **핫플레이스 군집화:** 행정구역 상 애매한 '홍대', '샤로수길', '송리단길' 등의 지역을 커스텀 사전으로 묶어 **별도 데이터**로 구축.
+> - **동적 데이터 업데이트:** 팝업스토어나 전시/공연 등 만료일이 있는 정보는 **스케줄러**를 통해 기간 만료 시 자동 페일오버/삭제 처리.
+> - **리서치 기반 임베딩 증강:** 배달의민족, 한국관광공사 통계 기반의 '외국인 선호 음식/관광지' 데이터를 텍스트 임베딩 컨텍스트에 추가 주입.
+
+---
+
+### 3️⃣ RAG / DB 엔진 스키마 요약
+복잡성을 줄이고 속도를 높이기 위해 도메인 특화 데이터베이스 모델링을 적용했습니다.
+
+- **RDBMS (MySQL) |** 사용자 정보(`Users`), 채팅 세션 맥락(`ChatRooms`, `ChatMessages`), 북마크(`ChatPlaces`), 부가 기능(`Reservations`, `DiaryEntries`)
+- **Vector DB (Qdrant) |** 고차원 벡터 임베딩 저장 공간 (`places` 텍스트 벡터, `photos` 이미지 벡터)
+- **Checkpointer |** LangGraph의 상태(State) 추적 및 복원을 담당하는 대화 메모리 체인 (MySQL 연동)
+
+<details>
+<summary><b>(클릭하여 ERD 및 데이터 파이프라인 이미지 보기)</b></summary>
+<br/>
+
+**[ERD 구조]**  
+![ERD](images/ERD.png)
+
+**[Langchain 데이터 흐름도]**  
+![DATAPIPE](images/pipeline.png)
+
+</details>
 
 ---
 
 ## 🏗 시스템 아키텍쳐
 
-![시스템 아키텍쳐](doc/architecture.png)
+![시스템 아키텍쳐](images/architecture.png)
+
+### 🚀 CI/CD 웹 배포 파이프라인
+- **GitHub Actions**를 활용하여 `release` 브랜치는 Staging(스테이징)으로, `main` 브랜치는 Prod(운영) 환경으로 자동 배포되도록 구축했습니다.
+- 검증 ➡️ 빌드 ➡️ **GHCR(GitHub Container Registry)** 푸시 ➡️ AWS EC2 원격 접속 후 최신 이미지 Pull 및 컨테이너 무중단 재시작(`/api/healthz` 헬스 체크)의 일련 과정을 빈틈없이 자동화했습니다.
 
 ---
 
-## 🎯 성과 및 검증
+## 🤖 핵심 기술 (LLM 에이전트)
 
-| 지표 | 목표 | 달성률 |
-|:---|:---|:---|
-|  |  |  |
-|  |  |  |
+### 1️⃣ LangGraph 에이전트 파이프라인
+- 단순 Chatbot이 아닌 **상태 기계(State Machine) 기반 에이전트**로, 각 노드가 전문화된 역할을 수행합니다.
+- `Intent Node` (의도 분류) → `Planner Node` (검색식/일정 계획) → `Geocoder Node` (좌표 변환) → `Retriever Node` (검색) → `Executor Node` (최종 요약 응답)의 흐름으로 라우팅됩니다.
+
+### 2️⃣ 4-Layer 하이브리드 멀티채널 검색 (Retriever)
+단순한 텍스트 검색을 넘어, 정확도와 사용자 요구 충족을 위해 **4단계(Layer)로 구성된 정교한 리트리버 파이프라인**을 설계했습니다.
+
+![4-Layer 구조](images/layer_retriever.png)
+
+
+### 3️⃣ 초개인화 메커니즘
+- 사용자의 가입 설문(여행 스타일,  분위기, 선호 테마) 정보와 대화 이력을 LLM이 기억 및 요약합니다.
+- 이를 바탕으로 매일 새로운 **일일 추천 카드**를 생성하고, 실시간 날씨 정보(API 연동)에 따라 실내/실외를 유동적으로 판단합니다.
 
 ---
 
-## 🛠 트러블슈팅
+## 🏆 성과 및 차별점
+
+### 기존 서비스 대비 차별점
+| 비교 항목 | 기존 여행 서비스 | Triver |
+|----------|----------------|--------|
+| 추천 방식 | 키워드 검색, 리뷰 평점순 | LLM 대화형 + RAG 기반 하이브리드 검색 |
+| 개인화 | 사이트 내 단순 클릭 기록 기반 | 가입 설문 + 대화 맥락 + 실시간 날씨 일관 적용 |
+| 일정 생성 | 사용자가 장소를 하나씩 스크랩 후 구성 | AI가 동선과 소요시간을 고려하여 자동 타임라인 생성 |
+| 이미지 기반 | 미지원 | CLIP 모델 활용, 사진으로 유사한 느낌의 장소를 직접 매칭 |
+| 트렌드 반영 | 정적 데이터 (주기적 수동 업데이트) | 팝업/축제 실시간 자동 크롤링 및 만료 데이터 클렌징 처리 |
+| 언어 지원 | 브라우저 확장 번역 수준 | 프롬프트 레벨에서의 4개 국어(한/영/일/중) 네이티브 응답 생성 |
+
+### 주요 기술적 성과
+- LangGraph를 활용한 6개 노드 기반의 유연한 LLM 에이전트 파이프라인 구축.
+- 멀티모달(텍스트+이미지) 하이브리드 검색 파이프라인 설계
+- 주간 파이프라인을 통한 자동 데이터 수집/검증 및 SSE(Server-Sent Events) 스트리밍 기술로 끊김없는 실시간 대화 경험 구현.
+- **체계적인 3단계 RAG 성능 평가 체계 도입:** Ragas 프레임워크 기반의 평가 스크립트를 자체 구축하여 지표를 꼼꼼하게 측정 및 개선했습니다.
+- **비즈니스 로직 모듈화 및 TDD 기반 리팩토링:** 백엔드의 DB/VectorDB(Qdrant) 접근 코드를 `utils`로 분리하고 프론트엔드의 상태 관리를 `hooks`로 모듈화하였으며, 각 유틸성에 대한 독립된 단위 테스트(`tests/`) 코드를 작성하여 프로덕션 레벨의 유지보수성을 극대화했습니다.
+
+### 📊 RAG & 리트리버 성능 검증 (LLM as a Judge)
+지속적인 모델 튜닝(데이터 증강, 리랭커 결합, 청킹 최적화 등)을 거쳐 3차례에 걸쳐 Retriever 검색 성능과 생성 품질을 대폭 향상시켰습니다.
+
+![evaluation](images/evaluation_table.png)
+
+> **💡 Triver만의 평가 철학 (답변의 자유도와 신뢰성 확보)**
+> Triver는 정해진 단일 정답을 찾는 딱딱한 Q&A 봇이 아니라, 사용자 취향에 맞춰 **다양하고 매력적인 장소를 추천하는 대화형 에이전트**입니다.
+> 따라서 완벽하게 동일한 텍스트(Exact Match)를 요구하는 전통적인 성능 평가를 탈피하여, 에이전트가 높은 **'답변의 자유도'**를 가지도록 설계했습니다. 그 대신, LLM 모델(`gpt-4o`)을 판관(Judge)으로 삼아 **"현재 구축된 DB 내용에 충실하게 근거하여 답변하는가(Faithfulness)"**와 **"사용자 질문 맥락을 정확히 짚어냈는가(Answer Relevancy)"**만을 중점적으로 검증했습니다. 그 결과, 3차 테스트에서 해당 지표들이 `0.9` 이상으로 완벽에 가깝게 개선되며 '환각(Hallucination) 없는 창의적인 추천'을 기술적으로 증명했습니다.
+
+---
+
+## 🖥 사이트맵 및 화면구성
+
+> [![썸네일](images/triver.png)](https://drive.google.com/file/d/1zZh7HqiJMENf9PNMQkrvHTwWcvdhmBIx/view?usp=drive_link)
+<br>
+<sup>*이미지를 클릭해서 시연영상 보러가기*</sup>
+
+- **랜딩 & 온보딩**: 서비스 소개 레이아웃, Google OAuth 로그인 접속, 3단계 취향 설문(스타일, 분위기, 테마) 화면
+- **채팅룸 (핵심)**: 대화형 LLM 채팅 인터페이스 구현, 이미지 업로드 기반 추천, STT 인식 기능, 완성된 일정 마크다운/타임라인 제공, 지도 연동
+- **탐색 (Explore)**: 실시간 트렌드(팝업스토어/공연 전시), 카테고리별 장소 추천 섹션, 사용자 맞춤 일일 추천 카드 화면
+- **Moments** : 여행 기록을 남길 수 있는 다이어리 UI
+- **Bookmark** : 채팅룸에서 저장한 북마크 대화 이력, 북마크 된 장소 이력 확인 및 관리, 북마크 내역 선택으로 채팅 시작
+- **마이페이지**: 개인정보 관리, 여행 취향 변경, 한/중/영/일 다국어 전환, 여행지 테마 추천, 예약 정보 등록 및 관리
+
+---
+
+## 🛠 문제 해결
 
 | 문제 | 해결 과정 | 해결 결과 |
 |:---|:---|:---|
-|  |  |  |
-|  |  |  |
+| **LLM 에이전트 응답 지연(Latency)**<br>연쇄적인 노드 호출과 무거운 검색 로직으로 인해 사용자가 체감하는 첫 응답 시간(TTFT)과 전체 생성 시간이 길어지는 문제 발생 | **평균 레이턴시 축소 6대 전략 적용:**<br>1. Reranker 모델 경량화 도입<br>2. Intent 노드의 분석 작업 분리 및 비동기 병렬 처리 적용<br>3. Multi-channel Retriever 병렬 검색 구현<br>4. 불필요한 Candidates 개수 과감히 축소 (20개 → 5개)<br>5. Executor 노드 계획 추천 시 가장 적합한 Top 1개 후보군만 사용하도록 간소화<br>6. 프롬프트 엔지니어링을 통한 불필요 출력 토큰 최적화 | 각 에이전트 노드의 병목 현상이 해소되어 **전체 파이프라인의 평균 레이턴시가 대폭 감소**하였으며, 부드럽고 빠른 실시간 대화 스트리밍 체감 속도 확보 |
+| **장소 맥락 인식 불가 (키워드 매칭 오류)**<br>'강남에서 갈 수 있는 카페' 요청 시, 실제 강남이 아닌 이름만 똑같은 '홍대에 있는 강남카페'가 검색되는 등 공간적(Spatial) 맥락 인지 실패 문제 발생 | **3단계 공간 지능화(Spatial Intelligence) 로직 도입:**<br>**1. LLM 의도 분석 좌표 추출:** 사용자 발화('삼성역 조용한 카페')에서 지명 의도를 분리해 중심 좌표(위경도)를 선제적으로 도출<br>**2. 로컬 지역 사전(Landmark Dictionary) 구축:** '송리단길', '샤로수길' 등 행정구역에 없는 핫플레이스 고유명사에 위경도와 반경(예: 800m)을 하드 매핑하여 해결<br>**3. 동적 Geocoding 연결 (Naver API):** 사전에 없는 신규 장소('엔코아미술관')가 요청되었을 경우, `Naver Search API`로 실제 지번 주소를 동적 추출 후 `Naver GeoCoder`를 태워 좌표로 번역하는 강력한 Fallback 회로 구축 | 단순 텍스트 표기 매칭으로 일어나는 엉뚱한 오안내(False Positive)가 완벽히 차단됨. 사용자의 요청 위치를 기반으로 한 **정확한 반경 기반(Geo Filtering)** 매칭이 이루어져 추천 신뢰도 극대화 |
 
 ---
 
@@ -195,5 +350,20 @@ SKN21-FINAL-2Team/
 
 | 기능 | 계획 | 예상 효과 |
 |:---|:---|:---|
-|  |  |  |
-|  |  |  |
+| 추천 지역 확대 | 서울 > 광역시 > 전국 | 한국 전역의 관광지를 추천 가능 |
+| 지원 언어 확대 | 한국 방문 top 20 개국의 사용 언어 지원 | 방한 관광객의 편리성 증대 |
+| 사용자 만족도 조사 | 사용자 피드백을 통한 DB 추가와 사용자 기반의 정보 축척 | 축척된 자료를 통한 보다 정확한 선호도 기반 추천 가능 |
+| 실예약 시스템 연동 | 숙박, 레스토랑 등 실제 타 서비스 API 연동 | 단순 추천을 넘어 통합 커머스 플랫폼으로 진화 |
+| 커뮤니티 및 소셜 기능 | 사용자의 여행 일정/후기 공유 및 평점 시스템 도입 | 유저 리텐션 증가 및 자생적인 핫플레이스 DB 구축 |
+| 모바일 전용 앱 출시 | React Native 또는 Flutter 기반 네이티브 앱 개발 | 외부 이동이 많은 여행 중(On-site) 접근성 극대화 및 모바일 기기 위치기반(LBS) 연동 강화 |
+
+---
+
+## ✍️ 회고
+
+| 팀원   | 회고 내용 |
+| :----- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 전우영 | |
+| 김가람 | |
+| 박민정 | |
+| 손현우 | |

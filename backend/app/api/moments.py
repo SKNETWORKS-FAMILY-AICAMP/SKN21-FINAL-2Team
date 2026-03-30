@@ -18,19 +18,15 @@ from app.utils.geocoder import GeoCoder
 from app.utils.common import to_client_image_url
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
+from app.utils.db_utils import get_owned_resource_or_404
 
 router = APIRouter(prefix="/api/moments", tags=["moments"])
 
 
 def _get_owned_moment_or_404(db: Session, moment_id: int, user_id: int) -> Moment:
-    item = (
-        db.query(Moment)
-        .filter(Moment.id == moment_id, Moment.user_id == user_id)
-        .first()
+    return get_owned_resource_or_404(
+        db, Moment, moment_id, user_id, ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Moment not found"
     )
-    if not item:
-        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Moment not found", 404)
-    return item
 
 
 def _serialize_moment_detail(item: Moment) -> MomentDetailResponse:
