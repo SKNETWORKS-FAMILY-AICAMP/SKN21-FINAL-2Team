@@ -40,6 +40,7 @@ export function ChatHome() {
     const roomIdParam = searchParams.get("roomId");
     const parsedRouteRoomId = roomIdParam ? parseInt(roomIdParam, 10) : null;
     const fromDestinationParam = searchParams.get("fromDestination");
+    const promptParam = searchParams.get("prompt");
 
     const [inputText, setInputText] = useState("");
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -82,6 +83,7 @@ export function ChatHome() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const placeCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const autoStartedRoomsRef = useRef<Set<number>>(new Set());
+    const pendingPromptRef = useRef<{ roomId: number; text: string } | null>(null);
     const roomDraftsRef = useRef<Record<number, RoomDraft>>({});
     const previousRoomIdRef = useRef<number | null>(null);
     const scrollStateRef = useRef<{
@@ -100,7 +102,7 @@ export function ChatHome() {
     const initializingIdRef = useRef<string | number | null>(null);
 
 
-    const { isListening, sttPermission, handleToggleListening } = useSpeechRecognition({
+    const { isListening, sttPermission, handleToggleListening, abortListening } = useSpeechRecognition({
         inputText,
         setInputText
     });
@@ -293,7 +295,19 @@ export function ChatHome() {
                     const event = new CustomEvent("triver:rooms-updated");
                     window.dispatchEvent(event);
 
-                    if (fromDestinationParam === "1" && localStorage.getItem("pendingDestination")) {
+                    if (promptParam) {
+                        // 마이페이지 추천에서 넘어온 경우: 새 방 생성 + 즉시 메시지 전송
+                        const { createRoom } = await import("@/services/api");
+                        const newRoom = await createRoom("새로운 여행 계획");
+                        setRooms((prev) => [newRoom, ...prev]);
+                        setCurrentRoomId(newRoom.id);
+                        currentRoomIdRef.current = newRoom.id;
+                        setRoomLoadStatus("loaded");
+                        setLoadedRoomMessageCount(0);
+                        window.history.replaceState(null, "", `/chatbot?roomId=${newRoom.id}`);
+                        // 방 준비 후 즉시 메시지 전송
+                        pendingPromptRef.current = { roomId: newRoom.id, text: promptParam };
+                    } else if (fromDestinationParam === "1" && localStorage.getItem("pendingDestination")) {
                         setShowTripModal(true);
                     } else if (roomIdParam) {
                         const parsedRoomId = parseInt(roomIdParam, 10);
@@ -364,6 +378,8 @@ export function ChatHome() {
                         adress: p.adress,
                         contenttypeid: p.contenttypeid ?? 0,
                         description: p.description,
+                        image_path: p.image_path,
+                        category: p.category,
                     })),
                     save_user_message: false,
                 },
@@ -381,6 +397,8 @@ export function ChatHome() {
                         adress: p.adress,
                         contenttypeid: p.contenttypeid ?? 0,
                         description: p.description,
+                        image_path: p.image_path,
+                        category: p.category,
                     })),
                     save_user_message: false,
                 },
@@ -415,6 +433,22 @@ export function ChatHome() {
         }
     }, [currentRoomId, isInitializing, isStreaming, loadedRoomMessageCount, roomLoadStatus, runAutoStarterStream]);
 
+    // 마이페이지 추천 prompt 자동 전송
+    useEffect(() => {
+        const pending = pendingPromptRef.current;
+        if (!pending) return;
+        if (isInitializing || isStreaming || roomLoadStatus !== "loaded") return;
+        if (currentRoomId !== pending.roomId) return;
+
+        pendingPromptRef.current = null;
+        void streamMessageToRoom({
+            roomId: pending.roomId,
+            message: pending.text,
+            saveUserMessage: true,
+            optimisticUserText: pending.text,
+        });
+    }, [currentRoomId, isInitializing, isStreaming, roomLoadStatus, streamMessageToRoom]);
+
     const handleSendMessageWrapper = async () => {
         if (!currentRoomId) return;
         const userText = inputText.trim();
@@ -429,6 +463,7 @@ export function ChatHome() {
         const currentDataUrl = attachedImageDataUrl;   // 미리보기용 dataUrl
         const currentLocation = attachedLocation;
 
+        abortListening(); // STT가 실행 중이라면 즉시 중단 및 결과 무시
         setInputText("");
         setAttachedImageDataUrl(null);
         setAttachedFileName("");
@@ -501,8 +536,8 @@ export function ChatHome() {
 
     return (
         <div className={cn(
-            "flex h-full min-h-0 bg-white relative rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100",
-            isMapPanelOpen ? "lg:rounded-l-[32px] lg:rounded-r-none" : "lg:rounded-[32px]"
+            "flex h-full min-h-0 bg-white relative overflow-hidden",
+            ""
         )}>
             <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-slate-50/30">
                 <ChatHeader

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { correctSttText } from "@/services/api";
 
 export type SttPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 
@@ -61,6 +62,7 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
     const recognitionRef = useRef<SpeechRecognition | null>(null);
     const micPermissionStatusRef = useRef<PermissionStatus | null>(null);
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isAbortedRef = useRef(false);
 
     const SILENCE_DELAY_MS = 3000;
 
@@ -130,8 +132,10 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         recognition.continuous = true;
         recognition.maxAlternatives = 1;
         recognitionRef.current = recognition;
+        isAbortedRef.current = false;
 
         let finalTranscript = "";
+        let lastInterim = "";
 
         const resetSilenceTimer = () => {
             clearSilenceTimer();
@@ -147,24 +151,32 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
+            if (isAbortedRef.current) return;
             resetSilenceTimer();
             let interim = "";
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalTranscript += transcript;
+                    lastInterim = "";
                 } else {
                     interim += transcript;
                 }
             }
+            if (interim) lastInterim = interim;
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
             setInputText(baseText + separator + finalTranscript + interim);
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            console.error("Speech recognition error:", event.error);
+            // abort()에 의한 의도적 중단은 무시
+            if (event.error === "aborted" || isAbortedRef.current) return;
+
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 setSttPermission("denied");
+                console.warn("Speech recognition permission denied:", event.error);
+            } else {
+                console.warn("Speech recognition error:", event.error);
             }
             clearSilenceTimer();
             setIsListening(false);
@@ -174,8 +186,25 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
             clearSilenceTimer();
             setIsListening(false);
             recognitionRef.current = null;
+            
+            if (isAbortedRef.current) {
+                isAbortedRef.current = false;
+                return;
+            }
+
             const separator = baseText && !baseText.endsWith(" ") ? " " : "";
-            setInputText((baseText + separator + finalTranscript).trim());
+            // finalTranscript이 비어있으면 마지막 interim 결과를 fallback으로 사용
+            const transcript = finalTranscript || lastInterim;
+            const raw = (baseText + separator + transcript).trim();
+
+            if (appLanguage == "ja" && raw) {
+                correctSttText(raw, appLanguage).then((corrected) => {
+                    if (isAbortedRef.current) return;
+                    setInputText(corrected);
+                });
+            } else {
+                setInputText(raw);
+            }
         };
 
         try {
@@ -218,9 +247,19 @@ export const useSpeechRecognition = ({ inputText, setInputText }: UseSpeechRecog
         };
     }, [syncMicPermission]);
 
+    const abortListening = useCallback(() => {
+        isAbortedRef.current = true;
+        if (recognitionRef.current) {
+            recognitionRef.current.abort();
+            setIsListening(false);
+            clearSilenceTimer();
+        }
+    }, []);
+
     return {
         isListening,
         sttPermission,
         handleToggleListening,
+        abortListening,
     };
 };

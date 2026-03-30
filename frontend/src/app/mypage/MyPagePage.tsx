@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -9,77 +9,21 @@ import {
   Hotel,
   UtensilsCrossed,
   CheckCircle2,
-  MessageSquare,
 } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { JourneyDetailModal } from "./components/JourneyDetailModal";
 import { ReservationDetailModal } from "./components/ReservationDetailModal";
-import { SimpleModal } from "./components/SimpleModal";
-import {
-  SURVEY_IMAGE_MAP,
-  SURVEY_ITEM_LABELS,
-  SNAPSHOT_OPTIONS,
-  EXTRA_PREFER_OPTIONS,
-  SURVEY_LABEL_KEY_MAP,
-  EXTRA_PREFER_LABEL_KEY_MAP,
-} from "./constants";
-import type { ReservationItem, TripSummary } from "./types";
+import { RecommendedConversationCard } from "./components/RecommendedConversationCard";
+import { TravelPreferenceSection } from "./components/TravelPreferenceSection";
+import { UserSettingsModal } from "./components/UserSettingsModal";
+import { DeleteReservationConfirmModal, PreferenceSavedPopup } from "./components/MyPageModals";
+
 import { useTranslation } from "@/i18n/useTranslation";
-import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
-import { COUNTRIES, type Country } from "@/config/countries";
-
-import {
-  fetchBookmarkedRooms,
-  fetchReservations,
-  createReservation,
-  deleteReservation,
-  fetchTodayRecommendations,
-  fetchCurrentUser,
-  fetchRooms,
-  updateCurrentUser,
-  updateReservation,
-  uploadImageDataUrl,
-  resetCurrentUserProfilePictureToGoogle,
-  deactivateCurrentUser,
-  logoutApi,
-  type ReservationRecord,
-  type TodayRecommendationItem,
-} from "@/services/api";
-import { clearAuth } from "@/services/errorHandler";
 import { resolveImageUrl } from "@/lib/imageUrl";
-
-function formatKstDate(dateLike?: string | null) {
-  if (!dateLike) return "-";
-  const parsed = new Date(dateLike);
-  if (Number.isNaN(parsed.getTime())) return "-";
-  return parsed.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function mapReservationRecordToItem(item: ReservationRecord): ReservationItem {
-  const dynamicDetails = item.details
-    ? Object.entries(item.details).map(([k, v]) => ({ label: k, value: String(v) }))
-    : [];
-
-  return {
-    id: `reservation-${item.id}`,
-    reservationId: item.id,
-    category: (item.category as ReservationItem["category"]) || "etc",
-    title: item.name?.trim() || "Reservation",
-    subtitle: "Saved Reservation",
-    dateLabel: formatKstDate(item.date || item.created_at),
-    reservationImageUrl: item.image_path ?? undefined,
-    identifierLabel: "Reservation ID",
-    identifierValue: String(item.id),
-    details: dynamicDetails,
-  };
-}
+import { createReservation, updateReservation, uploadImageDataUrl } from "@/services/api";
+import { useMyPage, mapReservationRecordToItem } from "./components/useMyPage";
+import type { ReservationItem } from "./types";
 
 function ReservationLogo({ category }: { category: ReservationItem["category"] }) {
   const common = { size: 14 };
@@ -100,354 +44,48 @@ function ReservationLogo({ category }: { category: ReservationItem["category"] }
 export function MyPagePage() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [userProfile, setUserProfile] = useState({
-    nickname: "",
-    bio: "",
-    countryCode: "",
-    preferences: [] as string[],
-    profile_picture: "",
-    birthday: "",
-  });
-  const [userInsight, setUserInsight] = useState({
-    planPrefer: "",
-    vibePrefer: "",
-    placesPrefer: "",
-  });
-  const [draftInsight, setDraftInsight] = useState({
-    planPrefer: "",
-    vibePrefer: "",
-    placesPrefer: "",
-  });
-  const [todayRecommendations, setTodayRecommendations] = useState<TodayRecommendationItem[]>([]);
-  const [selectedRecommendationId, setSelectedRecommendationId] = useState<string>("");
-  const [trips, setTrips] = useState<TripSummary[]>([]);
-  const [reservations, setReservations] = useState<ReservationItem[]>([]);
-  const [bookmarkedRoomCount, setBookmarkedRoomCount] = useState<number>(0);
-  const [isEditingPreferences, setIsEditingPreferences] = useState<boolean>(false);
-  const [isSavingPreferences, setIsSavingPreferences] = useState<boolean>(false);
-  const [draftExtraPreferences, setDraftExtraPreferences] = useState<string[]>([]);
-  // [Feature] 선호도 수정 확인 팝업 상태
-  const [showPreferenceSavedPopup, setShowPreferenceSavedPopup] = useState<boolean>(false);
-  // [Feature] Settings 회원정보 수정 확인 팝업 상태
-  const [showSettingsSavedPopup, setShowSettingsSavedPopup] = useState<boolean>(false);
-  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
-  const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
-  const [settingsResettingPhoto, setSettingsResettingPhoto] = useState<boolean>(false);
-  const [settingsModalView, setSettingsModalView] = useState<"settings" | "deactivate">("settings");
-  const [deactivateGoogleConfirmed, setDeactivateGoogleConfirmed] = useState<boolean>(false);
-  const [deactivateAgreementConfirmed, setDeactivateAgreementConfirmed] = useState<boolean>(false);
-  const [deactivateSubmitAttempted, setDeactivateSubmitAttempted] = useState<boolean>(false);
-  const [deactivateSubmitting, setDeactivateSubmitting] = useState<boolean>(false);
-  const [deactivateError, setDeactivateError] = useState<string>("");
-  const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState<boolean>(false);
-  const countryOptions: Country[] = COUNTRIES;
-  const [settingsDraft, setSettingsDraft] = useState({
-    nickname: "",
-    countryCode: "",
-    profilePicture: "",
-    birthday: "",
-  });
-  const settingsPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [activeTrip, setActiveTrip] = useState<TripSummary | null>(null);
-  const [activeReservation, setActiveReservation] = useState<ReservationItem | null>(null);
-  const [addReservationOpen, setAddReservationOpen] = useState<boolean>(false);
-  const [addReservationName, setAddReservationName] = useState<string>("");
-  const [addReservationImage, setAddReservationImage] = useState<string>("");
-  const [addReservationError, setAddReservationError] = useState<string>("");
-  const addReservationPhotoInputRef = useRef<HTMLInputElement | null>(null);
+  // 드래프트 저장용 임시 ref (create 시 title/category/photo를 모아두기 위함)
+  const draftFieldsRef = useRef<{ title?: string; category?: string; photo?: string | null }>({});
 
-  useEffect(() => {
-    let cancelled = false;
+  // 1. 상태 및 데이터 페칭 전면 캡슐화 훅
+  const { state, actions } = useMyPage();
+  const {
+    userProfile,
+    userInsight,
+    draftInsight,
+    todayRecommendation,
+    trips,
+    reservations,
+    bookmarkedRoomCount,
+    isEditingPreferences,
+    isSavingPreferences,
+    draftExtraPreferences,
+    showPreferenceSavedPopup,
+    settingsOpen,
+    activeTrip,
+    activeReservation,
+    reservationToDelete,
+  } = state;
 
-    const fetchDashboardData = async () => {
-      try {
-        const [user, roomsData, reservationsData, bookmarkedRooms, todayRecs] = await Promise.all([
-          fetchCurrentUser(),
-          fetchRooms(),
-          fetchReservations(),
-          fetchBookmarkedRooms(),
-          fetchTodayRecommendations(),
-        ]);
-        if (cancelled) return;
-
-        const extraPreferMigrationMap: Record<string, string> = {
-          "Halal": "할랄",
-          "Kosher": "코셔",
-          "Vegan": "비건",
-          "Wheelchair Accessible": "휠체어 이용 가능",
-          "Pets": "반려동물",
-        };
-        const dbPrefs = [user.extra_prefer1, user.extra_prefer2, user.extra_prefer3]
-          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-          .map((x) => extraPreferMigrationMap[x] ?? x);
-
-        setUserProfile({
-          nickname: user.nickname || user.name || "User",
-          bio: user.email || "",
-          countryCode: user.country_code || "",
-          profile_picture: user.profile_picture || "",
-          birthday: user.birthday || "",
-          preferences: dbPrefs,
-        });
-        setUserInsight({
-          planPrefer: user.plan_prefer || "",
-          vibePrefer: user.vibe_prefer || "",
-          placesPrefer: user.places_prefer || "",
-        });
-        setDraftInsight({
-          planPrefer: user.plan_prefer || "",
-          vibePrefer: user.vibe_prefer || "",
-          placesPrefer: user.places_prefer || "",
-        });
-        setDraftExtraPreferences(dbPrefs);
-
-        const roomSummaries = (Array.isArray(roomsData) ? roomsData : []).map((room) => ({
-          id: String(room.id),
-          title: room.title || `Chat #${room.id}`,
-          createdAt: room.created_at,
-          messages: [],
-        }));
-
-        setTrips(roomSummaries);
-        setBookmarkedRoomCount(Array.isArray(bookmarkedRooms) ? bookmarkedRooms.length : 0);
-        setReservations((Array.isArray(reservationsData) ? reservationsData : []).map(mapReservationRecordToItem));
-        const recs = Array.isArray(todayRecs) ? todayRecs : [];
-        setTodayRecommendations(recs);
-        setSelectedRecommendationId((prev) => prev || recs[0]?.id || "");
-      } catch (error) {
-        console.warn("Failed to fetch mypage dashboard data", error);
-      }
-    };
-
-    fetchDashboardData();
-    const onProfileSettings = () => fetchDashboardData();
-    window.addEventListener("triver:profile-settings", onProfileSettings);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("triver:profile-settings", onProfileSettings);
-    };
-  }, []);
-
-
-  const [reservationToDelete, setReservationToDelete] = useState<ReservationItem | null>(null);
-
-  const handleAddReservation = async () => {
-    try {
-      const created = await createReservation({
-        category: "etc",
-        name: "새 예약",
-        date: new Date().toISOString().slice(0, 10),
-        image_path: "",
-      });
-      const mapped = mapReservationRecordToItem(created);
-      setReservations((prev) => [mapped, ...prev]);
-      setActiveReservation(mapped);
-    } catch (error) {
-      console.error("Failed to create new reservation draft", error);
-    }
-  };
-
-  const handleDeleteReservation = async (id: string) => {
-    const target = reservations.find((r) => r.id === id);
-    if (!target) return;
-    try {
-      await deleteReservation(target.reservationId);
-      setReservations((prev) => prev.filter((r) => r.id !== id));
-      if (activeReservation?.id === id) setActiveReservation(null);
-    } catch (error) {
-      console.error("Failed to delete reservation", error);
-    }
-  };
-
-  const requestDeleteReservation = (reservation: ReservationItem) => {
-    setReservationToDelete(reservation);
-  };
-
-  const cancelDeleteReservation = () => {
-    setReservationToDelete(null);
-  };
-
-  const confirmDeleteReservation = () => {
-    if (!reservationToDelete) return;
-    void handleDeleteReservation(reservationToDelete.id);
-    setReservationToDelete(null);
-  };
-
-  const closeSettingsModal = () => {
-    setSettingsOpen(false);
-    setSettingsModalView("settings");
-    setDeactivateGoogleConfirmed(false);
-    setDeactivateAgreementConfirmed(false);
-    setDeactivateSubmitAttempted(false);
-    setDeactivateSubmitting(false);
-    setDeactivateError("");
-    setDeactivateConfirmOpen(false);
-  };
-
-  const handleOpenSettings = () => {
-    setSettingsDraft({
-      nickname: userProfile.nickname,
-      countryCode: userProfile.countryCode,
-      profilePicture: userProfile.profile_picture,
-      birthday: userProfile.birthday,
-    });
-    setSettingsModalView("settings");
-    setDeactivateGoogleConfirmed(false);
-    setDeactivateAgreementConfirmed(false);
-    setDeactivateSubmitAttempted(false);
-    setDeactivateSubmitting(false);
-    setDeactivateError("");
-    setSettingsOpen(true);
-  };
-
-  // [Feature] 회원탈퇴 — Settings 뷰에서 탈퇴 뷰로 전환
-  const handleOpenDeactivateAccount = () => {
-    setSettingsModalView("deactivate");
-    setDeactivateGoogleConfirmed(false);
-    setDeactivateAgreementConfirmed(false);
-    setDeactivateSubmitAttempted(false);
-    setDeactivateSubmitting(false);
-    setDeactivateError("");
-    setDeactivateConfirmOpen(false);
-  };
-
-  // [Feature] 회원탈퇴 — 탈퇴 뷰에서 취소하고 Settings 뷰로 복귀
-  const handleCancelDeactivateAccount = () => {
-    setSettingsModalView("settings");
-    setDeactivateGoogleConfirmed(false);
-    setDeactivateAgreementConfirmed(false);
-    setDeactivateSubmitAttempted(false);
-    setDeactivateSubmitting(false);
-    setDeactivateError("");
-    setDeactivateConfirmOpen(false);
-  };
-
-  // [Feature] 회원탈퇴 — 체크박스 검증 후 최종 확인 팝업 열기
-  const handleRequestDeactivateAccount = () => {
-    setDeactivateSubmitAttempted(true);
-    setDeactivateError("");
-    if (!deactivateGoogleConfirmed || !deactivateAgreementConfirmed) return;
-    setDeactivateConfirmOpen(true);
-  };
-
-  // [Feature] 회원탈퇴 — 최종 확인 팝업에서 "아니요" 클릭 시 팝업 닫기
-  const handleCancelDeactivateConfirm = () => {
-    setDeactivateConfirmOpen(false);
-  };
-
-  // [Feature] 회원탈퇴 — 최종 확인 후 서버 탈퇴 API 호출 → 로그아웃 → 랜딩페이지 이동
-  const handleConfirmDeactivateAccount = async () => {
-    setDeactivateSubmitting(true);
-    setDeactivateError("");
-    try {
-      await deactivateCurrentUser();
-      await logoutApi();
-      clearAuth();
-      closeSettingsModal();
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Failed to deactivate account", error);
-      setDeactivateError(t("mypage.deactivateFailed"));
-      setDeactivateConfirmOpen(false);
-    } finally {
-      setDeactivateSubmitting(false);
-    }
-  };
-
-  // [Feature] Settings 회원정보 수정 완료 시 확인 팝업 표시
-  const handleSaveSettingsPopup = async () => {
-    setSettingsSaving(true);
-    try {
-      const resolvedProfilePicture = settingsDraft.profilePicture?.startsWith("data:image/")
-        ? await uploadImageDataUrl(settingsDraft.profilePicture, "profile")
-        : settingsDraft.profilePicture;
-      await updateCurrentUser({
-        nickname: settingsDraft.nickname.trim() || null,
-        country_code: settingsDraft.countryCode || null,
-        profile_picture: resolvedProfilePicture || null,
-        birthday: settingsDraft.birthday || null,
-      });
-      setUserProfile((prev) => ({
-        ...prev,
-        nickname: settingsDraft.nickname.trim() || prev.nickname,
-        countryCode: settingsDraft.countryCode,
-        profile_picture: resolvedProfilePicture || "",
-        birthday: settingsDraft.birthday,
-      }));
-      window.dispatchEvent(new Event("triver:profile-updated"));
-      setSettingsOpen(false);
-      setShowSettingsSavedPopup(true);
-    } catch (error) {
-      console.error("Failed to update user settings", error);
-    } finally {
-      setSettingsSaving(false);
-    }
-  };
-
-  const handleResetProfilePhotoToGoogle = async () => {
-    setSettingsResettingPhoto(true);
-    try {
-      const updated = await resetCurrentUserProfilePictureToGoogle();
-      const nextPicture = updated.profile_picture || "";
-      setSettingsDraft((prev) => ({ ...prev, profilePicture: nextPicture }));
-      setUserProfile((prev) => ({ ...prev, profile_picture: nextPicture }));
-      window.dispatchEvent(new Event("triver:profile-updated"));
-    } catch (error) {
-      console.error("Failed to reset profile photo to Google", error);
-    } finally {
-      setSettingsResettingPhoto(false);
-    }
-  };
-
-  // Removed handleSaveManualReservation as it is bypassed
-
-  const toggleDraftExtraPreference = (value: string) => {
-    setDraftExtraPreferences((prev) => {
-      if (prev.includes(value)) return prev.filter((v) => v !== value);
-      if (prev.length >= 3) return prev;
-      return [...prev, value];
-    });
-  };
-
-  // [Feature] 선호도 수정 완료 시 확인 팝업 표시
-  const handleTogglePreferenceEdit = async () => {
-    if (!isEditingPreferences) {
-      setDraftInsight(userInsight);
-      setDraftExtraPreferences(userProfile.preferences);
-      setIsEditingPreferences(true);
-      return;
-    }
-
-    setIsSavingPreferences(true);
-    try {
-      await updateCurrentUser({
-        plan_prefer: draftInsight.planPrefer || null,
-        vibe_prefer: draftInsight.vibePrefer || null,
-        places_prefer: draftInsight.placesPrefer || null,
-        extra_prefer1: draftExtraPreferences[0] || null,
-        extra_prefer2: draftExtraPreferences[1] || null,
-        extra_prefer3: draftExtraPreferences[2] || null,
-      });
-
-      setUserInsight(draftInsight);
-      setUserProfile((prev) => ({ ...prev, preferences: draftExtraPreferences }));
-      setIsEditingPreferences(false);
-      setShowPreferenceSavedPopup(true);
-    } catch (error) {
-      console.error("Failed to update preferences", error);
-    } finally {
-      setIsSavingPreferences(false);
-    }
-  };
-
-  // [Feature] 선호도 수정 Cancel — 편집 내용 폐기 후 뷰 모드로 복귀
-  const handleCancelPreferenceEdit = () => {
-    setDraftInsight(userInsight);
-    setDraftExtraPreferences(userProfile.preferences);
-    setIsEditingPreferences(false);
-  };
+  const {
+    setUserProfile,
+    setDraftInsight,
+    setReservations,
+    setShowPreferenceSavedPopup,
+    setSettingsOpen,
+    setActiveTrip,
+    setActiveReservation,
+    handleAddReservation,
+    handleDeleteReservation,
+    requestDeleteReservation,
+    cancelDeleteReservation,
+    confirmDeleteReservation,
+    handleOpenSettings,
+    toggleDraftExtraPreference,
+    handleTogglePreferenceEdit,
+    handleCancelPreferenceEdit,
+  } = actions;
 
   return (
     <div className="flex w-full min-h-screen bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row flex-col lg:overflow-hidden">
@@ -456,8 +94,8 @@ export function MyPagePage() {
           <Sidebar />
         </div>
       </div>
-      {/* [Fix] 화면 사이즈에 따른 유동적 레이아웃 — 큰 화면에서 공백 없이 남은 높이 전부 채움 */}
-      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto text-gray-900 flex flex-col">
+
+      <main className="flex-1 min-w-0 bg-white rounded-lg lg:h-full lg:overflow-y-auto custom-scrollbar text-gray-900 flex flex-col">
         <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-0">
           <header className="mb-6">
             <h1 className="page-title text-gray-900 mb-2">{t("mypage.title")}</h1>
@@ -475,7 +113,6 @@ export function MyPagePage() {
             </div>
           </header>
 
-          {/* [Fix] 그리드가 남은 높이를 전부 채우도록 flex-1 적용 */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pb-8 flex-1">
             <div className="xl:col-span-2 flex flex-col">
               <motion.div
@@ -489,11 +126,11 @@ export function MyPagePage() {
                       {userProfile.profile_picture ? (
                         <img
                           src={resolveImageUrl(userProfile.profile_picture)}
-                          alt="Profile"
+                          alt={t("mypage.profileAlt")}
                           className="w-full h-full object-cover grayscale-[20%]"
                         />
                       ) : (
-                        <span className="font-medium text-[10px]">No Image</span>
+                        <span className="font-medium text-[10px]">{t("mypage.noImage")}</span>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -517,188 +154,23 @@ export function MyPagePage() {
 
                 <hr className="border-gray-100 my-3" />
 
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="text-xl font-semibold text-gray-900 tracking-tight font-pretendard">여행 선호도</h3>
-                      <div className="flex items-center gap-2">
-                        {/* [Feature] 수정 모드 Cancel 버튼 — 편집 취소 시 원래 값으로 복원 */}
-                        {isEditingPreferences && (
-                          <button
-                            type="button"
-                            onClick={handleCancelPreferenceEdit}
-                            className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                          >
-                            {t("common.cancel")}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleTogglePreferenceEdit}
-                          disabled={isSavingPreferences}
-                          className={`h-10 px-4 rounded-full border text-xs font-bold transition-all disabled:opacity-60 ${isEditingPreferences
-                            ? "border-gray-900 bg-black text-white hover:opacity-90"
-                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                            }`}
-                        >
-                          {isEditingPreferences ? (isSavingPreferences ? t("common.saving") : t("mypage.done")) : t("mypage.edit")}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500">{t("mypage.travelPreferencesDesc")}</p>
-                  </div>
-
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.travelerSnapshot")}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {[
-                        { key: "plan" as const, label: t("mypage.surveyPlan"), value: isEditingPreferences ? draftInsight.planPrefer : userInsight.planPrefer },
-                        { key: "vibe" as const, label: t("mypage.surveyVibe"), value: isEditingPreferences ? draftInsight.vibePrefer : userInsight.vibePrefer },
-                        { key: "places" as const, label: t("mypage.surveyPlaces"), value: isEditingPreferences ? draftInsight.placesPrefer : userInsight.placesPrefer },
-                      ].map((item) => {
-                        const imageSrc = SURVEY_IMAGE_MAP[item.value] ?? "/image/noplan.png";
-                        return (
-                          <div key={item.key} className="space-y-2">
-                            {/* [Fix] 이미지 높이를 aspect-ratio로 변경하여 화면 사이즈에 비례하여 유동 확장 */}
-                            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-                              <img src={imageSrc} alt={item.value || item.label} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
-                              <div className="absolute inset-x-0 bottom-0 p-4">
-                                <p className="text-[10px] text-white/80 font-semibold uppercase tracking-[0.12em]">{item.label}</p>
-                                <p className="text-sm text-white font-semibold mt-1">{item.value ? (SURVEY_LABEL_KEY_MAP[item.value] ? t(SURVEY_LABEL_KEY_MAP[item.value]) : item.value) : "-"}</p>
-                              </div>
-                            </div>
-                            {isEditingPreferences && (
-                              <div className={`grid gap-1.5 ${SNAPSHOT_OPTIONS[item.key].length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-                                {SNAPSHOT_OPTIONS[item.key].map((opt) => (
-                                  <button
-                                    key={`${item.key}-${opt}`}
-                                    type="button"
-                                    onClick={() => {
-                                      setDraftInsight((prev) => ({
-                                        ...prev,
-                                        ...(item.key === "plan" ? { planPrefer: opt } : {}),
-                                        ...(item.key === "vibe" ? { vibePrefer: opt } : {}),
-                                        ...(item.key === "places" ? { placesPrefer: opt } : {}),
-                                      }));
-                                    }}
-                                    className={`px-2 py-1.5 rounded-full text-[11px] font-medium border transition-colors break-keep text-center ${(item.key === "plan" && draftInsight.planPrefer === opt)
-                                      || (item.key === "vibe" && draftInsight.vibePrefer === opt)
-                                      || (item.key === "places" && draftInsight.placesPrefer === opt)
-                                      ? "bg-black text-white border-black"
-                                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
-                                      }`}
-                                  >
-                                    {SURVEY_LABEL_KEY_MAP[opt] ? t(SURVEY_LABEL_KEY_MAP[opt]) : opt}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* [Feature] Additional Preference — Extra Prefer에서 명칭 변경 */}
-                  <div className="mt-6">
-                    <h4 className="text-xs font-semibold text-gray-500 tracking-wider mb-4 font-pretendard">{t("mypage.additionalPreference")}</h4>
-                    <div className="flex flex-wrap gap-2.5">
-                      {(isEditingPreferences
-                        ? EXTRA_PREFER_OPTIONS
-                        : (userProfile.preferences.length ? userProfile.preferences : [t("mypage.noPreference")])).map((pref) => (
-                          <button
-                            key={pref}
-                            type="button"
-                            onClick={() => isEditingPreferences && toggleDraftExtraPreference(pref)}
-                            disabled={!isEditingPreferences && pref === "No preference selected"}
-                            className={`px-4 py-2 rounded-full text-sm font-medium border shadow-sm transition-colors ${isEditingPreferences
-                              ? draftExtraPreferences.includes(pref)
-                                ? "bg-black text-white border-black"
-                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
-                              : "bg-gray-900 text-white border-gray-900"
-                              }`}
-                          >
-                            {EXTRA_PREFER_LABEL_KEY_MAP[pref] ? t(EXTRA_PREFER_LABEL_KEY_MAP[pref]) : pref}
-                          </button>
-                        ))}
-                    </div>
-                    {isEditingPreferences && (
-                      <p className="mt-2 text-[11px] text-gray-500">{t("mypage.upTo3")}</p>
-                    )}
-                  </div>
-                </div>
+                <TravelPreferenceSection
+                  userInsight={userInsight}
+                  draftInsight={draftInsight}
+                  setDraftInsight={setDraftInsight}
+                  userPreferences={userProfile.preferences}
+                  draftExtraPreferences={draftExtraPreferences}
+                  toggleDraftExtraPreference={toggleDraftExtraPreference}
+                  isEditingPreferences={isEditingPreferences}
+                  isSavingPreferences={isSavingPreferences}
+                  handleTogglePreferenceEdit={handleTogglePreferenceEdit}
+                  handleCancelPreferenceEdit={handleCancelPreferenceEdit}
+                />
               </motion.div>
             </div>
 
             <div className="flex flex-col gap-6 h-full">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="p-5 rounded-3xl bg-black text-white relative overflow-hidden group shadow-xl flex flex-col justify-between"
-              >
-                <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-colors duration-700"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-white text-xl font-semibold mb-4">
-                    오늘의 추천 상품
-                  </div>
-                  {todayRecommendations.length > 0 ? (
-                    <>
-                      {(() => {
-                        const selected = todayRecommendations.find((r) => r.id === selectedRecommendationId)
-                          || todayRecommendations[0];
-                        return (
-                          <>
-                            <h2 className="text-xl font-semibold mb-2 tracking-tight leading-tight">
-                              {selected?.title}
-                            </h2>
-                            <p className="text-white/75 text-[13px] leading-relaxed line-clamp-2">
-                              {selected?.description}
-                            </p>
-                          </>
-                        );
-                      })()}
-                      <div className="mt-4 space-y-2">
-                        {(todayRecommendations.slice(0, 3)).map((rec) => (
-                          <button
-                            key={rec.id}
-                            type="button"
-                            onClick={() => setSelectedRecommendationId(rec.id)}
-                            className={`w-full text-left px-3 py-2.5 rounded-xl text-[11px] font-medium border transition-colors ${rec.id === selectedRecommendationId
-                              ? "bg-white/15 text-white border-white/30"
-                              : "bg-white/5 text-white/80 border-white/10 hover:bg-white/10"
-                              }`}
-                          >
-                            {rec.title}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4">
-                      <h2 className="text-lg font-semibold mb-1 tracking-tight leading-tight">
-                        아직 추천 항목이 없습니다
-                      </h2>
-                      <p className="text-white/80 text-[13px] leading-relaxed">
-                        먼저 채팅을 시작해보세요. 저장된 대화 요약을 바탕으로 새로운 주제를 추천해드립니다.
-                      </p>
-                      <p className="text-white/50 text-[10px] mt-2">
-                        채팅 기록 요약이 저장되면 추천 항목이 표시됩니다.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => router.push("/chatbot")}
-                  className="relative z-10 w-full flex items-center justify-center gap-2 bg-white text-black px-4 py-3 rounded-xl text-xs font-semibold hover:bg-gray-200 transition-all uppercase tracking-[0.12em] mt-4"
-                >
-                  <MessageSquare size={16} />
-                  {todayRecommendations.length > 0 ? t("mypage.startPlanning") : t("mypage.startChat")}
-                </button>
-              </motion.div>
+              <RecommendedConversationCard todayRecommendation={todayRecommendation} />
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -708,7 +180,7 @@ export function MyPagePage() {
               >
                 <div className="flex items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    예약내역
+                    {t("mypage.tplResDetails")}
                   </h3>
                   <button
                     type="button"
@@ -719,7 +191,7 @@ export function MyPagePage() {
                   </button>
                 </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
                   {reservations.length ? (
                     reservations.map((res) => (
                       <div
@@ -750,7 +222,7 @@ export function MyPagePage() {
                           <button
                             type="button"
                             onClick={() => requestDeleteReservation(res)}
-                            className="text-[10px] font-semibold text-gray-700 uppercase tracking-[0.12em] hover:opacity-70"
+                            className="text-[10px] font-semibold text-gray-700 uppercase hover:opacity-70"
                           >
                             {t("common.delete")}
                           </button>
@@ -758,8 +230,8 @@ export function MyPagePage() {
                       </div>
                     ))
                   ) : (
-                    <div className="h-full min-h-[120px] flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-[11px] text-gray-400 font-medium">
-                      {t("mypage.noReservations")}
+                    <div className="h-full min-h-[120px] flex items-center justify-center text-gray-400 text-sm">
+                      {t("mypage.emptyReservations")}
                     </div>
                   )}
                 </div>
@@ -769,6 +241,7 @@ export function MyPagePage() {
         </div>
       </main>
 
+      {/* 모달 영역들 */}
       <JourneyDetailModal
         open={!!activeTrip}
         trip={activeTrip}
@@ -776,410 +249,122 @@ export function MyPagePage() {
       />
 
       <ReservationDetailModal
-        key={`${activeReservation?.id ?? "none"}-${activeReservation ? "open" : "closed"}`}
         open={!!activeReservation}
         reservation={activeReservation}
         photoUrl={activeReservation?.reservationImageUrl}
-        onSavePhoto={async (nextUrl) => {
+        onSavePhoto={async (url) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.photo = url;
+            return;
+          }
           try {
-            const resolvedImagePath = (nextUrl && nextUrl.startsWith("data:image/"))
-              ? await uploadImageDataUrl(nextUrl, "reservations")
-              : nextUrl;
+            const imagePath = url && url.startsWith("data:image/")
+              ? await uploadImageDataUrl(url, "reservations")
+              : url;
             const updated = await updateReservation(activeReservation.reservationId, {
-              image_path: resolvedImagePath || null,
+              image_path: imagePath,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-          } catch (error) {
-            console.error("Failed to update photo", error);
-          }
+          } catch (e) { console.error("Failed to update photo", e); }
         }}
         onSaveTitle={async (newTitle) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.title = newTitle;
+            return;
+          }
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
-              name: newTitle.trim(),
+              name: newTitle,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-          } catch (error) {
-            console.error("Failed to update title", error);
-          }
+          } catch (error) { console.error("Failed to update title", error); }
         }}
         onSaveCategory={async (newCategory) => {
           if (!activeReservation) return;
+          if (activeReservation.reservationId === -1) {
+            draftFieldsRef.current.category = newCategory;
+            return;
+          }
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
               category: newCategory,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-          } catch (error) {
-            console.error("Failed to update category", error);
-          }
+          } catch (error) { console.error("Failed to update category", error); }
         }}
         onSaveDetails={async (newDetails) => {
           if (!activeReservation) return;
+
+          // 드래프트: ref에 모아둔 title/category/photo와 함께 한 번에 create
+          if (activeReservation.reservationId === -1) {
+            try {
+              const draft = draftFieldsRef.current;
+              let imagePath = draft.photo || "";
+              if (imagePath && imagePath.startsWith("data:image/")) {
+                imagePath = await uploadImageDataUrl(imagePath, "reservations") || "";
+              }
+              const created = await createReservation({
+                category: draft.category || "transportation",
+                name: draft.title || t("mypage.newReservation"),
+                date: new Date().toISOString().slice(0, 10),
+                image_path: imagePath,
+                details: newDetails,
+              });
+              const mapped = mapReservationRecordToItem(created, t);
+              setReservations((prev) => [mapped, ...prev]);
+              draftFieldsRef.current = {};
+            } catch (error) { console.error("Failed to create reservation", error); }
+            return;
+          }
+
           try {
             const updated = await updateReservation(activeReservation.reservationId, {
               details: newDetails,
             });
-            const mapped = mapReservationRecordToItem(updated);
+            const mapped = mapReservationRecordToItem(updated, t);
             setReservations((prev) => prev.map((item) => (
               item.reservationId === mapped.reservationId ? mapped : item
             )));
-          } catch (error) {
-            console.error("Failed to update details", error);
-          }
+          } catch (error) { console.error("Failed to update details", error); }
         }}
-        onClose={(wasSaved, isNewDraft) => {
-          if (!wasSaved && isNewDraft && activeReservation) {
-            void handleDeleteReservation(activeReservation.id);
-          } else {
-            setActiveReservation(null);
-          }
+        onClose={() => {
+          setActiveReservation(null);
+          draftFieldsRef.current = {};
         }}
       />
 
-      <AnimatePresence>
-        {!!reservationToDelete && (
-          <motion.div
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <motion.button
-              type="button"
+      {/* 분리된 서브 모달들 */}
+      <DeleteReservationConfirmModal
+        open={!!reservationToDelete}
+        onCancel={cancelDeleteReservation}
+        onConfirm={confirmDeleteReservation}
+      />
 
-              className="absolute inset-0 bg-black/40"
-              onClick={cancelDeleteReservation}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            />
-
-            <motion.div
-              className="relative z-10 w-full max-w-[420px] rounded-xl bg-white shadow-lg overflow-hidden"
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 420, damping: 32 }}
-            >
-              <div className="p-6">
-                <div className="text-lg font-semibold text-gray-900">
-                  {t("mypage.deleteReservationConfirm")}
-                </div>
-                <div className="mt-5 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={cancelDeleteReservation}
-                    className="bg-gray-200 text-gray-900 px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors"
-                  >
-                    {t("common.no")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={confirmDeleteReservation}
-                    className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    {t("common.yes")}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Add Reservation SimpleModal was removed here */}
-
-      <SimpleModal
-        open={settingsOpen}
-        // [Feature] Settings 모달 타이틀 — 설정 뷰와 회원탈퇴 뷰를 구분
-        title={settingsModalView === "settings" ? t("mypage.settings") : t("mypage.deactivateTitle")}
-        onClose={closeSettingsModal}
-      >
-        {settingsModalView === "settings" ? (
-          <div className="space-y-5">
-            <input
-              ref={settingsPhotoInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const next = typeof reader.result === "string" ? reader.result : "";
-                  if (!next) return;
-                  setSettingsDraft((prev) => ({ ...prev, profilePicture: next }));
-                };
-                reader.readAsDataURL(file);
-                e.currentTarget.value = "";
-              }}
-            />
-
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-white flex items-center justify-center text-gray-400">
-                  {settingsDraft.profilePicture ? (
-                    <img src={settingsDraft.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[10px] font-semibold">No Image</span>
-                  )}
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">{t("mypage.profilePhoto")}</p>
-                  <button
-                    type="button"
-                    onClick={() => settingsPhotoInputRef.current?.click()}
-                    className="h-9 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                  >
-                    {t("mypage.changePhoto")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetProfilePhotoToGoogle}
-                    disabled={settingsResettingPhoto}
-                    className="h-9 ml-2 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-                  >
-                    {settingsResettingPhoto ? t("mypage.restoringPhoto") : t("mypage.useGooglePhoto")}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.nickname")}</label>
-                <input
-                  value={settingsDraft.nickname}
-                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, nickname: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-                  placeholder={t("mypage.nickname")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.country")}</label>
-                <select
-                  value={settingsDraft.countryCode}
-                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, countryCode: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-                >
-                  <option value="">{t("mypage.selectCountry")}</option>
-                  {countryOptions.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name} ({country.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("profile.birthday")}</label>
-                <input
-                  type="date"
-                  value={settingsDraft.birthday}
-                  onChange={(e) => setSettingsDraft((prev) => ({ ...prev, birthday: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("profile.language")}</label>
-                <LanguageSwitcher variant="select" />
-              </div>
-            </div>
-
-            <div className="pt-1 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleOpenDeactivateAccount}
-                  className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {t("mypage.deactivateAccount")}
-                </button>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeSettingsModal}
-                  className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveSettingsPopup}
-                  disabled={settingsSaving}
-                  className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
-                >
-                  {settingsSaving ? t("common.saving") : t("common.save")}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* [Feature] 회원탈퇴 뷰 — Google 계정 확인 + 탈퇴 동의 체크 후 탈퇴 요청 */
-          <div className="space-y-5">
-            {/* [Feature] Google 계정 확인 체크박스 — 본인 계정이 맞는지 확인 */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.googleAccountConfirm")}</p>
-                <p className="text-sm font-semibold text-gray-900 mt-1 break-all">
-                  {userProfile.bio || t("mypage.unknownAccount")}
-                </p>
-              </div>
-              <label className="flex items-start gap-2 text-sm text-gray-800">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={deactivateGoogleConfirmed}
-                  onChange={(e) => setDeactivateGoogleConfirmed(e.target.checked)}
-                />
-                <span>{t("mypage.confirmGoogleAccount")}</span>
-              </label>
-              {deactivateSubmitAttempted && !deactivateGoogleConfirmed && (
-                <div className="text-xs font-semibold text-red-600">{t("mypage.pleaseConfirmGoogle")}</div>
-              )}
-            </div>
-
-            {/* [Feature] 탈퇴 약관 동의 체크박스 — 동의 없이는 탈퇴 진행 불가 */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{t("mypage.deactivateAgreement")}</p>
-                <p className="text-xs text-gray-500 mt-1">{t("mypage.deactivateAgreementDesc")}</p>
-              </div>
-              <label className="flex items-start gap-2 text-sm text-gray-800">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={deactivateAgreementConfirmed}
-                  onChange={(e) => setDeactivateAgreementConfirmed(e.target.checked)}
-                />
-                <span>{t("mypage.agreeToDeactivate")}</span>
-              </label>
-              {deactivateSubmitAttempted && !deactivateAgreementConfirmed && (
-                <div className="text-xs font-semibold text-red-600">{t("mypage.pleaseAgreeDeactivate")}</div>
-              )}
-            </div>
-
-            {/* [Feature] 탈퇴 실패 시 에러 메시지 표시 */}
-            {!!deactivateError && <div className="text-xs font-semibold text-red-600">{deactivateError}</div>}
-
-            {/* [Feature] 취소 / 탈퇴하기 버튼 */}
-            <div className="pt-1 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleCancelDeactivateAccount}
-                className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleRequestDeactivateAccount}
-                disabled={deactivateSubmitting}
-                className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
-              >
-                {t("mypage.deactivateButton")}
-              </button>
-            </div>
-          </div>
-        )}
-      </SimpleModal>
-
-      {/* [Feature] 회원탈퇴 최종 확인 팝업 — 탈퇴 버튼 클릭 후 한 번 더 경고 + 확인 */}
-      <SimpleModal
-        open={deactivateConfirmOpen}
-        title={t("mypage.deactivateConfirmTitle")}
-        onClose={handleCancelDeactivateConfirm}
-        zIndex={60}
-        maxWidth="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm font-bold text-gray-900">{t("mypage.deactivateConfirmMessage")}</p>
-          <div className="text-xs text-gray-500 leading-relaxed space-y-1">
-            <p>• {t("mypage.deactivateWarning1")}</p>
-            <p>• {t("mypage.deactivateWarning2")}</p>
-            <p>• {t("mypage.deactivateWarning3")}</p>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleCancelDeactivateConfirm}
-              disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-            >
-              {t("common.no")}
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmDeactivateAccount}
-              disabled={deactivateSubmitting}
-              className="h-10 px-4 rounded-full border border-red-600 bg-red-600 text-white text-xs font-bold hover:bg-red-700 disabled:opacity-60 transition-all"
-            >
-              {deactivateSubmitting ? t("mypage.deactivating") : t("mypage.deactivateButton")}
-            </button>
-          </div>
-        </div>
-      </SimpleModal>
-
-      {/* [Feature] 선호도 수정 완료 확인 팝업 — Done 클릭 후 저장 성공 시 표시 */}
-      <SimpleModal
+      <PreferenceSavedPopup
         open={showPreferenceSavedPopup}
-        title={t("mypage.preferenceSavedTitle")}
         onClose={() => setShowPreferenceSavedPopup(false)}
-        zIndex={60}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-700">{t("mypage.preferenceSavedMessage")}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowPreferenceSavedPopup(false)}
-              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
-            >
-              {t("common.confirm")}
-            </button>
-          </div>
-        </div>
-      </SimpleModal>
+      />
 
-      {/* [Feature] Settings 회원정보 수정 완료 확인 팝업 — Save 클릭 후 저장 성공 시 표시 */}
-      <SimpleModal
-        open={showSettingsSavedPopup}
-        title={t("mypage.settingsSavedTitle")}
-        onClose={() => setShowSettingsSavedPopup(false)}
-        zIndex={60}
-        maxWidth="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-700">{t("mypage.settingsSavedMessage")}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowSettingsSavedPopup(false)}
-              className="h-10 px-6 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 transition-all"
-            >
-              {t("common.confirm")}
-            </button>
-          </div>
-        </div>
-      </SimpleModal>
+      <UserSettingsModal
+        open={settingsOpen}
+        userProfile={userProfile}
+        onClose={() => setSettingsOpen(false)}
+        onProfileUpdated={(updatedFields) => {
+          setUserProfile(prev => ({ ...prev, ...updatedFields }));
+          window.dispatchEvent(new Event("triver:profile-updated"));
+        }}
+      />
     </div>
   );
 }

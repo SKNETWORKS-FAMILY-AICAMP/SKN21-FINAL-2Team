@@ -60,18 +60,20 @@ class PlaceRetriever(PlaceScorer):
         CategoryType.TOUR.value: [CategoryType.TOURIST_ATTRACTION.value],
     }
 
-    def _resolve_category_values(self, categories: list[CategoryType] | None) -> list[str]:
+    def _resolve_category_values(self, categories: list[CategoryType] | None, strict: bool = False) -> list[str]:
         """LLM 추출 카테고리 → DB contenttypeid 값으로 변환.
 
         DB 실존 값: 음식점, 관광지, 숙박, 콘텐츠, 투어
         관광지/투어는 동의어 처리: 어느 쪽이든 포함되면 양쪽 모두 MatchAny에 추가.
+        strict=True 이면 동의어 확장을 생략하고 입력 카테고리만 사용한다.
         """
         if not categories:
             return []
         values: set[str] = {cat.value for cat in categories}
-        for v in list(values):
-            for synonym in self._CATEGORY_SYNONYMS.get(v, []):
-                values.add(synonym)
+        if not strict:
+            for v in list(values):
+                for synonym in self._CATEGORY_SYNONYMS.get(v, []):
+                    values.add(synonym)
         return list(values)
 
     def _merge_geo_bboxes(
@@ -126,6 +128,7 @@ class PlaceRetriever(PlaceScorer):
         anchor_lon: float | None = None,
         radius_m: float | None = None,
         bbox: tuple[float, float, float, float] | None = None,
+        strict_category: bool = False,
     ) -> Filter | None:
         """카테고리, 이미지 유무, Geo 조건을 합성한 Qdrant 필터 생성.
 
@@ -136,7 +139,7 @@ class PlaceRetriever(PlaceScorer):
         must_conditions = []
         must_not_conditions = []
         # fallback 포함 DB 실존값으로 변환 (예: "문화시설" → ["관광지"])
-        category_values = self._resolve_category_values(categories)
+        category_values = self._resolve_category_values(categories, strict=strict_category)
 
         if category_values:
             if len(category_values) >= 2:
@@ -183,21 +186,19 @@ class PlaceRetriever(PlaceScorer):
         dprint(f"[INFO] query_filter built: category={categories} values={category_values} geo={'bbox' if bbox else 'circle' if anchor_lat else 'no'}")
         return built
 
-    def search_text(self, query: str, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
-        """
-        Text-based search for places (Semantic).
-        Uses 'text_vec' (BGE-M3) in PLACES_COLLECTION.
-        """
-        dprint(f"[INFO] search_text (Semantic) start query='{query[:80]}' limit={limit} categories={categories} has_image={has_image}")
-        query_vec = self.text_model.encode(query).astype(np.float32)
-        return self.search_by_vector(query_vec, limit=limit, categories=categories, has_image=has_image)
-
-    def search_by_vector(self, query_vec: np.ndarray, limit: int = 5, categories: list[CategoryType] = None, has_image: bool = False):
+    def search_by_vector(
+        self,
+        query_vec: np.ndarray,
+        limit: int = 5,
+        categories: list[CategoryType] = None,
+        has_image: bool = False,
+    ):
         """
         Vector-based search for places (pre-encoded).
         Accepts an already-encoded numpy vector to avoid redundant encoding.
+        strict_category=True (기본값): 관광지↔투어 동의어 확장 없이 입력 카테고리만 사용.
         """
-        query_filter = self._build_query_filter(categories, has_image)
+        query_filter = self._build_query_filter(categories, has_image, strict_category=True)
 
         response = self.client.query_points(
             collection_name=PLACES_COLLECTION,
@@ -208,54 +209,6 @@ class PlaceRetriever(PlaceScorer):
         )
         dprint(f"[INFO] search_by_vector hits={len(response.points)}")
         return response.points
-
-    def search_text_to_image(self, query: str, limit: int = 5, categories: list[CategoryType] = None):
-        """
-        Text-to-Image cross-modal search.
-        Uses CLIP Text Encoder to find images in 'img_vec_agg'.
-        """
-        dprint(f"[INFO] search_text_to_image (Cross-modal) start query='{query[:80]}'")
-        # Using CLIP to encode text for image matching
-        query_vec = self.vision_model.encode(query).astype(np.float32)
-
-        query_filter = self._build_query_filter(categories)
-
-        response = self.client.query_points(
-            collection_name=PLACES_COLLECTION,
-            query=query_vec.tolist(),
-            using="img_vec_agg",
-            limit=limit,
-            with_payload=True,
-            query_filter=query_filter,
-        )
-        return response.points
-
-    async def search_image(self, image_url: str, limit: int = 5, group_size: int = 3, categories: list[CategoryType] = None):
-        """
-        Image-based search (Visual Similarity).
-        Uses CLIP Vision Encoder on PHOTOS_COLLECTION.
-        """
-        dprint(f"[INFO] search_image (Visual) start image_url='{str(image_url)[:120]}'")
-
-        img = await asyncio.to_thread(download_image, image_url)
-        if img is None:
-            return []
-
-        query_vec = await asyncio.to_thread(self.vision_model.encode, img)
-        query_vec = np.asarray(query_vec, dtype=np.float32)
-        query_filter = self._build_query_filter(categories)
-
-        response = await asyncio.to_thread(
-            self.client.query_points_groups,
-            collection_name=PHOTOS_COLLECTION,
-            query=query_vec.tolist(),
-            group_by="contentid",
-            group_size=group_size,
-            limit=limit,
-            with_payload=True,
-            query_filter=query_filter,
-        )
-        return response.groups
 
     async def search_hybrid(
         self,
@@ -519,20 +472,64 @@ class PlaceRetriever(PlaceScorer):
                 )
             return []
 
-        # --- C. Fusion & Boosting ---
-        results = []
-        fused = []
-        query_addr_tokens = self._extract_query_addr_tokens(query or "")
-        # preferred_location은 _location_text_bonus가 전담 처리.
-        # _addr_sparse_bonus는 query 원문 주소 토큰만 담당 → preferred_addr_tokens 불필요. (#11)
-        sparse_enabled = ENABLE_ADDR_SPARSE_BOOST and (
-            bool(categories)
-            or bool(query_addr_tokens)
-        )
-
-        # geo proximity boost anchor: 사용자 좌표 우선, 없으면 landmark anchor 사용
+        # geo proximity 기준 좌표: 사용자 GPS 우선, 없으면 landmark anchor
         prox_lat = user_latitude if user_latitude else location_anchor_lat
         prox_lon = user_lon if user_lon else location_anchor_lon
+
+        # --- B. Fusion & Boosting ---
+        results = self._fuse_and_boost(
+            score_map=score_map,
+            query=query,
+            preferred_location=preferred_location,
+            categories=categories,
+            input_tags=input_tags,
+            prox_lat=prox_lat,
+            prox_lon=prox_lon,
+        )
+
+        # --- C. Rerank ---
+        reranked = await self._apply_rerank(
+            first_stage_results=results[:candidate_k],
+            enable_rerank=enable_rerank,
+            rerank_top_k=rerank_top_k,
+            candidate_k=candidate_k,
+            query=query,
+            emotional_text=emotional_text,
+        )
+
+        # --- D. Geo Blend & Distance Filter ---
+        final_candidates = self._apply_geo_blend(
+            reranked=reranked,
+            prox_lat=prox_lat,
+            prox_lon=prox_lon,
+            geo_retry_count=geo_retry_count,
+        )
+
+        final = final_candidates[: max(int(limit or 0), 1)]
+        dprint(f"[TIMING] search_hybrid DONE  total={time.perf_counter()-_hybrid_start:.3f}s  returned={len(final)}  score_map={len(score_map)}  reranked={len(reranked)}")
+        return final
+
+
+    # ------------------------------------------------------------------
+    # search_hybrid 서브 메서드
+    # ------------------------------------------------------------------
+
+    def _fuse_and_boost(
+        self,
+        score_map: dict,
+        query: str,
+        preferred_location: str | None,
+        categories: list[CategoryType] | None,
+        input_tags: list[str] | None,
+        prox_lat: float | None,
+        prox_lon: float | None,
+    ) -> list[dict]:
+        """RRF score_map → 부스팅 적용 → min-max 정규화 → results 리스트 반환."""
+        fused = []
+        query_addr_tokens = self._extract_query_addr_tokens(query or "")
+        sparse_enabled = ENABLE_ADDR_SPARSE_BOOST and (
+            bool(categories) or bool(query_addr_tokens)
+        )
 
         for pid, data in score_map.items():
             payload = data.get("payload") or {}
@@ -542,7 +539,7 @@ class PlaceRetriever(PlaceScorer):
                 payload=payload,
                 anchor_lat=prox_lat,
                 anchor_lon=prox_lon,
-                radius_km=GEO_PROXIMITY_RADIUS_KM,  # config 기반 반경 (#9)
+                radius_km=GEO_PROXIMITY_RADIUS_KM,
             )
             payload_addr_tokens = self._payload_addr_tokens(payload)
             addr_sparse_boost = 0.0
@@ -554,7 +551,6 @@ class PlaceRetriever(PlaceScorer):
                 if addr_sparse_boost > 0.0:
                     data["matches"].add("addr_sparse")
 
-            # input_tags ↔ payload.tags 부분 문자열 매칭 보너스
             tag_boost = 0.0
             if input_tags:
                 tag_boost = self._tag_match_bonus(input_tags=input_tags, payload=payload)
@@ -562,46 +558,39 @@ class PlaceRetriever(PlaceScorer):
                     data["matches"].add("tag_match")
 
             boost = keyword_boost + location_text_boost + geo_proximity_boost + addr_sparse_boost + tag_boost
-            # BOOST_WEIGHT로 스케일 보정: RRF first_stage_score(0.01~0.05) 대비
-            # boost 합계(최대 0.65) 스케일 불균형 완화.
-            # 적용 후 boost 최대 기여 ≈ 0.65 * 0.3 = 0.195
-            fused.append(
-                (
-                    pid,
-                    data,
-                    float(data.get("score", 0.0)) + BOOST_WEIGHT * boost,
-                    {
-                        "keyword": keyword_boost,
-                        "location_text": location_text_boost,
-                        "geo_proximity": geo_proximity_boost,
-                        "addr_sparse": addr_sparse_boost,
-                        "tag": tag_boost,
-                        "total": boost,
-                    },
-                )
-            )
+            fused.append((
+                pid,
+                data,
+                float(data.get("score", 0.0)) + BOOST_WEIGHT * boost,
+                {
+                    "keyword": keyword_boost,
+                    "location_text": location_text_boost,
+                    "geo_proximity": geo_proximity_boost,
+                    "addr_sparse": addr_sparse_boost,
+                    "tag": tag_boost,
+                    "total": boost,
+                },
+            ))
 
         fused.sort(key=lambda x: x[2], reverse=True)
 
-        # min-max 정규화: 고정 분모(FUSED_SCORE_MAX) 대신 결과셋 내 최솟값·최댓값 사용.
-        # 이전 방식은 FUSED_SCORE_MAX(0.20)보다 실제 max가 크면 상위 결과가 모두
-        # 1.0으로 clamp되어 점수 분포가 의미 없어지는 문제가 있었다.
+        # min-max 정규화
         if fused:
-            all_final   = [x[2]          for x in fused]
-            all_rrf     = [x[1]["score"] for x in fused]
-            fused_max   = all_final[0];   fused_min  = all_final[-1]
+            all_final = [x[2]          for x in fused]
+            all_rrf   = [x[1]["score"] for x in fused]
+            fused_max = all_final[0]; fused_min = all_final[-1]
             fused_range = max(fused_max - fused_min, 1e-9)
-            rrf_max     = max(all_rrf);   rrf_min    = min(all_rrf)
-            rrf_range   = max(rrf_max - rrf_min, 1e-9)
+            rrf_max = max(all_rrf); rrf_min = min(all_rrf)
+            rrf_range = max(rrf_max - rrf_min, 1e-9)
         else:
             fused_min = fused_range = rrf_min = rrf_range = 1.0
 
+        results = []
         for idx, (pid, data, final_score, boost_detail) in enumerate(fused, start=1):
             results.append({
                 "id": pid,
-                # min-max 정규화: 이 결과셋 내에서 [0.0, 1.0] 상대 점수
-                "score":             round((final_score    - fused_min) / fused_range, 4),
-                "first_stage_score": round((data["score"]  - rrf_min)   / rrf_range,  4),
+                "score":             round((final_score   - fused_min) / fused_range, 4),
+                "first_stage_score": round((data["score"] - rrf_min)   / rrf_range,  4),
                 "first_stage_rank": idx,
                 "payload": data["payload"],
                 "match_types": sorted(list(data["matches"])),
@@ -614,19 +603,27 @@ class PlaceRetriever(PlaceScorer):
             })
 
         dprint(f"[TIMING] fusion & boosting  candidates={len(results)}")
+        return results
 
-        first_stage_results = results[:candidate_k]
-        # ENABLE_RERANKER(config)가 False면 호출자의 enable_rerank 값과 무관하게 비활성화
+    async def _apply_rerank(
+        self,
+        first_stage_results: list[dict],
+        enable_rerank: bool,
+        rerank_top_k: int,
+        candidate_k: int,
+        query: str,
+        emotional_text: str | None,
+    ) -> list[dict]:
+        """Reranker(CrossEncoder) 적용. ENABLE_RERANKER=False 또는 enable_rerank=False면 스킵."""
         _do_rerank = enable_rerank and ENABLE_RERANKER
         if _do_rerank:
             # 이미지 전용 검색(query="")일 때 emotional_text를 fallback으로 사용.
-            # 둘 다 없으면 _rerank_candidates 내부에서 rerank를 스킵하고 score 순 유지.
             rerank_query = (query or "").strip() or (emotional_text or "").strip()
             _rerank_start = time.perf_counter()
             reranked = await self._rerank_candidates(
                 query=rerank_query,
                 candidates=first_stage_results,
-                top_k=min(rerank_top_k, candidate_k)
+                top_k=min(rerank_top_k, candidate_k),
             )
             dprint(f"[TIMING] rerank  input={len(first_stage_results)}  top_k={min(rerank_top_k, candidate_k)}  elapsed={time.perf_counter()-_rerank_start:.3f}s")
         else:
@@ -636,47 +633,50 @@ class PlaceRetriever(PlaceScorer):
             for idx, c in enumerate(reranked, start=1):
                 c["rerank_score"] = None
                 c["final_rank"] = idx
+        return reranked
 
-        # rerank 후 거리 블렌딩: geo_proximity_boost(이미 퓨전 단계에서 계산됨)를
-        # rerank_score와 가중 합산하여 텍스트 관련도와 근접성을 함께 반영.
-        # prox_lat/lng 이 있을 때만 적용 (없으면 순수 rerank 순위 유지).
-        final_candidates = reranked
-        if prox_lat is not None and prox_lon is not None:
-            for c in reranked:
-                # reranker 비활성화 시 rerank_score=None → fused score를 fallback으로 사용
-                rerank_score = c.get("rerank_score")
-                raw_text = float(rerank_score) if rerank_score is not None else float(c.get("score", 0.0))
-                raw_geo = float(c.get("geo_proximity_boost") or 0.0)
-                normalized_geo = min(raw_geo / GEO_MAX_BOOST, 1.0)  # [0, 1]
-                c["blended_score"] = (
-                    (1 - RERANK_GEO_BLEND_WEIGHT) * raw_text
-                    + RERANK_GEO_BLEND_WEIGHT * normalized_geo
-                )
-            reranked.sort(key=lambda x: float(x.get("blended_score", 0.0)), reverse=True)
-            for idx, c in enumerate(reranked, start=1):
-                c["final_rank"] = idx
-            dprint(f"[INFO] geo-blended reranking applied (blend_weight={RERANK_GEO_BLEND_WEIGHT})")
-            final_candidates = reranked
+    def _apply_geo_blend(
+        self,
+        reranked: list[dict],
+        prox_lat: float | None,
+        prox_lon: float | None,
+        geo_retry_count: int = 0,
+    ) -> list[dict]:
+        """rerank 점수와 geo proximity boost를 블렌딩하고 거리 하드 필터를 적용한다.
+        prox_lat/lon이 없으면 reranked를 그대로 반환.
+        """
+        if prox_lat is None or prox_lon is None:
+            return reranked
 
-            # 안전망: 블렌딩 후에도 너무 먼 장소가 남아 있을 경우를 대비한 거리 하드 필터
-            nearby_candidates = self._filter_candidates_by_distance(
-                reranked,
-                anchor_lat=prox_lat,
-                anchor_lon=prox_lon,
-                max_distance_km=MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0),
+        for c in reranked:
+            rerank_score = c.get("rerank_score")
+            raw_text = float(rerank_score) if rerank_score is not None else float(c.get("score", 0.0))
+            raw_geo = float(c.get("geo_proximity_boost") or 0.0)
+            normalized_geo = min(raw_geo / GEO_MAX_BOOST, 1.0)
+            c["blended_score"] = (
+                (1 - RERANK_GEO_BLEND_WEIGHT) * raw_text
+                + RERANK_GEO_BLEND_WEIGHT * normalized_geo
             )
-            if nearby_candidates:
-                final_candidates = nearby_candidates
-            else:
-                dprint(
-                    f"[INFO] search_hybrid distance post-filter kept 0 candidates; "
-                    f"falling back to blended results (anchor=({prox_lat}, {prox_lon}))"
-                )
+        reranked.sort(key=lambda x: float(x.get("blended_score", 0.0)), reverse=True)
+        for idx, c in enumerate(reranked, start=1):
+            c["final_rank"] = idx
+        dprint(f"[INFO] geo-blended reranking applied (blend_weight={RERANK_GEO_BLEND_WEIGHT})")
 
-        # 기존 인터페이스 호환: limit 기준으로 반환
-        final = final_candidates[: max(int(limit or 0), 1)]
-        dprint(f"[TIMING] search_hybrid DONE  total={time.perf_counter()-_hybrid_start:.3f}s  returned={len(final)}  score_map={len(score_map)}  reranked={len(reranked)}")
-        return final
+        # 안전망: 블렌딩 후에도 너무 먼 장소가 남아 있을 경우 거리 하드 필터
+        nearby_candidates = self._filter_candidates_by_distance(
+            reranked,
+            anchor_lat=prox_lat,
+            anchor_lon=prox_lon,
+            max_distance_km=MAX_DISTANCE_KM * (GEO_RETRY_MULTIPLIER if geo_retry_count > 0 else 1.0),
+        )
+        if nearby_candidates:
+            return nearby_candidates
+        dprint(
+            f"[INFO] search_hybrid distance post-filter kept 0 candidates; "
+            f"falling back to blended results (anchor=({prox_lat}, {prox_lon}))"
+        )
+        return reranked
+
 
 
 

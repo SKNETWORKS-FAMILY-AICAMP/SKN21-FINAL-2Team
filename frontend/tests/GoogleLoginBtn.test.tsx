@@ -12,6 +12,10 @@ jest.mock("react-i18next", () => ({
       return labels[key] ?? key;
     },
   }),
+  initReactI18next: {
+    type: "3rdParty",
+    init: jest.fn(),
+  },
 }));
 
 // Mock useRouter

@@ -6,9 +6,10 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.core.retrieval.place import PlaceRetriever
-from app.utils.config import PLACES_COLLECTION, PHOTOS_COLLECTION
+from app.utils.config import PLACES_COLLECTION
 from app.utils.common import to_client_image_url
-from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, IsEmptyCondition, PayloadField
+from app.utils.qdrant_utils import scroll_random_places
+from qdrant_client.models import Filter, FieldCondition, MatchAny
 from app.database.connection import db_manager
 from app.models.hot_place import HotPlace
 from app.agents.models.output import CategoryType
@@ -184,57 +185,14 @@ def get_hot_places_legacy(limit: int = 3, db: Session = Depends(db_manager.get_d
 def get_random_restaurants_legacy(limit: int = 3):
     """음식점 데이터 랜덤 반환 (기존 restaurants.py 통합)"""
     client = PlaceRetriever.get_instance().client
-    try:
-        points, _ = client.scroll(
-            collection_name=PLACES_COLLECTION,
-            scroll_filter=Filter(
-                must=[FieldCondition(key="contenttypeid", match=MatchValue(value="음식점"))]
-            ),
-            limit=50,
-            with_payload=True
-        )
-        if not points: return []
-        sampled = random.sample(points, min(limit, len(points)))
-        return [
-            {
-                "contentid": str(p.id),
-                "name": (p.payload or {}).get("title", "Unknown"),
-                "address": (p.payload or {}).get("addr") or (p.payload or {}).get("address") or "주소 정보 없음",
-                "image": (p.payload or {}).get("image") or (p.payload or {}).get("firstimage", "")
-            }
-            for p in sampled
-        ]
-    except Exception as e:
-        logger.error(f"Failed to fetch random restaurants: {e}")
-        return []
+    return scroll_random_places(client, "음식점", limit)
+
 
 @router.get("/attractions", response_model=List[dict])
 def get_random_attractions_legacy(limit: int = 3):
     """관광지 데이터 랜덤 반환 (기존 attractions.py 통합)"""
     client = PlaceRetriever.get_instance().client
-    try:
-        points, _ = client.scroll(
-            collection_name=PLACES_COLLECTION,
-            scroll_filter=Filter(
-                must=[FieldCondition(key="contenttypeid", match=MatchValue(value="관광지"))]
-            ),
-            limit=50,
-            with_payload=True
-        )
-        if not points: return []
-        sampled = random.sample(points, min(limit, len(points)))
-        return [
-            {
-                "contentid": str(p.id),
-                "name": (p.payload or {}).get("title", "Unknown"),
-                "address": (p.payload or {}).get("addr") or (p.payload or {}).get("address") or "주소 정보 없음",
-                "image": (p.payload or {}).get("image") or (p.payload or {}).get("firstimage", "")
-            }
-            for p in sampled
-        ]
-    except Exception as e:
-        logger.error(f"Failed to fetch random attractions: {e}")
-        return []
+    return scroll_random_places(client, "관광지", limit)
 
 
 # =====================================================

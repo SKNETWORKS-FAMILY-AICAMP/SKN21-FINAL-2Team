@@ -4,6 +4,9 @@ version = "0.1.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 dependencies = [
     "alembic>=1.13",
     "httpx>=0.28.1",

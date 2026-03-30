@@ -1,27 +1,27 @@
-﻿"use client";
+"use client";
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
-import { SimpleModal } from "@/app/mypage/components/SimpleModal";
+import { SimpleModal } from "@/components/common/SimpleModal";
 import {
-    DiaryDetail,
-    DiaryListItem,
-    DiaryPayload,
-    createDiary,
-    fetchDiary,
-    fetchDiaries,
-    DiaryPlaceSearchResult,
-    deleteDiary,
-    updateDiary,
+    MomentDetail,
+    MomentListItem,
+    MomentPayload,
+    MomentPlaceSearchResult,
+    createMoment,
+    fetchMoment,
+    fetchMoments,
+    deleteMoment,
+    updateMoment,
     uploadImageDataUrl,
 } from "@/services/api";
 import { MomentsHeader } from "./components/MomentsHeader";
-import { DiaryEditorModal } from "./components/DiaryEditorModal";
-import { DiaryGallery } from "./components/DiaryGallery";
-import { DiaryLocationPickerModal } from "./components/DiaryLocationPickerModal";
-import { EmptyDiaryState } from "./components/EmptyDiaryState";
+import { MomentEditorModal } from "./components/MomentEditorModal";
+import { MomentGallery } from "./components/MomentGallery";
+import { MomentLocationPickerModal } from "./components/MomentLocationPickerModal";
+import { EmptyMomentState } from "./components/EmptyMomentState";
 import { EditorState } from "./types";
 import { emptyEditorState, readExifGps, readFileAsDataUrl } from "./utils";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -32,10 +32,11 @@ export function MomentsPage() {
     const modalImageInputRef = useRef<HTMLInputElement | null>(null);
     // [Feature] 모달 열 때 에디터 스냅샷 (수정 여부 판단용)
     const initialEditorRef = useRef<string>("");
+    const isFirstRun = useRef(true);
 
-    const [diaries, setDiaries] = useState<DiaryListItem[]>([]);
-    const [selectedDiaryId, setSelectedDiaryId] = useState<number | null>(null);
-    const [editor, setEditor] = useState<EditorState>(emptyEditorState);
+    const [moments, setMoments] = useState<MomentListItem[]>([]);
+    const [selectedMomentId, setSelectedMomentId] = useState<number | null>(null);
+    const [editor, setEditor] = useState<EditorState>(emptyEditorState());
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
@@ -47,21 +48,21 @@ export function MomentsPage() {
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     // [Feature] 저장 확인 팝업 상태
     const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-    // [Feature] 삭제 모드 + 확인 팝업 상태
+    // [Feature] 삭제 모드 + 다중 선택 + 확인 팝업 상태
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const [deletingDiaryId, setDeletingDiaryId] = useState<number | null>(null);
+    const [selectedToDelete, setSelectedToDelete] = useState<Set<number>>(new Set());
 
-    const loadDiaries = async (nextQuery = "") => {
-        setLoading(true);
+    const loadMoments = async (nextQuery = "", showLoader = true) => {
+        if (showLoader) setLoading(true);
         setError(null);
         try {
-            const items = await fetchDiaries(nextQuery.trim() ? { query: nextQuery.trim() } : undefined);
-            setDiaries(Array.isArray(items) ? items : []);
+            const items = await fetchMoments(nextQuery.trim() ? { query: nextQuery.trim() } : undefined);
+            setMoments(Array.isArray(items) ? items : []);
         } catch {
             setError(t("moments.failedToLoadList"));
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
@@ -72,9 +73,9 @@ export function MomentsPage() {
             setLoading(true);
             setError(null);
             try {
-                const diaryItems = await fetchDiaries();
+                const momentItems = await fetchMoments();
                 if (cancelled) return;
-                setDiaries(Array.isArray(diaryItems) ? diaryItems : []);
+                setMoments(Array.isArray(momentItems) ? momentItems : []);
             } catch {
                 if (!cancelled) setError(t("moments.failedToLoadDiaries"));
             } finally {
@@ -89,60 +90,67 @@ export function MomentsPage() {
     }, []);
 
     useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+            return;
+        }
         const timer = window.setTimeout(() => {
-            void loadDiaries(query);
-        }, 250);
+            void loadMoments(query, false);
+        }, 500);
         return () => window.clearTimeout(timer);
     }, [query]);
 
-    const selectedDiarySummary = useMemo(
-        () => diaries.find((item) => item.id === selectedDiaryId) ?? null,
-        [diaries, selectedDiaryId]
+    const selectedMomentSummary = useMemo(
+        () => moments.find((item) => item.id === selectedMomentId) ?? null,
+        [moments, selectedMomentId]
     );
 
-    const hydrateEditor = (detail: DiaryDetail) => {
+    const hydrateEditor = (detail: MomentDetail) => {
         setEditor({
             id: detail.id,
             title: detail.title,
             content: detail.content,
             entry_date: detail.entry_date,
-            cover_image_path: detail.cover_image_path ?? null,
-            linked_places: detail.linked_places.map((place) => ({
-                name: place.name ?? null,
-                adress: place.adress ?? "",
-                image_path: place.image_path ?? null,
-                longitude: place.longitude ?? 0,
-                latitude: place.latitude ?? 0,
-                contenttypeid: place.contenttypeid ?? null,
-                chat_place_id: place.chat_place_id ?? null,
-            })).filter((place) => Boolean(place.adress)),
+            image_path: detail.image_path ?? null,
+            adress: detail.adress ?? null,
+            longitude: detail.longitude ?? null,
+            latitude: detail.latitude ?? null,
         });
     };
 
-    const openCreateModal = (coverImagePath?: string | null) => {
-        setSelectedDiaryId(null);
+    const openCreateModal = (imagePath?: string | null) => {
+        setSelectedMomentId(null);
         setEditor({
             ...emptyEditorState(),
-            cover_image_path: coverImagePath ?? null,
+            image_path: imagePath ?? null,
         });
         setError(null);
         setIsEditMode(true);
         setIsModalOpen(true);
         // [Feature] 초기 상태 스냅샷 저장
-        initialEditorRef.current = JSON.stringify({ ...emptyEditorState(), cover_image_path: coverImagePath ?? null });
+        initialEditorRef.current = JSON.stringify({ ...emptyEditorState(), image_path: imagePath ?? null });
     };
 
-    const openDiaryModal = async (diaryId: number) => {
-        setSelectedDiaryId(diaryId);
+    const openMomentModal = async (momentId: number) => {
+        setSelectedMomentId(momentId);
         setIsEditMode(false);
         setIsModalOpen(true);
         setDetailLoading(true);
         setError(null);
         try {
-            const detail = await fetchDiary(diaryId);
+            const detail = await fetchMoment(momentId);
             hydrateEditor(detail);
-            // [Feature] 기존 일기 초기 상태 스냅샷 저장
-            initialEditorRef.current = JSON.stringify({ id: detail.id, title: detail.title, content: detail.content, entry_date: detail.entry_date, cover_image_path: detail.cover_image_path ?? null, linked_places: detail.linked_places });
+            // [Feature] 기존 moment 초기 상태 스냅샷 저장
+            initialEditorRef.current = JSON.stringify({
+                id: detail.id,
+                title: detail.title,
+                content: detail.content,
+                entry_date: detail.entry_date,
+                image_path: detail.image_path ?? null,
+                adress: detail.adress ?? null,
+                longitude: detail.longitude ?? null,
+                latitude: detail.latitude ?? null,
+            });
         } catch {
             setError(t("moments.failedToLoadDetail"));
         } finally {
@@ -171,17 +179,22 @@ export function MomentsPage() {
                     const doc = data.documents?.[0];
                     const adress = doc?.road_address?.address_name || doc?.address?.address_name;
                     if (adress) {
-                        const autoPlace: DiaryPlaceSearchResult = {
-                            name: null,
-                            adress,
-                            latitude: gps.latitude,
-                            longitude: gps.longitude,
-                        };
                         if (target === "create" && !isModalOpen) {
                             openCreateModal(dataUrl);
-                            setEditor((prev) => ({ ...prev, linked_places: [{ ...autoPlace, image_path: null, contenttypeid: null, chat_place_id: null }] }));
+                            setEditor((prev) => ({
+                                ...prev,
+                                adress,
+                                latitude: gps.latitude,
+                                longitude: gps.longitude,
+                            }));
                         } else {
-                            setEditor((prev) => ({ ...prev, cover_image_path: dataUrl, linked_places: [{ ...autoPlace, image_path: null, contenttypeid: null, chat_place_id: null }] }));
+                            setEditor((prev) => ({
+                                ...prev,
+                                image_path: dataUrl,
+                                adress,
+                                latitude: gps.latitude,
+                                longitude: gps.longitude,
+                            }));
                             setIsEditMode(true);
                             setIsModalOpen(true);
                         }
@@ -194,7 +207,7 @@ export function MomentsPage() {
             if (target === "create" && !isModalOpen) {
                 openCreateModal(dataUrl);
             } else {
-                setEditor((prev) => ({ ...prev, cover_image_path: dataUrl }));
+                setEditor((prev) => ({ ...prev, image_path: dataUrl }));
                 setIsEditMode(true);
                 setIsModalOpen(true);
             }
@@ -205,17 +218,19 @@ export function MomentsPage() {
         }
     };
 
-    const buildPayload = async (): Promise<DiaryPayload> => {
-        const uploadedCover = editor.cover_image_path
-            ? await uploadImageDataUrl(editor.cover_image_path, "diary")
+    const buildPayload = async (): Promise<MomentPayload> => {
+        const uploadedImage = editor.image_path
+            ? await uploadImageDataUrl(editor.image_path, "diary")
             : null;
 
         return {
             title: editor.title.trim(),
             content: editor.content.trim(),
             entry_date: editor.entry_date,
-            cover_image_path: uploadedCover,
-            linked_places: editor.linked_places,
+            image_path: uploadedImage,
+            adress: editor.adress,
+            longitude: editor.longitude,
+            latitude: editor.latitude,
         };
     };
 
@@ -231,16 +246,17 @@ export function MomentsPage() {
             const isNew = editor.id === null;
             const payload = await buildPayload();
             const detail = isNew
-                ? await createDiary(payload)
-                : await updateDiary(editor.id!, payload);
+                ? await createMoment(payload)
+                : await updateMoment(editor.id!, payload);
 
-            await loadDiaries(query);
+            // 주의: 저장 후 백그라운드로 목록을 갱신하여 화면 깜빡임 방지
+            await loadMoments(query, false);
             if (isNew) {
                 setIsModalOpen(false);
                 setEditor(emptyEditorState());
             } else {
                 hydrateEditor(detail);
-                setSelectedDiaryId(detail.id);
+                setSelectedMomentId(detail.id);
                 setIsEditMode(false);
                 setIsModalOpen(true);
             }
@@ -266,23 +282,17 @@ export function MomentsPage() {
         setIsModalOpen(false);
         setIsEditMode(false);
         setError(null);
-        if (selectedDiaryId === null) {
+        if (selectedMomentId === null) {
             setEditor(emptyEditorState());
         }
     };
 
-    const handlePickLocation = (place: DiaryPlaceSearchResult) => {
+    const handlePickLocation = (place: MomentPlaceSearchResult) => {
         setEditor((prev) => ({
             ...prev,
-            linked_places: [{
-                name: place.name ?? null,
-                adress: place.adress,
-                latitude: place.latitude,
-                longitude: place.longitude,
-                image_path: null,
-                contenttypeid: null,
-                chat_place_id: null,
-            }],
+            adress: place.adress,
+            latitude: place.latitude,
+            longitude: place.longitude,
         }));
         setIsLocationPickerOpen(false);
     };
@@ -290,44 +300,64 @@ export function MomentsPage() {
 
     // [Feature] Delete Memory - 쓰레기통 클릭 -> 삭제 모드 토글
     const handleToggleDeleteMode = () => {
-        setIsDeleteMode((prev) => !prev);
+        setIsDeleteMode((prev) => {
+            if (prev) setSelectedToDelete(new Set()); // 취소 시 선택 초기화
+            return !prev;
+        });
     };
 
-    // [Feature] 삭제 모드에서 카드 클릭 -> 확인 팝업
-    const handleGallerySelect = (diaryId: number) => {
-        if (isDeleteMode) {
-            setDeletingDiaryId(diaryId);
-            setIsDeleteConfirmOpen(true);
-        } else {
-            void openDiaryModal(diaryId);
-        }
+    // [Feature] 삭제 모드에서 카드 클릭 -> 다중 선택 토글
+    const handleToggleDeleteSelect = (momentId: number) => {
+        setSelectedToDelete((prev) => {
+            const next = new Set(prev);
+            if (next.has(momentId)) next.delete(momentId);
+            else next.add(momentId);
+            return next;
+        });
     };
 
-    // [Feature] 삭제 확인 -> 실제 삭제 실행
+    // [Feature] 일반 모드 카드 클릭
+    const handleGallerySelect = (momentId: number) => {
+        void openMomentModal(momentId);
+    };
+
+    // [Feature] 삭제 버튼 클릭 -> 선택 항목 있으면 확인 팝업
+    const handleRequestDelete = () => {
+        if (selectedToDelete.size === 0) return;
+        setIsDeleteConfirmOpen(true);
+    };
+
+    // [Feature] 삭제 확인 -> 선택된 항목 모두 삭제
     const handleConfirmDelete = async () => {
-        if (deletingDiaryId === null) return;
         try {
-            await deleteDiary(deletingDiaryId);
-            if (selectedDiaryId === deletingDiaryId) {
-                setSelectedDiaryId(null);
+            await Promise.all(Array.from(selectedToDelete).map((id) => deleteMoment(id)));
+            if (selectedMomentId !== null && selectedToDelete.has(selectedMomentId)) {
+                setSelectedMomentId(null);
                 setEditor(emptyEditorState());
             }
-            await loadDiaries(query);
+            // 주의: 삭제 후 백그라운드로 목록을 갱신하여 화면 깜빡임 방지
+            await loadMoments(query, false);
         } catch {
             setError(t("moments.failedToDelete"));
         } finally {
-            setDeletingDiaryId(null);
+            setSelectedToDelete(new Set());
             setIsDeleteConfirmOpen(false);
             setIsDeleteMode(false);
         }
     };
 
-    // [Feature] 저장 확인 팝업에서 "확인" 클릭 → Diary 모달 닫기
+    // [Feature] 저장 확인 팝업에서 "확인" 클릭 → 모달 닫기
     const handleSaveConfirmClose = () => {
         setIsSaveConfirmOpen(false);
         setIsModalOpen(false);
         setError(null);
     };
+
+    // LocationPicker에 전달할 initialPlace 계산
+    const locationPickerInitialPlace: MomentPlaceSearchResult | null =
+        editor.adress && editor.latitude != null && editor.longitude != null
+            ? { name: null, adress: editor.adress, latitude: editor.latitude, longitude: editor.longitude }
+            : null;
 
     return (
         <div className="flex w-full min-h-screen flex-col bg-gray-100 p-3 sm:p-4 gap-4 lg:h-screen lg:flex-row lg:overflow-hidden">
@@ -341,76 +371,77 @@ export function MomentsPage() {
                     onQueryChange={setQuery}
                     onCreate={() => openCreateModal()}
                     onDeleteSelect={handleToggleDeleteMode}
+                    isDeleteMode={isDeleteMode}
+                    deleteCount={selectedToDelete.size}
+                    onConfirmDelete={handleRequestDelete}
                 />
 
 
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {loading ? (
                         <div className="flex h-full items-center justify-center text-gray-400">
                             <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
-                    ) : diaries.length === 0 ? (
-                        <EmptyDiaryState onCreate={() => openCreateModal()} />
+                    ) : moments.length === 0 ? (
+                        <EmptyMomentState onCreate={() => openCreateModal()} />
                     ) : (
-                        <DiaryGallery
-                            diaries={diaries}
-                            selectedDiaryId={selectedDiaryId}
+                        <MomentGallery
+                            diaries={moments}
+                            selectedDiaryId={selectedMomentId}
                             onSelect={handleGallerySelect}
                             isDeleteMode={isDeleteMode}
+                            selectedToDelete={selectedToDelete}
+                            onToggleDeleteSelect={handleToggleDeleteSelect}
                         />
                     )}
                 </div>
             </main>
 
-            <DiaryEditorModal
+            <MomentEditorModal
                 isOpen={isModalOpen}
                 isEditMode={isEditMode}
                 detailLoading={detailLoading}
                 saving={saving}
                 error={error}
                 editor={editor}
-                selectedDiarySummary={selectedDiarySummary}
+                selectedMomentSummary={selectedMomentSummary}
                 modalImageInputRef={modalImageInputRef}
                 onClose={handleRequestClose}
                 onEnterEditMode={() => setIsEditMode(true)}
                 onImageChange={(event) => void handleSelectImage(event, "replace")}
-                onEditorChange={(updater) => setEditor(updater)}
+                onEditorChange={(updater) => {
+                    setEditor(updater);
+                    setError(null);
+                }}
                 onOpenLocationPicker={() => setIsLocationPickerOpen(true)}
-                onClearLinkedPlace={() => setEditor((prev) => ({ ...prev, linked_places: [] }))}
+                onClearLocation={() => setEditor((prev) => ({ ...prev, adress: null, longitude: null, latitude: null }))}
                 onSave={() => void handleSave()}
             />
-            <DiaryLocationPickerModal
+            <MomentLocationPickerModal
                 isOpen={isLocationPickerOpen}
-                initialPlace={editor.linked_places[0] ?? null}
+                initialPlace={locationPickerInitialPlace}
                 onClose={() => setIsLocationPickerOpen(false)}
                 onConfirm={handlePickLocation}
             />
             <SimpleModal
                 open={isCloseConfirmOpen}
                 title={t("moments.unsavedTitle")}
+                icon={<AlertTriangle size={20} />}
                 maxWidth="sm"
+                zIndex={10000}
                 onClose={() => setIsCloseConfirmOpen(false)}
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
-                        {t("moments.unsavedWarning")}
-                        <br />
-                        {t("moments.savePrompt", { save: t("common.save") })}
+                <div className="flex flex-col">
+                    <p className="text-[14px] font-medium text-gray-800 mb-6 leading-relaxed">
+                        {t("moments.unsavedWarning")} {t("moments.savePrompt", { save: t("common.save") })}
                     </p>
-                    <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setIsCloseConfirmOpen(false)}
-                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-                        >
-                            {t("common.back")}
-                        </button>
+                    <div className="flex flex-col gap-3">
                         <button
                             type="button"
                             onClick={handleConfirmClose}
-                            className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                            className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
-                            {t("common.close")}
+                            {t("moments.closeWithoutSaving")}
                         </button>
                     </div>
                 </div>
@@ -420,47 +451,42 @@ export function MomentsPage() {
             <SimpleModal
                 open={isSaveConfirmOpen}
                 title={t("moments.savedTitle")}
+                icon={<AlertTriangle size={20} />} // 실제로는 체크 아이콘이 더 어울리지만 일관성을 위해 아이콘 박스 유지
                 onClose={handleSaveConfirmClose}
                 maxWidth="sm"
+                zIndex={10000}
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
+                <div className="flex flex-col">
+                    <p className="text-[14px] font-medium text-gray-800 mb-6">
                         {t("moments.momentSaved")}
                     </p>
-                    <div className="flex justify-end">
-                        <button
-                            type="button"
-                            onClick={handleSaveConfirmClose}
-                            className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
-                        >
-                            {t("common.confirm")}
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handleSaveConfirmClose}
+                        className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
+                    >
+                        {t("common.confirm")}
+                    </button>
                 </div>
             </SimpleModal>
             {/* [Feature] Delete Memory - 삭제 확인 팝업 */}
             <SimpleModal
                 open={isDeleteConfirmOpen}
                 title={t("moments.deleteMemory")}
-                onClose={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
+                icon={<AlertTriangle size={20} />}
+                onClose={() => { setIsDeleteConfirmOpen(false); }}
                 maxWidth="sm"
+                zIndex={10000}
             >
-                <div className="space-y-4">
-                    <p className="text-sm leading-6 text-gray-600">
+                <div className="flex flex-col">
+                    <p className="text-[14px] font-medium text-gray-800 mb-6 leading-relaxed">
                         {t("moments.deleteConfirmation")}
                     </p>
-                    <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => { setIsDeleteConfirmOpen(false); setDeletingDiaryId(null); }}
-                            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-                        >
-                            {t("common.no")}
-                        </button>
+                    <div className="flex flex-col gap-3">
                         <button
                             type="button"
                             onClick={() => void handleConfirmDelete()}
-                            className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                            className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center active:scale-[0.98]"
                         >
                             {t("common.yes")}
                         </button>

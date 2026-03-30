@@ -5,14 +5,14 @@ import torch
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
 # Model - 챗봇/일반 LLM (기본값: OpenAI)
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-5.4-mini")
 LLM_TYPE = os.getenv("LLM_TYPE", "openai").lower()  # "openai" | "anthropic" | "ollama" | "huggingface"
 
 # Ollama
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 # Model - OCR 전용 LLM (OpenAI gpt-4o-mini)
-OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "gpt-4o-mini")
+OCR_LLM_MODEL = os.getenv("OCR_LLM_MODEL", "gpt-5.4-mini")
 OCR_LLM_TYPE = os.getenv("OCR_LLM_TYPE", "openai").lower()
 
 # Device

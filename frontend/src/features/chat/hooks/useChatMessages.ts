@@ -45,6 +45,11 @@ export function useChatMessages({
         const mappedStatus: StepStatus = status === "start" ? "running" : status as StepStatus;
         setPipelineSteps((prev) => {
             if (mappedStatus === "running") {
+                // image_analysis는 intent 노드 내부 서브스텝이므로
+                // 시작 시 기존 running 스텝(intent)을 done으로 전환하지 않음
+                if (step === "image_analysis") {
+                    return { ...prev, [step]: "running" };
+                }
                 const next = { ...prev };
                 for (const key of Object.keys(next)) {
                     if (next[key] === "running" && key !== step) {
@@ -176,7 +181,7 @@ export function useChatMessages({
                 room_id: roomId,
                 message: optimisticUserText,
                 role: "human",
-                image_path: optimisticImageDataUrl ?? imageDataUrl ?? null,
+                image_path: imageDataUrl ?? optimisticImageDataUrl ?? null,
                 latitude: optLat,
                 longitude: optLng,
                 created_at: new Date().toISOString(),
@@ -314,7 +319,7 @@ export function useChatMessages({
         payload: {
             mode: "trip_context" | "selected_places" | "combined" | "greeting";
             trip_context?: { travel_duration: string; adult_count: number; child_count: number };
-            selected_places?: { name?: string | null; adress?: string | null; contenttypeid?: number; description?: string | null }[];
+            selected_places?: { name?: string | null; adress?: string | null; contenttypeid?: number; description?: string | null; image_path?: string | null; category?: string | null }[];
             save_user_message?: boolean;
         };
     }) => {

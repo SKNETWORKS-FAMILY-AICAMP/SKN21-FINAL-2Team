@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#F3F4F6"/>
+  <rect width="400" height="300" fill="url(#grad)" opacity="0.5"/>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="400" y2="300">
+      <stop offset="0%" stop-color="#E5E7EB"/>
+      <stop offset="100%" stop-color="#D1D5DB"/>
+    </linearGradient>
+  </defs>
+  <!-- MapPin icon -->
+  <g transform="translate(176, 110)">
+    <path d="M24 10c0 7.732-12 22-12 22S0 17.732 0 10C0 4.477 5.373 0 12 0s12 4.477 12 10z" fill="#D1D5DB"/>
+    <circle cx="12" cy="10" r="4.5" fill="#F3F4F6"/>
+  </g>
+  <text x="200" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="13" font-weight="500" fill="#9CA3AF">No Image</text>
+</svg>

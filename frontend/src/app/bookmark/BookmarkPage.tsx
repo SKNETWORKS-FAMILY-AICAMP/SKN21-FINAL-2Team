@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, MapPin, ArrowRight, Check, Bookmark as BookmarkIcon, Loader2 } from "lucide-react";
+import { MessageSquare, MapPin, ArrowRight, Check, Bookmark as BookmarkIcon, Loader2, Trash2, X } from "lucide-react";
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { useRouter } from "next/navigation";
 import {
@@ -16,8 +17,9 @@ import {
 } from "@/services/api";
 import { setPendingAutoStartMeta } from "@/services/autoStart";
 import { useTranslation } from "@/i18n/useTranslation";
-
-const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80";
+import { SimpleModal } from "@/components/common/SimpleModal";
+import { AlertTriangle } from "lucide-react";
+import { PLACE_PLACEHOLDER } from "@/lib/imageUrl";
 
 export function BookmarkPage() {
     const router = useRouter();
@@ -26,8 +28,18 @@ export function BookmarkPage() {
     const [selectedPlacesForPlan, setSelectedPlacesForPlan] = useState<number[]>([]);
     const [isDeletingSessions, setIsDeletingSessions] = useState<boolean>(false);
     const [isDeletingPlaces, setIsDeletingPlaces] = useState<boolean>(false);
-    const [selectedSessionIdsForDelete, setSelectedSessionIdsForDelete] = useState<number[]>([]);
-    const [selectedPlaceIdsForDelete, setSelectedPlaceIdsForDelete] = useState<number[]>([]);
+    const {
+        selected: selectedSessionIdsForDelete,
+        toggle: toggleSessionSelectionForDelete,
+        clear: clearSelectedSessions,
+        setSelected: setSelectedSessionIdsForDelete,
+    } = useMultiSelect<number>();
+    const {
+        selected: selectedPlaceIdsForDelete,
+        toggle: togglePlaceSelectionForDelete,
+        clear: clearSelectedPlaces,
+        setSelected: setSelectedPlaceIdsForDelete,
+    } = useMultiSelect<number>();
     const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
     const [confirmKind, setConfirmKind] = useState<"sessions" | "places">("sessions");
     const [sessions, setSessions] = useState<BookmarkedRoomItem[]>([]);
@@ -77,37 +89,29 @@ export function BookmarkPage() {
         }
     };
 
-    const toggleSessionSelectionForDelete = (id: number) => {
-        setSelectedSessionIdsForDelete((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
-    const togglePlaceSelectionForDelete = (id: number) => {
-        setSelectedPlaceIdsForDelete((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    };
-
     const handleEnterDeleteSessions = () => {
         setIsDeletingSessions(true);
-        setSelectedSessionIdsForDelete([]);
+        clearSelectedSessions();
         setError(null);
     };
 
     const handleCancelDeleteSessions = () => {
         setIsDeletingSessions(false);
-        setSelectedSessionIdsForDelete([]);
+        clearSelectedSessions();
         setConfirmOpen(false);
         setError(null);
     };
 
     const handleEnterDeletePlaces = () => {
         setIsDeletingPlaces(true);
-        setSelectedPlaceIdsForDelete([]);
+        clearSelectedPlaces();
         setSelectedPlacesForPlan([]);
         setError(null);
     };
 
     const handleCancelDeletePlaces = () => {
         setIsDeletingPlaces(false);
-        setSelectedPlaceIdsForDelete([]);
+        clearSelectedPlaces();
         setConfirmOpen(false);
         setError(null);
     };
@@ -139,13 +143,13 @@ export function BookmarkPage() {
                 const ids = [...selectedSessionIdsForDelete];
                 await Promise.all(ids.map((roomId) => updateRoomBookmark(roomId, false)));
                 setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
-                setSelectedSessionIdsForDelete([]);
+                clearSelectedSessions();
                 setIsDeletingSessions(false);
             } else {
                 const ids = [...selectedPlaceIdsForDelete];
                 await Promise.all(ids.map((placeId) => updatePlaceBookmark(placeId, false)));
                 setPlaces((prev) => prev.filter((p) => !ids.includes(p.id)));
-                setSelectedPlaceIdsForDelete([]);
+                clearSelectedPlaces();
                 setIsDeletingPlaces(false);
             }
             setConfirmOpen(false);
@@ -218,55 +222,17 @@ export function BookmarkPage() {
                         </h1>
                         <p className="page-subtitle mt-1">{t("bookmark.pageSubtitle")}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        {activeTab === "sessions" ? (
-                            isDeletingSessions ? (
-                                <button
-                                    type="button"
-                                    onClick={handleCancelDeleteSessions}
-                                    className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    {t("bookmark.cancel")}
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleEnterDeleteSessions}
-                                    className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    {t("bookmark.deleteChat")}
-                                </button>
-                            )
-                        ) : activeTab === "places" ? (
-                            isDeletingPlaces ? (
-                                <button
-                                    type="button"
-                                    onClick={handleCancelDeletePlaces}
-                                    className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    {t("bookmark.cancel")}
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleEnterDeletePlaces}
-                                    className="text-[11px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    {t("bookmark.deletePlace")}
-                                </button>
-                            )
-                        ) : null}
-
-                        <div className="bg-gray-100 p-1 rounded-lg flex gap-0.5">
+                    <div className="flex flex-col-reverse md:flex-row md:items-center gap-3">
+                        <div className="bg-gray-100 p-1 rounded-full flex gap-1 self-start md:self-auto">
                             <button
                                 onClick={() => {
                                     setActiveTab("sessions");
                                     setIsDeletingPlaces(false);
-                                    setSelectedPlaceIdsForDelete([]);
+                                    clearSelectedPlaces();
                                     setSelectedPlacesForPlan([]);
                                     setConfirmOpen(false);
                                 }}
-                                className={`px-4 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${activeTab === "sessions" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
+                                className={`px-5 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all ${activeTab === "sessions" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 {t("bookmark.tabSessions")}
                             </button>
@@ -274,18 +240,78 @@ export function BookmarkPage() {
                                 onClick={() => {
                                     setActiveTab("places");
                                     setIsDeletingSessions(false);
-                                    setSelectedSessionIdsForDelete([]);
+                                    clearSelectedSessions();
                                     setConfirmOpen(false);
                                 }}
-                                className={`px-4 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${activeTab === "places" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
+                                className={`px-5 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all ${activeTab === "places" ? "bg-white shadow-sm text-black ring-1 ring-gray-200" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 {t("bookmark.tabPlaces")}
                             </button>
                         </div>
+
+                        <div className="flex items-center gap-3">
+                            {activeTab === "sessions" ? (
+                                isDeletingSessions ? (
+                                    <>
+                                        <button
+                                            onClick={openConfirmForSessions}
+                                            disabled={selectedSessionIdsForDelete.length === 0}
+                                            className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${selectedSessionIdsForDelete.length > 0 ? "bg-black text-white hover:bg-gray-800" : "bg-gray-100 text-gray-300 cursor-not-allowed"}`}
+                                        >
+                                            <Trash2 size={14} />
+                                            {selectedSessionIdsForDelete.length > 0 ? `${selectedSessionIdsForDelete.length} ${t("bookmark.deleteSelected") || "삭제"}` : t("bookmark.deleteSelected")}
+                                        </button>
+                                        <button
+                                            onClick={handleCancelDeleteSessions}
+                                            className="flex items-center justify-center rounded-full border border-gray-200 p-2.5 text-gray-500 transition-colors hover:bg-gray-100"
+                                            title={t("bookmark.cancel")}
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={handleEnterDeleteSessions}
+                                        className="flex items-center justify-center rounded-full border border-gray-200 p-2.5 text-gray-400 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                                        title={t("bookmark.deleteChat")}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )
+                            ) : activeTab === "places" ? (
+                                isDeletingPlaces ? (
+                                    <>
+                                        <button
+                                            onClick={openConfirmForPlaces}
+                                            disabled={selectedPlaceIdsForDelete.length === 0}
+                                            className={`flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors ${selectedPlaceIdsForDelete.length > 0 ? "bg-black text-white hover:bg-gray-800" : "bg-gray-100 text-gray-300 cursor-not-allowed"}`}
+                                        >
+                                            <Trash2 size={14} />
+                                            {selectedPlaceIdsForDelete.length > 0 ? `${selectedPlaceIdsForDelete.length} ${t("bookmark.deleteSelected") || "삭제"}` : t("bookmark.deleteSelected")}
+                                        </button>
+                                        <button
+                                            onClick={handleCancelDeletePlaces}
+                                            className="flex items-center justify-center rounded-full border border-gray-200 p-2.5 text-gray-500 transition-colors hover:bg-gray-100"
+                                            title={t("bookmark.cancel")}
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={handleEnterDeletePlaces}
+                                        className="flex items-center justify-center rounded-full border border-gray-200 p-2.5 text-gray-400 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+                                        title={t("bookmark.deletePlace")}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )
+                            ) : null}
+                        </div>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-6 pb-24">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-24">
                     {loading ? (
                         <div className="h-full flex items-center justify-center text-gray-400">
                             <Loader2 className="w-6 h-6 animate-spin" />
@@ -311,42 +337,44 @@ export function BookmarkPage() {
                                                     }
                                                     router.push(`/chatbot?roomId=${session.id}`);
                                                 }}
-                                                className={`group rounded-md bg-gray-50 border border-gray-200 rounded-lg p-5 transition-all duration-200 flex items-center justify-between gap-3 shadow-sm hover:shadow-md cursor-pointer min-w-0 overflow-hidden ${isDeletingSessions ? "hover:border-gray-400" : "hover:border-black group-hover:bg-black group-hover:text-white"}`}
+                                                className={`group relative rounded-2xl bg-white border border-gray-200 p-5 transition-all duration-200 flex flex-col justify-center min-w-0 cursor-pointer shadow-sm hover:shadow-md hover:border-black ${
+                                                    isDeletingSessions
+                                                        ? selectedSessionIdsForDelete.includes(session.id)
+                                                            ? "ring-2 ring-black scale-[0.98] bg-gray-50"
+                                                            : "opacity-70 hover:opacity-100 hover:border-gray-400"
+                                                        : ""
+                                                }`}
                                             >
-                                                <div className="flex items-start gap-4 min-w-0 flex-1">
-                                                    {isDeletingSessions ? (
-                                                        <div className="pt-1 flex-none">
-                                                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedSessionIdsForDelete.includes(session.id) ? "bg-black border-black" : "bg-white border-gray-300"}`}>
-                                                                {selectedSessionIdsForDelete.includes(session.id) ? (
-                                                                    <Check size={12} strokeWidth={3} className="text-white" />
-                                                                ) : null}
-                                                            </div>
-                                                        </div>
-                                                    ) : null}
-                                                    <div className="w-10 h-10 flex items-center justify-center text-gray-900 transition-colors flex-none">
-                                                        <MessageSquare size={16} strokeWidth={1.5} />
+                                                {isDeletingSessions && (
+                                                    <div className={`absolute top-4 right-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-sm ${selectedSessionIdsForDelete.includes(session.id) ? "border-black bg-black text-white" : "border-gray-300 bg-white text-transparent"}`}>
+                                                        <Check size={13} strokeWidth={3} />
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <h3 className="font-bold text-sm text-gray-900 mb-0.5 truncate">{session.title}</h3>
-                                                        <p className="text-xs text-gray-500 mb-2 truncate">
+                                                )}
+                                                <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                    <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-50 text-gray-700 transition-colors flex-none border border-gray-100 group-hover:bg-gray-100">
+                                                        <MessageSquare size={20} className="opacity-80" strokeWidth={1.5} />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 pr-6">
+                                                        <h3 className="font-bold text-gray-900 truncate text-[13px] mb-0.5 group-hover:text-blue-600 transition-colors">{session.title}</h3>
+                                                        <p className="text-xs text-gray-500 mb-1.5 truncate">
                                                             {session.latest_message_preview || t("bookmark.noHistory")}
                                                         </p>
-                                                        <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                                                        <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 uppercase">
                                                             {new Date(session.created_at).toLocaleDateString()}
                                                         </span>
                                                     </div>
+                                                    {!isDeletingSessions && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                router.push(`/chatbot?roomId=${session.id}`);
+                                                            }}
+                                                            className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 text-gray-400 hover:text-black p-2 hover:bg-gray-100 rounded-full flex-none shrink-0"
+                                                        >
+                                                            <ArrowRight size={18} />
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {!isDeletingSessions ? (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            router.push(`/chatbot?roomId=${session.id}`);
-                                                        }}
-                                                        className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200 text-black p-2 hover:bg-gray-100 rounded-md flex-none shrink-0"
-                                                    >
-                                                        <ArrowRight size={16} />
-                                                    </button>
-                                                ) : null}
                                             </div>
                                         ))
                                     )}
@@ -362,29 +390,43 @@ export function BookmarkPage() {
                                             const isSelected = isDeletingPlaces
                                                 ? selectedPlaceIdsForDelete.includes(place.id)
                                                 : selectedPlacesForPlan.includes(place.id);
-                                            const imageUrl = place.image_path || DEFAULT_PLACEHOLDER;
+                                            const imageUrl = place.image_path || PLACE_PLACEHOLDER;
                                             return (
                                                 <div
                                                     key={place.id}
                                                     onClick={() => (isDeletingPlaces ? togglePlaceSelectionForDelete(place.id) : togglePlaceSelectionForPlan(place.id))}
-                                                    className={`group relative h-60 rounded-lg overflow-hidden cursor-pointer border-2 transition-all duration-200 ${isSelected ? "border-black shadow-lg" : "border-transparent"}`}
+                                                    className={`group relative h-60 w-full overflow-hidden rounded-2xl cursor-pointer text-left shadow-sm transition-all hover:shadow-lg ${
+                                                        isDeletingPlaces
+                                                            ? isSelected
+                                                                ? "ring-2 ring-black scale-[0.98]"
+                                                                : "opacity-70 hover:opacity-100"
+                                                            : isSelected
+                                                                ? "ring-2 ring-black scale-[0.98]"
+                                                                : ""
+                                                    }`}
                                                 >
-                                                    <img src={imageUrl} alt={place.name || t("bookmark.placeAlt")} className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-90" />
-                                                    <div className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center">
-                                                        {isSelected ? (
-                                                            <div className="w-full h-full bg-black border border-white flex items-center justify-center rounded-sm text-white shadow-lg">
-                                                                <Check size={12} strokeWidth={3} />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-full h-full border-2 border-white/50 rounded-sm hover:border-white transition-colors" />
-                                                        )}
-                                                    </div>
-                                                    <div className="absolute bottom-0 left-0 w-full p-5">
+                                                    <img src={imageUrl} alt={place.name || t("bookmark.placeAlt")} onError={(e) => { e.currentTarget.src = PLACE_PLACEHOLDER; }} className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
+                                                    <div className={`absolute inset-0 transition-colors duration-300 ${isDeletingPlaces && isSelected ? "bg-black/20" : "bg-black/0 group-hover:bg-black/20"}`} />
+                                                    
+                                                    {!isDeletingPlaces && isSelected && (
+                                                        <div className="pointer-events-none absolute inset-0 rounded-2xl border-[3px] border-black z-10" />
+                                                    )}
+                                                    
+                                                    {(isDeletingPlaces || isSelected) && (
+                                                        <div className={`absolute top-3 right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-200 shadow-sm ${
+                                                            isSelected
+                                                                ? "border-black bg-black text-white"
+                                                                : "border-white/80 bg-black/30 text-transparent"
+                                                        }`}>
+                                                            <Check size={13} strokeWidth={3} />
+                                                        </div>
+                                                    )}
+
+                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent p-5">
                                                         <h3 className="text-white font-medium text-xl mb-1 leading-none truncate">
                                                             {place.name || t("bookmark.unnamedPlace")}
                                                         </h3>
-                                                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 min-w-0">
+                                                        <p className="text-white/60 text-[10px] font-bold uppercase flex items-center gap-1 min-w-0">
                                                             <MapPin size={10} className="flex-none" />
                                                             <span className="truncate">{place.adress || place.room_title}</span>
                                                         </p>
@@ -410,7 +452,7 @@ export function BookmarkPage() {
                             <button
                                 onClick={handlePlanWithSelection}
                                 disabled={isCreatingRoom}
-                                className="w-full bg-black text-white px-6 py-4 rounded-lg shadow-2xl hover:bg-gray-900 font-bold text-xs uppercase tracking-widest flex items-center justify-between group transition-all"
+                                className="w-full bg-black text-white px-6 py-4 rounded-2xl shadow-2xl hover:bg-zinc-800 font-bold text-xs uppercase flex items-center justify-between group transition-all"
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedPlacesForPlan.length}</span>
@@ -422,110 +464,34 @@ export function BookmarkPage() {
                     )}
                 </AnimatePresence>
 
-                <AnimatePresence>
-                    {activeTab === "sessions" && isDeletingSessions && selectedSessionIdsForDelete.length > 0 && (
-                        <motion.div
-                            initial={{ y: 100, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 100, opacity: 0 }}
-                            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-6"
-                        >
-                            <button
-                                type="button"
-                                onClick={openConfirmForSessions}
-                                disabled={isDeletingSubmitting}
-                                className="w-full bg-black text-white px-6 py-4 rounded-lg shadow-2xl hover:bg-gray-900 font-bold text-xs uppercase tracking-widest flex items-center justify-between group transition-all disabled:opacity-60"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedSessionIdsForDelete.length}</span>
-                                    <span>{t("bookmark.deleteSelected")}</span>
-                                </div>
-                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
-                <AnimatePresence>
-                    {activeTab === "places" && isDeletingPlaces && selectedPlaceIdsForDelete.length > 0 && (
-                        <motion.div
-                            initial={{ y: 100, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 100, opacity: 0 }}
-                            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-6"
-                        >
-                            <button
-                                type="button"
-                                onClick={openConfirmForPlaces}
-                                disabled={isDeletingSubmitting}
-                                className="w-full bg-black text-white px-6 py-4 rounded-lg shadow-2xl hover:bg-gray-900 font-bold text-xs uppercase tracking-widest flex items-center justify-between group transition-all disabled:opacity-60"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="bg-white text-black text-[10px] font-extrabold w-5 h-5 flex items-center justify-center rounded-sm">{selectedPlaceIdsForDelete.length}</span>
-                                    <span>{t("bookmark.deleteSelected")}</span>
-                                </div>
-                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
-                <AnimatePresence>
-                    {confirmOpen && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        >
-                            <button
-                                type="button"
-
-                                className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
-                                onClick={closeConfirm}
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="relative z-10 w-full max-w-xl rounded-3xl bg-white border border-gray-200 shadow-2xl overflow-hidden"
-                            >
-                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                                    <h3 className="text-[11px] font-bold text-gray-900 uppercase tracking-widest">{t("bookmark.confirmTitle")}</h3>
-                                    <button
-                                        type="button"
-                                        onClick={closeConfirm}
-                                        disabled={isDeletingSubmitting}
-                                        className="w-8 h-8 rounded-full border border-gray-200 bg-white text-gray-600 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-60"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <p className="text-sm font-bold text-gray-900">{confirmMessage}</p>
-                                    <div className="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={closeConfirm}
-                                            disabled={isDeletingSubmitting}
-                                            className="h-10 px-4 rounded-full border border-gray-300 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-60"
-                                        >
-                                            {t("common.no")}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={confirmDeleteSelected}
-                                            disabled={isDeletingSubmitting}
-                                            className="h-10 px-4 rounded-full border border-gray-900 bg-black text-white text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-all"
-                                        >
-                                            {isDeletingSubmitting ? t("bookmark.deleting") : t("common.yes")}
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <SimpleModal
+                    open={confirmOpen}
+                    onClose={closeConfirm}
+                    title={t("bookmark.confirmTitle")}
+                    icon={<AlertTriangle size={20} />}
+                    maxWidth="sm"
+                >
+                    <div className="flex flex-col">
+                        <p className="text-[14px] font-medium text-gray-800 mb-6 leading-relaxed">
+                            {t("bookmark.deleteConfirmDesc")}
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={confirmDeleteSelected}
+                                    disabled={isDeletingSubmitting}
+                                    className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                                >
+                                    {isDeletingSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                    {isDeletingSubmitting ? t("bookmark.deleting") : t("common.yes")}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </SimpleModal>
             </main>
         </div>
     );

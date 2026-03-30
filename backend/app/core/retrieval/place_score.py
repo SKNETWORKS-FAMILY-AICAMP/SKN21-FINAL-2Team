@@ -55,6 +55,9 @@ def _addr_token_stem(token: str) -> str:
         return token[:-1]
     return token
 
+def _safe_sigmoid(x: float) -> float:
+    """raw logit → [0, 1] 변환. overflow 방지."""
+    return 1.0 / (1.0 + math.exp(-max(min(x, 30.0), -30.0)))
 
 def _safe_sigmoid(x: float) -> float:
     """raw logit → [0, 1] 변환. overflow 방지."""

@@ -9,8 +9,10 @@ from app.database.connection import db_manager
 from app.models.reservation import Reservation
 from app.models.user import User
 from app.schemas.reservation import ReservationCreate, ReservationResponse, ReservationUpdate
+from app.utils.common import to_client_image_url
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.security import get_current_user
+from app.utils.db_utils import get_owned_resource_or_404
 from app.services.ocr_service import extract_datetime_from_image
 
 # 로컬 업로드 루트 (main.py와 동일한 경로)
@@ -19,6 +21,19 @@ _UPLOAD_DIR = os.path.join(
 )
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
+
+
+def _to_response(item: Reservation) -> ReservationResponse:
+    """DB 모델 → 응답 스키마 변환. image_path를 표시 가능한 URL로 변환."""
+    return ReservationResponse(
+        id=item.id,
+        user_id=item.user_id,
+        category=item.category,
+        name=item.name,
+        date=item.date,
+        image_path=to_client_image_url(item.image_path) or None,
+        details=item.details,
+    )
 
 
 @router.post("/ocr")
@@ -79,12 +94,13 @@ def list_reservations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
-    return (
+    items = (
         db.query(Reservation)
         .filter(Reservation.user_id == current_user.id)
         .order_by(Reservation.id.desc())
         .all()
     )
+    return [_to_response(r) for r in items]
 
 
 @router.post("", response_model=ReservationResponse)
@@ -99,11 +115,12 @@ def create_reservation(
         name=payload.name,
         date=payload.date,
         image_path=payload.image_path,
+        details=payload.details,
     )
     db.add(item)
     db.commit()
     db.refresh(item)
-    return item
+    return _to_response(item)
 
 
 @router.patch("/{reservation_id}", response_model=ReservationResponse)
@@ -113,13 +130,10 @@ def update_reservation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
-    item = (
-        db.query(Reservation)
-        .filter(Reservation.id == reservation_id, Reservation.user_id == current_user.id)
-        .first()
+    item = get_owned_resource_or_404(
+        db, Reservation, reservation_id, current_user.id,
+        ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Reservation not found"
     )
-    if not item:
-        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Reservation not found", 404)
 
     update_data = payload.dict(exclude_unset=True)
     for key, value in update_data.items():
@@ -128,7 +142,7 @@ def update_reservation(
     db.add(item)
     db.commit()
     db.refresh(item)
-    return item
+    return _to_response(item)
 
 
 @router.delete("/{reservation_id}")
@@ -137,13 +151,10 @@ def delete_reservation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
-    item = (
-        db.query(Reservation)
-        .filter(Reservation.id == reservation_id, Reservation.user_id == current_user.id)
-        .first()
+    item = get_owned_resource_or_404(
+        db, Reservation, reservation_id, current_user.id,
+        ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Reservation not found"
     )
-    if not item:
-        raise AppException(ErrorCode.CHAT_MESSAGE_NOT_FOUND_OR_DENIED, "Reservation not found", 404)
 
     db.delete(item)
     db.commit()

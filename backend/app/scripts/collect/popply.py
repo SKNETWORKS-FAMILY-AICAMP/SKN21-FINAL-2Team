@@ -12,6 +12,7 @@ from datetime import date
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -42,14 +43,24 @@ def _create_driver(headless: bool = True) -> webdriver.Chrome:
     opts = webdriver.ChromeOptions()
     if headless:
         opts.add_argument("--headless")
+    
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_argument(
         "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     )
-    driver = webdriver.Chrome(options=opts)
+    
+    # 리눅스 환경(특히 ARM64)에서 설치된 드라이버 경로를 명시적으로 지정
+    try:
+        service = Service(executable_path="/usr/bin/chromedriver")
+        driver = webdriver.Chrome(service=service, options=opts)
+    except Exception as e:
+        log.warning("시스템 드라이버( /usr/bin/chromedriver ) 로드 실패, 자동 탐색 시도: %s", e)
+        driver = webdriver.Chrome(options=opts)
+        
     driver.implicitly_wait(10)
     return driver
 

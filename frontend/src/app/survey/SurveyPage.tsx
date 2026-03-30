@@ -126,6 +126,8 @@ export function SurveyPage() {
 
     const currentQuestion = questions[currentQuestionIndex];
 
+    if (!isCompleted && !currentQuestion) return <div className="min-h-screen flex items-center justify-center">{t("common.loading")}</div>;
+
     return (
         <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
             {/* Progress Bar */}

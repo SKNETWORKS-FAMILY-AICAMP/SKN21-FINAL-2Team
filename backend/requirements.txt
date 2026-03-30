@@ -47,5 +47,5 @@ datasets
 boto3>=1.35.0
 
 # Scheduler (팝업 크롤러)
-selenium
+selenium==4.25.0
 beautifulsoup4

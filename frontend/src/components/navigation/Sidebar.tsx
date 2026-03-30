@@ -319,274 +319,286 @@ function SidebarContent() {
                         isMobileOpen ? "translate-x-0" : "-translate-x-[110%]"
                     )
             )}>
-            {!isDesktop && (
-                <button
-                    onClick={() => setIsMobileOpen(false)}
-                    className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-black lg:hidden"
-
-                >
-                    <X size={16} />
-                </button>
-            )}
-            {/* Collapse Toggle Button - Only visible if we can collapse */}
-            {canCollapse && (
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-8 bg-white border border-gray-200 rounded-full p-1 shadow-sm z-10 hover:bg-gray-50 text-gray-400 hover:text-black transition-colors"
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("transition-transform duration-300", isCollapsed ? "rotate-180" : "")}>
-                        <path d="M15 18l-6-6 6-6" />
-                    </svg>
-                </button>
-            )}
-
-            {/* Logo Area */}
-            <div className={cn("h-16 flex flex-shrink-0 items-center transition-all duration-300", actuallyCollapsed ? "justify-center px-0" : "px-6")}>
-                {!actuallyCollapsed ? (
-                    <Logo />
-                ) : (
-                    <Logo variant="icon" size={36} />
-                )}
-            </div>
-
-            {/* Navigation */}
-            <div className={cn("mt-6 space-y-4 flex flex-col flex-1 min-h-0", actuallyCollapsed ? "px-2" : "px-3")}>
-                {/* Main Tabs */}
-                <nav className="space-y-1">
-                    {menuItems.map((item) => (
-                        <button
-                            key={item.path}
-                            onClick={() => router.push(item.path)}
-                            className={cn(
-                                "flex items-center transition-all duration-300 group relative",
-                                actuallyCollapsed
-                                    ? "w-full justify-center p-3 rounded-2xl"
-                                    : "w-full gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium",
-                                pathname === item.path
-                                    ? "text-black bg-gray-100 shadow-sm"
-                                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
-                            )}
-                            title={actuallyCollapsed ? item.label : undefined}
-                        >
-                            {pathname === item.path && !actuallyCollapsed && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-black" />
-                            )}
-                            <item.icon
-                                size={16}
-                                strokeWidth={1.5}
-                                className={cn(
-                                    "transition-colors",
-                                    pathname === item.path ? "text-black" : "text-gray-400 group-hover:text-gray-600",
-                                )}
-                            />
-                            {!actuallyCollapsed && (
-                                <span className="tracking-wide">{item.label}</span>
-                            )}
-                        </button>
-                    ))}
-                </nav>
-
-                {/* New Chat Button */}
-                <div className={cn("pt-2", actuallyCollapsed ? "flex justify-center" : "")}>
+                {!isDesktop && (
                     <button
-                        onClick={() => setShowTripModal(true)}
-                        className={cn(
-                            "flex items-center transition-all duration-300 group bg-black text-white hover:bg-gray-800 shadow-md",
-                            actuallyCollapsed
-                                ? "p-3 rounded-2xl"
-                                : "w-full justify-between gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium"
-                        )}
-                        title={actuallyCollapsed ? t("sidebar.newChat") : undefined}
+                        onClick={() => setIsMobileOpen(false)}
+                        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-50 hover:text-black lg:hidden"
+
                     >
-                        {actuallyCollapsed ? (
-                            <Edit3 size={16} strokeWidth={1.5} />
+                        <X size={16} />
+                    </button>
+                )}
+                {/* Collapse Toggle Button - Only visible if we can collapse */}
+                {canCollapse && (
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="absolute -right-3 top-8 bg-white border border-gray-200 rounded-full p-1 shadow-sm z-10 hover:bg-gray-50 text-gray-400 hover:text-black transition-colors"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("transition-transform duration-300", isCollapsed ? "rotate-180" : "")}>
+                            <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </button>
+                )}
+
+                {/* Logo Area */}
+                <div className={cn("h-16 flex flex-shrink-0 items-center transition-all duration-300", actuallyCollapsed ? "justify-center pl-1.5" : "px-6")}>
+                    {!actuallyCollapsed ? (
+                        <Logo size={26} />
+                    ) : (
+                        <Logo variant="icon" size={36} />
+                    )}
+                </div>
+
+                {/* Navigation */}
+                <div className={cn("mt-3 flex flex-col flex-1 min-h-0", actuallyCollapsed ? "px-2" : "px-3")}>
+                    {/* 상단 고정 영역 (Main Tabs & New Chat 버튼) */}
+                    <div className="space-y-4 flex-none pb-2">
+                        {/* Main Tabs */}
+                        <nav className="space-y-1">
+                            {menuItems.map((item) => (
+                                <button
+                                    key={item.path}
+                                    onClick={() => router.push(item.path)}
+                                    className={cn(
+                                        "flex items-center transition-all duration-300 group relative",
+                                        actuallyCollapsed
+                                            ? "w-full justify-center p-3 rounded-2xl"
+                                            : "w-full gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium",
+                                        pathname === item.path
+                                            ? "text-black bg-gray-100 shadow-sm"
+                                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
+                                    )}
+                                    title={actuallyCollapsed ? item.label : undefined}
+                                >
+                                    {pathname === item.path && !actuallyCollapsed && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-black" />
+                                    )}
+                                    <item.icon
+                                        size={16}
+                                        strokeWidth={1.5}
+                                        className={cn(
+                                            "transition-colors",
+                                            pathname === item.path ? "text-black" : "text-gray-400 group-hover:text-gray-600",
+                                        )}
+                                    />
+                                    {!actuallyCollapsed && (
+                                        <span className="tracking-wide">{item.label}</span>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+
+                        {/* New Chat Button */}
+                        <div className={cn("pt-2", actuallyCollapsed ? "flex justify-center" : "")}>
+                            <button
+                                onClick={() => setShowTripModal(true)}
+                                className={cn(
+                                    "flex items-center transition-all duration-300 group bg-black text-white hover:bg-gray-800 shadow-md",
+                                    actuallyCollapsed
+                                        ? "p-3 rounded-2xl"
+                                        : "w-full justify-between gap-3 px-4 py-3 rounded-2xl text-[13px] font-medium"
+                                )}
+                                title={actuallyCollapsed ? t("sidebar.newChat") : undefined}
+                            >
+                                {actuallyCollapsed ? (
+                                    <Edit3 size={16} strokeWidth={1.5} />
+                                ) : (
+                                    <div className="flex items-center gap-3">
+                                        <span className="tracking-wide">{t("sidebar.newChat")}</span>
+                                    </div>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Chats History Section (마우스 호버 시에만 스크롤바 표시) */}
+                    {/* 주의: overflow-y-hidden으로 완전히 숨기면 휠 스트롤이 안됩니다. 항상 auto를 사용하고, 
+                    Tailwind를 활용하여 호버 시에만 웹킷 스크롤바 thumb에 색상을 적용하는 패턴을 사용하는 것이 안정적입니다.
+                    - 체크리스트: 스크롤이 작동안하면 부모 컨테이너가 flex-1 및 min-h-0를 가졌는지 확인하세요.
+                */}
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar pt-2 border-t border-gray-100/50">
+                        {!actuallyCollapsed ? (
+                            <div className="pt-2 pb-4">
+                                <nav className="space-y-0.5">
+                                    {rooms.map((room) => {
+                                        const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
+                                        return (
+                                            <div
+                                                key={room.id}
+                                                className={cn(
+                                                    "group/item w-full flex items-center gap-2 px-2 py-1 rounded-xl transition-all duration-300",
+                                                    isActiveRoom ? "bg-gray-100" : "hover:bg-gray-50"
+                                                )}
+                                            >
+                                                <button
+                                                    onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
+                                                    className={cn(
+                                                        "flex-1 min-w-0 text-left px-2 py-1.5 rounded-lg text-[13px] font-medium transition-colors truncate",
+                                                        isActiveRoom ? "text-black" : "text-gray-500 group-hover/item:text-gray-900"
+                                                    )}
+                                                >
+                                                    <span className="truncate block">{room.title}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        setPendingDeleteRoom(room);
+                                                    }}
+                                                    className={cn(
+                                                        "flex h-8 w-8 flex-none items-center justify-center rounded-full text-gray-300 transition-all",
+                                                        "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
+                                                        isActiveRoom && "group-focus-within/item:opacity-100"
+                                                    )}
+
+                                                    title={t("sidebar.deleteRoom")}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </nav>
+                            </div>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="tracking-wide">{t("sidebar.newChat")}</span>
+                            <div className="pt-4 flex flex-col items-center">
+                                <button
+                                    onClick={() => setIsCollapsed(false)}
+                                    className="p-3 text-gray-400 hover:text-black hover:bg-gray-50 rounded-2xl transition-colors"
+                                    title={t("sidebar.recentChats")}
+                                >
+                                    <MessageSquare size={16} strokeWidth={1.5} />
+                                </button>
                             </div>
                         )}
-                    </button>
+                    </div>
                 </div>
 
-                {/* Chats History Section */}
-                {!actuallyCollapsed ? (
-                    <div className="pt-4 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <nav className="space-y-0.5">
-                            {rooms.map((room) => {
-                                const isActiveRoom = pathname === "/chatbot" && activeRoomId === room.id;
-                                return (
-                                    <div
-                                        key={room.id}
-                                        className={cn(
-                                            "group/item w-full flex items-center gap-2 px-2 py-1 rounded-xl transition-all duration-300",
-                                            isActiveRoom ? "bg-gray-100" : "hover:bg-gray-50"
-                                        )}
-                                    >
-                                        <button
-                                            onClick={() => router.push(`/chatbot?roomId=${room.id}`)}
-                                            className={cn(
-                                                "flex-1 min-w-0 text-left px-2 py-1.5 rounded-lg text-[13px] font-medium transition-colors truncate",
-                                                isActiveRoom ? "text-black" : "text-gray-500 group-hover/item:text-gray-900"
-                                            )}
-                                        >
-                                            <span className="truncate block">{room.title}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setPendingDeleteRoom(room);
-                                            }}
-                                            className={cn(
-                                                "flex h-8 w-8 flex-none items-center justify-center rounded-full text-gray-300 transition-all",
-                                                "opacity-0 pointer-events-none group-hover/item:opacity-100 group-hover/item:pointer-events-auto hover:bg-white hover:text-red-500",
-                                                isActiveRoom && "group-focus-within/item:opacity-100"
-                                            )}
-
-                                            title={t("sidebar.deleteRoom")}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </nav>
+                {/* User Profile */}
+                <div className={cn("flex-none border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
+                    {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
+                    <div className="absolute bottom-20 right-3 z-50">
+                        <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />
                     </div>
-                ) : (
-                    <div className="pt-4 flex flex-col items-center">
-                        <button
-                            onClick={() => setIsCollapsed(false)}
-                            className="p-3 text-gray-400 hover:text-black hover:bg-gray-50 rounded-2xl transition-colors"
-                            title={t("sidebar.recentChats")}
-                        >
-                            <MessageSquare size={16} strokeWidth={1.5} />
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* User Profile */}
-            <div className={cn("mt-auto border-t border-gray-100 relative", actuallyCollapsed ? "p-3 flex flex-col gap-2 items-center" : "p-3")}>
-                {/* 숨겨진 LanguageSwitcher — Globe 아이콘 클릭 시 이벤트로 드롭다운 열림 */}
-                <div className="absolute bottom-20 right-3 z-50">
-                    <LanguageSwitcher variant="dropdown" dropDirection="up" className="[&>button]:hidden" />
-                </div>
-                <div
-                    className={cn(
-                        "flex items-center transition-all duration-300 rounded-2xl",
-                        actuallyCollapsed ? "justify-center p-2" : "justify-between p-3"
-                    )}
-                >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-9 h-9 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
-                            {displayImage ? (
-                                <img
-                                    src={displayImage}
-                                    alt="Profile"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                displayName.charAt(0).toUpperCase()
+                    <div
+                        className={cn(
+                            "flex items-center transition-all duration-300 rounded-2xl",
+                            actuallyCollapsed ? "justify-center p-2" : "justify-between p-3"
+                        )}
+                    >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-9 h-9 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center bg-gray-200 text-gray-400 font-bold text-xs ring-2 ring-white shadow-sm grayscale-[20%]">
+                                {displayImage ? (
+                                    <img
+                                        src={displayImage}
+                                        alt="Profile"
+                                        className="w-full h-full object-cover"
+                                        width={36}
+                                        height={36}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    displayName.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            {!actuallyCollapsed && (
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate w-32">{displayName}</span>
+                                </div>
                             )}
                         </div>
                         {!actuallyCollapsed && (
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[13px] font-semibold text-gray-900 leading-tight truncate w-32">{displayName}</span>
-                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const event = new CustomEvent("triver:open-language-switcher");
+                                    window.dispatchEvent(event);
+                                }}
+                                className="p-1 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100 flex-shrink-0 ml-2"
+                                title={t("sidebar.language")}
+                            >
+                                <Globe size={14} />
+                            </button>
                         )}
                     </div>
-                    {!actuallyCollapsed && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                const event = new CustomEvent("triver:open-language-switcher");
-                                window.dispatchEvent(event);
-                            }}
-                            className="p-1 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-100 flex-shrink-0 ml-2"
-                            title={t("sidebar.language")}
-                        >
-                            <Globe size={14} />
-                        </button>
+
+                    {!actuallyCollapsed ? (
+                        <div className="mt-2 px-2 flex items-center justify-end text-[10px] text-gray-400 font-medium pt-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSignOut();
+                                }}
+                                className="flex items-center gap-1 hover:text-red-600 transition-colors"
+                            >
+                                <LogOut size={10} />
+                                {t("sidebar.signOut")}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-1">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const event = new CustomEvent("triver:open-language-switcher");
+                                    window.dispatchEvent(event);
+                                }}
+                                className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-black hover:bg-gray-50 transition-colors w-full"
+                                title={t("sidebar.language")}
+                            >
+                                <Globe size={16} strokeWidth={1.5} />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSignOut();
+                                }}
+                                className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
+                                title={t("sidebar.signOut")}
+                            >
+                                <LogOut size={16} strokeWidth={1.5} />
+                            </button>
+                        </div>
                     )}
                 </div>
+                {pendingDeleteRoom && (
+                    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                        <button
+                            type="button"
 
-                {!actuallyCollapsed ? (
-                    <div className="mt-2 px-2 flex items-center justify-end text-[10px] text-gray-400 font-medium pt-2">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleSignOut();
+                            className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
+                            onClick={() => {
+                                if (!isDeletingRoom) setPendingDeleteRoom(null);
                             }}
-                            className="flex items-center gap-1 hover:text-red-600 transition-colors"
-                        >
-                            <LogOut size={10} />
-                            {t("sidebar.signOut")}
-                        </button>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-1">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                const event = new CustomEvent("triver:open-language-switcher");
-                                window.dispatchEvent(event);
-                            }}
-                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-black hover:bg-gray-50 transition-colors w-full"
-                            title={t("sidebar.language")}
-                        >
-                            <Globe size={16} strokeWidth={1.5} />
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleSignOut();
-                            }}
-                            className="p-3 flex items-center justify-center rounded-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
-                            title={t("sidebar.signOut")}
-                        >
-                            <LogOut size={16} strokeWidth={1.5} />
-                        </button>
+                        />
+                        <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl">
+                            <div className="mb-5">
+                                <h3 className="text-lg font-semibold tracking-tight text-gray-900">{t("sidebar.deleteRoomTitle")}</h3>
+                                <p className="mt-2 text-sm leading-6 text-gray-500">
+                                    {t("sidebar.deleteRoomMessage", { title: pendingDeleteRoom.title || t("sidebar.newChat") })}
+                                </p>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingDeleteRoom(null)}
+                                    disabled={isDeletingRoom}
+                                    className="h-10 rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {t("common.cancel")}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void handleDeleteRoom(pendingDeleteRoom.id)}
+                                    disabled={isDeletingRoom}
+                                    className="h-10 rounded-full bg-red-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {isDeletingRoom ? t("common.deleting") : t("common.delete")}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
-            </div>
-            {pendingDeleteRoom && (
-                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-                    <button
-                        type="button"
-
-                        className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
-                        onClick={() => {
-                            if (!isDeletingRoom) setPendingDeleteRoom(null);
-                        }}
-                    />
-                    <div className="relative z-10 w-full max-w-sm rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl">
-                        <div className="mb-5">
-                            <h3 className="text-lg font-semibold tracking-tight text-gray-900">{t("sidebar.deleteRoomTitle")}</h3>
-                            <p className="mt-2 text-sm leading-6 text-gray-500">
-                                {t("sidebar.deleteRoomMessage", { title: pendingDeleteRoom.title || t("sidebar.newChat") })}
-                            </p>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setPendingDeleteRoom(null)}
-                                disabled={isDeletingRoom}
-                                className="h-10 rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {t("common.cancel")}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => void handleDeleteRoom(pendingDeleteRoom.id)}
-                                disabled={isDeletingRoom}
-                                className="h-10 rounded-full bg-red-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {isDeletingRoom ? t("common.deleting") : t("common.delete")}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
             </aside>
             {/* TripContextModal — aside 바깥에 렌더링하여 Sidebar 위에 표시 */}
             <TripContextModal

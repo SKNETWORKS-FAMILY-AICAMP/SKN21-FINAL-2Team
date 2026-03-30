@@ -1,6 +1,26 @@
 from app.models.enums import LanguageType
 
 
+_LANGUAGE_REMINDER: dict[LanguageType, str] = {
+    LanguageType.en: "[IMPORTANT] Your response MUST be written entirely in English.",
+    LanguageType.ja: "[重要] 必ず全て日本語で回答してください。",
+    LanguageType.zh: "[重要] 请务必全部使用中文回答。",
+}
+
+
+def get_language_reminder(language) -> str | None:
+    """
+    HumanMessage 앞에 삽입할 짧은 언어 강제 지시문. 한국어는 None 반환.
+    """
+    try:
+        key = language if isinstance(language, LanguageType) else LanguageType(language) if language else None
+    except ValueError:
+        key = None
+    if key is None or key == LanguageType.ko:
+        return None
+    return _LANGUAGE_REMINDER.get(key)
+
+
 def get_language_instruction(language: LanguageType, name_instruction = True) -> str:
     """
     사용자 언어를 따르도록 하는 시스템 문구를 반환합니다.
@@ -18,13 +38,13 @@ def get_language_instruction(language: LanguageType, name_instruction = True) ->
 
 _LANGUAGE_INSTRUCTION: dict[LanguageType, str] = {
     LanguageType.ko: """# 응답 언어 (반드시 준수)
-- 반드시 **한국어**로만 작성하세요.""",
+- [필수] 반드시 **한국어**로만 작성하세요.""",
     LanguageType.en: """# Response language (mandatory)
-- Write **only in English**""",
+- [Required] Write **only in English**""",
     LanguageType.ja: """# 応答言語（必須）
-- **日本語のみ**で、短い見出しにしてください。""",
+- [必須] **日本語のみ**で、短い見出しにしてください。""",
     LanguageType.zh: """# 响应语言（必须遵守）
-- **只用中文**撰写，简短标题。""",
+- [必需的] **只用中文**撰写，简短标题。""",
 }
 
 _NAME_INSTRUCTION: dict[LanguageType, str] = {
@@ -131,6 +151,7 @@ INTENT_PROMPT = """
 ---
 
 # 중요 규칙
+- 범죄 관련 입력일 경우, primary_intent를 GENERAL로 설정하십시오. (예: 살인, 살해, 성폭행, 강간, 테러, 폭발물, 국가보안법 위반, 간첩, 동물학대, 동물유기 등)
 - 반드시 IntentCoreOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
 - 스키마 description을 반드시 따르십시오.
 """

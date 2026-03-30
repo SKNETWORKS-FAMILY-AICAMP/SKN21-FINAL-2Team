@@ -2,6 +2,7 @@ from pydantic import BaseModel, field_validator, field_serializer
 from typing import Optional, List, Literal
 from datetime import datetime, date
 from app.models.enums import RoleType
+from app.utils.common import to_client_image_url
 
 class ChatMessageBase(BaseModel):
     message: str
@@ -75,6 +76,12 @@ class ChatPlaceResponse(ChatPlaceBase):
     id: int
     messages_id: int
 
+    @field_serializer("image_path")
+    def serialize_image_path(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        return to_client_image_url(value) or None
+
     class Config:
         from_attributes = True
 
@@ -90,6 +97,12 @@ class ChatMessageResponse(ChatMessageBase):
     @field_serializer("created_at")
     def serialize_created_at(self, value: datetime) -> str:
         return value.isoformat() + "Z"
+
+    @field_serializer("image_path")
+    def serialize_image_path(self, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        return to_client_image_url(value) or None
 
     class Config:
         from_attributes = True
@@ -187,6 +200,8 @@ class AutoStarterPlaceSeed(BaseModel):
     adress: Optional[str] = None
     place_id: int = 0
     description: Optional[str] = None
+    image_path: Optional[str] = None
+    category: Optional[str] = None
 
     @field_validator("place_id", mode="before")
     @classmethod

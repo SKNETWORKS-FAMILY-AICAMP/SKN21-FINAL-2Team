@@ -36,11 +36,7 @@ AUTO_START_SINGLE_PLACE_RULES = """
 
 작성 방식:
 - 선택한 장소를 중심으로 해당 장소의 특징·매력을 짧게 소개한다.
-- 선택 장소 주변에서 함께 즐길 수 있는 다양한 카테고리(맛집·카페·관광지·전시·쇼핑 등)를
-  2~3개 큐레이션해 제안한다.
-- 같은 카테고리로만 채우지 말고 반드시 2가지 이상의 카테고리를 섞어 추천한다.
-- 반일 코스 단위로 가볍게 엮어서 제안한다.
-- 마지막 문장은 '어떤 코스가 끌리세요?' 형태의 선택형 질문으로 끝낸다.
+- 선택한 장소와 다른 카테고리를 즐길 수 있다는 선택형 질문 1~2개로 끝낸다.
 """
 
 AUTO_START_MULTI_PLACE_RULES = """
@@ -50,7 +46,7 @@ AUTO_START_MULTI_PLACE_RULES = """
 
 작성 방식:
 - 선택 장소들을 반드시 포함하여 최적 여행 동선을 제안한다.
-- 선택 장소 사이에 자연스럽게 들를 수 있는 중간 장소(코엑스 or 잠실 or 홍대 등)를 1~2개 추가로 제안한다.
+- 선택 장소 사이에 자연스럽게 들를 수 있는 중간 장소(코엑스 or 잠실 or 홍대 등)를 1~2개 추가로 제안한다. 없다면 무시한다.
 - 선택된 장소 외 특정 상세 장소 언급 금지(예: 만향오향족발 홍대점, 딥커피 등).
 """
 
@@ -102,6 +98,8 @@ def _format_selected_places_block(selected_places: List[AutoStarterPlaceSeed]) -
         address = (place.adress or "").strip() or "주소 정보 없음"
         pid = place.place_id if (place.place_id or 0) > 0 else "unknown"
         line = f"{idx}. {name} (ID: {pid}) / 주소: {address}"
+        if place.category and place.category.strip():
+            line += f" / 카테고리: {place.category.strip()}"
         if place.description and place.description.strip():
             line += f" / 설명: {place.description.strip()}"
         lines.append(line)

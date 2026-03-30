@@ -28,6 +28,7 @@ from app.schemas.chat import (
 from app.utils.security import get_current_user
 from app.utils.error_handler import AppException, ErrorCode
 from app.utils.common import to_client_image_url, to_vision_image_input
+from app.utils.db_utils import get_owned_resource_or_404
 from app.agents.graph import workflow
 from app.agents.models.state import TravelState
 from app.database.checkpointer import get_checkpointer
@@ -60,11 +61,12 @@ async def get_graph_app():
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-class TodayRecommendationItem(BaseModel):
-    id: str
-    title: str
-    description: str
-    prompt: str
+from app.services.recommendation import (
+    RecommendationItem as TodayRecommendationItem,
+    get_cached as get_cached_recommendation,
+    generate_recommendation,
+    generate_recommendation_background,
+)
 
 
 class ChatRoomDeleteResponse(BaseModel):
@@ -170,6 +172,24 @@ def _save_room_title(db: Session, room: ChatRoom, next_title: str | None) -> boo
         return False
 
 
+def _save_room_history(db: Session, room: ChatRoom, summary_message: str | None) -> bool:
+    """intent 노드가 생성한 summary_message를 room.history에 저장한다."""
+    text = (summary_message or "").strip()
+    if not text:
+        return False
+
+    room.history = text
+    db.add(room)
+    try:
+        db.commit()
+        db.refresh(room)
+        return True
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"[ChatAPI] Room history update failed(room_id={room.id}): {e}")
+        return False
+
+
 def _safe_float(value):
     try:
         f = float(value)
@@ -201,10 +221,9 @@ def _input_coordinate_or_none(value):
 
 
 def _get_owned_room_or_404(db: Session, room_id: int, user_id: int) -> ChatRoom:
-    room = db.query(ChatRoom).filter(ChatRoom.id == room_id, ChatRoom.user_id == user_id).first()
-    if not room:
-        raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
-    return room
+    return get_owned_resource_or_404(
+        db, ChatRoom, room_id, user_id, ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found"
+    )
 
 
 def _save_human_message_if_needed(db: Session, room_id: int, message_in: ChatMessageCreate):
@@ -265,11 +284,19 @@ def get_rooms(skip: int = 0, limit: int = 100, current_user: User = Depends(get_
     return rooms
 
 
-@router.get("/recommendations/today", response_model=List[TodayRecommendationItem])
-def get_today_recommendations(
+@router.get("/recommendations/today")
+async def get_today_recommendations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(db_manager.get_db),
 ):
+    """오늘의 추천 1개를 반환한다. 캐시 → DB history → LLM 순으로 조회."""
+
+    # 1. 캐시 히트
+    cached = get_cached_recommendation(current_user.id)
+    if cached:
+        return cached
+
+    # 2. DB에서 최근 history 수집
     rooms_with_history = (
         db.query(ChatRoom)
         .filter(ChatRoom.user_id == current_user.id)
@@ -280,70 +307,26 @@ def get_today_recommendations(
         .all()
     )
 
-    if not rooms_with_history:
-        return []
-
-    latest_room = rooms_with_history[0]
-    latest_history = _clean_history_text(latest_room.history or "")
-    latest_title = latest_room.title.strip() if latest_room and latest_room.title else "최근 여행 대화"
-    latest_snippet = _shorten_text(latest_history, 56)
-
-    recent_histories: List[str] = []
+    histories = []
     for room in rooms_with_history:
         text = _clean_history_text(room.history or "")
         if text:
-            recent_histories.append(text)
+            histories.append(text)
 
-    uniq_histories: List[str] = []
-    for text in recent_histories:
-        if text not in uniq_histories:
-            uniq_histories.append(text)
+    # 3. 사용자 선호도 수집
+    prefs = {
+        "plan_prefer": current_user.plan_prefer,
+        "vibe_prefer": current_user.vibe_prefer,
+        "places_prefer": current_user.places_prefer,
+        "extra_prefer1": current_user.extra_prefer1,
+        "extra_prefer2": current_user.extra_prefer2,
+        "extra_prefer3": current_user.extra_prefer3,
+    }
 
-    first_theme = _shorten_text(uniq_histories[0], 52) if uniq_histories else latest_snippet
-    second_theme = _shorten_text(uniq_histories[1], 52) if len(uniq_histories) > 1 else first_theme
-
-    continue_title = f"Continue: {latest_title}"
-    continue_desc = "최근 대화 맥락을 이어서 바로 다음 계획으로 확장해보세요."
-    continue_prompt = (
-        f"다음은 최근 대화 요약입니다: {latest_history}\n"
-        "기존 맥락을 이어 하루 단위로 실행 가능한 여행 계획을 제안해줘."
-    )
-
-    new_angle_title = "Try a new angle"
-    new_angle_desc = f"최근 대화 주제와 다른 관점으로 새 플랜을 제안합니다: {second_theme}"
-    new_angle_prompt = (
-        "다음 최근 대화 요약들을 참고해 기존과 다른 각도의 여행 아이디어를 1개 제안해줘.\n"
-        + "\n".join([f"- {h}" for h in uniq_histories[:3]])
-        + "\n새 아이디어는 이동 동선과 핵심 포인트를 포함해 간결하게 작성해줘."
-    )
-
-    quick_plan_title = "Fast plan for today"
-    quick_plan_desc = f"최근 요약 기반으로 바로 실행 가능한 짧은 일정: {first_theme}"
-    quick_plan_prompt = (
-        f"최근 대화 요약: {latest_history}\n"
-        "오늘 바로 실행할 수 있는 3스팟 반나절 일정(순서/이동/예상시간 포함)을 간단히 제시해줘."
-    )
-
-    return [
-        TodayRecommendationItem(
-            id="continue",
-            title=continue_title,
-            description=continue_desc,
-            prompt=continue_prompt,
-        ),
-        TodayRecommendationItem(
-            id="new-angle",
-            title=new_angle_title,
-            description=new_angle_desc,
-            prompt=new_angle_prompt,
-        ),
-        TodayRecommendationItem(
-            id="fast-plan",
-            title=quick_plan_title,
-            description=quick_plan_desc,
-            prompt=quick_plan_prompt,
-        ),
-    ]
+    # 4. LLM으로 생성 (history + 선호도 + 언어 반영)
+    user_lang = str(current_user.language.value) if current_user.language else "ko"
+    item = await generate_recommendation(current_user.id, histories or None, prefs, user_lang)
+    return item
 
 # 채팅방 생성
 @router.post("/rooms", response_model=ChatRoomResponse)
@@ -362,11 +345,6 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ).filter(ChatRoom.id == room_id, ChatRoom.user_id == current_user.id).first()
     if not room:
         raise AppException(ErrorCode.CHAT_ROOM_NOT_FOUND, "Room not found", 404)
-    for message in room.messages:
-        if message.image_path:
-            message.image_path = to_client_image_url(message.image_path)
-        for place in message.places:
-            place.image_path = to_client_image_url(place.image_path)
     return room
 
 
@@ -474,7 +452,6 @@ def update_place_bookmark(place_id: int, bookmark: bool, current_user: User = De
     db.add(place)
     db.commit()
     db.refresh(place)
-    place.image_path = to_client_image_url(place.image_path)
     return place
 
 
@@ -703,6 +680,26 @@ def _build_streaming_response(
                                     print(f"[ChatAPI] Room title updated to: {room.title}")
                                     yield _encode_sse({"room_title": room.title})
 
+                        # summary_message → room.history 저장 + 추천 갱신
+                        if output:
+                            sm = output.get("summary_message")
+                            if sm and str(sm).strip():
+                                if _save_room_history(db, room, sm):
+                                    print(f"[ChatAPI] Room history saved (room_id={room.id}, len={len(sm)})")
+                                    # 비동기로 오늘의 추천 갱신 (선호도 + 언어 포함)
+                                    user_prefs = {
+                                        "plan_prefer": current_user.plan_prefer,
+                                        "vibe_prefer": current_user.vibe_prefer,
+                                        "places_prefer": current_user.places_prefer,
+                                        "extra_prefer1": current_user.extra_prefer1,
+                                        "extra_prefer2": current_user.extra_prefer2,
+                                        "extra_prefer3": current_user.extra_prefer3,
+                                    }
+                                    user_lang = str(current_user.language.value) if current_user.language else "ko"
+                                    asyncio.create_task(
+                                        generate_recommendation_background(room.user_id, [str(sm)], user_prefs, user_lang)
+                                    )
+
                 # 이미지 분석 진행 상태 (intent_node 내부에서 dispatch)
                 elif kind == "on_custom_event" and event_name == "image_analysis":
                     status = (event.get("data") or {}).get("status")
@@ -900,6 +897,7 @@ async def auto_start_chat_room_stream(
                 "name": p.name or "",
                 "address": p.adress or "",
                 "place_id": p.place_id,
+                "image_path": p.image_path or "",
             }
             for p in auto_start_in.selected_places
             if (p.name or "").strip()

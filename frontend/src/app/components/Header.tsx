@@ -119,10 +119,9 @@ export function Header() {
         
         const token = localStorage.getItem("access_token");
         if (token && userProfile) {
-            // 주의: 가입 기입 내용이나 설문을 다 마치지 않았다면, explore 대신 경고 모달 표시
+            // 가입 미완료(is_join=false): 구글 계정 선택부터 다시 시작
             if (!userProfile.is_join) {
-                setWarningStep("profile");
-                setIsWarningModalOpen(true);
+                router.push("/signup");
                 return;
             }
             if (!userProfile.is_prefer) {
@@ -146,6 +145,7 @@ export function Header() {
     };
 
     return (
+        <>
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
             {/* [Fix] Removed max-w-7xl mx-auto so Logo stays fixed at px-6 matching Sidebar */}
             <div className="w-full px-6 h-16 relative flex items-center justify-between">
@@ -182,6 +182,9 @@ export function Header() {
                                 alt={t("header.profileAlt")}
                                 className="w-full h-full object-cover"
                                 onError={() => setImgError(true)}
+                                width={36}
+                                height={36}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                         </button>
                     ) : profilePicture && imgError && userProfile?.is_join && userProfile?.is_prefer ? (
@@ -247,6 +250,9 @@ export function Header() {
                                     alt={t("header.profileAlt")}
                                     className="w-9 h-9 rounded-full object-cover border-2 border-gray-200"
                                     onError={() => setImgError(true)}
+                                    width={36}
+                                    height={36}
+                                    style={{ width: '36px', height: '36px', objectFit: 'cover' }}
                                 />
                                 <span className="text-base font-medium text-gray-700">{t("header.goToProfile")}</span>
                             </button>
@@ -272,12 +278,14 @@ export function Header() {
                 </motion.div>
             )}
 
+        </header>
+
             <IncompleteSignupModal
                 isOpen={isWarningModalOpen}
                 missingStep={warningStep}
                 onClose={() => setIsWarningModalOpen(false)}
                 onConfirm={confirmWarning}
             />
-        </header>
+        </>
     );
 }
