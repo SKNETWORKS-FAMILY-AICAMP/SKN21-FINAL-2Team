@@ -7,6 +7,7 @@ import { Sparkles, MapPin, ArrowRight, Calendar } from "lucide-react";
 
 import { Sidebar } from "@/components/navigation/Sidebar";
 import { PlaceCard } from "@/components/common/PlaceCard";
+import { PLACE_PLACEHOLDER } from "@/lib/imageUrl";
 import { fetchRandomExplorePlaces, fetchCategoryPlaces, fetchCurrentUser, createRoom, type CategoryPlaceItem, type HotPlace, type UserProfile } from "@/services/api";
 
 /** 백엔드 카테고리 값(한국어) → 번역 키 매핑 */
