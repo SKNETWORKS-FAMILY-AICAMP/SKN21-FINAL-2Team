@@ -536,7 +536,7 @@ export function ChatHome() {
 
     return (
         <div className={cn(
-            "flex h-full min-h-0 bg-white relative overflow-hidden",
+            "flex h-full min-h-0 bg-white relative overflow-hidden rounded-[inherit]",
             ""
         )}>
             <div className="flex-1 min-w-0 min-h-0 flex flex-col relative bg-slate-50/30">

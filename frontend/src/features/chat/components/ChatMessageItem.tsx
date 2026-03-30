@@ -53,7 +53,7 @@ export const ChatMessageItem = memo(({
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 className="flex justify-end w-full px-1 sm:px-2 lg:px-4 mb-2"
             >
-                <div className="bg-black text-white px-4 py-2.5 rounded-[16px] rounded-br-[4px] max-w-[90%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
+                <div className="bg-black text-white px-4 py-2.5 rounded-[16px] max-w-[90%] md:max-w-[66%] shadow-[0_4px_14px_rgba(0,0,0,0.08)]">
                     {!!msg.image_path && (
                         <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15">
                             <img
@@ -127,7 +127,7 @@ export const ChatMessageItem = memo(({
                     {shouldRenderAiBubble && (
                         <div
                             data-testid={`ai-bubble-${msg.id}`}
-                            className="bg-white border border-slate-100/80 rounded-[20px] rounded-tl-[4px] px-4 sm:px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
+                            className="bg-white border border-slate-100/80 rounded-[20px] px-4 sm:px-5 py-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] inline-block w-full mb-2 backdrop-blur-xl"
                         >
                             {shouldRenderPipeline && (
                                 <div className={msg.message ? "mb-3" : ""}>
