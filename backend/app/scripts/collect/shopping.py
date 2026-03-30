@@ -74,31 +74,12 @@ DAISO_TARGET_GUGUNS = {
     "성동구": "성수", "중구": "명동",
 }
 
-DAISO_AREA_CONTEXT = {
-    "강남": "강남역·신논현 일대에 위치해 쇼핑과 관광을 함께 즐길 수 있으며, 주변 패션 매장과 함께 둘러보기 좋습니다.",
-    "잠실": "잠실역, 롯데월드, 석촌호수 인근에 위치해 잠실 관광과 함께 쇼핑을 즐기기 좋은 곳입니다.",
-    "홍대": "홍대입구역 인근 MZ세대 문화 중심지에 위치해, 활기찬 홍대 거리를 둘러보며 함께 방문하기 좋습니다.",
-    "성수": "성수동 카페 거리와 팝업스토어 밀집 지역에 위치해, 성수 핫플레이스 투어와 함께 이용하기 좋습니다.",
-    "명동": "명동 쇼핑 거리 한복판에 위치해, 외국인 관광객이 가장 많이 찾는 다이소 쇼핑 명소입니다.",
-}
-
 
 def _daiso_fmt_time(raw: str) -> str:
     if not raw or len(raw) < 4:
         return ""
     return f"{raw[:2]}:{raw[2:]}"
 
-
-def _daiso_generate_intro(title, addr, area, parking):
-    ctx = DAISO_AREA_CONTEXT.get(area, "")
-    parking_txt = " 주차 공간이 마련되어 있어 자동차 방문도 편리합니다." if parking else ""
-    return (
-        f"{title}은 {addr.split('(')[0].strip()}에 위치한 다이소 매장입니다. "
-        f"생활용품, 주방용품, 문구, 화장품, 간식, 인테리어 소품 등 "
-        f"다양한 상품을 가성비 좋은 가격에 구매할 수 있습니다. "
-        f"{ctx}{parking_txt} "
-        f"외국인 관광객에게는 K-다이소만의 캐릭터 상품과 K-뷰티 소품이 인기입니다."
-    )
 
 
 async def _daiso_collect_stores(page, gugun):
@@ -197,7 +178,6 @@ async def scrape_daiso():
         start = _daiso_fmt_time(s["start"])
         end = _daiso_fmt_time(s["end"])
         usetime = f"{start}~{end}" if start and end else ""
-        intro = _daiso_generate_intro(title, s["addr"], s["area"], s["parking"])
         tags = ["다이소", "생활용품", "쇼핑", s["area"], "가성비"]
 
         entry = {
@@ -215,7 +195,6 @@ async def scrape_daiso():
             "website": "https://www.daiso.co.kr",
             "tags": tags,
         }
-        entry["llm_text"] = _build_llm_text(entry, intro)
         # null/빈값 제거
         entry = {k: v for k, v in entry.items() if v is not None and v != ""}
         results.append(entry)
@@ -497,24 +476,6 @@ async def scrape_oliveyoung():
     print("  ⚠️  좌표/llm_text는 preprocess_shopping.py로 보강하세요.")
     return results
 
-
-# =====================================================================
-# 공통: llm_text 빌더
-# =====================================================================
-
-def _build_llm_text(item: dict, intro: str) -> str:
-    lines = []
-    if t := item.get("title"):
-        lines.append(f"- 장소명: {t}")
-    if a := item.get("addr"):
-        lines.append(f"- 주소: {a}")
-    if v := item.get("usetime"):
-        lines.append(f"- 영업시간: {v}")
-    if tags := item.get("tags"):
-        lines.append(f"- 주요 키워드: {', '.join(tags)}")
-    if intro:
-        lines.append(f"- 소개: {intro}")
-    return "\n".join(lines)
 
 
 # =====================================================================

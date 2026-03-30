@@ -4,8 +4,10 @@
 수집 후 JSON 파일에 대해 아래 보정 작업을 수행합니다:
   1) 좌표 보정 (하드코딩 좌표 / GeoCoder API)
   2) 이미지 보완 (올리브영 CDN 매핑 / 네이버 이미지 검색 fallback)
-  3) llm_text 생성 (매장별 소개 텍스트 + 템플릿)
+  3) description 생성 (매장별 소개 텍스트)
   4) null/빈값 필드 정리
+
+llm_text 생성은 enrich 단계에서 GPT가 description을 참고하여 수행합니다.
 
 사용법:
     python data/scripts/preprocess_shopping.py              # 전체
@@ -21,21 +23,6 @@ DATA_DIR = Path(__file__).resolve().parent.parent
 # =====================================================================
 # 공통 유틸
 # =====================================================================
-
-def _build_llm_text(item: dict, intro: str) -> str:
-    lines = []
-    if t := item.get("title"):
-        lines.append(f"- 장소명: {t}")
-    if a := item.get("addr"):
-        lines.append(f"- 주소: {a}")
-    if v := item.get("usetime"):
-        lines.append(f"- 영업시간: {v}")
-    if tags := item.get("tags"):
-        lines.append(f"- 주요 키워드: {', '.join(tags)}")
-    if intro:
-        lines.append(f"- 소개: {intro}")
-    return "\n".join(lines)
-
 
 def _clean_nulls(data: list[dict]) -> list[dict]:
     """null/빈값 필드 제거"""
@@ -99,7 +86,7 @@ MUSINSA_INTROS = {
 
 
 def preprocess_musinsa():
-    """무신사 전처리: 좌표 보정 + 이미지 보완 + llm_text 생성"""
+    """무신사 전처리: 좌표 보정 + 이미지 보완 + description 생성"""
     path = DATA_DIR / "musinsa_투어.json"
     if not path.exists():
         print("  [SKIP] musinsa_투어.json 없음")
@@ -118,9 +105,8 @@ def preprocess_musinsa():
         # 이미지 보완
         if not s.get("image") and s["title"] in MUSINSA_FALLBACK_IMAGES:
             s["image"] = MUSINSA_FALLBACK_IMAGES[s["title"]]
-        # llm_text
-        intro = MUSINSA_INTROS.get(s["title"], s.get("summary", ""))
-        s["llm_text"] = _build_llm_text(s, intro)
+        # description
+        s["description"] = MUSINSA_INTROS.get(s["title"], s.get("summary", ""))
 
     _save(stores, path)
     print(f"  ✅ 무신사 완료")
@@ -193,7 +179,7 @@ def _oy_generate_intro(store: dict) -> str:
 
 
 def preprocess_oliveyoung():
-    """올리브영 전처리: llm_text 생성"""
+    """올리브영 전처리: description 생성"""
     path = DATA_DIR / "oliveyoung_투어.json"
     if not path.exists():
         print("  [SKIP] oliveyoung_투어.json 없음")
@@ -206,21 +192,50 @@ def preprocess_oliveyoung():
     for s in stores:
         title = s["title"]
         if title in OY_SPECIAL_INTROS:
-            intro = OY_SPECIAL_INTROS[title]
+            s["description"] = OY_SPECIAL_INTROS[title]
         else:
-            intro = _oy_generate_intro(s)
-        s["llm_text"] = _build_llm_text(s, intro)
+            s["description"] = _oy_generate_intro(s)
 
     _save(stores, path)
     print(f"  ✅ 올리브영 완료")
 
 
 # =====================================================================
-# 다이소 전처리 (scrape 시 이미 llm_text 포함, null 정리만)
+# 다이소 전처리
 # =====================================================================
 
+DAISO_AREA_CONTEXT = {
+    "강남": "강남역·신논현 일대에 위치해 쇼핑과 관광을 함께 즐길 수 있으며, 주변 패션 매장과 함께 둘러보기 좋습니다.",
+    "잠실": "잠실역, 롯데월드, 석촌호수 인근에 위치해 잠실 관광과 함께 쇼핑을 즐기기 좋은 곳입니다.",
+    "홍대": "홍대입구역 인근 MZ세대 문화 중심지에 위치해, 활기찬 홍대 거리를 둘러보며 함께 방문하기 좋습니다.",
+    "성수": "성수동 카페 거리와 팝업스토어 밀집 지역에 위치해, 성수 핫플레이스 투어와 함께 이용하기 좋습니다.",
+    "명동": "명동 쇼핑 거리 한복판에 위치해, 외국인 관광객이 가장 많이 찾는 다이소 쇼핑 명소입니다.",
+}
+
+
+def _daiso_generate_description(store: dict) -> str:
+    title = store["title"]
+    addr = store.get("addr", "")
+    # tags에서 지역명 추출
+    area = ""
+    for tag in store.get("tags", []):
+        if tag in DAISO_AREA_CONTEXT:
+            area = tag
+            break
+    ctx = DAISO_AREA_CONTEXT.get(area, "")
+    desc = (
+        f"{title}은 {addr.split('(')[0].strip()}에 위치한 다이소 매장입니다. "
+        f"생활용품, 주방용품, 문구, 화장품, 간식, 인테리어 소품 등 "
+        f"다양한 상품을 가성비 좋은 가격에 구매할 수 있습니다. "
+    )
+    if ctx:
+        desc += ctx + " "
+    desc += "외국인 관광객에게는 K-다이소만의 캐릭터 상품과 K-뷰티 소품이 인기입니다."
+    return desc
+
+
 def preprocess_daiso():
-    """다이소 전처리: null 정리"""
+    """다이소 전처리: description 생성 + null 정리"""
     path = DATA_DIR / "daiso_투어.json"
     if not path.exists():
         print("  [SKIP] daiso_투어.json 없음")
@@ -229,6 +244,12 @@ def preprocess_daiso():
     with open(path, encoding="utf-8") as f:
         stores = json.load(f)
     print(f"\n▶ 다이소 전처리: {len(stores)}개 매장")
+
+    for s in stores:
+        s["description"] = _daiso_generate_description(s)
+        # collect 단계에서 남아있을 수 있는 llm_text 제거
+        s.pop("llm_text", None)
+
     _save(stores, path)
     print(f"  ✅ 다이소 완료")
 
