@@ -42,7 +42,7 @@ export function PlaceMapSheet({
           />
 
           <motion.div
-            className="absolute bottom-0 left-0 right-0 h-[72dvh] max-h-[calc(100dvh-5rem)] rounded-t-[28px] bg-white shadow-2xl overflow-hidden"
+            className="absolute bottom-0 left-0 right-0 h-[82dvh] max-h-[calc(100dvh-3rem)] rounded-t-[28px] bg-white shadow-2xl overflow-hidden"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -61,7 +61,7 @@ export function PlaceMapSheet({
             </div>
 
             <PlaceMapPanel
-              className="h-[calc(72dvh-56px)] max-h-[calc(100dvh-8.5rem)]"
+              className="h-[calc(82dvh-56px)] max-h-[calc(100dvh-6rem)]"
               places={places}
               focusPlaces={focusPlaces}
               groups={groups}
@@ -69,6 +69,7 @@ export function PlaceMapSheet({
               onSelectPlace={onSelectPlace}
               onMarkerClick={onMarkerClick}
               showHeader={false}
+              isSheet={true}
             />
           </motion.div>
         </motion.div>

@@ -2,6 +2,22 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import GoogleLoginBtn from "../src/components/GoogleLoginBtn";
 import "@testing-library/jest-dom";
 
+// Mock react-i18next
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const labels: Record<string, string> = {
+        "login.googleStart": "Google로 시작하기",
+      };
+      return labels[key] ?? key;
+    },
+  }),
+  initReactI18next: {
+    type: "3rdParty",
+    init: jest.fn(),
+  },
+}));
+
 // Mock useRouter
 const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({

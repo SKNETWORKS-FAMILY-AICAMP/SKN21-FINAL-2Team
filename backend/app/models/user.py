@@ -3,6 +3,8 @@ from sqlalchemy.orm import relationship
 
 from app.models.orm import BaseModel
 from app.models.enums import GenderType, LanguageType
+from app.utils.countries import get_nationality_hint
+
 
 class User(BaseModel):
     __tablename__ = "users"
@@ -38,7 +40,7 @@ class User(BaseModel):
     # Relations
     rooms = relationship("ChatRoom", back_populates="user")
     reservations = relationship("Reservation", back_populates="user")
-    diary_entries = relationship("DiaryEntry", back_populates="user")
+    moments = relationship("Moment", back_populates="user")
 
     def build_preferences(self) -> str:
         """
@@ -61,5 +63,9 @@ class User(BaseModel):
             lines.append(f"- 추가 선호도 2: {self.extra_prefer2}")
         if self.extra_prefer3:
             lines.append(f"- 추가 선호도 3: {self.extra_prefer3}")
+
+        hint = get_nationality_hint(self.country_code) if self.country_code else None
+        if hint:
+            lines.append(f"- 국적별 여행 선호 경향: {hint}")
 
         return "\n".join(lines) if lines else "특별한 선호도 정보 없음"

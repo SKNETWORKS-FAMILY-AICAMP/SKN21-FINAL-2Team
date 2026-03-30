@@ -125,10 +125,10 @@ def upgrade() -> None:
         )
         op.create_index('ix_hot_places_id', 'hot_places', ['id'], unique=False)
 
-    # 6. reservation_list (users 참조)
-    if 'reservation_list' not in existing:
+    # 6. reservations (users 참조)
+    if 'reservations' not in existing:
         op.create_table(
-            'reservation_list',
+            'reservations',
             sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
             sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=True),
             sa.Column('category', sa.String(255), nullable=True),
@@ -138,51 +138,33 @@ def upgrade() -> None:
             sa.Column('details', sa.JSON(), nullable=True),
             sa.PrimaryKeyConstraint('id'),
         )
-        op.create_index('ix_reservation_list_id', 'reservation_list', ['id'], unique=False)
+        op.create_index('ix_reservations_id', 'reservations', ['id'], unique=False)
 
-    # 7. diary_entries (users, chat_rooms 참조)
-    if 'diary_entries' not in existing:
+    # 7. moments (users 참조) — diary_entries + diary_entry_places 통합
+    if 'moments' not in existing:
         op.create_table(
-            'diary_entries',
+            'moments',
             sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
             sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=False),
             sa.Column('title', sa.String(255), nullable=False),
             sa.Column('content', sa.Text(), nullable=False),
             sa.Column('entry_date', sa.Date(), nullable=False),
-            sa.Column('cover_image_path', sa.String(1000), nullable=True),
-            sa.Column('linked_chat_room_id', sa.Integer(), sa.ForeignKey('chat_rooms.id'), nullable=True),
+            sa.Column('image_path', sa.String(1000), nullable=True),
+            sa.Column('adress', sa.String(255), nullable=True),
+            sa.Column('longitude', sa.Float(), nullable=True),
+            sa.Column('latitude', sa.Float(), nullable=True),
             sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
             sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now()),
             sa.PrimaryKeyConstraint('id'),
         )
-        op.create_index('ix_diary_entries_id', 'diary_entries', ['id'], unique=False)
-        op.create_index('ix_diary_entries_entry_date', 'diary_entries', ['entry_date'], unique=False)
-        op.create_index('ix_diary_entries_user_id', 'diary_entries', ['user_id'], unique=False)
-
-    # 8. diary_entry_places (diary_entries, chat_places 참조)
-    if 'diary_entry_places' not in existing:
-        op.create_table(
-            'diary_entry_places',
-            sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-            sa.Column('entry_id', sa.Integer(), sa.ForeignKey('diary_entries.id'), nullable=False),
-            sa.Column('chat_place_id', sa.Integer(), sa.ForeignKey('chat_places.id'), nullable=True),
-            sa.Column('contenttypeid', sa.Integer(), nullable=True),
-            sa.Column('name', sa.String(255), nullable=True),
-            sa.Column('adress', sa.String(255), nullable=True),
-            sa.Column('image_path', sa.String(1000), nullable=True),
-            sa.Column('longitude', sa.Float(), nullable=True),
-            sa.Column('latitude', sa.Float(), nullable=True),
-            sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
-            sa.PrimaryKeyConstraint('id'),
-        )
-        op.create_index('ix_diary_entry_places_id', 'diary_entry_places', ['id'], unique=False)
-        op.create_index('ix_diary_entry_places_entry_id', 'diary_entry_places', ['entry_id'], unique=False)
+        op.create_index('ix_moments_id', 'moments', ['id'], unique=False)
+        op.create_index('ix_moments_entry_date', 'moments', ['entry_date'], unique=False)
+        op.create_index('ix_moments_user_id', 'moments', ['user_id'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_table('diary_entry_places')
-    op.drop_table('diary_entries')
-    op.drop_table('reservation_list')
+    op.drop_table('moments')
+    op.drop_table('reservations')
     op.drop_table('hot_places')
     op.drop_table('chat_places')
     op.drop_table('chat_messages')

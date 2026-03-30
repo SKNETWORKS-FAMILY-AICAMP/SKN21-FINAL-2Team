@@ -1,51 +1,72 @@
 from app.models.enums import LanguageType
 
 
-def get_summary_language_instruction(language) -> str:
+_LANGUAGE_REMINDER: dict[LanguageType, str] = {
+    LanguageType.en: "[IMPORTANT] Your response MUST be written entirely in English.",
+    LanguageType.ja: "[重要] 必ず全て日本語で回答してください。",
+    LanguageType.zh: "[重要] 请务必全部使用中文回答。",
+}
+
+
+def get_language_reminder(language) -> str | None:
     """
-    summary_title(및 UI 일관성을 위해 summary_message)이 사용자 언어를 따르도록 하는 시스템 문구.
+    HumanMessage 앞에 삽입할 짧은 언어 강제 지시문. 한국어는 None 반환.
+    """
+    try:
+        key = language if isinstance(language, LanguageType) else LanguageType(language) if language else None
+    except ValueError:
+        key = None
+    if key is None or key == LanguageType.ko:
+        return None
+    return _LANGUAGE_REMINDER.get(key)
+
+
+def get_language_instruction(language: LanguageType, name_instruction = True) -> str:
+    """
+    사용자 언어를 따르도록 하는 시스템 문구를 반환합니다.
     """
     try:
         key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
     except ValueError:
         key = LanguageType.ko
-    return _SUMMARY_LANGUAGE_INSTRUCTION.get(key, _SUMMARY_LANGUAGE_INSTRUCTION[LanguageType.ko])
 
+    instruction = _LANGUAGE_INSTRUCTION.get(key, _LANGUAGE_INSTRUCTION[LanguageType.ko])
+    if name_instruction:
+        instruction += "\n"
+        instruction += _NAME_INSTRUCTION.get(key, _NAME_INSTRUCTION[LanguageType.ko])
+    return instruction
 
-_SUMMARY_LANGUAGE_INSTRUCTION: dict[LanguageType, str] = {
+_LANGUAGE_INSTRUCTION: dict[LanguageType, str] = {
     LanguageType.ko: """# 응답 언어 (반드시 준수)
-- **summary_title**: 반드시 **한국어**로만 작성하세요. (공백 포함 약 10자 이내의 짧은 제목)
-- **summary_message**: **한국어**로만 작성하세요. (채팅 UI 언어와 통일)
-- 장소명 등 고유명사는 한국어 원문 표기를 유지하세요.""",
+- [필수] 반드시 **한국어**로만 작성하세요.""",
     LanguageType.en: """# Response language (mandatory)
-- **summary_title**: Write **only in English** — a very short phrase or headline (aim for about 10 words or fewer; be concise).
-- **summary_message**: Write **only in English** to match the UI language.
-- Keep Korean place names in original Hangul when they are the canonical name (do not romanize unnecessarily).""",
+- [Required] Write **only in English**""",
     LanguageType.ja: """# 応答言語（必須）
-- **summary_title**: **日本語のみ**で、短い見出しにしてください（目安：全角10文字前後以内）。
-- **summary_message**: **日本語のみ**で、UI の言語と揃えてください。
-- 場所名など固有名詞は、入力・文脈の韓国語表記を維持しても構いません。""",
+- [必須] **日本語のみ**で、短い見出しにしてください。""",
     LanguageType.zh: """# 响应语言（必须遵守）
-- **summary_title**：**只用中文**撰写，简短标题（建议不超过约 10 个汉字）。
-- **summary_message**：**只用中文**，与界面语言一致。
-- 地点名等专有名词可保留韩文原文表记。""",
+- [必需的] **只用中文**撰写，简短标题。""",
 }
 
+_NAME_INSTRUCTION: dict[LanguageType, str] = {
+    LanguageType.ko: """- 장소명 등 고유명사는 한국어 원문 표기를 유지하세요.""",
+    LanguageType.en: """- Keep Korean place names in original Hangul when they are the canonical name (do not romanize unnecessarily).""",
+    LanguageType.ja: """- 場所名など固有名詞は、入力・文脈の韓国語表記を維持しても構いません。""",
+    LanguageType.zh: """- 地点名等专有名词可保留韩文原文表记。""",
+}
 
 INTENT_PROMPT = """
 # 역할 (Role)
 당신은 한국 여행을 도와주는 친절하고 지식이 풍부한 AI 여행 가이드입니다.
-대화 기록과 최신 사용자 입력을 기반으로 intent를 분석하십시오. 사용자의 입력이 단답이거나 의도가 불명확하면 먼저 update_user_input을 만들고, 그 문장을 기준으로 intent를 분석하십시오.
+대화 기록과 최신 사용자 입력을 기반으로 intent를 분석하십시오. 사용자의 입력이 단답이거나 의도가 불명확하면 먼저 update_user_input을 **한국어**로 만들고, 그 문장을 기준으로 intent를 분석하십시오.
 
 ---
 
 # 입력 정보
 
-기존 채팅 제목:
-{summary_title}
-
 이전 요약 내용:
 {summary_message}
+
+{gps_location_context}
 
 이 정보를 바탕으로 intent를 분석하세요.
 
@@ -72,7 +93,7 @@ INTENT_PROMPT = """
 - REVIEWS: 리뷰, 평점, 후기 요청
 - BUDGET: 예산 관련 요청
 - ITINERARY_SAVE: 일정 저장 요청
-- INFO_QA: 특정 장소 또는 여행 정보 질문{image_intent_type}
+- INFO_QA: 특정 장소 또는 여행 정보 질문 {image_intent_type}
 
 ### Intent 분류 핵심 규칙
 - intents는 반드시 1개 이상 선택하십시오.
@@ -111,6 +132,7 @@ INTENT_PROMPT = """
   - "홍대 카페", "성수 맛집", "이태원 바", "건대 주변" 등 서울 특정 동네
   - "K-pop 카페", "한옥 카페" 등 서울 특정 문화를 연상하는 표현 → 명시된 동네가 없으면 None
 - 장소가 완전히 불명확하거나 서울 외 지역이면 None으로 설정하십시오.
+- **사용자 GPS가 서울 내 위치로 첨부된 경우 (위 gps_location_context 참고)**: 사용자 입력에 명시적 장소가 없으면 GPS 지역명을 location.name으로 우선 사용하십시오. GPS가 서울 밖이면 location은 None으로 두고, 서울 장소 추천 intent(PLACE_INQUIRY 등)는 유지하십시오.
 
 ### exclude_location 추출 규칙
 - "서울역 말고", "홍대 빼고", "거기 말고" 등 장소를 제외하는 표현이 있으면 exclude_location에 해당 장소명을 담고, location은 None으로 두십시오.
@@ -129,6 +151,7 @@ INTENT_PROMPT = """
 ---
 
 # 중요 규칙
+- 범죄 관련 입력일 경우, primary_intent를 GENERAL로 설정하십시오. (예: 살인, 살해, 성폭행, 강간, 테러, 폭발물, 국가보안법 위반, 간첩, 동물학대, 동물유기 등)
 - 반드시 IntentCoreOutput 스키마에 맞는 값만 생성하십시오. 스키마에 없는 필드는 만들지 마십시오.
 - 스키마 description을 반드시 따르십시오.
 """
@@ -137,25 +160,28 @@ INTENT_PROMPT = """
 IMAGE_INTENT_TYPE = "\n- IMAGE_SIMILAR: 이미지와 유사한 장소 검색"
 
 SUMMARY_PROMPT = """
-당신은 한국 여행 채팅 기록을 요약하는 어시스턴트입니다.
-대화 내용을 읽고 summary_title과 summary_message를 추출하십시오.
-
 {summary_language_instruction}
 
-기존 채팅 제목: {summary_title}
-이전 요약 내용: {summary_message}
+You are an assistant that summarizes Seoul travel chat history.
+Read the conversation and extract summary_title and summary_message.
+ALL outputs must be written in the language specified above.
 
-### summary_title
-- 새로운 장소, 활동, 기간 등 구체적인 여행 맥락이 포함되었을 때만 **위 응답 언어 지침에 맞는 언어로** 짧은 제목을 추출하십시오. (한·일·중: 대략 10자/10字 수준, 영어: 매우 짧은 phrase)
-- 인사말이나 단순 답변이거나 기존 제목이 이미 현재 대화를 잘 대변하면 `null`을 반환하십시오.
-- 예시 (언어는 지침에 맞게 선택): 한국어 "홍대·종로 2일", English "Gangnam cafes & food", 日本語「明洞・カフェ」, 中文「弘大美食推荐」
+Current title: {summary_title}
 
-### summary_message
-- 이전 요약을 참고하여 최근 대화 내용을 포함한 누적 요약을 작성하십시오.
-- 여행 관련 정보(장소, 날짜, 인원, 카테고리 등)를 중심으로 요약하십시오.
-- 문장은 **위 응답 언어 지침**과 동일한 언어로 작성하십시오.
+### summary_title (new chat room title)
+- Extract a SHORT title ONLY when new travel context appears (places, activities, dates, etc.).
+- Write it in the language specified above. (ko/ja/zh: ≤10 chars, en: short phrase)
+- Return null if: it's just a greeting, simple reply, or the current title already represents the conversation well.
+- Examples: ko "홍대·종로 2일" / en "Gangnam cafes & food" / ja「明洞・カフェ」/ zh「弘大美食推荐」
 
-반드시 SummaryOutput 스키마에 맞는 값만 생성하십시오.
+Previous summary: {summary_message}
+
+### summary_message (cumulative summary)
+- Update the previous summary to include recent conversation content.
+- Focus on travel info: places, dates, party size, categories.
+- Write in the language specified above.
+
+Return only SummaryOutput schema fields.
 """
 
 
@@ -189,29 +215,29 @@ PLANNER_PROMPT = """
    - 서울 핫플레이스(성수·홍대·한남·종로·강남 등)를 최소 1개 이상 일정에 포함하세요.
 1. 사용자가 특정 장소를 언급하면 itinerary에 우선 반영하세요.
 2. 슬롯 정보에 장소 정보와 사용자 위치 정보를 확인하여 편한 동선으로 일정을 계획하세요. (하루 최대 동선 20km 이내로 계획하세요.)
-3. 이전 대화에서 이미 추천한 장소보다 새로운 장소를 우선순위 높게 반영하세요.
-4. duration 정보가 없으면 day=1(당일치기) 기준으로 일정 초안을 작성하세요.
-5. itinerary에는 사용자 선호도를 반영한 장소를 최소 1개 포함하세요.
-6. itinerary에는 최소 1개 이상의 시간순/일차별 여행 일정 항목을 포함하세요.
-7. search_query는 Qdrant 장소 검색에 유리한 구체적인 한국어 키워드로 작성하세요.
-8. time_slot 필드에 해당 활동의 시간대를 반드시 입력하세요. (아침 | 오전 | 점심 | 오후 | 늦은 오후 | 저녁 | 밤)
+3. 현재 날씨 정보가 있으면 일정에 반영하세요.
+    - 비·눈·강수확률 높음(50% 이상): 실내 위주 일정(카페, 박물관, 쇼핑몰 등) 비중을 높이세요.
+    - 맑음·구름 조금: 야외 활동(공원 산책, 야외 명소 등)을 자연스럽게 포함하세요.
+    - 날씨 정보가 "없음"이면 이 규칙을 무시하세요.
+4. 이전 대화에서 이미 추천한 장소보다 새로운 장소를 우선순위 높게 반영하세요.
+5. duration 정보가 없으면 day=1(당일치기) 기준으로 일정 초안을 작성하세요.
+6. itinerary에는 사용자 선호도를 반영한 장소를 최소 1개 포함하세요.
+7. itinerary에는 최소 1개 이상의 시간순/일차별 여행 일정 항목을 포함하세요.
+8. search_query는 Qdrant 장소 검색에 유리한 구체적인 한국어 키워드로 작성하세요.
+9. time_slot 필드에 해당 활동의 시간대를 반드시 입력하세요. (아침 | 오전 | 점심 | 오후 | 늦은 오후 | 저녁 | 밤)
    activity 필드에도 시간대 맥락을 자연스럽게 포함하세요. (예: "늦은 아침 브런치 카페", "오후 경복궁 산책", "저녁 노을 맛집")
    - 빽빽한 일정을 원하면 음식점 2~3개(아침 or 점심 or 저녁), 그 외 3개 이상의 항목을 생성하세요.
    - 여유로운 일정을 원하면 음식점 2개(점심 and 저녁), 그 외 1~2개 항목만 생성하세요.
    - 아침형 선호도: 이른 아침 활동부터 배치하세요.
    - 저녁형 선호도: 오후~저녁 위주로 배치하고 아침 항목은 생략하거나 늦게 설정하세요.
-9. 기존 itinerary가 "없음"이면 새 itinerary를 생성하세요.
-10. 기존 itinerary가 있고 사용자가 변경 요청을 하면, 기존 itinerary를 기준으로 요청된 부분만 우선 수정하고 변경 지시가 없는 항목은 최대한 유지하세요.
-11. 사용자가 기존 itinerary를 "이어서" 요청하면 기존 일정의 흐름과 일차를 이어서 확장하세요.
-12. 사용자가 기존 itinerary를 "참고해서 다시" 요청하면 기존 itinerary를 참고하되 더 적합한 전체 itinerary로 재구성할 수 있습니다.
-13. 최신 사용자 요청이 기존 itinerary보다 우선합니다.
-14. 최종 출력은 항상 최신 전체 itinerary여야 합니다.
-15. 슬롯 정보에 exclude_location이 있으면 해당 위치는 절대 일정에 포함하지 마십시오.
-16. 슬롯 정보에 exclude_tags가 있으면 해당 키워드와 관련된 장소는 일정에서 제외하세요.
-17. 현재 날씨 정보가 있으면 일정에 반영하세요.
-    - 비·눈·강수확률 높음(50% 이상): 실내 위주 일정(카페, 박물관, 쇼핑몰 등) 비중을 높이세요.
-    - 맑음·구름 조금: 야외 활동(공원 산책, 야외 명소 등)을 자연스럽게 포함하세요.
-    - 날씨 정보가 "없음"이면 이 규칙을 무시하세요.
+10. 기존 itinerary가 "없음"이면 새 itinerary를 생성하세요.
+11. 기존 itinerary가 있고 사용자가 변경 요청을 하면, 기존 itinerary를 기준으로 요청된 부분만 우선 수정하고 변경 지시가 없는 항목은 최대한 유지하세요.
+12. 사용자가 기존 itinerary를 "이어서" 요청하면 기존 일정의 흐름과 일차를 이어서 확장하세요.
+13. 사용자가 기존 itinerary를 "참고해서 다시" 요청하면 기존 itinerary를 참고하되 더 적합한 전체 itinerary로 재구성할 수 있습니다.
+14. 최신 사용자 요청이 기존 itinerary보다 우선합니다.
+15. 최종 출력은 항상 최신 전체 itinerary여야 합니다.
+16. 슬롯 정보에 exclude_location이 있으면 해당 위치는 절대 일정에 포함하지 마십시오.
+17. 슬롯 정보에 exclude_tags가 있으면 해당 키워드와 관련된 장소는 일정에서 제외하세요.
 """
 
 

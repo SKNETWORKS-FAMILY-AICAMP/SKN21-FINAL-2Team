@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Users, ArrowRight, CalendarDays, Loader2 } from "lucide-react";
+import { X, Users, ArrowRight, CalendarDays, Loader2, Check } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useTranslation } from "@/i18n/useTranslation";
 
 export interface TripContext {
@@ -17,20 +19,47 @@ interface TripContextModalProps {
     onClose: () => void;
     /** true이면 방 생성 API 대기 중 — 모달을 닫지 않고 스피너 표시 */
     loading?: boolean;
+    /** 수정 모드일 때 기존 값을 전달 */
+    initialContext?: TripContext;
+    /** true이면 수정 모드 — "채팅 시작" 대신 "수정 완료" 버튼, skip 숨김 */
+    isEdit?: boolean;
 }
 
-const today = (() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-})();
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
-export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }: TripContextModalProps) {
+const parseDate = (str: string): Date | null => {
+    if (!str) return null;
+    const [y, m, d] = str.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+};
+
+const formatDate = (date: Date): string =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+export function TripContextModal({ isOpen, onConfirm, onClose, loading = false, initialContext, isEdit = false }: TripContextModalProps) {
     const { t } = useTranslation();
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [adultCount, setAdultCount] = useState<number>(1);
     const [childCount, setChildCount] = useState<number>(0);
-    const endDateDesktopRef = useRef<HTMLInputElement>(null);
+    const endPickerRef = useRef<DatePicker>(null);
+
+    // 수정 모드: 모달이 열릴 때 기존 값으로 초기화
+    useEffect(() => {
+        if (isOpen && initialContext) {
+            const parts = initialContext.travelDuration?.split(" ~ ") ?? [];
+            setStartDate(parts[0] ?? "");
+            setEndDate(parts[1] ?? "");
+            setAdultCount(initialContext.adultCount ?? 1);
+            setChildCount(initialContext.childCount ?? 0);
+        } else if (isOpen && !initialContext) {
+            resetState();
+        }
+    // isOpen이 true로 바뀔 때만 실행
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const resetState = () => {
         setStartDate("");
@@ -54,7 +83,11 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
     };
 
     const canProceed = !!startDate;
-    const endMin = startDate || today;
+    const startDateObj = parseDate(startDate);
+    const endDateObj = parseDate(endDate);
+    const endMinDate = startDateObj ?? today;
+
+    const inputClass = "w-full h-12 rounded-2xl border-none bg-black/[0.03] px-4 text-[13px] font-medium text-gray-800 transition-all duration-300 focus:outline-none focus:bg-black/[0.05] focus:ring-[1px] focus:ring-black/[0.08] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] cursor-pointer";
 
     return (
         <AnimatePresence>
@@ -66,8 +99,8 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="fixed inset-0 bg-black/30 backdrop-blur-md z-[9998]"
                         onClick={handleClose}
                     />
 
@@ -78,113 +111,115 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                      */}
                     <motion.div
                         key="modal"
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
                         onClick={handleClose}
                     >
                         <div
-                            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-7"
+                            className="relative w-full max-w-sm max-h-[90vh] overflow-y-auto custom-scrollbar p-8 rounded-[2rem] bg-white/95 backdrop-blur-3xl border border-white shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)]"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {loading && (
-                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-3xl gap-3">
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-[2rem] gap-3">
                                     <Loader2 className="w-7 h-7 animate-spin text-black" />
-                                    <p className="text-xs font-medium text-gray-500">{t("chat.creatingRoom")}</p>
+                                    <p className="text-xs font-bold text-gray-500">{t("chat.creatingRoom")}</p>
                                 </div>
                             )}
 
                             <button
                                 onClick={handleClose}
-                                className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                                className="absolute top-6 right-6 p-2.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100/70 rounded-full transition-all bg-transparent"
                             >
                                 <X size={16} />
                             </button>
 
-                            <div className="flex items-center gap-2 mb-1">
-                                <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
-                                    <CalendarDays size={14} className="text-gray-600" />
+                            <div className="flex items-center gap-2 mb-5">
+                                <div className="w-10 h-10 bg-gray-50 border border-gray-100 text-gray-900 rounded-xl flex items-center justify-center shadow-sm">
+                                    <CalendarDays size={16} />
                                 </div>
-                                <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
-                                    {t("tripContext.label")}
-                                </span>
+                                <h2 className="text-[14px] font-bold text-[#8b98a5] uppercase mt-0.5">
+                                    TRIP CONTEXT
+                                </h2>
                             </div>
-                            <h2 className="text-xl font-medium text-gray-900 mb-1">
-                                {t("tripContext.heading")}
-                            </h2>
 
-                            <div className="grid grid-cols-2 gap-3 mt-4">
+                            <div className="grid grid-cols-2 gap-4 mt-5">
                                 <div>
-                                    <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
+                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase mb-1.5 pl-1">
                                         {t("tripContext.departure")}
                                     </label>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        min={today}
-                                        onChange={(e) => {
-                                            const nextStart = e.target.value;
-                                            setStartDate(nextStart);
-                                            if (endDate && nextStart && endDate < nextStart) {
-                                                setEndDate(nextStart);
-                                            }
-                                            if (nextStart) {
-                                                setTimeout(() => {
-                                                    endDateDesktopRef.current?.showPicker?.();
-                                                }, 50);
-                                            }
+                                    <DatePicker
+                                        selected={startDateObj}
+                                        onChange={(date: Date | null) => {
+                                            if (!date) return;
+                                            const next = formatDate(date);
+                                            setStartDate(next);
+                                            if (endDate && next > endDate) setEndDate(next);
+                                            setTimeout(() => endPickerRef.current?.setOpen(true), 50);
                                         }}
-                                        className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                        minDate={today}
+                                        dateFormat="yyyy-MM-dd"
+                                        className={inputClass}
+                                        placeholderText="YYYY-MM-DD"
+                                        popperPlacement="bottom-start"
+                                        showMonthDropdown
+                                        showYearDropdown
+                                        dropdownMode="select"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-1">
+                                    <label className="block text-[10px] font-bold text-[#8b98a5] uppercase mb-1.5 pl-1">
                                         {t("tripContext.return")}
                                     </label>
-                                    <input
-                                        ref={endDateDesktopRef}
-                                        type="date"
-                                        value={endDate}
-                                        min={endMin}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-black/10"
+                                    <DatePicker
+                                        ref={endPickerRef}
+                                        selected={endDateObj}
+                                        onChange={(date: Date | null) => {
+                                            if (!date) return;
+                                            setEndDate(formatDate(date));
+                                        }}
+                                        minDate={endMinDate}
+                                        dateFormat="yyyy-MM-dd"
+                                        className={inputClass}
+                                        placeholderText="YYYY-MM-DD"
+                                        popperPlacement="bottom-end"
+                                        showMonthDropdown
+                                        showYearDropdown
+                                        dropdownMode="select"
                                     />
                                 </div>
                             </div>
 
-                            <div className="mt-5 space-y-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
-                                        <Users size={14} className="text-gray-600" />
-                                    </div>
-                                    <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                            <div className="mt-6 space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[10px] font-bold text-[#8b98a5] uppercase pl-1">
                                         {t("tripContext.travelers")}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50">
+                                <div className="flex items-center justify-between p-5 rounded-[1.25rem] border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)]">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{t("tripContext.adults")}</p>
-                                        <p className="text-[11px] font-medium text-gray-400">{t("tripContext.adultsAge")}</p>
+                                        <p className="text-sm font-semibold text-gray-900">{t("tripContext.adults")}</p>
+                                        <p className="text-[10px] font-medium uppercase text-[#8b98a5] mt-0.5">{t("tripContext.adultsAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => setAdultCount((v) => Math.max(1, v - 1))} className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 font-medium">-</button>
-                                        <span className="w-6 text-center text-sm font-medium">{adultCount}</span>
-                                        <button onClick={() => setAdultCount((v) => Math.min(99, v + 1))} className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 font-medium">+</button>
+                                        <button onClick={() => setAdultCount((v) => Math.max(1, v - 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">-</button>
+                                        <span className="w-6 text-center text-[13px] font-semibold">{adultCount}</span>
+                                        <button onClick={() => setAdultCount((v) => Math.min(99, v + 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">+</button>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50">
+                                <div className="flex items-center justify-between p-5 rounded-[1.25rem] border border-white/60 bg-[#f5f7f9]/60 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)]">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{t("tripContext.children")}</p>
-                                        <p className="text-[11px] font-medium text-gray-400">{t("tripContext.childrenAge")}</p>
+                                        <p className="text-sm font-semibold text-gray-900">{t("tripContext.children")}</p>
+                                        <p className="text-[10px] font-medium uppercase text-[#8b98a5] mt-0.5">{t("tripContext.childrenAge")}</p>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => setChildCount((v) => Math.max(0, v - 1))} className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 font-medium">-</button>
-                                        <span className="w-6 text-center text-sm font-medium">{childCount}</span>
-                                        <button onClick={() => setChildCount((v) => Math.min(99, v + 1))} className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-100 font-medium">+</button>
+                                        <button onClick={() => setChildCount((v) => Math.max(0, v - 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">-</button>
+                                        <span className="w-6 text-center text-[13px] font-semibold">{childCount}</span>
+                                        <button onClick={() => setChildCount((v) => Math.min(99, v + 1))} className="w-8 h-8 rounded-full bg-white/80 shadow-sm border border-white hover:bg-white hover:scale-105 transition-all font-medium text-gray-700">+</button>
                                     </div>
                                 </div>
                             </div>
@@ -192,25 +227,27 @@ export function TripContextModal({ isOpen, onConfirm, onClose, loading = false }
                             <button
                                 onClick={handleTravelerConfirm}
                                 disabled={!canProceed}
-                                className={`mt-5 w-full py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 transition-all duration-200 ${canProceed
-                                    ? "bg-black text-white hover:bg-gray-800 active:scale-[0.98]"
-                                    : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                className={`mt-6 w-full h-13 py-3.5 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all duration-300 tracking-wide ${canProceed
+                                    ? "bg-gradient-to-r from-gray-900 to-black text-white hover:-translate-y-0.5 shadow-[0_8px_16px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_12px_24px_-6px_rgba(0,0,0,0.4)] active:scale-[0.98]"
+                                    : "bg-black/[0.04] text-gray-300 cursor-not-allowed"
                                     }`}
                             >
-                                {t("tripContext.startChat")}
-                                <ArrowRight size={15} />
+                                {isEdit ? t("tripContext.saveEdit") : t("tripContext.startChat")}
+                                {isEdit ? <Check size={16} strokeWidth={2.5} /> : <ArrowRight size={16} strokeWidth={2.5} />}
                             </button>
 
-                            <button
-                                onClick={() => {
-                                    onConfirm({ travelDuration: "", adultCount: 0, childCount: 0 });
-                                    resetState();
-                                }}
-                                className="mt-5 w-full flex items-center justify-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-500 transition-colors"
-                            >
-                                {t("tripContext.skipAndStart")}
-                                <ArrowRight size={12} />
-                            </button>
+                            {!isEdit && (
+                                <button
+                                    onClick={() => {
+                                        onConfirm({ travelDuration: "", adultCount: 0, childCount: 0 });
+                                        resetState();
+                                    }}
+                                    className="mt-4 w-full h-11 flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-all"
+                                >
+                                    {t("tripContext.skipAndStart")}
+                                    <ArrowRight size={13} strokeWidth={2.5} />
+                                </button>
+                            )}
                         </div>
                     </motion.div>
                 </>

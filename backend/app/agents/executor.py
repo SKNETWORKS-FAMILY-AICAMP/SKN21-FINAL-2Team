@@ -12,24 +12,13 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 from app.agents.models.state import TravelState, get_effective_user_input
 from app.agents.models.output import IntentType, IntentLocation
 from app.agents.prompts.executor_prompt import EXECUTOR_PROMPT, EXECUTOR_TRIP_PLANNING_PROMPT, EXECUTOR_AUTO_START_PROMPT, EXECUTOR_MISSING_INFO_PROMPT, EXECUTOR_GENERAL_PROMPT
+from app.agents.prompts.prompts import get_language_instruction, get_language_reminder
 from app.utils.common import build_naver_map_url, dprint, dpprint
-from app.models.enums import LanguageType    
 from app.core.llm_streaming import collect_streamed_text
 from app.utils.place_id import get_contenttypeid
 from app.utils.geocoder import GeoCoder
 from app.agents.models.state import IntentSlots
 from app.agents.models.place import PlaceInfo
-
-_LANGUAGE_INSTRUCTION: dict[str, str] = {
-    LanguageType.ko: "중요: 반드시 한국어로만 답변하세요. 단, 장소명은 목록·입력에 제공된 한국어 표기를 글자 하나도 바꾸지 말고 그대로 유지하세요.",
-    LanguageType.en: "IMPORTANT: Respond entirely in English. However, keep all place names exactly as given in Korean—do not translate or romanize place names.",
-    LanguageType.ja: "重要: 回答は必ず日本語のみで行ってください。ただし、場所名は入力・一覧の韓国語表記を一字一句変えずにそのまま使ってください。",
-    LanguageType.zh: "重要：请务必只用中文回答。但是，所有地点名称必须与列表/输入中的韩文完全一致，不得翻译或改写。",
-}
-
-def _get_language_suffix(language) -> str:
-    key = language if isinstance(language, LanguageType) else LanguageType(language) if language else LanguageType.ko
-    return _LANGUAGE_INSTRUCTION.get(key, "")
 
 def _extract_place_names_from_answer(answer_text: str) -> list[str]:
     """
@@ -96,9 +85,6 @@ def _build_candidate_place_pairs(candidates: List[Dict[str, Any]]) -> List[tuple
 def _collect_recommended_places(
     answer_text: str,
     places: List[PlaceInfo],
-    minimum_count: int = 2,
-    maximum_count: int = 3,
-    deprioritized_names: List[str] | None = None,
 ) -> List[PlaceInfo]:
     """답변 텍스트에 실제로 언급된 장소만 반환한다. 미언급 장소는 절대 포함하지 않는다."""
     if not places:
@@ -116,66 +102,30 @@ def _collect_recommended_places(
         if place and all(place.name != existing.name for existing in recommended):
             recommended.append(place)
 
-    return recommended[:maximum_count]
+    return recommended
 
 
-def _answer_mentions_unknown_places(answer_text: str, places: List[PlaceInfo]) -> bool:
-    """답변에서 추출한 장소명 중 과반수가 후보군 밖이면 True.
-    ONE unknown(오탈자·약칭 등)이 있어도 나머지가 알려진 장소면 허용한다."""
-    extracted_names = _extract_place_names_from_answer(answer_text)
-    if not extracted_names:
-        return False
-
-    normalized_known_names = {
-        _normalize_place_name(place.name)
-        for place in places
-        if place.name
-    }
-    unknown_count = sum(
-        1 for name in extracted_names
-        if _normalize_place_name(name) not in normalized_known_names
-    )
-    # 과반수가 모르는 장소일 때만 할루시네이션으로 판단
-    return unknown_count > len(extracted_names) / 2
-
-
-def _build_minimum_recommendation_suffix(
-    recommended_places: List[PlaceInfo],
-    candidates: List[Dict[str, Any]],
-) -> str:
-    if not recommended_places:
-        return ""
-
-    intro_by_name: dict[str, str] = {}
-    for candidate in candidates or []:
-        payload = candidate.get("payload", {}) or {}
-        name = (payload.get("title") or payload.get("name") or payload.get("place") or "").strip()
-        if not name:
+def _build_pinned_place_info_list(pinned_places: List[Dict[str, Any]]) -> List[PlaceInfo]:
+    """geo(lat/lon)가 있는 pinned_places를 PlaceInfo 리스트로 변환한다."""
+    result: list[PlaceInfo] = []
+    for p in pinned_places:
+        name = (p.get("name") or "").strip()
+        address = (p.get("address") or "").strip()
+        geo = p.get("geo") or {}
+        lat = geo.get("lat") or 0.0
+        lon = geo.get("lon") or 0.0
+        if not name or not lat or not lon:
             continue
-        introduction = (
-            candidate.get("introduction")
-            or payload.get("introduction")
-            or payload.get("llm_text")
-            or ""
-        )
-        intro_by_name[_normalize_place_name(name)] = str(introduction).strip()
-
-    lines = ["", "추천드릴 곳은 다음 2~3곳입니다."]
-    for place in recommended_places:
-        intro = intro_by_name.get(_normalize_place_name(place.name), "")
-        summary = intro[:120].strip()
-        if len(intro) > 120:
-            summary += "..."
-        if place.map_url and place.map_url != "Unknown":
-            place_label = f"[{place.name}]({place.map_url})"
-        else:
-            place_label = place.name
-        detail_parts = [part for part in [place.address, summary] if part]
-        if detail_parts:
-            lines.append(f"{place_label}은 {', '.join(detail_parts)} 기준으로 추천드립니다.")
-        else:
-            lines.append(f"{place_label}을 추천드립니다.")
-    return "\n\n".join(lines)
+        result.append(PlaceInfo(
+            contenttypeid=p.get("category") or "",
+            name=name,
+            address=address,
+            image_path=p.get("image_path") or "",
+            map_url=build_naver_map_url(name, float(lat), float(lon)),
+            longitude=float(lon),
+            latitude=float(lat),
+        ))
+    return result
 
 
 def _build_place_context(candidates: List[Dict[str, Any]]) -> tuple[list[PlaceInfo], str, str]:
@@ -344,6 +294,24 @@ def _get_image_data_url(image_path: str) -> str:
     return image_path
 
 
+def _build_party_info(slots: Optional[IntentSlots]) -> str:
+    """slots.party_member에서 성인/어린이 수를 읽어 프롬프트용 문자열로 반환."""
+    if not slots or not slots.party_member:
+        return "없음"
+    party = slots.party_member
+    adult = party.adult_count
+    children = party.children_count
+    if adult is None and children is None:
+        return "없음"
+    parts = []
+    if adult is not None:
+        parts.append(f"성인 {adult}명")
+    if children is not None:
+        parts.append(f"어린이 {children}명")
+    total = (adult or 0) + (children or 0)
+    return f"{', '.join(parts)} (총 {total}명)"
+
+
 def _build_missing_context(missing_slots: List[str]) -> str:
     """missing_slots가 있으면, 해당 슬롯에 대한 질문을 생성"""
     if not missing_slots:
@@ -359,18 +327,32 @@ def _build_missing_context(missing_slots: List[str]) -> str:
 async def _build_location_context(
     slots: Optional[IntentSlots],
     input_address: Optional[str] = None,
+    gps_location_override: bool = False,
+    gps_outside_seoul: bool = False,
 ) -> str:
-    # 사용자 위치 컨텍스트 구성 (geocoder_node에서 미리 reverse geocoding된 주소 사용)
+    """사용자 위치 컨텍스트 문자열 구성.
+
+    - gps_location_override=True : slots.location이 GPS 파생 위치 → '사용자 관심 장소' 생략(중복 방지)
+    - gps_outside_seoul=True     : GPS가 서울 밖 → 서울 밖 위치임을 명시하고 서울 장소 추천 안내
+    """
     user_location_context = ""
 
     if input_address:
-        user_location_context = f"- 사용자 현재 위치: {input_address}"
+        if gps_outside_seoul:
+            user_location_context = (
+                f"- 사용자 현재 위치: {input_address} (서울 외 지역)\n"
+                f"**[위치 규칙]** 사용자의 현재 위치가 서울 밖이므로, 답변 초반에 **이 사실을 언급하고 \"서울 장소만 제공된다\"는 점을 안내할 것.**"
+            )
+        else:
+            user_location_context = f"- 사용자 현재 위치: {input_address}"
 
-    if slots and slots.location and slots.location.name:
+    # GPS 우선 모드에서는 slots.location이 GPS와 동일한 위치를 가리키므로 생략
+    if not gps_location_override and slots and slots.location and slots.location.name:
         address = ""
         if slots.location.lat and slots.location.lon:
             address = await GeoCoder.get_address(slots.location.lat, slots.location.lon)
-        user_location_context += f"\n- 사용자 관심 장소: {slots.location.name} ({address})"
+        loc_line = f"- 사용자 관심 장소: {slots.location.name} ({address})"
+        user_location_context = f"{user_location_context}\n{loc_line}" if user_location_context else loc_line
 
     return user_location_context
 
@@ -388,16 +370,14 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     candidates = state.get("candidates")
     candidate_pool = state.get("candidate_pool")
     user_input = get_effective_user_input(state)
-    input_tags = state.get("input_tags", [])
     messages = state.get("messages", [])[-6:]
     prefs_info = state.get("prefs_info", "")
     primary_intent = state.get("primary_intent")
     slots: Optional[IntentSlots] = state.get("slots")
     image_path = state.get("input_image")
-    input_lat = state.get("input_lat")
-    input_lon = state.get("input_lon")
     follow_up_questions = state.get("follow_up_questions", [])
     previous_recommendations = _extract_previously_recommended_place_names(messages)
+    pinned_places = state.get("pinned_places") or []
 
     # ====================================
     # 장소 정보 리스트가 없으면 Naver Search API 검색으로 보완
@@ -435,19 +415,29 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
     if slots and slots.categories:
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
+    # 인원 정보 ============================
+    party_info = _build_party_info(slots)
+
     # 위치 정보 ============================
     # 사용자 위치 컨텍스트 구성 (GPS 위치 우선, 없으면 slots.location 사용)
-    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
+    location_context = await _build_location_context(
+        slots,
+        input_address=state.get("input_address"),
+        gps_location_override=state.get("gps_location_override", False),
+        gps_outside_seoul=state.get("gps_outside_seoul", False),
+    )
 
 
     # HumanMessage 구성 (멀티모달 지원)
     content_blocks = []
-    
+    lang_reminder = get_language_reminder(state.get("language"))
+
     if image_path:
         # 텍스트가 없어도 이미지가 있으면 안내 문구 추가
         if len(user_input) == 0:
             user_input = "사용자가 이미지를 보냈습니다. 이 이미지를 분석해서 어울리는 장소를 추천해주세요."
-        content_blocks.append({"type": "text", "text": user_input})
+        text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+        content_blocks.append({"type": "text", "text": text})
 
         image_url = _get_image_data_url(image_path)
         content_blocks.append({
@@ -455,8 +445,9 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             "image_url": {"url": image_url}
         })
     else:
-        content_blocks.append({"type": "text", "text": f"{user_input}"})
-    
+        text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+        content_blocks.append({"type": "text", "text": text})
+
     # content_blocks가 비어있으면(텍스트도 없고 이미지도 없음) 처리
     if not content_blocks:
           content_blocks.append({"type": "text", "text": "사용자 입력이 없습니다."})
@@ -467,14 +458,28 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
         raw_itinerary = state.get("itinerary") or []
         planner_itinerary_str = _build_planner_itinerary_str(raw_itinerary)
         if state.get("is_auto_start"):
+            if pinned_places:
+                pinned_lines = [
+                    f"- 장소명: {p.get('name', '없음')} / 주소: {p.get('address', '없음')} / 설명: {p.get('description', '없음')}"
+                    for p in pinned_places
+                ]
+                pinned_places_str = "\n".join(pinned_lines)
+            else:
+                pinned_places_str = "없음"
+
             # auto_start: retriever 건너뜀 → 가벼운 초안 응답 전용 프롬프트
             system_prompt = EXECUTOR_AUTO_START_PROMPT.format(
                 prefs_info=prefs_info,
+                party_info=party_info,
+                weather_info=weather_info,
+                pinned_places=pinned_places_str,
                 planner_itinerary=planner_itinerary_str,
+                user_lang=get_language_instruction(state.get("language")),
             )
         else:
             system_prompt = EXECUTOR_TRIP_PLANNING_PROMPT.format(
                 prefs_info=prefs_info,
+                party_info=party_info,
                 location_context=location_context,
                 weather_info=weather_info,
                 candidate_names=candidate_names,
@@ -482,10 +487,12 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
                 itinerary_context=itinerary_context or "없음",
                 planner_itinerary=planner_itinerary_str,
                 follow_up_questions=follow_up_questions,
+                user_lang=get_language_instruction(state.get("language")),
             )
     else:
         system_prompt = EXECUTOR_PROMPT.format(
             prefs_info=prefs_info,
+            party_info=party_info,
             location_context=location_context,
             weather_info=weather_info,
             candidate_names=candidate_names,
@@ -494,11 +501,8 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
             web_context=web_context or "없음",
             follow_up_questions=follow_up_questions,
             previous_recommendations=", ".join(previous_recommendations) if previous_recommendations else "없음",
+            user_lang=get_language_instruction(state.get("language")),
         )
-
-    lang_suffix = _get_language_suffix(state.get("language"))
-    if lang_suffix:
-        system_prompt += f"\n\n{lang_suffix}"
 
     # state의 messages에는 이미 현재 턴 HumanMessage가 포함되어 있음(chat API에서 invoke 시 추가).
     # 이미지 등 멀티모달을 위해 현재 턴은 content_blocks로 한 번만 보내고, 과거 대화만 history로 사용.
@@ -520,23 +524,40 @@ async def executor_node(state: TravelState, config: RunnableConfig | None = None
         place_info_list = _collect_recommended_places(
             cleaned_answer,
             candidate_places,
-            deprioritized_names=previous_recommendations,
         )
-        if _answer_mentions_unknown_places(cleaned_answer, candidate_places):
-            place_info_list = []
     else:
         place_info_list = _collect_recommended_places(
             cleaned_answer,
             fallback_places,
-            deprioritized_names=previous_recommendations,
         )
 
+    # pinned_places 중 답변에 언급된 장소를 place_info_list에 추가 (중복 제거)
+    if pinned_places:
+        pinned_place_infos = _build_pinned_place_info_list(pinned_places)
+        pinned_mentioned = _collect_recommended_places(cleaned_answer, pinned_place_infos)
+        existing_names = {p.name for p in place_info_list}
+        for p in pinned_mentioned:
+            if p.name not in existing_names:
+                place_info_list.append(p)
+                dprint(f"[Executor] pinned_place added to place_info_list: {p.name}")
+
     dprint(f"[Executor] place_info_list: {len(place_info_list)} items")
+
+    # 실제 답변에 노출된 장소 ID만 shown_place_ids에 누적
+    # (retriever의 exposed_candidates 전체가 아닌, LLM이 실제로 언급한 장소만 기록)
+    shown_place_ids: list[str] = list(state.get("shown_place_ids") or [])
+    shown_set = set(shown_place_ids)
+    for p in place_info_list:
+        if p.contenttypeid and p.contenttypeid not in shown_set:
+            shown_place_ids.append(p.contenttypeid)
+            shown_set.add(p.contenttypeid)
+    dprint(f"[Executor] shown_place_ids updated: total={len(shown_place_ids)}")
 
     return {
         "messages": AIMessage(content=cleaned_answer),
         "answer": cleaned_answer,
         "place_info_list": place_info_list,
+        "shown_place_ids": shown_place_ids,
     }
 
 
@@ -561,12 +582,13 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
     dprint(f"[Executor] Missing slots: {missing_slots}")
     missing_context = _build_missing_context(missing_slots)
 
-    human_message = HumanMessage(content="여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요.")
+    lang_reminder = get_language_reminder(state.get("language"))
+    human_content = "여행 계획을 위한 추가 정보가 필요합니다. 아래 정보를 참고하여 질문해주세요."
+    if lang_reminder:
+        human_content = f"{lang_reminder}\n\n{human_content}"
+    human_message = HumanMessage(content=human_content)
 
     missing_system_prompt = EXECUTOR_MISSING_INFO_PROMPT
-    lang_suffix = _get_language_suffix(state.get("language"))
-    if lang_suffix:
-        missing_system_prompt += f"\n\n{lang_suffix}"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", missing_system_prompt),
@@ -581,6 +603,7 @@ async def executor_missing_node(state: TravelState, config: RunnableConfig | Non
         "prefs_info": prefs_info,
         "missing_info": missing_context,
         "follow_up_questions": follow_up_questions,
+        "user_lang": get_language_instruction(state.get("language")),
     })
 
     full_content = await collect_streamed_text(
@@ -615,28 +638,31 @@ async def executor_general_node(state: TravelState, config: RunnableConfig | Non
     if slots and slots.categories:
         prefs_info += f"\n- 사용자 관심 카테고리 : {', '.join(slots.categories)}"
 
-    location_context = await _build_location_context(slots, input_address=state.get("input_address"))
+    party_info = _build_party_info(slots)
+    location_context = await _build_location_context(
+        slots,
+        input_address=state.get("input_address"),
+        gps_location_override=state.get("gps_location_override", False),
+        gps_outside_seoul=state.get("gps_outside_seoul", False),
+    )
 
-    general_system_prompt = EXECUTOR_GENERAL_PROMPT
-    lang_suffix = _get_language_suffix(state.get("language"))
-    if lang_suffix:
-        general_system_prompt += f"\n\n{lang_suffix}"
+    system_content = EXECUTOR_GENERAL_PROMPT.format(
+        messages=messages,
+        user_input=user_input,
+        location_context=location_context,
+        prefs_info=prefs_info,
+        party_info=party_info,
+        follow_up_questions=follow_up_questions,
+        user_lang=get_language_instruction(state.get("language")),
+    )
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", general_system_prompt),
-    ])
-
-    prompt_value = prompt.invoke({
-        "messages": messages,
-        "user_input": user_input,
-        "location_context": location_context,
-        "prefs_info": prefs_info,
-        "follow_up_questions": follow_up_questions,
-    })
+    lang_reminder = get_language_reminder(state.get("language"))
+    user_text = f"{lang_reminder}\n\n{user_input}" if lang_reminder else user_input
+    prompt_messages = [SystemMessage(content=system_content), HumanMessage(content=user_text)]
 
     full_content = await collect_streamed_text(
         temperature=0.7,
-        prompt_value=prompt_value,
+        prompt_value=prompt_messages,
         config=config,
     )
 

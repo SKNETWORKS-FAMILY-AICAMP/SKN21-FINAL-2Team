@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, MessageSquareText } from "lucide-react";
 import { useTranslation } from "@/i18n/useTranslation";
+import { MODAL_STYLES } from "@/components/common/SimpleModal";
 import type { TripSummary, ChatTranscriptMessage } from "../types";
 
 export function JourneyDetailModal({
@@ -42,18 +44,36 @@ export function JourneyDetailModal({
                     />
 
                     <motion.div
-                        className="relative z-10 w-full max-w-xl rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden flex flex-col"
+                        className={`${MODAL_STYLES.container} w-[95%] sm:w-full max-w-xl flex flex-col`}
                         initial={{ opacity: 0, y: 10, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        transition={{ duration: 0.2 }}
                     >
-                        <div className="p-6 pb-4">
-                            <h2 className="text-3xl font-bold text-gray-900 text-center">{t("mypage.journeyDetail")}</h2>
+                        <div className="flex flex-none items-center justify-between border-b border-black/[0.03] px-7 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className={MODAL_STYLES.headerIconBox}>
+                                    <MessageSquareText size={18} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className={MODAL_STYLES.headerLabel}>
+                                        AI ASSISTANT
+                                    </h2>
+                                    <p className={MODAL_STYLES.headerTitle}>
+                                        {t("mypage.journeyDetail")}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className={MODAL_STYLES.closeButton}
+                            >
+                                <X size={18} />
+                            </button>
                         </div>
 
-                        <div className="px-6 pb-4">
-                            <div className="relative rounded-xl border border-gray-200 bg-white p-5 max-h-[55vh] overflow-y-auto">
+                        <div className="px-7 pb-6 pt-6">
+                            <div className="relative rounded-[2rem] border border-gray-100 bg-black/[0.02] p-6 max-h-[55vh] overflow-y-auto custom-scrollbar">
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}

@@ -1,4 +1,10 @@
 describe("resolveStreamApiBaseUrl", () => {
+    beforeEach(() => {
+        jest.resetModules();
+        delete process.env.NEXT_PUBLIC_API_URL;
+        delete process.env.NEXT_PUBLIC_STREAM_API_URL;
+    });
+
     afterEach(() => {
         delete process.env.NEXT_PUBLIC_STREAM_API_URL;
         delete process.env.NEXT_PUBLIC_API_URL;

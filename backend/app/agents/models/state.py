@@ -42,6 +42,8 @@ class TravelState(TypedDict, total=False):
     location_anchor_lat: float | None         # LANDMARK_DICTIONARY 또는 Naver API로 확정된 anchor 위도
     location_anchor_lon: float | None         # anchor 경도
     location_anchor_radius_m: float | None    # anchor 검색 반경(m)
+    gps_location_override: bool               # input_lat/lon이 서울 내 좌표 → slots.location 대체 여부
+    gps_outside_seoul: bool                   # input_lat/lon이 서울 밖 좌표 → 서울 장소 추천 안내 필요
 
     # retriever
     candidate_k: int

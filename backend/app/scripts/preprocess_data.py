@@ -217,7 +217,7 @@ def ingest_data(data):
                 # 좌표가 없으면 지오코딩 결과로 채움
                 if lat == 0.0 or lng == 0.0:
                     item['mapy'] = result.get('lat')
-                    item['mapx'] = result.get('lng')
+                    item['mapx'] = result.get('lon')
         elif lat != 0.0 and lng != 0.0:
             # 주소는 없는데 좌표는 있는 경우 리버스 지오코딩
             latlng = asyncio.run(GeoCoder.get_instance().reverse_geocoder(lat, lng))

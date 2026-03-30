@@ -20,6 +20,7 @@ jest.mock('@/i18n/useTranslation', () => ({
         "pipeline.executor": "답변 생성",
         "pipeline.executorMissing": "추가 정보 확인",
         "pipeline.executorGeneral": "일반 답변 생성",
+        "login.googleStart": "Google로 시작하기",
       };
       if (key === "pipeline.running") return `${params?.label} 중...`;
       if (key === "pipeline.done") return `${params?.label} 완료`;

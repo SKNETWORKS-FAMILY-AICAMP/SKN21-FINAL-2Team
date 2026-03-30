@@ -34,6 +34,7 @@ type PlaceMapPanelProps = {
   isPanelOpen?: boolean;
   panelWidth?: number;
   isResizing?: boolean;
+  isSheet?: boolean;
   // 길찾기 관련
   dirSelectedIds?: Set<string>;
   onToggleDirPlace?: (mapId: string) => void;
@@ -79,6 +80,7 @@ export function PlaceMapPanel({
   isPanelOpen = true,
   panelWidth,
   isResizing = false,
+  isSheet = false,
   dirSelectedIds,
   onToggleDirPlace,
   routePath,
@@ -114,6 +116,19 @@ export function PlaceMapPanel({
     return [{ groupId: "all", label: "All recommendations", places: sortedPlaces }];
   }, [groups, sortedPlaces]);
 
+  // Stable key derived from actual fit target content.
+  // When streaming, focusPlaces reference is stable (activeMessage doesn't change),
+  // so this key stays constant and prevents fitBounds from firing on every token.
+  const fitTargetKey = useMemo(() => {
+    const targets = (focusPlaces && focusPlaces.length > 0) ? focusPlaces : sortedPlaces;
+    if (!targets.length) return "";
+    return targets.map((p) => `${p.mapId}:${p.latitude}:${p.longitude}`).join("|");
+  }, [focusPlaces, sortedPlaces]);
+
+  // Latest fit targets for use inside the fit effect without adding array refs to deps.
+  const latestFitTargetsRef = useRef<ChatMapPlace[]>([]);
+  latestFitTargetsRef.current = (focusPlaces && focusPlaces.length > 0) ? focusPlaces : sortedPlaces;
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -134,6 +149,16 @@ export function PlaceMapPanel({
     window.addEventListener("resize", checkScrollability);
     return () => window.removeEventListener("resize", checkScrollability);
   }, [checkScrollability, groupedPlacesKey]);
+
+  // 언어 변경 시 Naver SDK가 재로드되므로, 기존 map 인스턴스를 초기화하여 새 SDK로 재생성되도록 함
+  const prevLanguageRef = useRef(language);
+  useEffect(() => {
+    if (prevLanguageRef.current === language) return;
+    prevLanguageRef.current = language;
+    markersRef.current.clear();
+    infoWindowRef.current = null;
+    mapInstanceRef.current = null;
+  }, [language]);
 
   useEffect(() => {
     if (!isPanelOpen || status !== "ready" || !naver?.maps || !mapInstanceRef.current) return;
@@ -221,17 +246,6 @@ export function PlaceMapPanel({
       bounds.extend(marker.getPosition());
     });
 
-    // fitBounds: focusPlaces(새 메시지 장소)가 있으면 그것만, 없으면 전체
-    const fitTargets = (focusPlaces && focusPlaces.length > 0) ? focusPlaces : sortedPlaces;
-    if (fitTargets.length === 1) {
-      map.setCenter(new naver.maps.LatLng(fitTargets[0].latitude, fitTargets[0].longitude));
-      map.setZoom(14);
-    } else if (fitTargets.length > 1) {
-      const fitBounds = new naver.maps.LatLngBounds();
-      fitTargets.forEach((p) => fitBounds.extend(new naver.maps.LatLng(p.latitude, p.longitude)));
-      map.fitBounds(fitBounds, { top: 50, right: 40, bottom: 50, left: 40 });
-    }
-
     if (selectedMapPlaceId && infoWindowRef.current) {
       const selected = sortedPlaces.find((p) => p.mapId === selectedMapPlaceId);
       const marker = markersRef.current.get(selectedMapPlaceId);
@@ -252,7 +266,23 @@ export function PlaceMapPanel({
     } else if (infoWindowRef.current) {
       infoWindowRef.current.close();
     }
-  }, [status, naver, sortedPlaces, focusPlaces, selectedMapPlaceId, onMarkerClick, onSelectPlace]);
+  }, [status, naver, sortedPlaces, selectedMapPlaceId, onMarkerClick, onSelectPlace]);
+
+  // Separate effect for fitBounds/setCenter — only runs when the actual
+  // fit-target coordinates change (fitTargetKey), not on every streaming token.
+  useEffect(() => {
+    if (!mapInstanceRef.current || !naver?.maps || status !== "ready" || !fitTargetKey) return;
+    const map = mapInstanceRef.current;
+    const targets = latestFitTargetsRef.current;
+    if (targets.length === 1) {
+      map.setCenter(new naver.maps.LatLng(targets[0].latitude, targets[0].longitude));
+      map.setZoom(14);
+    } else if (targets.length > 1) {
+      const fitBoundsObj = new naver.maps.LatLngBounds();
+      targets.forEach((p) => fitBoundsObj.extend(new naver.maps.LatLng(p.latitude, p.longitude)));
+      map.fitBounds(fitBoundsObj, { top: 50, right: 40, bottom: 50, left: 40 });
+    }
+  }, [fitTargetKey, status, naver]);
 
   // 폴리라인 렌더링
   useEffect(() => {
@@ -473,13 +503,16 @@ export function PlaceMapPanel({
             )}
 
             {/* Floating Carousel at the bottom */}
-            <div className="absolute left-0 right-0 bottom-3 sm:bottom-4 z-10 px-3 sm:px-4 group/carousel">
+            <div 
+              className={`absolute left-0 right-0 z-10 group/carousel ${
+                isSheet ? "bottom-20 sm:bottom-24" : "bottom-6 sm:bottom-8"
+              } pb-[env(safe-area-inset-bottom)]`}
+            >
               {canScrollLeft && (
                 <button
                   type="button"
                   onClick={() => scrollBy("left")}
-                  className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-
+                  className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 flex w-8 h-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100"
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -488,7 +521,7 @@ export function PlaceMapPanel({
               <div
                 ref={scrollContainerRef}
                 onScroll={checkScrollability}
-                className="flex overflow-x-auto gap-2.5 sm:gap-3 pt-2 pb-2 pr-2 snap-x custom-scrollbar relative scroll-smooth"
+                className="flex overflow-x-auto gap-2.5 sm:gap-3 px-4 sm:px-6 pt-2 pb-2 snap-x custom-scrollbar relative scroll-smooth"
               >
                 {groupedPlaces.map((group) => (
                   group.places.map((place) => {
@@ -573,8 +606,7 @@ export function PlaceMapPanel({
                 <button
                   type="button"
                   onClick={() => scrollBy("right")}
-                  className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-0 group-hover/carousel:opacity-100"
-
+                  className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 flex w-8 h-8 items-center justify-center rounded-full bg-white/90 shadow-md border border-gray-200 text-gray-700 hover:bg-white transition-all opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100"
                 >
                   <ChevronRight size={18} />
                 </button>

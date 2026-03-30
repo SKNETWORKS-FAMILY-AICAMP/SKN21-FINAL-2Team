@@ -49,15 +49,12 @@ export function LanguageSwitcher({
     return () => window.removeEventListener("triver:open-language-switcher", handleOpenSwitcher);
   }, [variant]);
 
-  const handleChange = async (lang: SupportedLanguage) => {
+  const handleChange = (lang: SupportedLanguage) => {
     setOpen(false);
-    try {
-      await updateCurrentUser({ language: lang });
-      setLanguage(lang);
-      onLanguageChange?.(lang);
-    } catch {
-      // DB 반영 실패 시 UI/i18n은 이전 언어 유지
-    }
+    setLanguage(lang);
+    onLanguageChange?.(lang);
+    // DB 저장은 백그라운드로 처리 (실패해도 UI 언어 변경은 유지)
+    updateCurrentUser({ language: lang }).catch(() => undefined);
   };
 
   if (variant === "select") {
@@ -65,7 +62,7 @@ export function LanguageSwitcher({
       <select
         value={language}
         onChange={(e) => {
-          void handleChange(e.target.value as SupportedLanguage);
+          handleChange(e.target.value as SupportedLanguage);
         }}
         className={`rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-gray-400 ${className}`}
       >
