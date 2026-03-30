@@ -1,6 +1,7 @@
 fastapi
 python-dotenv
 tqdm
+pandas
 
 uvicorn # ASGI Server
 pydantic[email] # Data Validation & Email
@@ -33,6 +34,7 @@ langgraph
 langgraph-checkpoint-mysql[aiomysql]
 langchain
 langchain-openai
+langchain-anthropic
 langchain-huggingface
 langchain-community
 tavily-python
@@ -41,7 +43,6 @@ langchain-tavily
 # Evaluation
 ragas
 rapidfuzz
-pandas
 datasets
 boto3>=1.35.0
 

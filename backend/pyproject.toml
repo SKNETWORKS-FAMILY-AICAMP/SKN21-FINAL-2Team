@@ -15,4 +15,6 @@ dependencies = [
     "sentence-transformers>=5.2.2",
     "sqlalchemy>=2.0.48",
     "boto3>=1.35.0",
+    "langchain-anthropic>=1.4.0",
+    "ragas>=0.4.3",
 ]

@@ -1,0 +1,1090 @@
+{
+  "models": {
+    "gpt-4o-mini": {
+      "avg_relevance": 0.848,
+      "avg_faithfulness": 0.734,
+      "avg_hallucination": 0.828,
+      "avg_usefulness": 0.858,
+      "overall_avg": 0.816,
+      "n_evaluated": 21,
+      "per_query": [
+        {
+          "idx": 0,
+          "user_input": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+          "response": "소설한남은 서울특별시 용산구 한남대로20길에 위치한 음식점입니다. 이곳은 아늑한 분위기와 함께 다양한 메뉴를 제공하여 많은 사람들에게 사랑받고 있습니다. 방문할 때 고려해야 할 점은 다음과 같습니다:\n\n1. **예약 여부**: 인기 있는 음식점이므로 미리 예약을 하는 것이 좋습니다.\n2. **주차 공간**: 주변에 주차 공간이 제한적일 수 있으니 대중교통 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "안양천제방벚꽃길은 서울특별시 영등포구 양평동1가에 위치한 아름다운 관광지로, 상시 개방되어 있어 언제든지 방문할 수 있습니다. 이곳은 연중무휴로 운영되며, 주차도 가능하여 편리하게 접근할 수 있습니다. 특히, 벚꽃 시즌에는 화려한 벚꽃이 만개하여 많은 사람들에게 사랑받는 산책로로 알려져 있습니다. 자연을 즐기며 여유로운 시간을 보낼 수 있는 매력적인 장소입",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "남산서울타워에 대한 정보는 검색된 장소 정보에 포함되어 있지 않습니다. 하지만 남산공원길에는 남산순환나들길과 남산인권숲이 있습니다. 이 두 장소는 상시 개방이며, 남산의 자연을 즐길 수 있는 좋은 장소입니다.\n\n남산순환나들길은 일부 구역에서 반려견 동반이 가능하므로, 반려견과 함께 산책을 즐기고 싶다면 이 점을 고려하시면 좋습니다. 또한, 맹견의 경우 입마",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에 좋은 음식점으로는 \"백년손님\"과 \"소설한남\"이 있습니다.\n\n- **백년손님**: 서울특별시 용산구 독서당로 23에 위치하고 있습니다.\n- **소설한남**: 서울특별시 용산구 한남대로20길 21-18에 위치하고 있습니다.\n\n두 곳 모두 한남동에서 맛있는 음식을 즐기기에 좋은 장소입니다!",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길에는 \"유 아트 스페이스\"가 있습니다. 이곳은 문화시설로, 주소는 서울특별시 강남구 압구정로71길 10 (청담동)입니다.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 5,
+          "user_input": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+          "response": "서울우리소리박물관에서는 다양한 소리 문화를 체험할 수 있는 프로그램과 전시가 마련되어 있습니다. 박물관 내에서는 전통 음악과 관련된 전시를 관람할 수 있으며, 때때로 특별한 체험 프로그램이나 공연이 진행되기도 합니다. 이러한 프로그램을 통해 관람객들은 한국의 전통 소리와 음악을 직접 느끼고 경험할 수 있습니다. 방문 전에 박물관의 공식 웹사이트나 전화로 구",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에는 다음과 같은 장소가 있습니다:\n\n1. **서울특별시교육청 강동도서관**\n   - 주소: 서울특별시 강동구 양재대로116길 57 (길동)\n\n2. **강동반상** (음식점)\n   - 주소: 서울특별시 강동구 상일로6길 39 강동타워\n\n3. **강동선사문화축제** (축제공연행사)\n   - 주소: 서울특별시 강동구 올림픽로 875 (암사동)\n   - 전",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "도산안창호기념관은 서울특별시 강남구에 위치한 문화시설로, 도산 안창호의 생애와 업적을 기념하는 공간입니다. 이곳에서는 다양한 전시와 교육 프로그램이 제공되어 방문객들이 도산 안창호에 대한 깊이 있는 이해를 할 수 있도록 돕습니다. 가족 단위 방문객들에게는 역사 교육의 기회를 제공하며, 아이들이 역사적 인물에 대해 배우는 데 유익한 장소입니다.\n\n반면, 화랑",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "응암정보도서관은 서울특별시 은평구에 위치한 문화시설로, 다양한 도서와 자료를 제공하여 독서와 학습의 공간을 제공합니다. 이곳에서는 조용한 환경에서 책을 읽거나 연구를 할 수 있는 기회를 제공받을 수 있습니다.\n\n어반아트는 검색된 정보에 포함되어 있지 않지만, 응암정보도서관과 함께 방문할 경우, 도서관에서의 지식 탐구 후 아트 관련 활동이나 전시를 즐길 수 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "키즈오토파크에서 어린이 자동차 체험을 즐긴 후, 일원에코파크를 방문하면 자연과 도시의 조화로운 환경 속에서 다양한 경험을 할 수 있습니다. 일원에코파크는 자연을 가까이에서 느끼며 산책하거나 피크닉을 즐길 수 있는 공간으로, 아이들이 자연과 친숙해질 수 있는 기회를 제공합니다. 또한, 공원 내에서 다양한 생태 체험 프로그램이나 놀이 시설을 통해 가족과 함께 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "클럽케이서울에 대한 정보는 검색된 결과에 포함되어 있지 않지만, 남산서울타워에 대한 정보를 제공할 수 있습니다.\n\n**남산서울타워의 매력:**\n남산서울타워는 서울의 상징적인 랜드마크로, 아름다운 서울의 전경을 감상할 수 있는 곳입니다. 특히, 야경이 아름다워 많은 관광객들이 찾는 명소입니다. 타워 내부에는 다양한 전시와 레스토랑도 있어 즐길 거리가 많습니다",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 11,
+          "user_input": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+          "response": "죄송하지만, \"라프레플루트\"와 \"성수부두\"에 대한 정보는 검색된 장소 정보에 포함되어 있지 않습니다. 대신, 서울숲 근처의 다른 장소들에 대한 정보를 제공해 드릴 수 있습니다. 서울숲은 상시 개방되는 아름다운 공원으로, 생태숲, 곤충식물원, 나비정원 등이 있어 자연을 즐기기에 좋은 장소입니다. 또한, 서울숲 근처에는 더서울라이티움과 같은 문화시설과 다양한 ",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 12,
+          "user_input": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+          "response": "메리어트 이그제큐티브 아파트먼트 서울 여의도는 여의도파크센터에 위치해 있으며, 편리한 접근성과 고급스러운 숙박 시설을 제공합니다. 이곳은 장기 체류에 적합한 아파트형 숙소로, 주방 시설이 갖춰져 있어 자취하는 느낌을 주며, 비즈니스 여행객에게도 적합한 환경을 제공합니다.\n\n고려정에 대한 정보는 검색된 결과에 포함되어 있지 않으므로, 해당 장소에 대한 특징은",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 13,
+          "user_input": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+          "response": "도산안창호기념관은 서울특별시 강남구에 위치한 문화시설로, 도산 안창호 선생의 업적을 기념하는 공간입니다. 가족 단위 방문객들에게 교육적인 가치가 높으며, 역사와 문화를 배울 수 있는 좋은 기회를 제공합니다.\n\n아모레퍼시픽미술관에 대한 정보는 검색 결과에 포함되어 있지 않으므로, 해당 장소에 대한 특징은 제공할 수 없습니다. 하지만 도산안창호기념관은 가족 방",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 14,
+          "user_input": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+          "response": "양천구에 있는 한생연 생명과학박물관은 생명과학에 대한 다양한 전시와 체험 프로그램을 통해 방문객들에게 생명과학의 원리와 중요성을 교육하는 기회를 제공합니다. 이 박물관은 생명과학에 대한 이해를 높이고, 과학적 호기심을 자극하는 다양한 전시물과 활동을 제공합니다.\n\n양천문화회관에 대한 정보는 검색된 결과에 포함되어 있지 않으므로, 구체적인 문화적 경험과 교육",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 15,
+          "user_input": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+          "response": "석촌동에서의 독특한 식사 경험을 원하신다면, 장칼집과 카페 마나랑을 추천드립니다.\n\n1. **장칼집**: 이곳은 맛있는 장칼국수를 전문으로 하는 음식점입니다. 친구나 가족과 함께 방문하기 좋은 아늑한 분위기를 제공하며, 따뜻한 국물 요리를 즐길 수 있습니다. 장칼국수의 매콤한 맛은 함께 나누기 좋은 메뉴로, 대화와 함께 즐거운 시간을 보낼 수 있습니다.\n\n",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 16,
+          "user_input": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+          "response": "검색된 정보에는 \"그릴에이치\"에 대한 내용이 포함되어 있지 않습니다. 그러나 \"스시 카이신(鮨海信)\"에 대한 정보는 다음과 같습니다:\n\n- **스시 카이신**은 서울특별시 강남구 도산대로100길 12에 위치한 음식점입니다. \n- 주소는 \"서울특별시 강남구 도산대로100길 12 우리빌딩\"입니다.\n\n그릴에이치에 대한 정보는 제공할 수 없습니다. 추가적인 질문이",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 17,
+          "user_input": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+          "response": "성북동의 고택인 청택고택과 방우산장 각각의 매력을 비교해보겠습니다.\n\n### 청택고택\n- **숙박 경험**: 청택고택은 전통적인 한국의 고택으로, 숙박이 가능한 장소입니다. 이곳에서 하룻밤을 보내며 한국의 전통적인 생활 방식을 체험할 수 있습니다.\n- **문화 체험**: 고택의 고유한 건축 양식과 내부 인테리어는 한국의 전통 문화를 느낄 수 있는 좋은 기회",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 18,
+          "user_input": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+          "response": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소로는 다음과 같은 호텔을 추천합니다:\n\n1. **글래드 여의도**\n   - 주소: 서울특별시 영등포구 의사당대로 16 (여의도동)\n   - 설명: 비즈니스 호텔로 편안한 숙박을 제공하며, 다양한 식사 옵션이 있을 수 있습니다.\n\n2. **메리어트 이그제큐티브 아파트먼트 서울 여의도**\n ",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 19,
+          "user_input": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+          "response": "현복집 강남본점과 영광밥상은 각각 독특한 매력을 지닌 한식 음식점입니다.\n\n1. **현복집 강남본점**:\n   - 위치: 서울특별시 강남구 도산대로50길 14\n   - 특징: 현복집은 전통적인 한식의 맛을 현대적으로 재해석하여 제공하는 곳으로, 신선한 재료와 정성 가득한 조리법이 특징입니다. 특히, 다양한 한식 메뉴를 통해 한국의 전통적인 맛을 경험할 수 ",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 20,
+          "user_input": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+          "response": "강남에서 가족 모임에 적합한 아늑한 분위기의 한식 레스토랑으로는 다음과 같은 곳들이 있습니다:\n\n1. **삼원가든**\n   - 주소: 서울특별시 강남구 언주로 835\n   - 전화: 정보 없음\n\n2. **강남진해장**\n   - 주소: 서울특별시 강남구 테헤란로5길 11 (역삼동)\n   - 전화: 정보 없음\n\n이 두 곳은 한식을 제공하며, 가족 모임에 적합한",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        }
+      ]
+    },
+    "gpt-5.4": {
+      "avg_relevance": 0.686,
+      "avg_faithfulness": 0.638,
+      "avg_hallucination": 0.78,
+      "avg_usefulness": 0.686,
+      "overall_avg": 0.698,
+      "n_evaluated": 21,
+      "per_query": [
+        {
+          "idx": 0,
+          "user_input": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+          "response": "검색된 정보 기준으로 보면 **소설한남**의 확인 가능한 매력은 다음과 같습니다.\n\n- **위치 매력**:  \n  **서울특별시 용산구 한남대로20길 21-18 (한남동)**에 있어, 한남동 일대에서 식당을 찾는 분들에게 적합한 곳입니다.\n- **장소 성격**:  \n  검색 결과상 **음식점**으로 확인됩니다.\n\n방문할 때 고려할 점은:\n\n- **정확한 주",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "안양천제방벚꽃길은 **서울특별시 영등포구 양평동1가**에 위치한 **관광지**로,  \n**상시 개방**되고 **연중무휴**라서 언제든 방문할 수 있는 점이 매력입니다. 또한 **주차가 가능**해 접근도 편리합니다.\n\n정리하면:\n- **위치**: 서울특별시 영등포구 양평동1가\n- **유형**: 관광지\n- **이용시간**: 상시 개방\n- **휴무일**: 연중무",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "검색된 정보에는 **남산서울타워** 자체에 대한 상세 정보는 없습니다. 다만 **남산공원길에 위치한 주변 장소 정보**를 바탕으로 보면, 방문 시 참고할 만한 점은 아래와 같습니다.\n\n- **남산공원길 일대는 산책과 둘러보기에 적합한 분위기**가 있습니다.  \n  - 예: **남산순환나들길**  \n  - 주소: **서울특별시 중구 남산공원길 609**\n  ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에 있는 음식점으로는 검색 결과상 아래 2곳이 있습니다.\n\n1. 백년손님  \n- 주소: 서울특별시 용산구 독서당로 23  \n- 지번: 서울특별시 용산구 한남동 110-1\n\n2. 소설한남  \n- 주소: 서울특별시 용산구 한남대로20길 21-18  \n- 지번: 서울특별시 용산구 한남동 68-4\n\n원하시면 제가 한남동 음식점 2곳을 보기 쉽게 비교해서 다시",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길에는 검색 결과 기준으로 **유 아트 스페이스**가 있습니다.\n\n- **이름:** 유 아트 스페이스\n- **분류:** 문화시설\n- **주소:** 서울특별시 강남구 압구정로71길 10 (청담동)\n\n원하시면 제가 이 근처의 다른 장소도 함께 정리해드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 5,
+          "user_input": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+          "response": "검색된 정보에 따르면 **서울우리소리박물관**은 서울 종로구 율곡로 96에 있는 **문화시설**입니다.\n\n다만 제공된 검색 결과에는 **소리 문화를 어떻게 체험할 수 있는지에 대한 구체적인 체험 프로그램이나 전시 내용 정보는 포함되어 있지 않습니다.**  \n확인 가능한 정보는 아래와 같습니다.\n\n- **장소명:** 서울우리소리박물관\n- **유형:** 문화시",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에는 검색 결과 기준으로 이런 곳들이 있어요:\n\n- **서울특별시교육청 강동도서관**  \n  - 문화시설  \n  - 서울특별시 강동구 양재대로116길 57 강동도서관\n\n- **강동반상**  \n  - 음식점  \n  - 서울특별시 강동구 상일로6길 39 강동타워\n\n- **강동선사문화축제**  \n  - 축제공연행사  \n  - 서울특별시 강동구 올림픽로 87",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "검색 결과에는 **도산안창호기념관** 정보만 있으며, **화랑대 철도공원**에 대한 정보는 포함되어 있지 않습니다. 따라서 제공된 정보 기준으로만 답변드리면:\n\n### 도산안창호기념관\n- **분류**: 문화시설\n- **주소**: 서울특별시 강남구 도산대로45길 20 (신사동)\n- **도로명 주소**: 서울특별시 강남구 도산대로45길 20 도산전시관\n\n###",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "검색된 정보 기준으로 보면 **응암정보도서관**은 확인되지만, **아트포레스트**에 대한 정보는 검색 결과에 없습니다. 따라서 검색 결과에 있는 정보만 바탕으로 안내드리면:\n\n- **응암정보도서관**: 서울특별시 은평구 가좌로 179 성지빌딩에 있는 **문화시설**입니다. 도서관이라는 성격상 비교적 차분하고 지적인 문화 공간으로 이해할 수 있습니다.\n- *",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "검색된 장소 정보에는 **키즈오토파크**와 **일원에코파크**에 대한 정보가 없습니다.  \n그래서 두 장소의 구체적인 체험 내용이나 방문 경험을 검색 결과만으로는 안내해드릴 수 없습니다.\n\n현재 검색 결과에서 확인되는 서울의 레포츠 장소는 다음과 같습니다.\n- **경춘선숲길**: 서울특별시 노원구 공릉로55길 53\n- **롤파크**: 서울특별시 종로구 종로",
+          "hallucination": 1.0,
+          "faithfulness": 0.4,
+          "relevance": 0.4,
+          "usefulness": 0.4
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "검색된 정보에는 **클럽케이서울**에 대한 정보가 없어 해당 장소의 매력이나 방문 시간대는 안내드리기 어렵습니다.\n\n다만 **남산서울타워**는 다음과 같이 확인됩니다.\n\n- **매력**\n  - 서울을 대표하는 **관광지**\n  - 위치: **서울특별시 용산구 남산공원길 105**\n\n- **방문하기 좋은 시간대**\n  - **평일:** 10:00~22:30\n",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 11,
+          "user_input": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+          "response": "제공된 검색 결과에는 **서울숲**, **기후**, **더서울라이티움**, **디에이치 성수포레**, **플래드카페 서울숲** 정보만 있으며,  \n질문에 있는 **라프레플루트**와 **성수부두**에 대한 정보는 포함되어 있지 않습니다.\n\n따라서 검색 결과만으로는  \n- 각 장소가 제공하는 특별한 경험\n- 두 장소의 분위기와 특징의 차이\n\n를 정확히 설명할 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.4,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 12,
+          "user_input": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+          "response": "제공된 검색 결과에는 **메리어트 이그제큐티브 아파트먼트 서울 여의도** 정보만 있고, **고려정**에 대한 정보는 없습니다. 따라서 검색 결과에 있는 내용만 기준으로 답변드리면:\n\n- **메리어트 이그제큐티브 아파트먼트 서울 여의도**\n  - **숙박 시설**입니다.\n  - 위치는 **서울특별시 영등포구 여의대로 8 여의도파크센터**입니다.\n  - 여의도",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 13,
+          "user_input": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+          "response": "Based on the searched place information, I can only confirm details for **도산안창호기념관**.\n\n- **도산안창호기념관**  \n  - Type: **Cultural facility**\n  - Location: **서울특별시 강남구 도산대로45길 20 (신사동)**  \n  - As a **문화시설**",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 14,
+          "user_input": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+          "response": "검색된 정보 기준으로 보면, **한생연 생명과학박물관**은 양천구에 있는 **문화시설**로 확인되며, 위치는 **서울특별시 양천구 목동동로 206-1**입니다. 이름상으로 보아 **생명과학 관련 전시나 학습 중심의 문화·교육적 경험**을 제공하는 장소로 이해할 수 있습니다.\n\n다만, 질문에 함께 언급하신 **양천문화회관**은 현재 제공된 검색 결과에 포함되",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 15,
+          "user_input": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+          "response": "In 석촌동, two places from the search results are:\n\n- **장칼집** — 서울특별시 송파구 가락로6길 3 (석촌동)\n- **카페 마나랑** — 서울특별시 송파구 송파대로49길 37 (석촌동)\n\nBased on the provided information, both are listed as **restaurants/dini",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 16,
+          "user_input": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+          "response": "검색된 장소 정보에는 **스시 카이신(鮨海信)**은 확인되지만, **그릴에이치**에 대한 정보는 없습니다. 또한 스시 카이신의 **특징에 대한 상세 설명도 검색 결과에 포함되어 있지 않습니다.**\n\n확인 가능한 정보만 정리하면:\n\n- **스시 카이신(鮨海信)**\n  - 분류: 음식점\n  - 주소: 서울특별시 강남구 도산대로100길 12\n  - 도로명주소: ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 17,
+          "user_input": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+          "response": "성북동에서 **고택 분위기**를 느끼고 싶다면 **청택고택**, 보다 가볍게 들를 수 있는 장소로는 **방우산장**을 비교해볼 수 있습니다.\n\n### 1. 청택고택\n- **유형:** 숙박\n- **주소:** 서울특별시 성북구 동소문로18길 12-6\n- **특징으로 볼 수 있는 점:** 검색 정보상 **고택 형태의 숙박 장소**입니다.\n\n**방문 시 기대할 수",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 18,
+          "user_input": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+          "response": "여의도 지역에서 편안한 숙박을 찾으신다면, 검색 결과 기준으로 다음 장소들이 있습니다.\n\n1. **글래드 여의도**  \n- 주소: 서울특별시 영등포구 의사당대로 16\n\n2. **메리어트 이그제큐티브 아파트먼트 서울 여의도**  \n- 주소: 서울특별시 영등포구 여의대로 8\n\n3. **켄싱턴호텔 여의도 (구. 렉싱턴호텔)**  \n- 주소: 서울특별시 영등포구 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 19,
+          "user_input": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+          "response": "Based on the searched place information, both **현복집 강남본점** and **영광밥상** are Korean restaurants in Seoul, but the available data mainly provides their names and locations, so I can only describe their ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 20,
+          "user_input": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+          "response": "Here are some 강남 restaurants from the search results that may suit a family gathering:\n\n1. **삼원가든**\n- Address: 서울특별시 강남구 언주로 835\n- Road address: 서울특별시 강남구 언주로 835\n\n2. **강남진해장**\n- Address: 서울특별시 강남구 테헤",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        }
+      ]
+    },
+    "gpt-5.4-mini": {
+      "avg_relevance": 0.696,
+      "avg_faithfulness": 0.638,
+      "avg_hallucination": 0.772,
+      "avg_usefulness": 0.686,
+      "overall_avg": 0.698,
+      "n_evaluated": 21,
+      "per_query": [
+        {
+          "idx": 0,
+          "user_input": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+          "response": "검색된 정보만 기준으로 말씀드리면, **소설한남**은 서울특별시 용산구 **한남대로20길 21-18(한남동)**에 위치한 **음식점**입니다.\n\n다만, 현재 제공된 검색 결과에는 이곳의 **메뉴, 분위기, 특징, 운영시간, 예약 여부** 같은 구체적인 정보가 없어서, “어떤 매력을 가지고 있는지”를 단정해 말씀드리기는 어렵습니다.\n\n방문할 때는 다음 점을 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "안양천제방벚꽃길은 **서울특별시 영등포구 양평동1가**에 위치한 관광지로, **상시 개방**되며 **연중무휴**입니다. 또한 **주차가 가능**합니다.\n\n장소명에 벚꽃길이 들어가 있어, 이름에서 느껴지는 것처럼 **벚꽃을 즐기며 산책하기 좋은 장소**로 볼 수 있습니다.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "검색된 장소 정보에는 **남산서울타워** 자체의 상세 정보는 없지만, **남산공원길**에 있는 장소들 기준으로 보면 다음처럼 참고할 수 있습니다.\n\n### 남산공원길 주변의 매력\n- **상시 개방**되는 곳이 있어 시간 제약 없이 들를 수 있습니다.\n- **남산순환나들길**은 **연중무휴**이며 **주차 가능**합니다.\n- **반공 청년운동 순국 열사 기념",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에 있는 음식점으로는 아래 곳들이 검색되었습니다.\n\n- 백년손님  \n  서울특별시 용산구 독서당로 23 (한남동)\n\n- 소설한남  \n  서울특별시 용산구 한남대로20길 21-18 (한남동)\n\n원하시면 제가 이 중에서 더 골라서 정리해드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길에 있는 장소로는 **유 아트 스페이스**가 검색되었습니다.\n\n- **유 아트 스페이스**  \n  - 유형: 문화시설  \n  - 주소: **서울특별시 강남구 압구정로71길 10 (청담동)**\n\n원하시면 압구정로71길 주변의 다른 장소도 함께 찾아드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 5,
+          "user_input": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+          "response": "검색된 정보에는 **서울우리소리박물관의 체험 방식**에 대한 구체적인 설명이 없습니다.  \n확인 가능한 정보는 다음뿐입니다.\n\n- **서울우리소리박물관**\n- 주소: **서울특별시 종로구 율곡로 96 (와룡동)**\n\n원하시면 제가 대신 **가까운 관련 문화시설**로는 **우리소리도서관**이나 **서울돈화문국악당**도 함께 소개해드릴게요.",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에는 다음 장소들이 있습니다.\n\n- **서울특별시교육청 강동도서관**: 문화시설\n- **강동반상**: 음식점\n- **강동선사문화축제**: 축제공연행사\n- **한강드론공원**: 레포츠\n- **한강**: 관광지\n\n원하시면 **맛집, 산책, 문화시설, 축제**처럼 목적별로도 골라드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "검색된 장소 정보 기준으로 답변드리면,\n\n- **도산안창호기념관**  \n  - 서울특별시 강남구 도산대로45길 20에 있습니다.  \n  - 검색 결과에는 **가족 대상 체험, 전시 내용, 편의시설**에 대한 정보가 따로 없습니다.  \n  - 따라서 이 장소가 가족에게 어떻게 맞는지에 대해서는 검색된 정보만으로는 구체적으로 말씀드릴 수 없습니다.\n\n- **화",
+          "hallucination": 0.8,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "검색된 정보 기준으로 보면, **응암정보도서관**은 서울 은평구에 있는 **문화시설**이고, **아트포레스트**는 이번 검색 결과에는 포함되어 있지 않아 구체적인 문화적 경험을 확인할 수 없습니다.\n\n따라서 검색된 정보만 바탕으로 답변드리면:\n\n- **응암정보도서관**: 도서관 성격의 **문화시설**로, 책과 정보 중심의 문화 경험을 제공하는 장소로 볼 수",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "검색된 장소 정보에는 **키즈오토파크**와 **일원에코파크**가 포함되어 있지 않아, 두 장소를 함께 방문했을 때의 구체적인 경험을 안내해드릴 수는 없습니다.\n\n대신 검색 결과에 있는 장소 중에서는 다음과 같은 곳을 참고하실 수 있습니다.\n\n- **경춘선숲길**: 서울특별시 노원구 하계동 107-2\n- **롤파크**: 서울특별시 종로구 종로 33\n- **[",
+          "hallucination": 0.6,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "검색된 정보 기준으로 보면, **남산서울타워**에 대한 정보는 확인할 수 있지만, **클럽케이서울**은 검색 결과에 없습니다.  \n그래서 클럽케이서울의 매력이나 방문 시간대는 알려드릴 수 없습니다.\n\n**남산서울타워**의 경우:\n- **매력**: 서울특별시 용산구 남산공원길 105에 있는 관광지입니다.\n- **방문하기 좋은 시간대**\n  - **평일**: ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 11,
+          "user_input": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+          "response": "검색된 장소 정보에는 **라프레플루트**와 **성수부두**가 포함되어 있지 않아, 각각이 어떤 특별한 경험을 제공하는지 구체적으로 답변드릴 수 없습니다.\n\n다만 검색된 정보 기준으로 **서울숲 근처/성수동**의 관련 장소는 다음과 같습니다.\n\n- **서울숲**: 관광지\n  - 상시 개방\n  - 생태숲, 곤충식물원, 나비정원이 있음\n  - 일부 구역은 반려동",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 12,
+          "user_input": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+          "response": "검색된 장소 정보 기준으로는 **메리어트 이그제큐티브 아파트먼트 서울 여의도**는 확인되지만, **고려정**에 대한 정보는 없습니다. 따라서 고려정의 특징은 답변할 수 없습니다.\n\n메리어트 이그제큐티브 아파트먼트 서울 여의도의 정보는 다음과 같습니다:\n- **숙박 시설**\n- **주소:** 서울특별시 영등포구 여의대로 8 (여의도동)\n- **도로명 주소:*",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 13,
+          "user_input": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+          "response": "검색된 장소 정보에는 **도산안창호기념관**만 포함되어 있고, **아모레퍼시픽미술관** 정보는 없습니다. 그래서 검색 결과를 바탕으로만 답하면, 도산안창호기념관에 대해서는 다음처럼 말할 수 있습니다.\n\n- **도산안창호기념관**: 서울특별시 강남구 도산대로45길 20에 있는 **문화시설**입니다.\n\n다만, **가족 방문에 적합한 특별한 특징**이나 **아모",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 14,
+          "user_input": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+          "response": "검색된 장소 정보 기준으로 보면, **양천구에 있는 곳**으로 확인되는 것은 **한생연 생명과학박물관**입니다.  \n반면 **양천문화회관**은 이번 검색 결과에 포함되어 있지 않아, 제공할 수 있는 정보가 없습니다.\n\n### 한생연 생명과학박물관\n- **분류:** 문화시설\n- **주소:** 서울특별시 양천구 목동동로 206-1 (목동)\n\n이 장소는 이름상 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 15,
+          "user_input": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+          "response": "석촌동에서는 검색된 정보 기준으로 **장칼집**과 **카페 마나랑**을 찾을 수 있습니다.\n\n- **장칼집**:  \n  주소는 **서울특별시 송파구 가락로6길 3 (석촌동)**이며, 음식점입니다.  \n  검색된 정보에는 구체적인 메뉴나 분위기 설명은 없지만, 석촌동에 있는 식사 장소로 방문할 수 있습니다.\n\n- **카페 마나랑**:  \n  주소는 **서울특",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 16,
+          "user_input": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+          "response": "검색된 장소 정보에는 **그릴에이치**에 대한 정보가 없습니다.  \n따라서 **그릴에이치와 스시 카이신의 특징을 함께 비교해 드릴 수는 없습니다.**\n\n검색된 정보 기준으로 **스시 카이신(鮨海信)**은 다음과 같습니다.\n- **장소 유형:** 음식점\n- **주소:** 서울특별시 강남구 도산대로100길 12\n- **도로명 주소:** 서울특별시 강남구 도산대",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 17,
+          "user_input": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+          "response": "성북동에서 **고택**과 **방우산장**은 분위기와 방문 경험이 조금 다릅니다.\n\n### 1) 고택: 청택고택\n- **분류:** 숙박\n- **주소:** 서울특별시 성북구 동소문로18길 12-6\n- **연락처:** 0507-1498-2356\n\n청택고택은 **숙박 시설**이기 때문에, 방문하면 단순히 둘러보는 것보다 **머물며 공간을 체험하는 경험**에 더 가",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 18,
+          "user_input": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+          "response": "여의도 지역에서 편안한 숙박을 즐기기 좋은 장소로는 다음이 있습니다.\n\n- **글래드 여의도**  \n  서울특별시 영등포구 의사당대로 16\n\n- **메리어트 이그제큐티브 아파트먼트 서울 여의도**  \n  서울특별시 영등포구 여의대로 8\n\n- **켄싱턴호텔 여의도 (구. 렉싱턴호텔)**  \n  서울특별시 영등포구 국회대로76길 16  \n  전화: 02-667",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 19,
+          "user_input": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+          "response": "검색된 정보에는 **두 곳의 구체적인 메뉴, 분위기, 특색 있는 서비스**에 대한 내용이 없어, 각 식당의 **유니크한 특징이나 dining experience**를 단정해서 설명할 수는 없습니다.\n\n다만 확인 가능한 정보는 다음과 같습니다.\n\n- **현복집 강남본점**:  \n  - 음식점  \n  - 서울특별시 강남구 도산대로50길 14 (논현동)\n\n- *",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 20,
+          "user_input": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+          "response": "강남에서 가족 모임에 어울릴 만한 **한식** 식당으로는 아래 장소들을 추천할 수 있습니다.\n\n- **삼원가든**  \n  - 주소: 서울특별시 강남구 언주로 835\n\n- **강남진해장**  \n  - 주소: 서울특별시 강남구 테헤란로5길 11 (역삼동)\n\n- **고래불**  \n  - 주소: 서울특별시 강남구 논현로79길 62 (역삼동)\n\n검색된 정보에는 각 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        }
+      ]
+    },
+    "gpt-5.4-nano": {
+      "avg_relevance": 0.704,
+      "avg_faithfulness": 0.61,
+      "avg_hallucination": 0.79,
+      "avg_usefulness": 0.724,
+      "overall_avg": 0.708,
+      "n_evaluated": 21,
+      "per_query": [
+        {
+          "idx": 0,
+          "user_input": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+          "response": "한남대로20길 21-18에 위치한 **음식점 ‘소설한남’**에 대해 검색된 정보는 **위치(주소)**뿐이라, “어떤 매력(대표 메뉴/분위기/맛/특징)”이나 “방문 시 고려할 점(영업시간, 예약 필요 여부 등)”은 확인할 수 없습니다.\n\n다만, 방문을 고려하실 때는 최소한 아래 사항은 **직접 확인**하시는 것을 권장드려요.\n- **영업 여부/시간**(휴무일",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "서울특별시 영등포구 **양평동1가**에 있는 **안양천제방벚꽃길**은, 검색된 정보 기준으로는 **상시 개방(연중무휴)**이고 **주차도 가능**한 곳입니다.  \n\n즉, 계절에 크게 구애받지 않고 언제든 방문하기 좋고, 교통 부담도 비교적 적게 이용할 수 있는 **산책/드라이브 겸 나들이 코스**로 접근하기에 매력적인 장소예요.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "제공된 검색 정보에는 **남산공원길에 있는 “남산서울타워”** 정보가 포함되어 있지 않습니다. 따라서 **타워의 매력이나 방문 시 고려사항**을 검색 정보 기반으로는 답변할 수 없어요.\n\n대신, 남산공원길(남산공원길 주소로 검색된 장소) 중 방문을 고려할 수 있는 곳은 아래와 같습니다.\n\n- **남산순환나들길** (서울특별시 중구 남산공원길 609, 예장동",
+          "hallucination": 1.0,
+          "faithfulness": 0.4,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에서 가기 좋은 음식점으로는 아래가 있어요.\n\n1. **백년손님**  \n   - 주소: 서울특별시 용산구 **독서당로 23** (한남동)\n\n2. **소설한남**  \n   - 주소: 서울특별시 용산구 **한남대로20길 21-18** (한남동)\n\n원하시면 “한식/중식/면류”처럼 어떤 종류를 원하시는지 말씀해 주세요. 그에 맞춰 골라드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길(검색된 정보 기준)에는 아래 장소가 있습니다.\n\n- **유 아트 스페이스** (문화시설)  \n  - 주소: **서울특별시 강남구 압구정로71길 10 (청담동)**\n\n원하시면 “근처에서 같이 가볼 만한 곳”도 검색 결과 범위 안에서 묶어서 추천해드릴게요.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 5,
+          "user_input": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+          "response": "서울우리소리박물관(서울특별시 종로구 율곡로 96)에서 **소리 문화**를 “어떻게 체험”할 수 있는지에 대한 구체적인 체험 프로그램(전시/체험 내용, 운영 방식 등)은 제공된 검색 정보에 없습니다.  \n\n대신, 해당 장소 정보로는 **위치(주소)**만 확인됩니다:  \n- **서울우리소리박물관**: 서울특별시 종로구 율곡로 96 (와룡동)\n\n원하시면, “체험",
+          "hallucination": 0.8,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에서 가볼 만한 곳(검색된 정보 기준)으로는 아래가 있어요.\n\n1) **서울특별시교육청 강동도서관** (문화시설)  \n- 주소: 서울특별시 강동구 양재대로116길 57 (길동) / 서울특별시 강동구 양재대로116길 57 강동도서관\n\n2) **강동반상** (음식점)  \n- 주소: 서울특별시 강동구 상일로6길 39 강동타워\n\n3) **강동선사문화축제** ",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "죄송하지만, 제공된 검색 결과에는 **도산안창호기념관** 정보만 있고, 질문에 나온 **“화랑대 철도공원”**에 대한 검색 정보는 없습니다. 또한 각 장소의 **핵심 전시/체험의 구체적인 내용**도 검색 결과에 포함되어 있지 않아, 그 밖의 정보를 추가로 단정해 설명할 수는 없습니다.\n\n다만, 검색 결과에 기반해 확인 가능한 범위는 아래와 같습니다.\n\n##",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "요청하신 **응암정보도서관**은 검색 결과에 있는 정보로는 확인되지만, **아트포레스트(Art Forest)**는 이번 검색 결과에 **없어서** 구체적인 문화적 경험을 설명할 수 없습니다. 대신 **응암정보도서관**에서 제공되는 문화적 성격은 “도서관(문화시설)”이라는 점까지는 말할 수 있어요.  \n\n## 1) 응암정보도서관(은평구 가좌로 179)\n- *",
+          "hallucination": 0.8,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "검색된 장소 정보에는 **“키즈오토파크”**나 **“일원에코파크”** 항목이 없어, 해당 두 곳을 기준으로 어떤 경험을 할 수 있는지는 확인해 드릴 수 없습니다.\n\n대신, 검색 결과에 있는 비슷한 성격의(체험/레포츠) 장소로는 아래를 방문해 볼 수 있어요.\n\n- **경춘선숲길**: 서울 노원구 하계동에 있는 숲길로, 자연 속에서 걷기/즐기기 경험을 할 수 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "검색된 정보 기준으로 보면, **클럽케이서울**은 목록에 없어서(검색 결과에 없음) 그 장소의 매력/방문 시간은 안내할 수 없습니다. 대신 **남산서울타워**는 아래처럼 정리할 수 있어요.\n\n## 남산서울타워(남산서울타워) 매력\n- 남산공원에 있는 **서울타워(관광지)**로, **평일/주말 모두 운영**되어 방문 계획을 잡기 좋습니다.\n- 위치: **서울특",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 11,
+          "user_input": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+          "response": "검색된 정보에는 **라프레플루트**와 **성수동의 성수부두**에 대한 내용이 없어서, 해당 두 장소의 “특별한 경험”이나 “분위기/특징”을 비교해 드릴 수는 없습니다.\n\n대신, **서울숲(근처 관광지)**에 대해서는 확인된 정보로 분위기와 운영 특징을 정리해드릴게요.\n\n## 1) 서울숲(비교 기준: 자연/휴식형 분위기)\n- **상시 개방**(서울숲/생태숲은",
+          "hallucination": 1.0,
+          "faithfulness": 0.4,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 12,
+          "user_input": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+          "response": "제공된 검색 정보에는 **메리어트 이그제큐티브 아파트먼트 서울 여의도**에 대한 “고유한 특징(amenities/장점)” 설명이 없고, 또한 질문에 언급된 **“고려정”**에 대한 검색 결과도 확인되지 않습니다. 따라서 요청하신 “특징이 무엇인지”를 근거 없이 추가로 설명할 수는 없습니다.\n\n다만, 검색된 정보로 확인 가능한 것은 아래와 같습니다.\n\n- *",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 13,
+          "user_input": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+          "response": "검색된 정보 기준으로 말씀드리면, **도산안창호기념관**은 “문화시설”로 분류되어 있고, 위치가 **서울특별시 강남구 도산대로45길 20 (신사동)**(도산전시관)로 확인됩니다. 다만, 요청하신 “가족 방문에 적합하게 만드는 독특한 특징(예: 체험/전시 구성, 가족 동반 편의시설 등)”에 대한 구체 정보는 검색 결과에 포함되어 있지 않습니다.\n\n또한 질문에",
+          "hallucination": 0.4,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 14,
+          "user_input": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+          "response": "검색된 정보 기준으로는 **“양천문화회관”**(양천구 내)의 장소 정보가 확인되지 않아, 그에 대한 문화적 경험/교육적 기회를 답변드릴 수 없습니다. 대신 **양천구의 다른 교육·문화 시설**과 **한생연 생명과학박물관**은 아래처럼 정리할 수 있습니다.\n\n## 한생연 생명과학박물관 (양천구)\n- **위치:** 서울특별시 양천구 목동동로 206-1 (목동)",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 15,
+          "user_input": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+          "response": "석촌동에서 **장칼집**과 **카페 마나랑**은 분위기와 목적이 다르게 즐길 수 있는 “식사/모임” 선택지로 보입니다. (아래 내용은 검색된 정보 내에서만 정리했습니다.)\n\n## 1) 장칼집 (석촌동) — “함께 먹기 좋은 식사 중심”\n- **위치:** 서울특별시 송파구 가락로6길 3-3 홍진빌라 (석촌동)\n- **고유한 포인트:** 검색 결과에서 이곳은 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 16,
+          "user_input": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+          "response": "검색된 장소 정보에는 **“그릴에이치”** 정보가 없어서, 그릴에이치의 특징은 안내드릴 수 없습니다. 대신 **도산대로에 위치한 스시 카이신(鮨海信)** 정보는 확인됩니다.\n\n## 스시 카이신(鮨海信) 특징(검색 정보 기준)\n- **종류:** 음식점(스시)\n- **위치:** 서울특별시 강남구 **도산대로100길 12** (도산대로 인근)\n- **주소:** ",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 17,
+          "user_input": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+          "response": "아래 두 곳(성북동 **청택고택**, 성북동 **방우산장**)은 모두 성북동의 전통적인 분위기를 느낄 수 있지만, “어떤 유형의 경험”을 하게 되는지는 조금 다릅니다.\n\n## 1) 청택고택(고택 숙박)\n- **방문 시 경험**\n  - 고택을 **숙박 형태로 이용**할 수 있어, 단순히 구경하고 끝나는 방문보다 **생활 공간처럼 더 오래 머무르며 분위기를 체",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 1.0
+        },
+        {
+          "idx": 18,
+          "user_input": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+          "response": "여의도 지역에서 **편안한 숙박**과 함께 **맛있는 음식**을 즐기기 좋은 곳으로는 아래 숙박 장소들이 적합합니다.\n\n- **글래드 여의도** (숙박)  \n  - 주소: 서울특별시 영등포구 의사당대로 16 (여의도동) / 서여의도 비즈니스호텔\n\n- **메리어트 이그제큐티브 아파트먼트 서울 여의도** (숙박)  \n  - 주소: 서울특별시 영등포구 여의대로 ",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 19,
+          "user_input": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+          "response": "죄송하지만, 제공된 검색 정보에는 **현복집 강남본점**과 **영광밥상**의 “독특한 특징(메뉴/조리 방식/분위기/대표 시그니처 등)”에 대한 내용이 없습니다. 그래서 두 곳이 제공하는 **고유한 경험**이 무엇인지, 그리고 그것이 **서울 한식의 매력**을 어떻게 드러내는지에 대해 **근거 없이 추가 설명**할 수는 없어요.\n\n다만, 검색 결과에 있는 정",
+          "hallucination": 0.8,
+          "faithfulness": 0.4,
+          "relevance": 0.4,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 20,
+          "user_input": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+          "response": "강남에서 **가족 모임하기 좋은 아늑한 분위기**로 즐기기 좋은 한식(또는 한식으로 알려진 곳)으로 아래 음식점들을 추천드립니다.\n\n1. **삼원가든** (강남구 언주로 835)  \n   - 서울특별시 강남구 언주로 835  \n2. **강남진해장** (강남구 테헤란로5길 11)  \n   - 서울특별시 강남구 테헤란로5길 11 (역삼동)  \n\n※ 참고: 검색",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        }
+      ]
+    },
+    "claude-haiku-4-5": {
+      "avg_relevance": 0.75,
+      "avg_faithfulness": 0.62,
+      "avg_hallucination": 0.88,
+      "avg_usefulness": 0.73,
+      "overall_avg": 0.75,
+      "n_evaluated": 21,
+      "per_query": [
+        {
+          "idx": 0,
+          "user_input": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+          "response": "# 소설한남 안내\n\n**위치 정보**\n소설한남은 서울특별시 용산구 한남대로20길 21-18 (한남동)에 위치하고 있습니다.\n\n**안내 사항**\n죄송하지만, 저는 제공된 기본 정보(위치, 주소)만 보유하고 있어서 소설한남의 구체적인 매력, 음식 종류, 분위기, 예약 방법, 영업시간 등의 상세 정보는 알려드릴 수 없습니다.\n\n**추천**\n방문 전에 다음을 확인",
+          "usefulness": 0.6,
+          "faithfulness": 0.4,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "안양천제방벚꽃길은 서울특별시 영등포구 양평동1가에 위치한 아름다운 관광지입니다.\n\n이곳은 **상시 개방**되어 있으며 **연중무휴**로 운영되고 있어 언제든지 방문할 수 있습니다. 또한 **주차가 가능**하여 자동차로 편리하게 방문할 수 있다는 장점이 있습니다.\n\n안양천제방벚꽃길은 제방을 따라 펼쳐진 경관이 특징적인 장소로, 특히 벚꽃 시즌에 아름다운 풍경",
+          "usefulness": 1.0,
+          "faithfulness": 1.0,
+          "hallucination": 1.0,
+          "relevance": 1.0
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "죄송하지만, 남산서울타워는 제가 추천해드릴 수 있는 장소 목록에 포함되어 있지 않습니다.\n\n대신 남산공원길 주변에서 추천드릴 수 있는 장소들을 소개해드립니다:\n\n**반공 청년운동 순국 열사 기념비**\n남산공원길 125-72에 위치하고 있으며, 상시 개방되는 관광지입니다. 역사적 의미를 담은 장소로 연중무휴로 방문할 수 있습니다.\n\n**남산순환나들길**\n남산",
+          "usefulness": 0.8,
+          "faithfulness": 0.4,
+          "hallucination": 1.0,
+          "relevance": 0.6
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에는 좋은 음식점들이 있습니다!\n\n**백년손님**은 서울특별시 용산구 독서당로 23에 위치하고 있으며, 한남동 지역에서 인기 있는 식당입니다.\n\n또한 **소설한남**도 한남동에 있는데, 서울특별시 용산구 한남대로20길 21-18에 자리 잡고 있습니다.\n\n두 곳 모두 한남동의 매력적인 음식점들이니 방문해보시기를 추천합니다!",
+          "usefulness": 0.8,
+          "faithfulness": 0.8,
+          "hallucination": 1.0,
+          "relevance": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길에는 **유 아트 스페이스**가 있습니다.\n\n이곳은 문화시설로, 서울특별시 강남구 청담동에 위치하고 있습니다. 예술과 문화를 즐기고 싶으신 분들에게 좋은 장소입니다.\n\n주소: 서울특별시 강남구 압구정로71길 10 (청담동)",
+          "usefulness": 0.8,
+          "faithfulness": 0.8,
+          "hallucination": 1.0,
+          "relevance": 1.0
+        },
+        {
+          "idx": 5,
+          "user_input": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+          "response": "서울우리소리박물관은 서울특별시 종로구 율곡로 96(와룡동)에 위치한 문화시설입니다.\n\n다만, 죄송하지만 제가 보유한 정보에는 박물관에서 구체적으로 어떤 방식으로 소리 문화를 체험할 수 있는지에 대한 상세 내용이 없습니다. \n\n박물관의 정확한 전시 내용, 체험 프로그램, 운영 시간 등에 대해서는 직접 방문 전에 박물관에 문의하시거나 공식 웹사이트를 확인하시는",
+          "usefulness": 0.6,
+          "faithfulness": 0.4,
+          "hallucination": 1.0,
+          "relevance": 0.6
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에는 다양한 볼거리와 즐길 거리가 있습니다!\n\n**문화와 휴식**\n- **서울특별시교육청 강동도서관**: 양재대로116길 57에 위치한 문화시설로, 책과 문화를 즐길 수 있습니다.\n\n**음식**\n- **강동반상**: 상일로6길 39 강동타워에 있는 음식점입니다.\n\n**축제**\n- **강동선사문화축제**: 올림픽로 875의 서울 암사동 유적에서 열리는 ",
+          "usefulness": 0.8,
+          "faithfulness": 0.8,
+          "hallucination": 1.0,
+          "relevance": 0.8
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "# 서울 여행 추천\n\n안녕하세요! 서울 여행에 대해 도와드리겠습니다.\n\n## 도산안창호기념관\n\n**도산안창호기념관**은 서울 강남구 신사동에 위치한 문화시설입니다. \n- **위치**: 서울특별시 강남구 도산대로45길 20 (신사동)\n\n이곳은 역사와 문화를 체험할 수 있는 의미 있는 공간으로, 서울 관광 시 방문할 만한 장소입니다.\n\n---\n\n## 안내\n\n죄",
+          "usefulness": 0.6,
+          "faithfulness": 0.4,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "안녕하세요! 서울 여행에 관심을 가져주셔서 감사합니다.\n\n**응암정보도서관**은 서울 은평구에 위치한 문화시설로, 도서관으로서 다양한 정보 자료와 문화 프로그램을 통해 풍요로운 문화 경험을 제공합니다. 주소는 서울특별시 은평구 가좌로 179입니다.\n\n다만, 죄송하지만 **아트포레스트**는 제가 추천할 수 있는 장소 목록에 없어서 자세한 정보를 드릴 수 없습",
+          "usefulness": 0.6,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "죄송하지만, 제가 추천할 수 있는 장소 목록에 **키즈오토파크**와 **일원에코파크**는 포함되어 있지 않습니다.\n\n현재 저는 다음의 서울 여행지만 추천해드릴 수 있습니다:\n\n- **경춘선숲길** (노원구) - 자연을 즐길 수 있는 산책로\n- **롤파크** (종로구) - 레포츠 활동\n- **[서울둘레길 1코스] 수락산코스** (도봉구) - 무료 등산 코스\n",
+          "usefulness": 0.6,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "안녕하세요! 서울 여행에 관심을 가져주셔서 감사합니다.\n\n질문하신 **클럽케이서울**은 제가 추천할 수 있는 장소 목록에 없어서 정보를 드릴 수 없습니다. 죄송합니다.\n\n다만 **남산서울타워**는 기꺼이 추천해드릴 수 있습니다!\n\n## 남산서울타워의 매력\n남산서울타워는 서울의 대표적인 관광지로, 서울 전역을 한눈에 내려다볼 수 있는 멋진 경험을 제공합니다.",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 11,
+          "user_input": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+          "response": "죄송하지만, 라프레플루트와 성수부두는 제가 추천할 수 있는 장소 목록에 없어서 자세한 정보를 드릴 수 없습니다.\n\n대신 서울숲 근처에서 추천할 수 있는 장소들을 소개해드리겠습니다:\n\n**서울숲** - 자연을 즐길 수 있는 관광지로, 생태숲, 곤충식물원, 나비정원 등 다양한 시설이 있습니다. 산책과 휴식에 좋습니다.\n\n**기후** - 서울숲 드림타워에 위치한",
+          "usefulness": 0.6,
+          "faithfulness": 0.4,
+          "hallucination": 0.8,
+          "relevance": 0.6
+        },
+        {
+          "idx": 12,
+          "user_input": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+          "response": "# 여의도 숙박 추천\n\n질문해주신 **메리어트 이그제큐티브 아파트먼트 서울 여의도**에 대해 안내해드리겠습니다.\n\n## 메리어트 이그제큐티브 아파트먼트 서울 여의도\n\n이 숙소는 **여의도파크센터**에 위치하고 있으며, 여의대로 8번지에 자리하고 있습니다. 메리어트의 신뢰할 수 있는 브랜드로서 편안한 숙박 경험을 제공합니다.\n\n**위치 정보:**\n- 주소: ",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 13,
+          "user_input": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+          "response": "# 서울 가족 방문 추천 장소\n\n제가 추천 가능한 장소 중에서 **도산안창호기념관**에 대해 소개해드리겠습니다.\n\n## 도산안창호기념관\n**위치:** 서울특별시 강남구 도산대로45길 20 (신사동)\n\n도산안창호기념관은 문화시설로서 한국 근현대 역사와 문화를 배울 수 있는 의미 있는 공간입니다. 가족과 함께 방문하여 역사 교육을 받을 수 있으며, 강남 신사동",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 14,
+          "user_input": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+          "response": "안녕하세요! 양천구의 문화시설에 대해 질문해주셨네요.\n\n제가 정보를 가지고 있는 양천구 시설 중에서는 **한생연 생명과학박물관**을 추천드립니다.\n\n**한생연 생명과학박물관**\n- 위치: 서울특별시 양천구 목동동로 206-1 (목동)\n- 생명과학 분야의 교육적 경험을 제공하는 문화시설입니다.\n\n다만, 양천문화회관에 대해서는 제가 보유한 정보가 없어 구체적으",
+          "usefulness": 0.6,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 15,
+          "user_input": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+          "response": "# 석촌동의 독특한 식사 경험\n\n석촌동 지역에는 매력적인 식당들이 있습니다.\n\n## 장칼집\n**위치**: 서울특별시 송파구 가락로6길 3-3 (석촌동)\n\n장칼집은 석촌동에 위치한 음식점으로, 지역 주민들과 방문객들이 찾는 식당입니다.\n\n## 카페 마나랑\n**위치**: 서울특별시 송파구 송파대로49길 37 (석촌동)\n\n카페 마나랑은 석촌동 지역의 카페로, 편",
+          "usefulness": 0.6,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 16,
+          "user_input": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+          "response": "죄송하지만, 그릴에이치는 제가 추천할 수 있는 장소 목록에 없어서 정보를 드릴 수 없습니다.\n\n다만 도산대로에 위치한 **스시 카이신(鮨海信)**은 추천해드릴 수 있습니다. 이곳은 서울특별시 강남구 도산대로100길 12에 위치한 음식점으로, 도산 지역의 고급 식당 중 하나입니다.\n\n도산대로 주변에는 스시 카이신 외에도 **스시 장종현**(도산대로85길 13",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 17,
+          "user_input": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+          "response": "# 성북동의 두 매력 장소 비교\n\n## 청택고택\n청택고택은 전통 한옥 숙박시설로, 성북동의 역사 깊은 동소문로18길에 위치하고 있습니다. 이곳에서는 **한옥에서의 숙박 경험**을 통해 전통 건축미를 직접 체험할 수 있습니다. 고택의 고즈넉한 분위기 속에서 서울의 옛 정취를 느끼며 여유로운 시간을 보낼 수 있다는 것이 가장 큰 매력입니다.\n\n## 방우산장\n방",
+          "usefulness": 0.8,
+          "faithfulness": 0.8,
+          "hallucination": 1.0,
+          "relevance": 1.0
+        },
+        {
+          "idx": 18,
+          "user_input": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+          "response": "여의도 지역에서 편안한 숙박을 원하신다면 다음 세 곳을 추천드립니다.\n\n**글래드 여의도**\n서울특별시 영등포구 의사당대로 16에 위치한 비즈니스호텔로, 여의도의 중심부에서 편리하게 이용할 수 있습니다.\n\n**메리어트 이그제큐티브 아파트먼트 서울 여의도**\n여의대로 8의 여의도파크센터에 위치하며, 아파트먼트 형태로 더욱 편안한 숙박 경험을 제공합니다.\n\n*",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        },
+        {
+          "idx": 19,
+          "user_input": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+          "response": "# 서울의 한식 매력을 담은 두 식당\n\n## 현복집 강남본점\n강남구 도산대로50길에 위치한 **현복집 강남본점**은 서울의 트렌디한 논현동 지역에서 전통 한식의 정수를 선보이는 식당입니다. 강남의 세련된 분위기 속에서 정통 한식 요리를 경험할 수 있는 곳으로, 현지인과 방문객 모두에게 사랑받고 있습니다.\n\n## 영광밥상\n서초구 사평대로56길의 **영광밥상*",
+          "usefulness": 0.8,
+          "faithfulness": 0.8,
+          "hallucination": 1.0,
+          "relevance": 0.8
+        },
+        {
+          "idx": 20,
+          "user_input": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+          "response": "강남 지역의 한식당 중에서 가족 모임에 좋은 분위기의 식당들을 추천해드립니다.\n\n**삼원가든** (서울특별시 강남구 언주로 835)\n- 전화: 정보 미제공\n- 가족 단위의 식사에 적합한 한식당입니다.\n\n**강남진해장** (서울특별시 강남구 테헤란로5길 11)\n- 전화: 정보 미제공\n- 편안한 분위기에서 즐길 수 있는 한식 식당입니다.\n\n**고래불** (서울",
+          "usefulness": 0.8,
+          "faithfulness": 0.6,
+          "hallucination": 0.8,
+          "relevance": 0.8
+        }
+      ]
+    },
+    "ollama-llama3.2": {
+      "avg_relevance": 0.822,
+      "avg_faithfulness": 0.688,
+      "avg_hallucination": 0.756,
+      "avg_usefulness": 0.778,
+      "overall_avg": 0.762,
+      "n_evaluated": 9,
+      "per_query": [
+        {
+          "idx": 1,
+          "user_input": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+          "response": "안양천제방벚꽃길은 서울시에 있는 관광지입니다. 이 곳은 벚꽃이 피는 시기에는 매우 매력적이며, 자연의 아름다움을 감상할 수 있습니다.\n\n안양천제방벚꽃길은 양평동1가에 위치하고 있으며 상시 개방을 하며, 연중무휴로 방문할 수 있습니다. 이 곳은 주변의 공원과 도로를 따라서 벚꽃이 피는 시기에는 매우 아름답습니다.\n\n안양천제방벚꽃길은 주변의 자연을 감상할 수 ",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 2,
+          "user_input": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+          "response": "남산서울타워는 서울의 대표적인 관광지 중 하나입니다. 이곳은 남산의 정상에 위치해 있으며, 서울의 전경을 감상할 수 있는 장소입니다.\n\n남산서울타워는 매력적으로 다음과 같은 점이 있습니다:\n\n*   서울의 전경을 감상할 수 있는 장소\n*   남산의 정상에 위치해 있으며, 서울의 전경을 감상할 수 있는 장소입니다.\n*   서울의 대표적인 관광지 중 하나입니다",
+          "hallucination": 0.8,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 3,
+          "user_input": "한남동에 뭐 좋은 음식점 있어?",
+          "response": "한남동에 좋은 음식점은 백년손님과 소설한남이 있습니다.",
+          "hallucination": 0.8,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 4,
+          "user_input": "압구정로71길 뭐가 있어?",
+          "response": "압구정로71길에 유 아트 스페이스가 있습니다.",
+          "hallucination": 1.0,
+          "faithfulness": 1.0,
+          "relevance": 1.0,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 6,
+          "user_input": "강동구에 뭐가 있어?",
+          "response": "강동구에 있는 문화시설 중 하나는 서울특별시 교육청 강동도서관입니다. 이 도서관은 강동구 길동 362에 위치하고 있으며, 다양한 문화 활동과 교육 프로그램을 제공합니다.",
+          "hallucination": 1.0,
+          "faithfulness": 0.8,
+          "relevance": 0.8,
+          "usefulness": 0.6
+        },
+        {
+          "idx": 7,
+          "user_input": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+          "response": "도산안창호기념관은 서울의 문화시설 중 하나입니다. 이 기념관은 안창호의 삶과 업적을 다루고 있습니다. 도산안창호기념관은 가족-friendly한 장소로, 특히 어린이들이 좋아하는 과학 및 자연에 대한 exhibits가 많습니다.\n\n화랑대 철도공원은 서울의 공원 중 하나입니다. 이 공원에는 철도역과 함께 있는 화랑대와 함께 철도 역사와 문화를 다루고 있습니다.",
+          "hallucination": 0.6,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 8,
+          "user_input": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+          "response": "응암정보도서관은 서울의 문화와 교육을 위한 중요한 역할을 하고 있으며, 다양한 문화 및 예술 작품을 전시하고 있습니다. 또한, 이곳에서 다양한 문화적 활동과 workshops를 제공합니다.\n\n아트포레스트는 아트와 कल라임을 주제로 하는 문화 시설입니다. 이곳에서는 다양한 아트 작품을 전시하고 있으며, 아트와 관련된 다양한 활동과 workshop도 제공합니다",
+          "hallucination": 0.4,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 9,
+          "user_input": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+          "response": "일원에코파크를 방문하면 자연과 도시의 조화를 느끼는 경험을 할 수 있습니다. 일원에코파크는 자연과 도시의 조화를 통해 어린이 automobile 체험을 하면서 자연과 도시의 조화가 이루어진 경험을 할 수 있습니다.\n\n키즈돌핀 서대문DMC점은 자연과 도시의 조화를 통해 어린이 automobile 체험을 하면서 자연과 도시의 조화가 이루어진 경험을 할 수 있습",
+          "hallucination": 0.6,
+          "faithfulness": 0.4,
+          "relevance": 0.6,
+          "usefulness": 0.8
+        },
+        {
+          "idx": 10,
+          "user_input": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+          "response": "클럽 케이 Seoul은 서울에서 가장 유명한 클럽 중 하나로, 다양한 장르의 뮤직비디오와 DJ를 제공합니다. 클럽 케이 Seoul은 주말과 일요일을 제외하고 평일 22:00부터 04:00까지 운영합니다.\n\n남산서울타워는 서울의 대표적인 관광지 중 하나로, 서울의 시대상과 문화를 보여주는 다양한 매력을 가지고 있습니다. 남산서울타워는 연중무휴로 운영되며, 평",
+          "hallucination": 0.6,
+          "faithfulness": 0.6,
+          "relevance": 0.8,
+          "usefulness": 0.8
+        }
+      ]
+    }
+  }
+}

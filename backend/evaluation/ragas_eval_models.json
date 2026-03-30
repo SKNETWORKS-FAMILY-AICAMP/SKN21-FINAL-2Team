@@ -1,0 +1,471 @@
+{
+  "ragas_metrics": {
+    "gpt-4o-mini": {
+      "faithfulness": 0.239,
+      "answer_relevancy": 0.427,
+      "overall": 0.333,
+      "n": 21,
+      "per_query": [
+        {
+          "faithfulness": 0.1111111111111111,
+          "answer_relevancy": 0.49210803053057783
+        },
+        {
+          "faithfulness": 0.375,
+          "answer_relevancy": 0.3724038948653848
+        },
+        {
+          "faithfulness": 0.6363636363636364,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.25,
+          "answer_relevancy": 0.6935541026478861
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.7718567218601056
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.6794183183414423
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.7995170908526291
+        },
+        {
+          "faithfulness": 0.08333333333333333,
+          "answer_relevancy": 0.6549694250298316
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.2857142857142857,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.2,
+          "answer_relevancy": 0.569414624808579
+        },
+        {
+          "faithfulness": 0.18181818181818182,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.14285714285714285,
+          "answer_relevancy": 0.6870968258494472
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.6815962775310989
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.2857142857142857,
+          "answer_relevancy": 0.49014009742752684
+        },
+        {
+          "faithfulness": 0.125,
+          "answer_relevancy": 0.49998340554936554
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.8262994831410172
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.7440723299775877
+        }
+      ]
+    },
+    "gpt-5.4": {
+      "faithfulness": 0.663,
+      "answer_relevancy": 0.283,
+      "overall": 0.473,
+      "n": 21,
+      "per_query": [
+        {
+          "faithfulness": 0.36363636363636365,
+          "answer_relevancy": 0.5493621910001475
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.4288361584465273
+        },
+        {
+          "faithfulness": 0.7142857142857143,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.4,
+          "answer_relevancy": 0.6236968550725758
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.5893890082282374
+        },
+        {
+          "faithfulness": 0.5714285714285714,
+          "answer_relevancy": 0.6294054464341109
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.634443695338321
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.8,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.7142857142857143,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.6666666666666666,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.6666666666666666,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.25,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.625,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.8181818181818182,
+          "answer_relevancy": 0.6805521445268763
+        },
+        {
+          "faithfulness": 0.8,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.5510243575771951
+        },
+        {
+          "faithfulness": 0.875,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.6666666666666666,
+          "answer_relevancy": 0.5339798597082402
+        },
+        {
+          "faithfulness": 0.0,
+          "answer_relevancy": 0.7156704521062652
+        }
+      ]
+    },
+    "gpt-5.4-mini": {
+      "faithfulness": 0.59,
+      "answer_relevancy": 0.233,
+      "overall": 0.412,
+      "n": 21,
+      "per_query": [
+        {
+          "faithfulness": 0.7142857142857143,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5714285714285714,
+          "answer_relevancy": 0.3867423995602833
+        },
+        {
+          "faithfulness": 0.7777777777777778,
+          "answer_relevancy": 0.5432969804059312
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.664745518726845
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.30919197643283475
+        },
+        {
+          "faithfulness": 0.6,
+          "answer_relevancy": 0.7113113878744004
+        },
+        {
+          "faithfulness": 0.6,
+          "answer_relevancy": 0.6540353576509134
+        },
+        {
+          "faithfulness": 0.125,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.25,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.7142857142857143,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.8571428571428571,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.16666666666666666,
+          "answer_relevancy": 0.599434800830939
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5454545454545454,
+          "answer_relevancy": 0.5509906725857183
+        },
+        {
+          "faithfulness": 0.6666666666666666,
+          "answer_relevancy": 0.47029803272473947
+        },
+        {
+          "faithfulness": 0.6,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.375,
+          "answer_relevancy": 0.0
+        }
+      ]
+    },
+    "gpt-5.4-nano": {
+      "faithfulness": 0.451,
+      "answer_relevancy": 0.257,
+      "overall": 0.354,
+      "n": 21,
+      "per_query": [
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.558170645136041
+        },
+        {
+          "faithfulness": 0.8,
+          "answer_relevancy": 0.5208969156830792
+        },
+        {
+          "faithfulness": 0.5714285714285714,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.5842237085334777
+        },
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.43141843071133
+        },
+        {
+          "faithfulness": 0.4,
+          "answer_relevancy": 0.715178938853088
+        },
+        {
+          "faithfulness": 0.7619047619047619,
+          "answer_relevancy": 0.6247307869755998
+        },
+        {
+          "faithfulness": 0.25,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.18181818181818182,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.2222222222222222,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.15384615384615385,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.14285714285714285,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.3333333333333333,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.125,
+          "answer_relevancy": 0.6958600890184353
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5294117647058824,
+          "answer_relevancy": 0.550960260207442
+        },
+        {
+          "faithfulness": 0.8,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.18181818181818182,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.6,
+          "answer_relevancy": 0.7191411261711215
+        }
+      ]
+    },
+    "claude-haiku-4-5": {
+      "faithfulness": 0.543,
+      "answer_relevancy": 0.217,
+      "overall": 0.38,
+      "n": 21,
+      "per_query": [
+        {
+          "faithfulness": 1.0,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.3811879267918184
+        },
+        {
+          "faithfulness": 0.9090909090909091,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.42857142857142855,
+          "answer_relevancy": 0.6936454789051677
+        },
+        {
+          "faithfulness": 0.8,
+          "answer_relevancy": 0.4976128647281212
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.6666666666666666,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.4,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.5384615384615384,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.7142857142857143,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.75,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.14285714285714285,
+          "answer_relevancy": 0.7226653876034398
+        },
+        {
+          "faithfulness": 0.2,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.4444444444444444,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.4444444444444444,
+          "answer_relevancy": 0.0
+        },
+        {
+          "faithfulness": 0.4166666666666667,
+          "answer_relevancy": 0.5511423595420362
+        },
+        {
+          "faithfulness": 0.4,
+          "answer_relevancy": 0.45559475197901406
+        },
+        {
+          "faithfulness": 0.25,
+          "answer_relevancy": 0.5400751634498837
+        },
+        {
+          "faithfulness": 0.4,
+          "answer_relevancy": 0.7176753613464438
+        }
+      ]
+    },
+    "ollama-llama3.2": {
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.0,
+      "overall": 0.0,
+      "n": 4,
+      "error": "All metrics must be initialised metric objects, e.g: metrics=[BleuScore(), AspectCritic()]"
+    }
+  }
+}

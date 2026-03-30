@@ -56,6 +56,11 @@ def _addr_token_stem(token: str) -> str:
     return token
 
 
+def _safe_sigmoid(x: float) -> float:
+    """raw logit → [0, 1] 변환. overflow 방지."""
+    return 1.0 / (1.0 + math.exp(-max(min(x, 30.0), -30.0)))
+
+
 def _build_compact_text(payload: dict[str, Any]) -> str:
     # llm_text는 LLM 답변 생성용 장문 텍스트 → reranker 입력에 사용하지 않음
     # (400~600자 무제한 전달 시 CrossEncoder attention 연산이 ~25배 증가)
@@ -487,7 +492,7 @@ class PlaceScorer:
                 # MPS(Apple Silicon) 환경에서는 FP16 미지원 → CPU fallback 방지
                 model_kwargs={"torch_dtype": "auto"},
             )
-            dprint(f"[INFO] Reranker loaded: {RERANKER_MODEL}")
+            dprint(f"[INFO] Reranker loaded: {RERANKER_MODEL}  num_labels={self._reranker.num_labels}")
         except Exception as e:
             self._reranker = None
             dprint(f"[WARN] Reranker unavailable: {e}")
@@ -506,11 +511,15 @@ class PlaceScorer:
             _t0 = time.perf_counter()
             scores = await asyncio.to_thread(self._reranker.predict, pairs)
             dprint(f"[TIMING] reranker.predict  pairs={len(pairs)}  elapsed={time.perf_counter()-_t0:.3f}s")
+            # num_labels==1이면 sentence-transformers가 내부적으로 sigmoid를 적용해 [0,1]을 반환.
+            # num_labels!=1이면 raw logit이 반환되므로 명시적으로 sigmoid를 적용한다.
+            # 두 경우 모두 최종 clamp로 [0.0, 1.0] 범위를 보장한다.
+            needs_sigmoid = self._reranker.num_labels != 1
             for c, s in zip(candidates, scores):
-                # sentence-transformers CrossEncoder.predict()는 num_labels=1일 때
-                # 내부적으로 sigmoid를 적용해 [0.0, 1.0] 범위로 반환하므로
-                # 추가 sigmoid 변환 없이 그대로 사용한다.
-                c["rerank_score"] = round(float(s), 4)
+                raw = float(s)
+                if needs_sigmoid:
+                    raw = _safe_sigmoid(raw)
+                c["rerank_score"] = round(min(max(raw, 0.0), 1.0), 4)
             candidates.sort(key=lambda x: float(x.get("rerank_score", 0.0)), reverse=True)
             for idx, c in enumerate(candidates[:top_k], start=1):
                 c["final_rank"] = idx

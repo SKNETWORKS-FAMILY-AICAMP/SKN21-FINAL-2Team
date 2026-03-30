@@ -1,0 +1,1561 @@
+{
+  "timestamp": "2026-03-24T20:57:40.921932",
+  "models": [
+    "gpt-4o-mini",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.4-nano",
+    "claude-haiku-4-5",
+    "ollama-llama3.2",
+    "ollama-qwen3.5-4b"
+  ],
+  "query_count": 10,
+  "summary": {
+    "gpt-4o-mini": {
+      "avg_intent_ms": 4654.6,
+      "avg_executor_ms": 2536.3,
+      "avg_ttft_ms": 734.6,
+      "avg_planner_ms": 7946.0,
+      "avg_total_ms": 7190.9,
+      "intent_accuracy": 0.3,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "gpt-5.4": {
+      "avg_intent_ms": 2634.9,
+      "avg_executor_ms": 3004.8,
+      "avg_ttft_ms": 708.1,
+      "avg_planner_ms": 7744.6,
+      "avg_total_ms": 5639.6,
+      "intent_accuracy": 0.3,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "gpt-5.4-mini": {
+      "avg_intent_ms": 1421.9,
+      "avg_executor_ms": 1198.6,
+      "avg_ttft_ms": 498.9,
+      "avg_planner_ms": 2459.4,
+      "avg_total_ms": 2620.5,
+      "intent_accuracy": 0.3,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "gpt-5.4-nano": {
+      "avg_intent_ms": 1414.9,
+      "avg_executor_ms": 1193.9,
+      "avg_ttft_ms": 631.4,
+      "avg_planner_ms": 3428.6,
+      "avg_total_ms": 2608.8,
+      "intent_accuracy": 0.4,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "claude-haiku-4-5": {
+      "avg_intent_ms": 2536.8,
+      "avg_executor_ms": 2549.7,
+      "avg_ttft_ms": 802.2,
+      "avg_planner_ms": 7180.6,
+      "avg_total_ms": 5086.4,
+      "intent_accuracy": 0.3,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "ollama-llama3.2": {
+      "avg_intent_ms": 346918.5,
+      "avg_executor_ms": 105629.5,
+      "avg_ttft_ms": 67049.3,
+      "avg_planner_ms": 142539.3,
+      "avg_total_ms": 452547.9,
+      "intent_accuracy": 0.9,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "ollama-qwen3.5-4b": {
+      "avg_intent_ms": null,
+      "avg_executor_ms": null,
+      "avg_ttft_ms": null,
+      "avg_planner_ms": null,
+      "avg_total_ms": null,
+      "intent_accuracy": null,
+      "error_count": 22,
+      "sample_errors": [
+        "intent: Error code: 500 - {'error': {'message': 'llama runner process has terminated: si",
+        "executor: Error code: 500 - {'error': {'message': 'llama runner process has terminated: si",
+        "intent: Error code: 500 - {'error': {'message': 'llama runner process has terminated: si"
+      ]
+    }
+  },
+  "results": [
+    {
+      "model": "gpt-4o-mini",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 5943.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2549.2,
+        "ttft_ms": 884.0,
+        "output_chars": 137,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2699.5,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2578.7,
+        "ttft_ms": 859.8,
+        "output_chars": 170,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1350.9,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1189.0,
+        "ttft_ms": 548.8,
+        "output_chars": 192,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1257.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2194.8,
+        "ttft_ms": 1619.6,
+        "output_chars": 204,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2609.5,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2260.7,
+        "ttft_ms": 741.3,
+        "output_chars": 143,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 317328.2,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 347034.5,
+        "ttft_ms": 324495.2,
+        "output_chars": 127,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 6738.5,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1961.6,
+        "ttft_ms": 377.4,
+        "output_chars": 159,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 3130.4,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 3751.4,
+        "ttft_ms": 1065.6,
+        "output_chars": 221,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1097.9,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1141.2,
+        "ttft_ms": 357.5,
+        "output_chars": 197,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1255.8,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1309.2,
+        "ttft_ms": 1019.2,
+        "output_chars": 220,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1948.9,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2326.5,
+        "ttft_ms": 617.3,
+        "output_chars": 182,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 426429.4,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 180281.8,
+        "ttft_ms": 125130.6,
+        "output_chars": 261,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2937.4,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2602.4,
+        "ttft_ms": 667.8,
+        "output_chars": 190,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 3543.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2843.0,
+        "ttft_ms": 622.1,
+        "output_chars": 231,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1716.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1803.9,
+        "ttft_ms": 1016.4,
+        "output_chars": 239,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2516.1,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1573.7,
+        "ttft_ms": 755.7,
+        "output_chars": 255,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2256.4,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2772.8,
+        "ttft_ms": 928.0,
+        "output_chars": 209,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 379363.3,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 61809.3,
+        "ttft_ms": 12278.5,
+        "output_chars": 255,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2663.2,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2075.9,
+        "ttft_ms": 616.5,
+        "output_chars": 146,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2866.0,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2449.0,
+        "ttft_ms": 769.4,
+        "output_chars": 168,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1103.0,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 955.3,
+        "ttft_ms": 352.3,
+        "output_chars": 161,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1285.3,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 844.9,
+        "ttft_ms": 478.8,
+        "output_chars": 174,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2441.2,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2305.8,
+        "ttft_ms": 931.3,
+        "output_chars": 148,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 323163.5,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 33322.6,
+        "ttft_ms": 10033.9,
+        "output_chars": 137,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 4319.1,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2542.3,
+        "ttft_ms": 600.5,
+        "output_chars": 184,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2066.8,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2577.8,
+        "ttft_ms": 552.8,
+        "output_chars": 174,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1577.0,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1078.0,
+        "ttft_ms": 382.2,
+        "output_chars": 168,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1534.4,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 895.8,
+        "ttft_ms": 348.6,
+        "output_chars": 209,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2259.7,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2384.2,
+        "ttft_ms": 816.0,
+        "output_chars": 177,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 366627.1,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 42251.6,
+        "ttft_ms": 10882.2,
+        "output_chars": 203,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 6626.7,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2580.3,
+        "ttft_ms": 645.6,
+        "output_chars": 165,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2280.0,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2973.1,
+        "ttft_ms": 733.8,
+        "output_chars": 172,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1968.5,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1048.3,
+        "ttft_ms": 608.0,
+        "output_chars": 173,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1255.7,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 893.1,
+        "ttft_ms": 453.7,
+        "output_chars": 210,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 3263.1,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2082.7,
+        "ttft_ms": 906.5,
+        "output_chars": 157,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 306472.5,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 71397.2,
+        "ttft_ms": 51735.8,
+        "output_chars": 141,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 6025.7,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 3671.4,
+        "ttft_ms": 996.4,
+        "output_chars": 211,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2537.0,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 4304.3,
+        "ttft_ms": 670.1,
+        "output_chars": 233,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1992.2,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1154.0,
+        "ttft_ms": 419.3,
+        "output_chars": 192,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1207.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 1051.0,
+        "ttft_ms": 331.9,
+        "output_chars": 229,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2354.6,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2706.1,
+        "ttft_ms": 603.0,
+        "output_chars": 225,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 366073.5,
+        "detected_intent": "INFO_QA",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 102722.7,
+        "ttft_ms": 71377.6,
+        "output_chars": 203,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 5689.9,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2377.3,
+        "ttft_ms": 769.9,
+        "output_chars": 129,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2218.6,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2328.1,
+        "ttft_ms": 567.6,
+        "output_chars": 132,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 913.3,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 905.0,
+        "ttft_ms": 370.4,
+        "output_chars": 121,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 1356.8,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 954.8,
+        "ttft_ms": 435.8,
+        "output_chars": 209,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 2525.0,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 2467.6,
+        "ttft_ms": 615.5,
+        "output_chars": 177,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": 301620.2,
+        "detected_intent": "PLACE_INQUIRY",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": 78527.6,
+        "ttft_ms": 44841.3,
+        "output_chars": 197,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "expected_intent": "PLACE_INQUIRY",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "skipped (not TRIP_PLANNING)"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 2633.9,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 10897.1,
+        "itinerary_count": 9,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 3259.1,
+        "ttft_ms": 1138.0,
+        "output_chars": 157,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 2582.5,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 9369.4,
+        "itinerary_count": 15,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 2759.4,
+        "ttft_ms": 600.1,
+        "output_chars": 185,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 1276.7,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 3030.9,
+        "itinerary_count": 12,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 1316.8,
+        "ttft_ms": 436.2,
+        "output_chars": 224,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 1223.3,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 4405.6,
+        "itinerary_count": 16,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 1118.5,
+        "ttft_ms": 487.7,
+        "output_chars": 219,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 3029.7,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 8849.8,
+        "itinerary_count": 15,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 3458.8,
+        "ttft_ms": 994.9,
+        "output_chars": 197,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 357858.8,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 150113.8,
+        "itinerary_count": 3,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 85437.5,
+        "ttft_ms": 9925.3,
+        "output_chars": 473,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "2박3일 서울 여행 계획 짜줘. 혼자 가고 카페랑 맛집 위주로 돌고 싶어.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    },
+    {
+      "model": "gpt-4o-mini",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 2968.3,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 4994.8,
+        "itinerary_count": 5,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 1743.3,
+        "ttft_ms": 649.6,
+        "output_chars": 84,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 2424.3,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 6119.9,
+        "itinerary_count": 6,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 3482.7,
+        "ttft_ms": 639.8,
+        "output_chars": 216,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-mini",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 1223.2,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 1887.9,
+        "itinerary_count": 5,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 1394.2,
+        "ttft_ms": 497.8,
+        "output_chars": 179,
+        "error": null
+      }
+    },
+    {
+      "model": "gpt-5.4-nano",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 1256.6,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 2451.5,
+        "itinerary_count": 6,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 1102.8,
+        "ttft_ms": 383.4,
+        "output_chars": 211,
+        "error": null
+      }
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 2679.7,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 5511.4,
+        "itinerary_count": 6,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 2731.3,
+        "ttft_ms": 868.4,
+        "output_chars": 193,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-llama3.2",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": 324248.0,
+        "detected_intent": "TRIP_PLANNING",
+        "error": null
+      },
+      "planner": {
+        "latency_ms": 134964.9,
+        "itinerary_count": 1,
+        "error": null
+      },
+      "executor": {
+        "latency_ms": 53510.0,
+        "ttft_ms": 9792.9,
+        "output_chars": 281,
+        "error": null
+      }
+    },
+    {
+      "model": "ollama-qwen3.5-4b",
+      "query": "친구들이랑 주말에 서울 당일치기 코스 추천해줘. 젊은 분위기 좋아해.",
+      "expected_intent": "TRIP_PLANNING",
+      "intent": {
+        "latency_ms": null,
+        "detected_intent": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "planner": {
+        "latency_ms": null,
+        "itinerary_count": null,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      },
+      "executor": {
+        "latency_ms": null,
+        "ttft_ms": null,
+        "output_chars": 0,
+        "error": "Error code: 500 - {'error': {'message': 'llama runner process has terminated: signal: killed', 'type': 'api_error', 'param': None, 'code': None}}"
+      }
+    }
+  ]
+}

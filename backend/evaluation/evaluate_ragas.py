@@ -354,8 +354,9 @@ def generate_dataset(
 
         response_list.append(answer)
         retrieved_context_list.append(contexts)
-        # candidates를 JSON serializable하게 정리
-        retrieved_candidates_list.append(json.dumps(candidates, ensure_ascii=False, default=str))
+        # candidates를 final_rank(rerank 후 순위) 기준으로 정렬 후 저장
+        candidates_sorted = sorted(candidates, key=lambda x: x.get("final_rank") or 999)
+        retrieved_candidates_list.append(json.dumps(candidates_sorted, ensure_ascii=False, default=str))
         selected_ids_list.append(json.dumps(selected_ids, ensure_ascii=False))
         relevant_ids_list.append(json.dumps(relevant_ids, ensure_ascii=False))
 

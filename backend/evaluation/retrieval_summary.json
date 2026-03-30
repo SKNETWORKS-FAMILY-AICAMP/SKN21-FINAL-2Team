@@ -1,0 +1,373 @@
+{
+  "n_queries": 16,
+  "avg_k": 5.0,
+  "recall@1": 0.5312,
+  "recall@3": 1.0,
+  "recall@5": 1.0,
+  "mrr": 0.8125,
+  "hit@5": 1.0,
+  "miss_count": 0,
+  "type_counts": {
+    "MISS": 0,
+    "LATE": 0,
+    "PARTIAL": 0,
+    "OK": 3
+  },
+  "per_query": [
+    {
+      "idx": 0,
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "relevant_ids": [
+        "2851166"
+      ],
+      "retrieved_ids": [
+        "2851166",
+        "2856443",
+        "2839360",
+        "2837937",
+        "2758116"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "소설한남",
+      "top1_type": "음식점"
+    },
+    {
+      "idx": 1,
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "relevant_ids": [
+        "2774291"
+      ],
+      "retrieved_ids": [
+        "3060934",
+        "2774291",
+        "331506",
+        "753558",
+        "1603237"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "당산공원",
+      "top1_type": "관광지"
+    },
+    {
+      "idx": 4,
+      "query": "압구정로71길 뭐가 있어?",
+      "relevant_ids": [
+        "130306",
+        "264570"
+      ],
+      "retrieved_ids": [
+        "130306",
+        "264570",
+        "835066",
+        "2696383",
+        "126823"
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "OK",
+      "top1_title": "유 아트 스페이스",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 5,
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "relevant_ids": [
+        "2678273"
+      ],
+      "retrieved_ids": [
+        "3457702",
+        "2678273",
+        "2469662",
+        "130464",
+        "3075429"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "우리소리도서관",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 7,
+      "query": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they cater to families?",
+      "relevant_ids": [
+        "130926"
+      ],
+      "retrieved_ids": [
+        "130926",
+        "3334487",
+        "130182",
+        "3338761",
+        "130272"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "도산안창호기념관",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 8,
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "relevant_ids": [
+        "2010617"
+      ],
+      "retrieved_ids": [
+        "130637",
+        "2010617",
+        "2653208",
+        "1413224",
+        "130374"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "어반아트",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 10,
+      "query": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+      "relevant_ids": [
+        "126535"
+      ],
+      "retrieved_ids": [
+        "126535",
+        "135131",
+        "229910",
+        "3483968",
+        "2603706"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "남산서울타워",
+      "top1_type": "관광지"
+    },
+    {
+      "idx": 11,
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "relevant_ids": [
+        "128611"
+      ],
+      "retrieved_ids": [
+        "2901568",
+        "128611",
+        "2753089",
+        "3533001",
+        "3444690"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "기후",
+      "top1_type": "음식점"
+    },
+    {
+      "idx": 12,
+      "query": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memorable experience in 여의도?",
+      "relevant_ids": [
+        "1327006"
+      ],
+      "retrieved_ids": [
+        "143033",
+        "1327006",
+        "2011019",
+        "3492920",
+        "143113"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "JW 메리어트 호텔 서울(JW Marriott Hotel Seoul)",
+      "top1_type": "숙박"
+    },
+    {
+      "idx": 13,
+      "query": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in Seoul?",
+      "relevant_ids": [
+        "130926"
+      ],
+      "retrieved_ids": [
+        "130926",
+        "1578248",
+        "750863",
+        "1964911",
+        "1829696"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "도산안창호기념관",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 14,
+      "query": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+      "relevant_ids": [
+        "2760301"
+      ],
+      "retrieved_ids": [
+        "2760301",
+        "2753817",
+        "3080852",
+        "2612093",
+        "130769"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "한생연 생명과학박물관",
+      "top1_type": "문화시설"
+    },
+    {
+      "idx": 15,
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their atmospheres and offerings cater to visitors looking for enjoyable meals with friends and family?",
+      "relevant_ids": [
+        "3082222",
+        "2840031"
+      ],
+      "retrieved_ids": [
+        "3082222",
+        "2840031",
+        "2902666",
+        "2608933",
+        "2844953"
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "OK",
+      "top1_title": "카페 마나랑",
+      "top1_type": "음식점"
+    },
+    {
+      "idx": 16,
+      "query": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+      "relevant_ids": [
+        "2544497"
+      ],
+      "retrieved_ids": [
+        "2544497",
+        "1005620",
+        "126486",
+        "2867754",
+        "2745569"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "스시 카이신(鮨海信)",
+      "top1_type": "음식점"
+    },
+    {
+      "idx": 17,
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "relevant_ids": [
+        "3043977"
+      ],
+      "retrieved_ids": [
+        "3043977",
+        "1037027",
+        "3533008",
+        "3043911",
+        "403283"
+      ],
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "방우산장",
+      "top1_type": "관광지"
+    },
+    {
+      "idx": 18,
+      "query": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+      "relevant_ids": [
+        "1327006"
+      ],
+      "retrieved_ids": [
+        "3492920",
+        "1327006",
+        "143113",
+        "2592489",
+        "2907121"
+      ],
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "hit@5": 1.0,
+      "type": "NOISE",
+      "top1_title": "글래드 여의도",
+      "top1_type": "숙박"
+    },
+    {
+      "idx": 19,
+      "query": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they reflect the charm of 한식 in Seoul?",
+      "relevant_ids": [
+        "2871222",
+        "134807"
+      ],
+      "retrieved_ids": [
+        "2871222",
+        "134807",
+        "2869994",
+        "2663450",
+        "2839360"
+      ],
+      "recall@1": 0.5,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 1.0,
+      "hit@5": 1.0,
+      "type": "OK",
+      "top1_title": "현복집 강남본점",
+      "top1_type": "음식점"
+    }
+  ]
+}

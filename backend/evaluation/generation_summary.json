@@ -1,0 +1,368 @@
+{
+  "avg_relevance": 0.8433,
+  "avg_faithfulness": 0.3419,
+  "avg_hallucination": 0.2895,
+  "avg_usefulness": 0.579,
+  "overall_avg": 0.5135,
+  "risk_count": 16,
+  "risk_queries": [
+    {
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.22,
+        "hallucination": 0.18,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "query": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+      "scores": {
+        "relevance": 0.89,
+        "faithfulness": 0.28,
+        "hallucination": 0.33,
+        "usefulness": 0.72
+      }
+    },
+    {
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "scores": {
+        "relevance": 0.9,
+        "faithfulness": 0.38,
+        "hallucination": 0.32,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "scores": {
+        "relevance": 0.91,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "query": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they ",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.22,
+        "hallucination": 0.28,
+        "usefulness": 0.6
+      }
+    },
+    {
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.58
+      }
+    },
+    {
+      "query": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+      "scores": {
+        "relevance": 0.28,
+        "faithfulness": 0.12,
+        "hallucination": 0.08,
+        "usefulness": 0.22
+      }
+    },
+    {
+      "query": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+      "scores": {
+        "relevance": 0.74,
+        "faithfulness": 0.22,
+        "hallucination": 0.12,
+        "usefulness": 0.41
+      }
+    },
+    {
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.08,
+        "hallucination": 0.12,
+        "usefulness": 0.42
+      }
+    },
+    {
+      "query": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memor",
+      "scores": {
+        "relevance": 0.84,
+        "faithfulness": 0.24,
+        "hallucination": 0.18,
+        "usefulness": 0.52
+      }
+    },
+    {
+      "query": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in ",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.18,
+        "hallucination": 0.12,
+        "usefulness": 0.57
+      }
+    },
+    {
+      "query": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.18,
+        "hallucination": 0.22,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their",
+      "scores": {
+        "relevance": 0.95,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "query": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.32,
+        "hallucination": 0.28,
+        "usefulness": 0.63
+      }
+    },
+    {
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "scores": {
+        "relevance": 0.78,
+        "faithfulness": 0.24,
+        "hallucination": 0.18,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "query": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they re",
+      "scores": {
+        "relevance": 0.84,
+        "faithfulness": 0.22,
+        "hallucination": 0.18,
+        "usefulness": 0.56
+      }
+    }
+  ],
+  "n_evaluated": 21,
+  "n_skipped": 0,
+  "per_query": [
+    {
+      "idx": 0,
+      "query": "한남대로20길에 위치한 소설한남 음식점은 어떤 매력을 가지고 있으며, 방문할 때 어떤 점을 고려해야 할까요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.22,
+        "hallucination": 0.18,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "idx": 1,
+      "query": "서울특별시 영등포구 양평동1가에 위치한 안양천제방벚꽃길은 어떤 매력을 가지고 있나요?",
+      "scores": {
+        "relevance": 0.96,
+        "faithfulness": 0.62,
+        "hallucination": 0.68,
+        "usefulness": 0.79
+      }
+    },
+    {
+      "idx": 2,
+      "query": "남산공원길에 위치한 남산서울타워는 어떤 매력을 가지고 있으며, 방문 시 어떤 점을 고려해야 할까요?",
+      "scores": {
+        "relevance": 0.89,
+        "faithfulness": 0.28,
+        "hallucination": 0.33,
+        "usefulness": 0.72
+      }
+    },
+    {
+      "idx": 3,
+      "query": "한남동에 뭐 좋은 음식점 있어?",
+      "scores": {
+        "relevance": 0.9,
+        "faithfulness": 0.38,
+        "hallucination": 0.32,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "idx": 4,
+      "query": "압구정로71길 뭐가 있어?",
+      "scores": {
+        "relevance": 0.84,
+        "faithfulness": 0.58,
+        "hallucination": 0.42,
+        "usefulness": 0.66
+      }
+    },
+    {
+      "idx": 5,
+      "query": "서울우리소리박물관에서 소리 문화는 어떻게 체험할 수 있나요?",
+      "scores": {
+        "relevance": 0.91,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "idx": 6,
+      "query": "강동구에 뭐가 있어?",
+      "scores": {
+        "relevance": 0.94,
+        "faithfulness": 0.86,
+        "hallucination": 0.72,
+        "usefulness": 0.84
+      }
+    },
+    {
+      "idx": 7,
+      "query": "What are the key features and visitor experiences offered at 도산안창호기념관 and 화랑대 철도공원, and how do they ",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.22,
+        "hallucination": 0.28,
+        "usefulness": 0.6
+      }
+    },
+    {
+      "idx": 8,
+      "query": "응암정보도서관과 아트포레스트는 각각 어떤 문화적 경험을 제공하며, 이 두 장소를 함께 방문하면 어떤 특별한 경험을 할 수 있을까요?",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.58
+      }
+    },
+    {
+      "idx": 9,
+      "query": "키즈오토파크에서 어린이 자동차 체험을 하면서 자연과 도시의 조화가 이루어진 일원에코파크도 방문하면 어떤 경험을 할 수 있을까요?",
+      "scores": {
+        "relevance": 0.28,
+        "faithfulness": 0.12,
+        "hallucination": 0.08,
+        "usefulness": 0.22
+      }
+    },
+    {
+      "idx": 10,
+      "query": "클럽케이서울과 남산서울타워는 각각 어떤 매력을 가지고 있으며, 방문하기에 적합한 시간대는 언제인가요?",
+      "scores": {
+        "relevance": 0.74,
+        "faithfulness": 0.22,
+        "hallucination": 0.12,
+        "usefulness": 0.41
+      }
+    },
+    {
+      "idx": 11,
+      "query": "서울숲 근처의 라프레플루트와 성수동의 성수부두는 각각 어떤 특별한 경험을 제공하며, 두 장소의 분위기와 특징은 어떻게 다릅니까?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.08,
+        "hallucination": 0.12,
+        "usefulness": 0.42
+      }
+    },
+    {
+      "idx": 12,
+      "query": "What are the unique features of 메리어트 이그제큐티브 아파트먼트 서울 여의도 and 고려정 that make them suitable for a memor",
+      "scores": {
+        "relevance": 0.84,
+        "faithfulness": 0.24,
+        "hallucination": 0.18,
+        "usefulness": 0.52
+      }
+    },
+    {
+      "idx": 13,
+      "query": "What are the unique features of 도산안창호기념관 and 아모레퍼시픽미술관 that make them suitable for family visits in ",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.18,
+        "hallucination": 0.12,
+        "usefulness": 0.57
+      }
+    },
+    {
+      "idx": 14,
+      "query": "양천구에 있는 양천문화회관과 한생연 생명과학박물관은 각각 어떤 문화적 경험과 교육적 기회를 제공하나요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.18,
+        "hallucination": 0.22,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "idx": 15,
+      "query": "What unique dining experiences can one find in 석촌동, specifically at 장칼집 and 카페 마나랑, and how do their",
+      "scores": {
+        "relevance": 0.95,
+        "faithfulness": 0.34,
+        "hallucination": 0.28,
+        "usefulness": 0.62
+      }
+    },
+    {
+      "idx": 16,
+      "query": "도산대로에 위치한 그릴에이치와 스시 카이신의 특징은 무엇인가요?",
+      "scores": {
+        "relevance": 0.88,
+        "faithfulness": 0.32,
+        "hallucination": 0.28,
+        "usefulness": 0.63
+      }
+    },
+    {
+      "idx": 17,
+      "query": "성북동의 고택과 방우산장 두 곳의 매력을 비교하여, 각각의 방문 시 어떤 경험을 할 수 있는지 설명해 주세요.",
+      "scores": {
+        "relevance": 0.78,
+        "faithfulness": 0.24,
+        "hallucination": 0.18,
+        "usefulness": 0.46
+      }
+    },
+    {
+      "idx": 18,
+      "query": "여의도 지역에서 편안한 숙박과 맛있는 음식을 동시에 즐길 수 있는 장소는 어디인가요?",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.58,
+        "hallucination": 0.42,
+        "usefulness": 0.72
+      }
+    },
+    {
+      "idx": 19,
+      "query": "What are the unique features and dining experiences offered by 현복집 강남본점 and 영광밥상, and how do they re",
+      "scores": {
+        "relevance": 0.84,
+        "faithfulness": 0.22,
+        "hallucination": 0.18,
+        "usefulness": 0.56
+      }
+    },
+    {
+      "idx": 20,
+      "query": "What are some recommended 한식 restaurants in 강남 that offer a cozy atmosphere for family gatherings?",
+      "scores": {
+        "relevance": 0.86,
+        "faithfulness": 0.62,
+        "hallucination": 0.41,
+        "usefulness": 0.68
+      }
+    }
+  ]
+}

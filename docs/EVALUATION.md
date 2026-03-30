@@ -89,6 +89,8 @@
 - `answer_relevancy`
 - `context_precision`
 - `context_recall`
+- `run_generation_eval.py`, `ragas_model_comparison.py`의 LLM-as-Judge 요약 점수는 `0~1` 범위로 정규화한다.
+- Judge가 legacy `1~5` 점수를 반환하면 저장 전에 `5`로 나눠 `0~1` 값으로 변환한다.
 
 ---
 
