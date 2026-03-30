@@ -31,11 +31,12 @@
 
 | 이름 | 역할 | Github |
 |:---:|:---:|:---:|
-| **전우영**<br/>👑 팀장 | **PM / Service Planner** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
+|👑 </br> **전우영** | **PM / Service Planner** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
 | **김가람** | **Multimodal AI Engineer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) |
 | **박민정** | **Frontend Developer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) |
 | **손현우** | **UI/UX Designer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
 
+</div>
 
 ---
 
@@ -53,14 +54,17 @@ LLM 기반 대화형 여행 추천 서비스입니다.
 ## 🧭 프로젝트 배경
 
 ### 1. k-컬쳐에 대한 관심도와 한국 관광에 대한 관심 증가
-![ERD](images/article.png)
+![aritcle](images/article.png)
 <br>
 <sup>*출처: [뉴데일리경제 기사]*</sup>
-![ERD](images/graph1.png)
+
+![graph](images/graph1.png)
 <br>
 <sup>*출처: [한국관광데이터랩]*</sup>
 
-K-컬쳐 인기와 함께 방한 관광객은 증가하고 있는 추세.
+![article2](images/article2.png)
+
+> K-컬쳐 인기와 함께 방한 관광객은 증가하고 있는 추세.
 
 
 ### 2. 기존 시장 구조의 한계
@@ -109,7 +113,7 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 
 ### 주요 기능 맵
 | 기능 | 설명 |
-|------|------|
+|:------|:------|
 | 대화형 여행 플래닝 | 멀티턴 대화로 일정 자동 생성 |
 | 장소 추천 (RAG) | 하이브리드 검색으로 맞춤 장소 추천 |
 | 이미지 유사 장소 검색 | CLIP 기반 사진 → 유사 장소 매칭 |
@@ -133,13 +137,14 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 ### 💻 Frontend
 | Category | Tech |
 |----------|------|
-| Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) |
 | Language | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) |
+| Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) |
 | Styling | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
 
 ### ⚙ Backend
 | Category | Tech |
 |----------|------|
+| Language | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) |
 | Framework | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white) |
 | Database | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=flat-square) |
 | ORM / Migration | ![Alembic](https://img.shields.io/badge/Alembic-5B8A44?style=flat-square) |
@@ -149,7 +154,7 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 | Category | Tech |
 |----------|------|
 | Framework | ![LangChain](https://img.shields.io/badge/LangChain-515151?style=flat-square) ![LangGraph](https://img.shields.io/badge/LangGraph-515151?style=flat-square) |
-| Model | ![CLIP](https://img.shields.io/badge/CLIP-5A48CE?style=flat-square) ![BGE-M3](https://img.shields.io/badge/BGE--M3-0052CC?style=flat-square) ![GPT-4o-mini](https://img.shields.io/badge/GPT--4o--mini-515151?style=flat-square&logo=openai&logoColor=white) |
+| Model | ![CLIP](https://img.shields.io/badge/CLIP-5A48CE?style=flat-square) ![BGE-M3](https://img.shields.io/badge/BGE--M3-0052CC?style=flat-square) ![GPT-4o-mini](https://img.shields.io/badge/GPT--5.4--mini-515151?style=flat-square&logo=openai&logoColor=white) |
 
 ---
 
@@ -197,8 +202,15 @@ SKN21-FINAL-2Team/
 | **고도화** | 7주차 | 최적화 및 평가 | RAGAS 성능 지표 검증, 응답 레이턴시 병목 개선, 네이버 지도 연동 |
 | **배포** | 8주차 | CI/CD 배포 및 마무리 | GitHub Actions 기반 AWS 무중단 배포 적용, 최종 발표 자료 준비 |
 
-> 📌 **상세 일정표 (Gantt Chart)**  
-> ![WBS 본문 이미지](images/wbs.jpg)
+
+<details>
+<summary><b>(클릭하여 WBS 이미지 보기)</b></summary>
+<br/>
+
+**상세 일정표 (Gantt Chart)**  
+![WBS 본문 이미지](images/wbs.jpg)
+
+</details>
 
 ---
 ## 📋 데이터 아키텍처
@@ -242,7 +254,7 @@ SKN21-FINAL-2Team/
 - **Checkpointer |** LangGraph의 상태(State) 추적 및 복원을 담당하는 대화 메모리 체인 (MySQL 연동)
 
 <details>
-<summary><b>(클릭하여 아키텍처 및 ERD 이미지 보기)</b></summary>
+<summary><b>(클릭하여 ERD 및 데이터 파이프라인 이미지 보기)</b></summary>
 <br/>
 
 **[ERD 구조]**  
@@ -313,14 +325,16 @@ SKN21-FINAL-2Team/
 
 ## 🖥 사이트맵 및 화면구성
 
-> 화면 캡쳐 첨부
+> [![썸네일](images/triver.png)](https://drive.google.com/file/d/1zZh7HqiJMENf9PNMQkrvHTwWcvdhmBIx/view?usp=drive_link)
+<br>
+<sup>*이미지를 클릭해서 시연영상 보러가기*</sup>
 
 - **랜딩 & 온보딩**: 서비스 소개 레이아웃, Google OAuth 로그인 접속, 3단계 취향 설문(스타일, 분위기, 테마) 화면
 - **채팅룸 (핵심)**: 대화형 LLM 채팅 인터페이스 구현, 이미지 업로드 기반 추천, STT 인식 기능, 완성된 일정 마크다운/타임라인 제공, 지도 연동
 - **탐색 (Explore)**: 실시간 트렌드(팝업스토어/공연 전시), 카테고리별 장소 추천 섹션, 사용자 맞춤 일일 추천 카드 화면
-- **마이페이지**: 개인정보 관리, 여행 취향 변경, 한/중/영/일 다국어 전환, 여행지 테마 추천, 예약 정보 등록 및 관리
 - **Moments** : 여행 기록을 남길 수 있는 다이어리 UI
 - **Bookmark** : 채팅룸에서 저장한 북마크 대화 이력, 북마크 된 장소 이력 확인 및 관리, 북마크 내역 선택으로 채팅 시작
+- **마이페이지**: 개인정보 관리, 여행 취향 변경, 한/중/영/일 다국어 전환, 여행지 테마 추천, 예약 정보 등록 및 관리
 
 ---
 
