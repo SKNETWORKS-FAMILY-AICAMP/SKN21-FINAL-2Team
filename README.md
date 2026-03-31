@@ -28,8 +28,9 @@
 
 <div align="center">
 
-| 👑 전우영 | 김가람 | 박민정 | 손현우 |
+| <img src="images/p1.png" alt="PM & Backend Developer" width="150" height="150" />| <img src="images/p2.png" alt="Multimodal AI Engineer" width="150" height="150" />| <img src="images/p3.png" alt="Frontend Developer & Data" width="150" height="150" />| <img src="images/p4.png" alt="UI/UX Designer & Docs" width="150" height="150" />|
 |:---:|:---:|:---:|:---:|
+| 👑 전우영 | 김가람 | 박민정 | 손현우 |
 | **PM & Backend Developer** | **Multimodal AI Engineer** | **Frontend Developer&data** | **UI/UX Designer&docs** |
 | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
 
@@ -199,7 +200,6 @@ SKN21-FINAL-2Team/
 |   **고도화**    |  7주차  | 최적화 및 평가       | RAGAS 성능 지표 검증, 응답 레이턴시 병목 개선, 네이버 지도 연동 |
 |    **배포**     |  8주차  | CI/CD 배포 및 마무리 | GitHub Actions 기반 AWS 무중단 배포 적용, 최종 발표 자료 준비   |
 
-
 <details>
 <summary><b>(클릭하여 WBS 이미지 보기)</b></summary>
 <br/>
@@ -269,8 +269,7 @@ SKN21-FINAL-2Team/
 
 ### 1️⃣ LangGraph 파이프라인
 
-**[Langchain 파이프라인]**  
-![DATAPIPE](images/pipeline.png)
+<img src="images/pipeline.png" alt="LangGraph 파이프라인" width="60%">
 
 - 단순 Chatbot이 아닌 **상태 기계(State Machine) 기반 에이전트**로, 각 노드가 전문화된 역할을 수행합니다.
 - `Intent Node` (의도 분류) → `Planner Node` (검색식/일정 계획) → `Geocoder Node` (좌표 변환) → `Retriever Node` (검색) → `Web Search Node` (웹 검색 Fallback) → `Executor Node` (최종 요약 응답 / 누락 처리 / 일반 응답)의 흐름으로 라우팅됩니다.
@@ -278,7 +277,7 @@ SKN21-FINAL-2Team/
 ### 2️⃣ 4-Layer 하이브리드 멀티채널 검색 (Retriever)
 단순한 텍스트 검색을 넘어, 정확도와 사용자 요구 충족을 위해 **4단계(Layer)로 구성된 정교한 리트리버 파이프라인**을 설계했습니다.
 
-![4-Layer 구조](images/layer_retriever.png)
+<img src="images/layer_retriever.png" alt="4-Layer 구조" width="80%">
 
 
 ### 3️⃣ 초개인화 메커니즘
