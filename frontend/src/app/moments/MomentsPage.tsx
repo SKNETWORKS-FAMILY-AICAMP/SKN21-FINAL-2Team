@@ -290,7 +290,7 @@ export function MomentsPage() {
     const handlePickLocation = (place: MomentPlaceSearchResult) => {
         setEditor((prev) => ({
             ...prev,
-            adress: place.adress,
+            adress: place.name || place.adress,
             latitude: place.latitude,
             longitude: place.longitude,
         }));

@@ -124,7 +124,6 @@ export function ReservationImageSection({
             <button
               type="button"
               onClick={() => {
-                onPreviewOpen();
                 fileInputRef.current?.click();
               }}
               className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-[10px] font-bold text-gray-500 hover:text-black hover:border-black uppercase transition-all flex items-center gap-1.5 flex-none"
