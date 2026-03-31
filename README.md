@@ -29,12 +29,12 @@
 
 <div align="center">
 
-| 이름 | 역할 | Github |
-|:---:|:---:|:---:|
-|👑 </br> **전우영** | **PM / Service Planner** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) |
-| **김가람** | **Multimodal AI Engineer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) |
-| **박민정** | **Frontend Developer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) |
-| **손현우** | **UI/UX Designer** | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
+|        이름        |            역할            |                                                                  Github                                                                   |
+| :----------------: | :------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: |
+| 👑 </br> **전우영** |  **PM / Service Planner**  |     [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng)     |
+|     **김가람**     | **Multimodal AI Engineer** |    [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94)    |
+|     **박민정**     |   **Frontend Developer**   |   [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12)   |
+|     **손현우**     |     **UI/UX Designer**     | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
 
 </div>
 
@@ -112,17 +112,16 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 - **이미지 기반:** 인스타에서 본 사진과 비슷한 장소 찾기
 
 ### 주요 기능 맵
-| 기능 | 설명 |
-|:------|:------|
-| 대화형 여행 플래닝 | 멀티턴 대화로 일정 자동 생성 |
-| 장소 추천 (RAG) | 하이브리드 검색으로 맞춤 장소 추천 |
-| 이미지 유사 장소 검색 | CLIP 기반 사진 → 유사 장소 매칭 |
-| 경로 최적화 | VRP 기반 이동 동선 최적화 |
-| 트렌드 통합 | 팝업스토어, 축제 등 실시간 반영 |
-| 날씨 연동 | 날씨 기반 실내/실외 추천 전환 |
-| 다국어 지원 | 4개 언어 네이티브 응답 |
-| 일일 추천 | 사용자별 매일 새로운 추천 생성 |
-| 북마크 & 다이어리 | 장소 저장 + 여행 기록 |
+| 기능                  | 설명                               |
+| :-------------------- | :--------------------------------- |
+| 대화형 여행 플래닝    | 멀티턴 대화로 일정 자동 생성       |
+| 장소 추천 (RAG)       | 하이브리드 검색으로 맞춤 장소 추천 |
+| 이미지 유사 장소 검색 | CLIP 기반 사진 → 유사 장소 매칭    |
+| 트렌드 통합           | 팝업스토어, 축제 등 실시간 반영    |
+| 날씨 연동             | 날씨 기반 실내/실외 추천 전환      |
+| 다국어 지원           | 4개 언어 네이티브 응답             |
+| 일일 추천             | 사용자별 매일 새로운 추천 생성     |
+| 북마크 & 다이어리     | 장소 저장 + 여행 기록              |
 
 ### 2-3. 사용자 흐름 (User Flow)
 ```
@@ -135,26 +134,26 @@ AI를 활용하여 사용자의 취향, 감성, 맥락을 분석하고, 이를 �
 ## 🛠 기술 스택
 
 ### 💻 Frontend
-| Category | Tech |
-|----------|------|
-| Language | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white) |
+| Category  | Tech                                                                                                                                                                                                       |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language  | ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)                                                                                            |
 | Framework | ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) |
-| Styling | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
+| Styling   | ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)                                                                                        |
 
 ### ⚙ Backend
-| Category | Tech |
-|----------|------|
-| Language | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) |
-| Framework | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white) |
-| Database | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=flat-square) |
-| ORM / Migration | ![Alembic](https://img.shields.io/badge/Alembic-5B8A44?style=flat-square) |
-| Infrastructure | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white) |
+| Category        | Tech                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Language        | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)                                                                                                          |
+| Framework       | ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)                                                                                                       |
+| Database        | ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=flat-square)                                     |
+| ORM / Migration | ![Alembic](https://img.shields.io/badge/Alembic-5B8A44?style=flat-square)                                                                                                                                    |
+| Infrastructure  | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white) ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white) |
 
 ### 🧠 LLM
-| Category | Tech |
-|----------|------|
-| Framework | ![LangChain](https://img.shields.io/badge/LangChain-515151?style=flat-square) ![LangGraph](https://img.shields.io/badge/LangGraph-515151?style=flat-square) |
-| Model | ![CLIP](https://img.shields.io/badge/CLIP-5A48CE?style=flat-square) ![BGE-M3](https://img.shields.io/badge/BGE--M3-0052CC?style=flat-square) ![GPT-4o-mini](https://img.shields.io/badge/GPT--5.4--mini-515151?style=flat-square&logo=openai&logoColor=white) |
+| Category  | Tech                                                                                                                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework | ![LangChain](https://img.shields.io/badge/LangChain-515151?style=flat-square) ![LangGraph](https://img.shields.io/badge/LangGraph-515151?style=flat-square)                                                                                                   |
+| Model     | ![CLIP](https://img.shields.io/badge/CLIP-5A48CE?style=flat-square) ![BGE-M3](https://img.shields.io/badge/BGE--M3-0052CC?style=flat-square) ![GPT-4o-mini](https://img.shields.io/badge/GPT--5.4--mini-515151?style=flat-square&logo=openai&logoColor=white) |
 
 ---
 
@@ -193,14 +192,14 @@ SKN21-FINAL-2Team/
 
 8주간의 프로젝트 진행 단계를 아래와 같이 압축하여 수행했습니다.
 
-| 단계 | 주차 | 주요 업무 | 세부 활동 |
-|:---:|:---:|:---|:---|
-| **기획** | 1~2주차 | 산출물 정의 및 설계 | 주제 선정, 요구사항 명세, WBS/메뉴트리 작성, UX/UI 와이어프레임 |
-| **데이터** | 2~3주차 | 수집 및 전처리 | 한국관광공사 등 외부 API 크롤링, 데이터 정제 로직 스키마 통일 |
-| **AI/모델링** | 3~4주차 | LangGraph / RAG 구축 | 멀티모달(텍스트+이미지) 하이브리드 Retriever 파이프라인 개발 |
-| **서비스 개발** | 5~6주차 | BE / FE 구현 | Next.js 프론트엔드 채팅룸, FastAPI 백엔드 연동, DB 세팅 |
-| **고도화** | 7주차 | 최적화 및 평가 | RAGAS 성능 지표 검증, 응답 레이턴시 병목 개선, 네이버 지도 연동 |
-| **배포** | 8주차 | CI/CD 배포 및 마무리 | GitHub Actions 기반 AWS 무중단 배포 적용, 최종 발표 자료 준비 |
+|      단계       |  주차   | 주요 업무            | 세부 활동                                                       |
+| :-------------: | :-----: | :------------------- | :-------------------------------------------------------------- |
+|    **기획**     | 1~2주차 | 산출물 정의 및 설계  | 주제 선정, 요구사항 명세, WBS/메뉴트리 작성, UX/UI 와이어프레임 |
+|   **데이터**    | 2~3주차 | 수집 및 전처리       | 한국관광공사 등 외부 API 크롤링, 데이터 정제 로직 스키마 통일   |
+|  **AI/모델링**  | 3~4주차 | LangGraph / RAG 구축 | 멀티모달(텍스트+이미지) 하이브리드 Retriever 파이프라인 개발    |
+| **서비스 개발** | 5~6주차 | BE / FE 구현         | Next.js 프론트엔드 채팅룸, FastAPI 백엔드 연동, DB 세팅         |
+|   **고도화**    |  7주차  | 최적화 및 평가       | RAGAS 성능 지표 검증, 응답 레이턴시 병목 개선, 네이버 지도 연동 |
+|    **배포**     |  8주차  | CI/CD 배포 및 마무리 | GitHub Actions 기반 AWS 무중단 배포 적용, 최종 발표 자료 준비   |
 
 
 <details>
@@ -218,16 +217,16 @@ SKN21-FINAL-2Team/
 ### 1️⃣ 수집 데이터 현황
 다양한 외부 출처로부터 신뢰할 수 있는 장소/관광/이미지 데이터를 총 **9,827건** 수집하여 Vector DB에 적재했습니다.
 
-| 카테고리 | 데이터 출처 | 수집 방식 | 목적 | 데이터 건수 |
-|:---:|:---|:---:|:---|:---:|
-| **관광지** | 한국관광공사 (Visit Korea) | API | 메인 관광 스팟 추천 | 1,632 |
-| **음식점** | 한국관광공사 (Visit Korea) | API | 식사/맛집 장소 추천 | 2,259 |
-| **숙박** | 한국관광공사 (Visit Korea) | API | 숙박 장소 추천 | 345 |
-| **쇼핑 (상설)** | 올리브영, 무신사, 다이소 등 공식 홈페이지 | 웹 크롤링 | K-브랜드 쇼핑 장소 추천 | 82 |
-| **투어** | Visit Korea | 웹 크롤링 | 투어 패키지 보조 추천 | 386 |
-| **컨텐츠** | 서울문화포털, Poply | 크롤링/API | 공연 및 전시 타임라인 추천 | 250 |
-| **팝업스토어** | Poply 등 | 웹 크롤링 | 단기 트렌드(팝업) 장소 추천 | 9 |
-| **이미지** | 한국관광공사, Poply 등 통합 | 크롤링/API | 멀티모달(사진) 기반 감성 검색 | 4,864 |
+|    카테고리     | 데이터 출처                               | 수집 방식  | 목적                          | 데이터 건수 |
+| :-------------: | :---------------------------------------- | :--------: | :---------------------------- | :---------: |
+|   **관광지**    | 한국관광공사 (Visit Korea)                |    API     | 메인 관광 스팟 추천           |    1,632    |
+|   **음식점**    | 한국관광공사 (Visit Korea)                |    API     | 식사/맛집 장소 추천           |    2,259    |
+|    **숙박**     | 한국관광공사 (Visit Korea)                |    API     | 숙박 장소 추천                |     345     |
+| **쇼핑 (상설)** | 올리브영, 무신사, 다이소 등 공식 홈페이지 | 웹 크롤링  | K-브랜드 쇼핑 장소 추천       |     82      |
+|    **투어**     | Visit Korea                               | 웹 크롤링  | 투어 패키지 보조 추천         |     386     |
+|   **컨텐츠**    | 서울문화포털, Poply                       | 크롤링/API | 공연 및 전시 타임라인 추천    |     250     |
+| **팝업스토어**  | Poply 등                                  | 웹 크롤링  | 단기 트렌드(팝업) 장소 추천   |      9      |
+|   **이미지**    | 한국관광공사, Poply 등 통합               | 크롤링/API | 멀티모달(사진) 기반 감성 검색 |    4,864    |
 
 ---
 
@@ -298,14 +297,14 @@ SKN21-FINAL-2Team/
 ## 🏆 성과 및 차별점
 
 ### 기존 서비스 대비 차별점
-| 비교 항목 | 기존 여행 서비스 | Triver |
-|----------|----------------|--------|
-| 추천 방식 | 키워드 검색, 리뷰 평점순 | LLM 대화형 + RAG 기반 하이브리드 검색 |
-| 개인화 | 사이트 내 단순 클릭 기록 기반 | 가입 설문 + 대화 맥락 + 실시간 날씨 일관 적용 |
-| 일정 생성 | 사용자가 장소를 하나씩 스크랩 후 구성 | AI가 동선과 소요시간을 고려하여 자동 타임라인 생성 |
-| 이미지 기반 | 미지원 | CLIP 모델 활용, 사진으로 유사한 느낌의 장소를 직접 매칭 |
-| 트렌드 반영 | 정적 데이터 (주기적 수동 업데이트) | 팝업/축제 실시간 자동 크롤링 및 만료 데이터 클렌징 처리 |
-| 언어 지원 | 브라우저 확장 번역 수준 | 프롬프트 레벨에서의 4개 국어(한/영/일/중) 네이티브 응답 생성 |
+| 비교 항목   | 기존 여행 서비스                      | Triver                                                       |
+| ----------- | ------------------------------------- | ------------------------------------------------------------ |
+| 추천 방식   | 키워드 검색, 리뷰 평점순              | LLM 대화형 + RAG 기반 하이브리드 검색                        |
+| 개인화      | 사이트 내 단순 클릭 기록 기반         | 가입 설문 + 대화 맥락 + 실시간 날씨 일관 적용                |
+| 일정 생성   | 사용자가 장소를 하나씩 스크랩 후 구성 | AI가 동선과 소요시간을 고려하여 자동 타임라인 생성           |
+| 이미지 기반 | 미지원                                | CLIP 모델 활용, 사진으로 유사한 느낌의 장소를 직접 매칭      |
+| 트렌드 반영 | 정적 데이터 (주기적 수동 업데이트)    | 팝업/축제 실시간 자동 크롤링 및 만료 데이터 클렌징 처리      |
+| 언어 지원   | 브라우저 확장 번역 수준               | 프롬프트 레벨에서의 4개 국어(한/영/일/중) 네이티브 응답 생성 |
 
 ### 주요 기술적 성과
 - LangGraph를 활용한 6개 노드 기반의 유연한 LLM 에이전트 파이프라인 구축.
@@ -340,31 +339,31 @@ SKN21-FINAL-2Team/
 
 ## 🛠 트러블슈팅
 
-| 문제 | 해결 과정 | 해결 결과 |
-|:---|:---|:---|
-| **LLM 에이전트 응답 지연(Latency)**<br>연쇄적인 노드 호출과 무거운 검색 로직으로 인해 사용자가 체감하는 첫 응답 시간(TTFT)과 전체 생성 시간이 길어지는 문제 발생 | **평균 레이턴시 축소 6대 전략 적용:**<br>1. Reranker 모델 경량화 도입<br>2. Intent 노드의 분석 작업 분리 및 비동기 병렬 처리 적용<br>3. Multi-channel Retriever 병렬 검색 구현<br>4. 불필요한 Candidates 개수 과감히 축소 (20개 → 5개)<br>5. Executor 노드 계획 추천 시 가장 적합한 Top 1개 후보군만 사용하도록 간소화<br>6. 프롬프트 엔지니어링을 통한 불필요 출력 토큰 최적화 | 각 에이전트 노드의 병목 현상이 해소되어 **전체 파이프라인의 평균 레이턴시가 대폭 감소**하였으며, 부드럽고 빠른 실시간 대화 스트리밍 체감 속도 확보 |
+| 문제                                                                                                                                                                                           | 해결 과정                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | 해결 결과                                                                                                                                                                                 |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LLM 에이전트 응답 지연(Latency)**<br>연쇄적인 노드 호출과 무거운 검색 로직으로 인해 사용자가 체감하는 첫 응답 시간(TTFT)과 전체 생성 시간이 길어지는 문제 발생                               | **평균 레이턴시 축소 6대 전략 적용:**<br>1. Reranker 모델 경량화 도입<br>2. Intent 노드의 분석 작업 분리 및 비동기 병렬 처리 적용<br>3. Multi-channel Retriever 병렬 검색 구현<br>4. 불필요한 Candidates 개수 과감히 축소 (20개 → 5개)<br>5. Executor 노드 계획 추천 시 가장 적합한 Top 1개 후보군만 사용하도록 간소화<br>6. 프롬프트 엔지니어링을 통한 불필요 출력 토큰 최적화                                                                                                                                                                                                  | 각 에이전트 노드의 병목 현상이 해소되어 **전체 파이프라인의 평균 레이턴시가 대폭 감소**하였으며, 부드럽고 빠른 실시간 대화 스트리밍 체감 속도 확보                                        |
 | **장소 맥락 인식 불가 (키워드 매칭 오류)**<br>'강남에서 갈 수 있는 카페' 요청 시, 실제 강남이 아닌 이름만 똑같은 '홍대에 있는 강남카페'가 검색되는 등 공간적(Spatial) 맥락 인지 실패 문제 발생 | **3단계 공간 지능화(Spatial Intelligence) 로직 도입:**<br>**1. LLM 의도 분석 좌표 추출:** 사용자 발화('삼성역 조용한 카페')에서 지명 의도를 분리해 중심 좌표(위경도)를 선제적으로 도출<br>**2. 로컬 지역 사전(Landmark Dictionary) 구축:** '송리단길', '샤로수길' 등 행정구역에 없는 핫플레이스 고유명사에 위경도와 반경(예: 800m)을 하드 매핑하여 해결<br>**3. 동적 Geocoding 연결 (Naver API):** 사전에 없는 신규 장소('엔코아미술관')가 요청되었을 경우, `Naver Search API`로 실제 지번 주소를 동적 추출 후 `Naver GeoCoder`를 태워 좌표로 번역하는 강력한 Fallback 회로 구축 | 단순 텍스트 표기 매칭으로 일어나는 엉뚱한 오안내(False Positive)가 완벽히 차단됨. 사용자의 요청 위치를 기반으로 한 **정확한 반경 기반(Geo Filtering)** 매칭이 이루어져 추천 신뢰도 극대화 |
 
 ---
 
 ## 🚀 향후계획
 
-| 기능 | 계획 | 예상 효과 |
-|:---|:---|:---|
-| 추천 지역 확대 | 서울 > 광역시 > 전국 | 한국 전역의 관광지를 추천 가능 |
-| 지원 언어 확대 | 한국 방문 top 20 개국의 사용 언어 지원 | 방한 관광객의 편리성 증대 |
-| 사용자 만족도 조사 | 사용자 피드백을 통한 DB 추가와 사용자 기반의 정보 축척 | 축척된 자료를 통한 보다 정확한 선호도 기반 추천 가능 |
-| 실예약 시스템 연동 | 숙박, 레스토랑 등 실제 타 서비스 API 연동 | 단순 추천을 넘어 통합 커머스 플랫폼으로 진화 |
-| 커뮤니티 및 소셜 기능 | 사용자의 여행 일정/후기 공유 및 평점 시스템 도입 | 유저 리텐션 증가 및 자생적인 핫플레이스 DB 구축 |
-| 모바일 전용 앱 출시 | React Native 또는 Flutter 기반 네이티브 앱 개발 | 외부 이동이 많은 여행 중(On-site) 접근성 극대화 및 모바일 기기 위치기반(LBS) 연동 강화 |
+| 기능                  | 계획                                                   | 예상 효과                                                                              |
+| :-------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| 추천 지역 확대        | 서울 > 광역시 > 전국                                   | 한국 전역의 관광지를 추천 가능                                                         |
+| 지원 언어 확대        | 한국 방문 top 20 개국의 사용 언어 지원                 | 방한 관광객의 편리성 증대                                                              |
+| 사용자 만족도 조사    | 사용자 피드백을 통한 DB 추가와 사용자 기반의 정보 축척 | 축척된 자료를 통한 보다 정확한 선호도 기반 추천 가능                                   |
+| 실예약 시스템 연동    | 숙박, 레스토랑 등 실제 타 서비스 API 연동              | 단순 추천을 넘어 통합 커머스 플랫폼으로 진화                                           |
+| 커뮤니티 및 소셜 기능 | 사용자의 여행 일정/후기 공유 및 평점 시스템 도입       | 유저 리텐션 증가 및 자생적인 핫플레이스 DB 구축                                        |
+| 모바일 전용 앱 출시   | React Native 또는 Flutter 기반 네이티브 앱 개발        | 외부 이동이 많은 여행 중(On-site) 접근성 극대화 및 모바일 기기 위치기반(LBS) 연동 강화 |
 
 ---
 
 ## ✍️ 회고
 
 | 팀원   | 회고 내용 |
-| :----- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 전우영 | |
-| 김가람 | |
-| 박민정 | |
-| 손현우 | |
+| :----- | :-------- |
+| 전우영 |           |
+| 김가람 |           |
+| 박민정 |           |
+| 손현우 |           |
