@@ -47,6 +47,9 @@ TARGETS = [
     "visitseoul_숙박",
     "visitseoul_음식점",
     "visitseoul_투어",
+    "daiso_투어",
+    "musinsa_투어",
+    "oliveyoung_투어",
 ]
 
 SYSTEM_PROMPT = (
