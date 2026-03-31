@@ -1,8 +1,11 @@
 # SKN21-FINAL-2Team
+
 # ✈️ Triver (트리버)
 
 ### LLM 기반 초개인화 K-Culture 여행 에이전트  
-> 당신이 원하는 한국 여행의 모든 것
+> 당신이 원하는 한국 여행의 모든 것<br>
+> 🔗 **배포 공식 사이트:** [triver-s.com](https://triver-s.com/)
+
 ---
 ## 📑 목차
 
