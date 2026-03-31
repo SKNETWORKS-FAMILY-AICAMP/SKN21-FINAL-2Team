@@ -31,7 +31,7 @@
 | <img src="images/p1.png" alt="PM & Backend Developer" width="150" height="150" />| <img src="images/p2.png" alt="Multimodal AI Engineer" width="150" height="150" />| <img src="images/p3.png" alt="Frontend Developer & Data" width="150" height="150" />| <img src="images/p4.png" alt="UI/UX Designer & Docs" width="150" height="150" />|
 |:---:|:---:|:---:|:---:|
 | 👑 전우영 | 김가람 | 박민정 | 손현우 |
-| **PM & Backend Developer** | **Multimodal AI Engineer** | **Frontend Developer&data** | **UI/UX Designer&docs** |
+| **PM & Backend Developer** | **Multimodal AI Engineer** | **Frontend Developer & data** | **UI/UX Designer & docs** |
 | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wooaeng) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/gr-kim-94) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/silentkit12) | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kevinhwsohn-afk) |
 
 </div>
@@ -189,7 +189,7 @@ SKN21-FINAL-2Team/
 
 ## 📊 WBS (일정 요약)
 
-8주간의 프로젝트 진행 단계를 아래와 같이 압축하여 수행했습니다.
+8주간의 프로젝트 진행 단계를 아래와 같이 수행했습니다.
 
 |      단계       |  주차   | 주요 업무            | 세부 활동                                                       |
 | :-------------: | :-----: | :------------------- | :-------------------------------------------------------------- |
@@ -213,7 +213,7 @@ SKN21-FINAL-2Team/
 ## 📋 데이터 아키텍처
 
 ### 1️⃣ 수집 데이터 현황
-다양한 외부 출처로부터 신뢰할 수 있는 장소/관광/이미지 데이터를 총 **9,827건** 수집하여 Vector DB에 적재했습니다.
+다양한 외부 출처로부터 신뢰할 수 있는 장소/관광/이미지 데이터를 약 **4,800여 건**을 수집하여 Vector DB에 적재했습니다.
 
 |    카테고리     | 데이터 출처                               | 수집 방식  | 목적                          | 데이터 건수 |
 | :-------------: | :---------------------------------------- | :--------: | :---------------------------- | :---------: |
@@ -224,7 +224,7 @@ SKN21-FINAL-2Team/
 |    **투어**     | Visit Seoul                               | 웹 크롤링  | 투어 패키지 보조 추천         |     386     |
 |   **컨텐츠**    | 서울문화포털, Poply                       | 크롤링/API | 공연 및 전시 타임라인 추천    |     250     |
 | **팝업스토어**  | Poply 등                                  | 웹 크롤링  | 단기 트렌드(팝업) 장소 추천   |      9      |
-|   **이미지**    | 한국관광공사, Poply 등 통합               | 크롤링/API | 멀티모달(사진) 기반 감성 검색 |    4,864    |
+|   **이미지**    | 한국관광공사, Poply 등 통합               | 크롤링/API | 멀티모달(사진) 기반 감성 검색 |    4,864(일부 중복값)    |
 
 ---
 
@@ -239,7 +239,7 @@ SKN21-FINAL-2Team/
 > - **멀티모달 이원화:** 텍스트 의미 검색을 위한 `places` 컬렉션과 이미지 감성 검색을 위한 `photos` 컬렉션을 분리 운용.
 > - **핫플레이스 군집화:** 행정구역 상 애매한 '홍대', '샤로수길', '송리단길' 등의 지역을 커스텀 사전으로 묶어 **별도 데이터**로 구축.
 > - **동적 데이터 업데이트:** 팝업스토어나 전시/공연 등 만료일이 있는 정보는 **스케줄러**를 통해 새로운 정보 업데이트와 동시에 기간 만료 시 자동 페일오버/삭제 처리.
-> - **리서치 기반 임베딩 증강:** 배달의민족, 한국관광공사 통계 기반의 '외국인 선호 음식/관광지' 데이터를 텍스트 임베딩 컨텍스트에 추가 주입.
+> - **리서치 기반 임베딩 증강:** 배달의민족, 한국관광공사 통계 기반의 '국적별 외국인 선호 음식/관광지' 데이터를 텍스트 임베딩 컨텍스트에 추가 주입.
 
 ---
 
@@ -300,17 +300,23 @@ SKN21-FINAL-2Team/
 
 ### 주요 기술적 성과
 - LangGraph를 활용한 8개 노드 기반의 유연한 LLM 에이전트 파이프라인 구축.
-- 멀티모달(텍스트+이미지) 하이브리드 검색 파이프라인 설계
-- 주간 파이프라인을 통한 자동 데이터 수집/검증 및 SSE(Server-Sent Events) 스트리밍 기술로 끊김없는 실시간 대화 경험 구현.
-- **체계적인 3단계 RAG 성능 평가 체계 도입:** Ragas 프레임워크 기반의 평가 스크립트를 자체 구축하여 지표를 꼼꼼하게 측정 및 개선했습니다.
-- **비즈니스 로직 모듈화 및 TDD 기반 리팩토링:** 백엔드의 DB/VectorDB(Qdrant) 접근 코드를 `utils`로 분리하고 프론트엔드의 상태 관리를 `hooks`로 모듈화하였으며, 각 유틸성에 대한 독립된 단위 테스트(`tests/`) 코드를 작성하여 프로덕션 레벨의 유지보수성을 극대화했습니다.
+- 멀티모달(텍스트+이미지) 하이브리드 검색 파이프라인 설계.
+- 스케줄러를 통한 자동 데이터 수집/검증 및 SSE(Server-Sent Events) 스트리밍 기술로 끊김 없는 실시간 대화 경험 구현.
+- **체계적인 성능 평가 체계 도입:** 기존 Ragas 프레임워크와 자체 구축한 'LLM 판관(Judge)' 평가 모델을 결합하여, 3차례에 걸쳐 검색 및 생성 지표를 꼼꼼하게 측정하고 개선했습니다.
+- **비즈니스 로직 모듈화 및 TDD 기반 리팩토링:** 백엔드의 DB/VectorDB(Qdrant) 접근 코드를 `utils`로 분리하고 프론트엔드의 상태 관리를 `hooks`로 모듈화하였으며, 독립된 단위 테스트(`tests/`) 코드를 작성하여 프로덕션 레벨의 유지보수성을 극대화했습니다.
 
-### 📊 RAG & 리트리버 성능 검증 (LLM as a Judge)
-지속적인 모델 튜닝(데이터 증강, 리랭커 결합, 청킹 최적화 등)을 거쳐 3차례에 걸쳐 Retriever 검색 성능과 생성 품질을 대폭 향상시켰습니다.
+### 📊 RAG & 리트리버 성능 검증 (LLM-as-a-Judge 도입)
+서비스 특성상 정해진 단답형 정답이 없고 에이전트의 대화 자유도가 높은 점을 고려하여, 전통적인 RAGAS 생성 평가 와 함께 **의미적 맥락을 판단하는 'LLM 기반 판관(Judge)' 평가 모델**을 자체 도입했습니다. 총 3차례의 테스트 및 고도화 사이클을 거쳐 검색 및 생성 품질을 최적화했습니다.
 
-![evaluation](images/evaluation_table.png)
+<img src="images/evaluation_table.png" alt="evaluation" width="80%">
 
-> *LLM 모델(`gpt-4o`)을 판관(Judge)으로 사용하여 RAGAS를 측정한 결과, Faithfulness(답변의 근거 신뢰성) 및 Answer Relevancy(질문 연관성) 지표가 3차에서 `0.9` 이상으로 완벽에 가깝게 개선되었습니다.*
+**[차수별 검색 성능 개선 과정]**
+- **1차 ➡️ 2차:** Visit Seoul, 한국관광공사 등 대규모 데이터셋이 Vector DB에 대거 추가되면서, 검색 대상 풀(Pool)이 커지고 노이즈(Noise) 데이터가 섞여 일시적으로 지표가 하락했습니다.
+- **3차 최종 튜닝 (DB 검색 고도화):** 강력한 **위치(Geo) 필터**를 엄밀히 적용하고, Payload의 `tags` 값을 활용하는 **Sparse 검색 결합(템플릿 고도화)**을 도입하여 노이즈를 성공적으로 제어했습니다.
+
+**[최종 평가 지표 도출]**
+- **검색 성능 (Retrieval):** Vector DB의 Payload가 단순 문장이 아닌 Key-Value 구조인 점을 감안해, 단어 매칭 위주의 Precision 측정 대신 순위 위주의 평가를 진행했습니다. 그 결과 최종 **Recall `0.84`**, **MRR `0.81`**의 안정적이고 뛰어난 검색 정확도를 달성했습니다.
+- **생성 성능 (Generation):** LLM 판관 심사 결과, 최종 3차 평가에서 **`0.9`점 대**의 우수한 점수를 기록했으며, 정서적이고 감성적인 뉘앙스를 요구하는 응답 기준에서도 결함이 없음을 검증 완료했습니다.
 
 ---
 
