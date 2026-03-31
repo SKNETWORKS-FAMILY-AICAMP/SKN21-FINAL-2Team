@@ -327,7 +327,7 @@
   "survey.start": "Start",
   "survey.questionProgress": "Question {current} of {total}",
   "mypage.emptyReservations": "No reservations.",
-  "mypage.imagePrivacyWarning": "Please hide private info (name, phone number) when uploading images.",
+  "mypage.imagePrivacyWarning": "Please redact all personal information (names and phone numbers) before uploading images.",
   "mypage.noImageAttached": "No image attached",
   "mypage.ocrRead": "Read data with OCR",
   "mypage.reservationTitlePlaceholder": "Enter reservation title",
