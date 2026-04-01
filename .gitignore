@@ -263,4 +263,4 @@ CLAUDE.md
 
 backend/data/uploads/
 backend/data/snapshots/
-backend/data/scheduler_reports/
+backend/data/scheduler_reports/.vscode/
