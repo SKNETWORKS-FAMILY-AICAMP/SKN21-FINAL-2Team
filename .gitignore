@@ -264,3 +264,6 @@ CLAUDE.md
 backend/data/uploads/
 backend/data/snapshots/
 backend/data/scheduler_reports/.vscode/
+
+# 산출물 폴더
+산출물/
